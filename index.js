@@ -185,7 +185,9 @@ instance.prototype.actions = function() {
 					choices: self.scenelist
 				}
 			]
-		}
+		},
+		'StartStopStreaming': { label: 'Start and Stop Streaming'},
+		'StartStopRecording': { label: 'Start and Stop Recording'},
 	});
 }
 
@@ -198,6 +200,10 @@ instance.prototype.action = function(action) {
 		self.obs.setCurrentScene({
 			'scene-name': action.options.scene
 		});
+	} else if (action.action == 'StartStopStreaming'){
+		self.obs.StartStopStreaming();
+	} else if (action.action == 'StartStopRecording'){
+		self.obs.StartStopRecording();
 	}
 
 };
