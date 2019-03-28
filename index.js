@@ -33,6 +33,7 @@ instance.prototype.init = function() {
 	self.obs = new OBSWebSocket();
 	self.states = {};
 	self.scenes = {};
+	self.transitions = {};
 	self.active_scene = "";
 
 	self.obs.connect({
@@ -149,6 +150,19 @@ instance.prototype.updateScenes = function() {
 	var self = this;
 	console.log("updateScenes()");
 
+	self.obs.GetTransitionList().then(data => {
+		self.transitions = {};
+		self.active_transition = data.current-transition;
+		for (var s in data.transitions) {
+			var transition = data.transitions[s];
+			self.transitions[transition.name] = transition;
+		}
+		self.actions();
+		self.init_presets();
+		self.init_feedbacks();
+		self.init_variables();
+	});
+
 	self.obs.getSceneList().then(data => {
 		self.scenes = {};
 		self.active_scene = "";
@@ -168,6 +182,7 @@ instance.prototype.updateScenes = function() {
 instance.prototype.destroy = function() {
 	var self = this;
 	self.scenes = [];
+	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
 	self.active_scene = "";
@@ -179,9 +194,16 @@ instance.prototype.actions = function() {
 	var self = this;
 	console.log("actions", self.scenes);
 	self.scenelist = [];
+	self.transitionlist = [];
 	if (self.scenes !== undefined) {
 		for (var s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
+		}
+	}
+
+	if (self.transitions !== undefined) {
+		for (var s in self.transitions) {
+			self.transitionlist.push({ id: s, label: s });
 		}
 	}
 
@@ -199,6 +221,18 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'set_transition': {
+		label: 'Change transition type',
+		options: [
+				{
+				type: 'dropdown',
+				label: 'Transitions',
+				id: 'transitions',
+				default: '0',
+				choices: self.transitionlist
+				}
+			]
+		}, 
 		'StartStopStreaming': { label: 'Start and Stop Streaming'},
 		'StartStopRecording': { label: 'Start and Stop Recording'},
 	});
@@ -215,6 +249,10 @@ instance.prototype.action = function(action) {
 				'scene-name': action.options.scene
 			});
 		break;
+		case "set_transition":
+			self.obs.setCurrentTransition({
+				'transition-name': action.options.transitions
+			});
 		case "StartStopStreaming":
 			self.obs.StartStopStreaming();
 		break;
