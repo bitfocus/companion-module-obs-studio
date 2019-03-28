@@ -76,6 +76,19 @@ instance.prototype.init = function() {
 		self.process_stream_vars(data);
 	});
 
+
+	self.obs.on('RecordingStarted', function(data) {
+		self.setVariable('recording', true);
+		self.states['recording'] = true;
+		self.checkFeedbacks('recording');
+	});
+
+	self.obs.on('RecordingStopped', function() {
+		self.setVariable('recording', false);
+		self.states['recording'] = false;
+		self.checkFeedbacks('recording');
+	});
+
 	debug = self.debug;
 	log = self.log;
 };
@@ -196,16 +209,20 @@ instance.prototype.action = function(action) {
 
 	debug('action: ', action);
 
-	if (action.action == 'set_scene') {
-		self.obs.setCurrentScene({
-			'scene-name': action.options.scene
-		});
-	} else if (action.action == 'StartStopStreaming'){
-		self.obs.StartStopStreaming();
-	} else if (action.action == 'StartStopRecording'){
-		self.obs.StartStopRecording();
-	}
+	switch(action.action){
+		case "set_scene":
+			self.obs.setCurrentScene({
+				'scene-name': action.options.scene
+			});
+		break;
+		case "StartStopStreaming":
+			self.obs.StartStopStreaming();
+		break;
+		case "StartStopRecording":
+			self.obs.StartStopRecording();
+		break;
 
+	}
 };
 
 
@@ -216,10 +233,28 @@ instance.prototype.init_feedbacks = function() {
 
 	// feedbacks
 	var feedbacks = {};
-
 	feedbacks['streaming'] = {
 		label: 'Stream is running',
 		description: 'If the stream is running, change colors of the bank',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255,255,255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(100,255,0)
+			},
+		]
+	};
+
+	feedbacks['recording'] = {
+		label: 'Recording is active',
+		description: 'If the recording is active, change colors of the bank',
 		options: [
 			{
 				type: 'colorpicker',
@@ -268,7 +303,6 @@ instance.prototype.init_feedbacks = function() {
 
 instance.prototype.feedback = function(feedback, bank) {
 	var self = this;
-
 	if (feedback.type == 'scene_active') {
 		if (self.states['scene_active'] == feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
@@ -277,6 +311,14 @@ instance.prototype.feedback = function(feedback, bank) {
 
 	if (feedback.type == 'streaming') {
 		if (self.states['streaming'] === true) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type == 'recording') {
+		console.log("RECORDING HIT with STATUS:");
+		console.log(self.states['recording']);
+		if (self.states['recording'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
@@ -323,6 +365,60 @@ instance.prototype.init_presets = function () {
 		});
 	}
 
+	// Preset for Start Streaming button with colors indicating streaming status
+	presets.push({
+		category: 'Streaming',
+		label: 'OBS Streaming',
+		bank: {
+			style: 'text',
+			text: 'OBS STREAM',
+			size: 'auto',
+			color: self.rgb(255,255,255),
+			bgcolor: 0
+		},
+		feedbacks: [
+			{
+				type: 'streaming',
+				options: {
+					bg: self.rgb(51,204,51),
+					fg: self.rgb(255,255,255),
+				}
+			}
+		],
+		actions: [
+			{
+				action: 'StartStopStreaming',
+			}
+		]
+	});
+
+	// Preset for Start Recording button with colors indicating recording status
+	presets.push({
+		category: 'Recording',
+		label: 'OBS Recording',
+		bank: {
+			style: 'text',
+			text: 'OBS RECORD',
+			size: 'auto',
+			color: self.rgb(255,255,255),
+			bgcolor: 0
+		},
+		feedbacks: [
+			{
+				type: 'recording',
+				options: {
+					bg: self.rgb(51,204,51),
+					fg: self.rgb(255,255,255),
+				}
+			}
+		],
+		actions: [
+			{
+				action: 'StartStopRecording',
+			}
+		]
+	});
+
 	self.setPresetDefinitions(presets);
 }
 
@@ -338,7 +434,8 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'num_dropped_frames', label: 'Number of dropped frames' });
 	variables.push({ name: 'num_total_frames', label: 'Number of total frames' });
 	variables.push({ name: 'preview_only', label: 'Preview only' });
-	variables.push({ name: 'recording', label: 'Recording state' });
+	// Line commented out due to creating a false state when recording started
+	//variables.push({ name: 'recording', label: 'Recording state' });
 	variables.push({ name: 'strain', label: 'Strain' });
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
