@@ -209,7 +209,7 @@ instance.prototype.actions = function() {
 
 	self.system.emit('instance_actions', self.id, {
 
-		'set_scene': {
+	 'set_scene': {
 			label: 'Change scene',
 			options: [
 				{
@@ -241,8 +241,6 @@ instance.prototype.actions = function() {
 instance.prototype.action = function(action) {
 	var self = this;
 
-	debug('action: ', action);
-
 	switch(action.action){
 		case "set_scene":
 			self.obs.setCurrentScene({
@@ -253,6 +251,7 @@ instance.prototype.action = function(action) {
 			self.obs.setCurrentTransition({
 				'transition-name': action.options.transitions
 			});
+		break;
 		case "StartStopStreaming":
 			self.obs.StartStopStreaming();
 		break;
