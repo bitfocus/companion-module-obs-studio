@@ -1,21 +1,14 @@
-## PlanningCenter-ServicesLive
+## OBS Studio
 
-This module will allow you to advance your Planning Center Online Service Plans.
+This module will allow you to control OBS Studio using a websocket connection.
 
 ### Configuration
-* You will need to set up a Personal Access Token in your PCO account.
-* <https://api.planningcenteronline.com/oauth/applications>
-* The PCO account that makes the token will be the account that controls the plans.
-* Supply the Application ID and Secret Key to Companion in the module instance settings.
-* You can supply a folder ID to filter the list of services to that specific folder.
-* You can also supply a service type ID to only return plans for that service type.
-* You can choose how many plans per service type to return and allow as options for control.
+* Download and install the websocket plugin on the computer running OBS: https://github.com/Palakis/obs-websocket/releases
+* Configure the plugin as needed
+* In Companion, specify the IP address of the computer running OBS and the port you are using for the websocket connection (defaults to 4444)
 
-### To use the module
-Add an action to a button and choose the plan you wish to control.
-
-**Available actions:**
-* Go to Next Item
-* Go to Previous Item
-* Take Control (don't allow others to control LIVE)
-* Release Control (release your account or others from controlling LIVE)
+### Available actions
+* Change Scene (pulls list of available scenes from OBS)
+* Change Transition Type
+* Start/Stop Streaming
+* Start/Stop Recording
