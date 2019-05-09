@@ -20,7 +20,7 @@ instance.prototype.updateConfig = function(config) {
 	debug('updateConfig() destroying and reiniting..');
 	self.destroy();
 	self.init();
-}
+};
 
 instance.prototype.init = function() {
 	var self = this;
@@ -91,7 +91,7 @@ instance.prototype.init = function() {
 	debug = self.debug;
 	log = self.log;
 
-}
+};
 
 instance.prototype.process_stream_vars = function(data) {
 
@@ -115,7 +115,7 @@ instance.prototype.process_stream_vars = function(data) {
 
 	self.checkFeedbacks('streaming');
 
-}
+};
 
 // Return config fields for web config
 instance.prototype.config_fields = function () {
@@ -144,7 +144,7 @@ instance.prototype.config_fields = function () {
 		}
 	]
 	
-}
+};
 
 instance.prototype.getStreamStatus = function() {
 	var self = this;
@@ -163,7 +163,7 @@ instance.prototype.getStreamStatus = function() {
 		self.init_feedbacks();
 		self.init_variables();
 	});
-}
+};
 
 instance.prototype.updateScenes = function() {
 	var self = this;
@@ -194,7 +194,7 @@ instance.prototype.updateScenes = function() {
 		self.init_variables();
 	});
 
-}
+};
 
 // When module gets deleted
 instance.prototype.destroy = function() {
@@ -206,7 +206,7 @@ instance.prototype.destroy = function() {
 	self.active_scene = '';
 	self.obs.disconnect();
 	debug('destroy');
-}
+};
 
 instance.prototype.actions = function() {
 	var self = this;
@@ -260,7 +260,7 @@ instance.prototype.actions = function() {
 		}
 
 	});
-}
+};
 
 instance.prototype.action = function(action) {
 	var self = this;
@@ -283,7 +283,7 @@ instance.prototype.action = function(action) {
 			self.obs.StartStopRecording();
 			break;
 	}
-}
+};
 
 instance.prototype.init_feedbacks = function() {
 	var self = this;
@@ -356,7 +356,7 @@ instance.prototype.init_feedbacks = function() {
 	};
 
 	self.setFeedbackDefinitions(feedbacks);
-}
+};
 
 instance.prototype.feedback = function(feedback, bank) {
 	var self = this;
@@ -379,7 +379,7 @@ instance.prototype.feedback = function(feedback, bank) {
 	}
 
 	return {};
-}
+};
 
 instance.prototype.init_presets = function () {
 	var self = this;
@@ -474,7 +474,7 @@ instance.prototype.init_presets = function () {
 	});
 
 	self.setPresetDefinitions(presets);
-}
+};
 
 instance.prototype.init_variables = function() {
 	var self = this;
@@ -494,7 +494,7 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'total_stream_time', label: 'Total streaming time' });
 
 	self.setVariableDefinitions(variables);
-}
+};
 
 instance_skel.extendedBy(instance);
 exports = module.exports = instance;
