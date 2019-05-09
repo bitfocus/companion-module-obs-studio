@@ -17,7 +17,7 @@ function instance(system, id, config) {
 instance.prototype.updateConfig = function(config) {
 	var self = this;
 	self.config = config;
-	debug("updateConfig() destroying and reiniting..");
+	debug('updateConfig() destroying and reiniting..');
 	self.destroy();
 	self.init();
 };
@@ -34,7 +34,7 @@ instance.prototype.init = function() {
 	self.states = {};
 	self.scenes = {};
 	self.transitions = {};
-	self.active_scene = "";
+	self.active_scene = '';
 
 	self.obs.connect({
 		address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
@@ -42,17 +42,16 @@ instance.prototype.init = function() {
 	}).then(() => {
 		self.status(self.STATE_OK);
 		debug('Success! Connected.');
+		self.getStreamStatus();
 		self.updateScenes();
 	}).catch(err => {
 		self.status(self.STATE_ERROR,err);
 	});
 
 	self.obs.on('TransitionBegin', function(data) {
-		console.log("transitionbegin", data);
 	});
 
 	self.obs.on('SwitchScenes', function(data) {
-		console.log("switchscenes", data);
 		self.states['scene_active'] = data['scene-name'];
 		self.setVariable('scene_active', data['scene-name']);
 		self.checkFeedbacks('scene_active');
@@ -77,9 +76,23 @@ instance.prototype.init = function() {
 		self.process_stream_vars(data);
 	});
 
+	self.obs.on('RecordingStarted', function(data) {
+		self.setVariable('recording', true);
+		self.states['recording'] = true;
+		self.checkFeedbacks('recording');
+	});
+
+	self.obs.on('RecordingStopped', function() {
+		self.setVariable('recording', false);
+		self.states['recording'] = false;
+		self.checkFeedbacks('recording');
+	});
+
 	debug = self.debug;
 	log = self.log;
+
 };
+
 instance.prototype.process_stream_vars = function(data) {
 
 	var self = this;
@@ -103,7 +116,6 @@ instance.prototype.process_stream_vars = function(data) {
 	self.checkFeedbacks('streaming');
 
 };
-
 
 // Return config fields for web config
 instance.prototype.config_fields = function () {
@@ -131,11 +143,30 @@ instance.prototype.config_fields = function () {
 			width: 4,
 		}
 	]
+	
+};
+
+instance.prototype.getStreamStatus = function() {
+	var self = this;
+	
+	self.obs.getStreamingStatus().then(data => {
+		self.setVariable('recording', data['recording']);
+		self.states['recording'] = data['recording'];
+		self.checkFeedbacks('recording');
+		
+		self.setVariable('streaming', data['streaming']);
+		self.states['streaming'] = data['streaming'];
+		self.checkFeedbacks('streaming');
+		
+		self.actions();
+		self.init_presets();
+		self.init_feedbacks();
+		self.init_variables();
+	});
 };
 
 instance.prototype.updateScenes = function() {
 	var self = this;
-	console.log("updateScenes()");
 
 	self.obs.GetTransitionList().then(data => {
 		self.transitions = {};
@@ -152,7 +183,7 @@ instance.prototype.updateScenes = function() {
 
 	self.obs.getSceneList().then(data => {
 		self.scenes = {};
-		self.active_scene = "";
+		self.active_scene = '';
 		for (var s in data.scenes) {
 			var scene = data.scenes[s];
 			self.scenes[scene.name] = scene;
@@ -172,16 +203,17 @@ instance.prototype.destroy = function() {
 	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
-	self.active_scene = "";
+	self.active_scene = '';
 	self.obs.disconnect();
-	debug("destroy");
+	debug('destroy');
 };
 
 instance.prototype.actions = function() {
 	var self = this;
-	console.log("actions", self.scenes);
+	
 	self.scenelist = [];
 	self.transitionlist = [];
+	
 	if (self.scenes !== undefined) {
 		for (var s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
@@ -196,64 +228,90 @@ instance.prototype.actions = function() {
 
 	self.system.emit('instance_actions', self.id, {
 
-		'set_scene': {
-			label: 'Change scene',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: '0',
-					choices: self.scenelist
-				}
-			]
-		}, 
+		 'set_scene': {
+				label: 'Change scene',
+				options: [
+					{
+						type: 'dropdown',
+						label: 'Scene',
+						id: 'scene',
+						default: '0',
+						choices: self.scenelist
+					}
+				]
+		},
 		'set_transition': {
 			label: 'Change transition type',
 			options: [
-				{
+					{
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
 					default: '0',
 					choices: self.transitionlist
-				}
-			]
-		}, 
+					}
+				]
+		},
+		'StartStopStreaming': {
+			label: 'Start and Stop Streaming'
+		},
+		'StartStopRecording': {
+			label: 'Start and Stop Recording'
+		}
+
 	});
-}
+};
 
 instance.prototype.action = function(action) {
 	var self = this;
 
-	debug('action: ', action);
-
-	if (action.action == 'set_scene') {
-		self.obs.setCurrentScene({
-			'scene-name': action.options.scene
-		});
+	switch(action.action) {
+		case 'set_scene':
+			self.obs.setCurrentScene({
+				'scene-name': action.options.scene
+			});
+			break;
+		case 'set_transition':
+			self.obs.setCurrentTransition({
+				'transition-name': action.options.transitions
+			});
+			break;
+		case 'StartStopStreaming':
+			self.obs.StartStopStreaming();
+			break;
+		case 'StartStopRecording':
+			self.obs.StartStopRecording();
+			break;
 	}
-
-	if (action.action == 'set_transition') {
-		self.obs.setCurrentTransition({
-			'transition-name': action.options.transitions
-		});
-	}
-
 };
-
-
-
 
 instance.prototype.init_feedbacks = function() {
 	var self = this;
 
 	// feedbacks
 	var feedbacks = {};
-
 	feedbacks['streaming'] = {
 		label: 'Stream is running',
 		description: 'If the stream is running, change colors of the bank',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255,255,255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(100,255,0)
+			},
+		]
+	};
+
+	feedbacks['recording'] = {
+		label: 'Recording is active',
+		description: 'If the recording is active, change colors of the bank',
 		options: [
 			{
 				type: 'colorpicker',
@@ -302,7 +360,6 @@ instance.prototype.init_feedbacks = function() {
 
 instance.prototype.feedback = function(feedback, bank) {
 	var self = this;
-
 	if (feedback.type == 'scene_active') {
 		if (self.states['scene_active'] == feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
@@ -315,9 +372,14 @@ instance.prototype.feedback = function(feedback, bank) {
 		}
 	}
 
+	if (feedback.type == 'recording') {
+		if (self.states['recording'] === true) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
 	return {};
 };
-
 
 instance.prototype.init_presets = function () {
 	var self = this;
@@ -357,9 +419,62 @@ instance.prototype.init_presets = function () {
 		});
 	}
 
-	self.setPresetDefinitions(presets);
-}
+	// Preset for Start Streaming button with colors indicating streaming status
+	presets.push({
+		category: 'Streaming',
+		label: 'OBS Streaming',
+		bank: {
+			style: 'text',
+			text: 'OBS STREAM',
+			size: 'auto',
+			color: self.rgb(255,255,255),
+			bgcolor: 0
+		},
+		feedbacks: [
+			{
+				type: 'streaming',
+				options: {
+					bg: self.rgb(51,204,51),
+					fg: self.rgb(255,255,255),
+				}
+			}
+		],
+		actions: [
+			{
+				action: 'StartStopStreaming',
+			}
+		]
+	});
 
+	// Preset for Start Recording button with colors indicating recording status
+	presets.push({
+		category: 'Recording',
+		label: 'OBS Recording',
+		bank: {
+			style: 'text',
+			text: 'OBS RECORD',
+			size: 'auto',
+			color: self.rgb(255,255,255),
+			bgcolor: 0
+		},
+		feedbacks: [
+			{
+				type: 'recording',
+				options: {
+					bg: self.rgb(51,204,51),
+					fg: self.rgb(255,255,255),
+				}
+			}
+		],
+		actions: [
+			{
+				action: 'StartStopRecording',
+			}
+		]
+	});
+
+	self.setPresetDefinitions(presets);
+};
 
 instance.prototype.init_variables = function() {
 	var self = this;
@@ -368,11 +483,11 @@ instance.prototype.init_variables = function() {
 
 	variables.push({ name: 'bytes_per_sec', label: 'Stream is active' });
 	variables.push({ name: 'fps', label: 'Frames per second' });
-	variables.push({ name: 'kbits_per_sec', label: 'kilobits per second' });
+	variables.push({ name: 'kbits_per_sec', label: 'Kilobits per second' });
 	variables.push({ name: 'num_dropped_frames', label: 'Number of dropped frames' });
 	variables.push({ name: 'num_total_frames', label: 'Number of total frames' });
 	variables.push({ name: 'preview_only', label: 'Preview only' });
-	variables.push({ name: 'recording', label: 'Recording state' });
+	variables.push({ name: 'recording', label: 'Recording State' });
 	variables.push({ name: 'strain', label: 'Strain' });
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
@@ -380,7 +495,6 @@ instance.prototype.init_variables = function() {
 
 	self.setVariableDefinitions(variables);
 };
-
 
 instance_skel.extendedBy(instance);
 exports = module.exports = instance;
