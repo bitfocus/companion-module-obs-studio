@@ -257,6 +257,24 @@ instance.prototype.actions = function() {
 		},
 		'StartStopRecording': {
 			label: 'Start and Stop Recording'
+		},
+		'set_source_mute' : {
+			label: 'Set Source Mute',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Source',
+					id: 'source',
+					default: '',
+				},
+				{
+					type: 'dropdown',
+					label: 'Mute',
+					id: 'mute',
+					default: 'true',
+					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
+				}
+			]
 		}
 
 	});
@@ -269,6 +287,12 @@ instance.prototype.action = function(action) {
 		case 'set_scene':
 			self.obs.setCurrentScene({
 				'scene-name': action.options.scene
+			});
+			break;
+		case 'set_source_mute':
+			self.obs.setMute({
+				'source': action.options.source,
+				'mute': (action.options.mute == 'true' ? true : false)
 			});
 			break;
 		case 'set_transition':
