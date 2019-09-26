@@ -31,9 +31,13 @@ instance.prototype.init = function() {
 		self.obs = undefined;
 	}
 	self.obs = new OBSWebSocket();
-	self.states = {};
+	self.states = {
+		muted_sources: []
+	};
 	self.scenes = {};
 	self.transitions = {};
+	self.sourceTypes = [];
+	self.sources = [];
 
 	self.obs.connect({
 		address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
@@ -43,6 +47,7 @@ instance.prototype.init = function() {
 		debug('Success! Connected.');
 		self.getStreamStatus();
 		self.updateScenes();
+		self.updateSources();
 	}).catch(err => {
 		self.status(self.STATUS_ERROR, err);
 	});
@@ -93,6 +98,23 @@ instance.prototype.init = function() {
 		self.setVariable('recording', false);
 		self.states['recording'] = false;
 		self.checkFeedbacks('recording');
+	});
+
+	self.obs.on('SourceCreated', () => {
+		self.updateSources()
+	});
+
+	self.obs.on('SourceDestroyed', () => {
+		self.updateSources()
+	});
+
+	self.obs.on('SourceRenamed', () => {
+		self.updateSources()
+	});
+
+	self.obs.on('SourceMuteStateChanged', data => {
+		self.states['muted_sources'][data.sourceName] = data.muted;
+		self.checkFeedbacks('source_muted');
 	});
 
 	debug = self.debug;
@@ -201,13 +223,64 @@ instance.prototype.updateScenes = function() {
 	});
 };
 
+instance.prototype.updateSources = function() {
+	var self = this;
+
+	let promises = [];
+	promises.push(self.obs.send('GetSourcesList').then(data => {
+		self.sources = data.sources;
+	}));
+
+	if (self.sourceTypes.length === 0) {
+		promises.push(self.obs.send('GetSourceTypesList').then(data => {
+			self.sourceTypes = data.types;
+		}));
+	}
+
+	Promise.all(promises).then(() => {
+		let promises = [];
+		let audioCapableSources = self.getAudioCapableSources();
+		for (var s in audioCapableSources) {
+			if (audioCapableSources.hasOwnProperty(s)) {
+				promises.push(self.obs.send('GetVolume', { source: audioCapableSources[s].name }).then(data => {
+					self.states['muted_sources'][data.name] = data.muted;
+				}));
+			}
+		}
+
+		Promise.all(promises).then(() => {
+			self.actions();
+			self.init_presets();
+			self.init_feedbacks();
+			self.init_variables();
+			self.checkFeedbacks('source_muted');
+		});
+	});
+};
+
+instance.prototype.getAudioCapableSources = function() {
+	var self = this;
+
+	if (typeof self.sourceTypes === 'undefined') { //call on instance creation
+		return [];
+	}
+
+	let audioCapableTypes = self.sourceTypes.filter(st => st.caps && st.caps.hasAudio).map(st => st.type + '-' + st.typeId);
+
+	return self.sources.filter(s => audioCapableTypes.indexOf(s.type + '-' + s.typeId) !== -1);
+};
+
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
 	self.scenes = [];
 	self.transitions = [];
-	self.states = {};
+	self.states = {
+		muted_sources: []
+	};
 	self.scenelist = [];
+	self.sourceTypes = [];
+	self.sources = [];
 	self.obs.disconnect();
 	debug('destroy');
 };
@@ -297,21 +370,24 @@ instance.prototype.actions = function() {
 		'StartStopRecording': {
 			label: 'Start and Stop Recording'
 		},
-		'set_source_mute' : {
+		'set_source_mute': {
 			label: 'Set Source Mute',
 			options: [
 				{
-					type: 'textinput',
+					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: '0',
+					choices: self.getAudioCapableSources().map(s => {
+						return { id: s.name, label: s.name };
+					})
 				},
 				{
 					type: 'dropdown',
 					label: 'Mute',
 					id: 'mute',
 					default: 'true',
-					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
+					choices: [{ id: 'false', label: 'False' }, { id: 'true', label: 'True' }, { id: 'toggle', label: 'Toggle' }]
 				}
 			]
 		}
@@ -347,10 +423,16 @@ instance.prototype.action = function(action) {
 			self.obs.send('TransitionToProgram', options);
 			break;
 		case 'set_source_mute':
-			self.obs.send('SetMute', {
-				'source': action.options.source,
-				'mute': (action.options.mute == 'true' ? true : false)
-			});
+			if (action.options.mute === 'toggle') {
+				self.obs.send('ToggleMute', {
+					source: action.options.source
+				});
+			} else {
+				self.obs.send('SetMute', {
+					'source': action.options.source,
+					'mute': action.options.mute === 'true'
+				});
+			}
 			break;
 		case 'set_transition':
 			self.obs.send('SetCurrentTransition', {
@@ -448,6 +530,43 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
+	feedbacks['source_muted'] = {
+		label: 'Change colors when muted',
+		description: 'If the specified source is muted, change colors of the bank',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color (muted)',
+				id: 'fg_muted',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (muted)',
+				id: 'bg_muted',
+				default: self.rgb(255, 0, 0)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Foreground color (unmuted)',
+				id: 'fg_unmuted',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (unmuted)',
+				id: 'bg_unmuted',
+				default: self.rgb(0, 0, 0)
+			},
+			{
+				type: 'textinput',
+				label: 'Source',
+				id: 'source',
+				default: '',
+			},
+		]
+	};
+
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -472,6 +591,14 @@ instance.prototype.feedback = function(feedback) {
 	if (feedback.type === 'recording') {
 		if (self.states['recording'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'source_muted') {
+		if (self.states['muted_sources'][feedback.options.source] === true) {
+			return { color: feedback.options.fg_muted, bgcolor: feedback.options.bg_muted };
+		} else if (self.states['muted_sources'][feedback.options.source] === false) {
+			return { color: feedback.options.fg_unmuted, bgcolor: feedback.options.bg_unmuted };
 		}
 	}
 
@@ -531,6 +658,42 @@ instance.prototype.init_presets = function() {
 				}
 			]
 		}));
+	}
+
+	let audioCapableSources = self.getAudioCapableSources();
+	for (var source in audioCapableSources) {
+		presets.push({
+			category: 'Toggle source muting',
+			label: audioCapableSources[source].name,
+			bank: {
+				style: 'text',
+				text: audioCapableSources[source].name,
+				size: 'auto',
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0
+			},
+			feedbacks: [
+				{
+					type: 'source_muted',
+					options: {
+						bg_muted: self.rgb(255, 0, 0),
+						fg_muted: self.rgb(255, 255, 255),
+						bg_unmuted: self.rgb(0, 0, 0),
+						fg_unmuted: self.rgb(255, 255, 255),
+						source: audioCapableSources[source].name,
+					}
+				}
+			],
+			actions: [
+				{
+					action: 'set_source_mute',
+					options: {
+						source: audioCapableSources[source].name,
+						mute: 'toggle'
+					}
+				}
+			]
+		});
 	}
 
 	presets.push({
