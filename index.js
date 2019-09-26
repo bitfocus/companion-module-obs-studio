@@ -25,7 +25,7 @@ instance.prototype.updateConfig = function(config) {
 instance.prototype.init = function() {
 	var self = this;
 
-	self.status(self.STATE_ERROR);
+	self.status(self.STATUS_ERROR, "Connecting");
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
 		self.obs = undefined;
@@ -34,26 +34,33 @@ instance.prototype.init = function() {
 	self.states = {};
 	self.scenes = {};
 	self.transitions = {};
-	self.active_scene = '';
 
 	self.obs.connect({
 		address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
 		password: self.config.pass
 	}).then(() => {
-		self.status(self.STATE_OK);
+		self.status(self.STATUS_OK);
 		debug('Success! Connected.');
 		self.getStreamStatus();
 		self.updateScenes();
 	}).catch(err => {
-		self.status(self.STATE_ERROR,err);
+		self.status(self.STATUS_ERROR, err);
 	});
 
-	self.obs.on('TransitionBegin', function(data) {
+	self.obs.on('error', err => {
+		debug('Error received: ' + err);
+		self.stats(self.STATUS_ERROR, err);
 	});
 
 	self.obs.on('SwitchScenes', function(data) {
 		self.states['scene_active'] = data['scene-name'];
 		self.setVariable('scene_active', data['scene-name']);
+		self.checkFeedbacks('scene_active');
+	});
+
+	self.obs.on('PreviewSceneChanged', function(data) {
+		self.states['scene_preview'] = data['scene-name'];
+		self.setVariable('scene_preview', data['scene-name']);
 		self.checkFeedbacks('scene_active');
 	});
 
@@ -76,7 +83,7 @@ instance.prototype.init = function() {
 		self.process_stream_vars(data);
 	});
 
-	self.obs.on('RecordingStarted', function(data) {
+	self.obs.on('RecordingStarted', function() {
 		self.setVariable('recording', true);
 		self.states['recording'] = true;
 		self.checkFeedbacks('recording');
@@ -94,7 +101,6 @@ instance.prototype.init = function() {
 };
 
 instance.prototype.process_stream_vars = function(data) {
-
 	var self = this;
 
 	for (var s in data) {
@@ -105,7 +111,7 @@ instance.prototype.process_stream_vars = function(data) {
 	self.setVariable('fps', data['fps']);
 	self.setVariable('kbits_per_sec', data['kbits-per-sec']);
 	self.setVariable('num_dropped_frames', data['num-dropped-frames']);
-	self.setVariable('num_total_frames', data['num-dropped-frames']);
+	self.setVariable('num_total_frames', data['num-total-frames']);
 	self.setVariable('preview_only', data['preview-only']);
 	self.setVariable('recording', data['recording']);
 	self.setVariable('strain', data['strain']);
@@ -118,7 +124,7 @@ instance.prototype.process_stream_vars = function(data) {
 };
 
 // Return config fields for web config
-instance.prototype.config_fields = function () {
+instance.prototype.config_fields = function() {
 	var self = this;
 	return [
 		{
@@ -143,21 +149,21 @@ instance.prototype.config_fields = function () {
 			width: 4,
 		}
 	]
-	
+
 };
 
 instance.prototype.getStreamStatus = function() {
 	var self = this;
-	
-	self.obs.getStreamingStatus().then(data => {
+
+	self.obs.send('GetStreamingStatus').then(data => {
 		self.setVariable('recording', data['recording']);
 		self.states['recording'] = data['recording'];
 		self.checkFeedbacks('recording');
-		
+
 		self.setVariable('streaming', data['streaming']);
 		self.states['streaming'] = data['streaming'];
 		self.checkFeedbacks('streaming');
-		
+
 		self.actions();
 		self.init_presets();
 		self.init_feedbacks();
@@ -168,9 +174,9 @@ instance.prototype.getStreamStatus = function() {
 instance.prototype.updateScenes = function() {
 	var self = this;
 
-	self.obs.GetTransitionList().then(data => {
+	self.obs.send('GetTransitionList').then(data => {
 		self.transitions = {};
-		self.active_transition = data.current-transition;
+		self.states['current_transition'] = data['current-transition'];
 		for (var s in data.transitions) {
 			var transition = data.transitions[s];
 			self.transitions[transition.name] = transition;
@@ -181,9 +187,9 @@ instance.prototype.updateScenes = function() {
 		self.init_variables();
 	});
 
-	self.obs.getSceneList().then(data => {
+	self.obs.send('GetSceneList').then(data => {
 		self.scenes = {};
-		self.active_scene = '';
+		self.states['scene_active'] = data['current-scene'];
 		for (var s in data.scenes) {
 			var scene = data.scenes[s];
 			self.scenes[scene.name] = scene;
@@ -193,7 +199,6 @@ instance.prototype.updateScenes = function() {
 		self.init_feedbacks();
 		self.init_variables();
 	});
-
 };
 
 // When module gets deleted
@@ -203,54 +208,88 @@ instance.prototype.destroy = function() {
 	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
-	self.active_scene = '';
 	self.obs.disconnect();
 	debug('destroy');
 };
 
 instance.prototype.actions = function() {
 	var self = this;
-	
+
 	self.scenelist = [];
 	self.transitionlist = [];
-	
+
+	var s;
 	if (self.scenes !== undefined) {
-		for (var s in self.scenes) {
+		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
 		}
 	}
 
 	if (self.transitions !== undefined) {
-		for (var s in self.transitions) {
+		for (s in self.transitions) {
 			self.transitionlist.push({ id: s, label: s });
 		}
 	}
 
-	self.system.emit('instance_actions', self.id, {
-
-		 'set_scene': {
-				label: 'Change scene',
-				options: [
-					{
-						type: 'dropdown',
-						label: 'Scene',
-						id: 'scene',
-						default: '0',
-						choices: self.scenelist
-					}
-				]
+	self.setActions({
+		'set_scene': {
+			label: 'Change scene',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene',
+					id: 'scene',
+					default: '0',
+					choices: self.scenelist
+				}
+			]
+		},
+		'preview_scene': {
+			label: 'Preview scene',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene',
+					id: 'scene',
+					default: '0',
+					choices: self.scenelist
+				}
+			]
+		},
+		'do_transition': {
+			label: 'Transition preview to program',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Transition to use',
+					id: 'transition',
+					default: null,
+					choices: self.transitionlist,
+					required: false
+				},
+				{
+					type: 'number',
+					label: 'Transition time (in ms)',
+					id: 'transition_time',
+					default: null,
+					min: 0,
+					max: 60 * 1000, //max is required by api
+					range: false,
+					required: false
+				}
+			]
 		},
 		'set_transition': {
 			label: 'Change transition type',
 			options: [
-					{
+				{
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
 					default: '0',
 					choices: self.transitionlist
-					}
-				]
+				}
+			]
 		},
 		'StartStopStreaming': {
 			label: 'Start and Stop Streaming'
@@ -276,35 +315,53 @@ instance.prototype.actions = function() {
 				}
 			]
 		}
-
 	});
 };
 
 instance.prototype.action = function(action) {
 	var self = this;
 
-	switch(action.action) {
+	switch (action.action) {
 		case 'set_scene':
-			self.obs.setCurrentScene({
+			self.obs.send('SetCurrentScene', {
 				'scene-name': action.options.scene
 			});
 			break;
+		case 'preview_scene':
+			self.obs.send('SetPreviewScene', {
+				'scene-name': action.options.scene
+			});
+			break;
+		case 'do_transition':
+			var options = {};
+			if (action.options && action.options.transition) {
+				options['with-transition'] = {
+					name: action.options.transition
+				};
+
+				if (action.options.transition_time > 0) {
+					options['with-transition']['duration'] = action.options.transition_time;
+				}
+			}
+
+			self.obs.send('TransitionToProgram', options);
+			break;
 		case 'set_source_mute':
-			self.obs.setMute({
+			self.obs.send('SetMute', {
 				'source': action.options.source,
 				'mute': (action.options.mute == 'true' ? true : false)
 			});
 			break;
 		case 'set_transition':
-			self.obs.setCurrentTransition({
+			self.obs.send('SetCurrentTransition', {
 				'transition-name': action.options.transitions
 			});
 			break;
 		case 'StartStopStreaming':
-			self.obs.StartStopStreaming();
+			self.obs.send('StartStopStreaming');
 			break;
 		case 'StartStopRecording':
-			self.obs.StartStopRecording();
+			self.obs.send('StartStopRecording');
 			break;
 	}
 };
@@ -322,13 +379,13 @@ instance.prototype.init_feedbacks = function() {
 				type: 'colorpicker',
 				label: 'Foreground color',
 				id: 'fg',
-				default: self.rgb(255,255,255)
+				default: self.rgb(255, 255, 255)
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(100,255,0)
+				default: self.rgb(100, 255, 0)
 			},
 		]
 	};
@@ -341,40 +398,52 @@ instance.prototype.init_feedbacks = function() {
 				type: 'colorpicker',
 				label: 'Foreground color',
 				id: 'fg',
-				default: self.rgb(255,255,255)
+				default: self.rgb(255, 255, 255)
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(100,255,0)
+				default: self.rgb(100, 255, 0)
 			},
 		]
 	};
 
 
 	feedbacks['scene_active'] = {
-		label: 'Change colors from active scene',
-		description: 'If the scene specified is active in OBS, change colors of the bank',
+		label: 'Change colors from active/previewed scene',
+		description: 'If the scene specified is active or previewed in OBS, change colors of the bank',
 		options: [
 			{
 				type: 'colorpicker',
-				label: 'Foreground color',
+				label: 'Foreground color (program)',
 				id: 'fg',
-				default: self.rgb(255,255,255)
+				default: self.rgb(255, 255, 255)
 			},
 			{
 				type: 'colorpicker',
-				label: 'Background color',
+				label: 'Background color (program)',
 				id: 'bg',
-				default: self.rgb(0,255,0)
+				default: self.rgb(255, 0, 0)
 			},
 			{
-				 type: 'dropdown',
-				 label: 'Scene',
-				 id: 'scene',
-				 default: '',
-				 choices: self.scenelist
+				type: 'colorpicker',
+				label: 'Foreground color (preview)',
+				id: 'fg_preview',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (preview)',
+				id: 'bg_preview',
+				default: self.rgb(0, 200, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: '',
+				choices: self.scenelist
 			}
 		]
 	};
@@ -382,21 +451,25 @@ instance.prototype.init_feedbacks = function() {
 	self.setFeedbackDefinitions(feedbacks);
 };
 
-instance.prototype.feedback = function(feedback, bank) {
+instance.prototype.feedback = function(feedback) {
 	var self = this;
-	if (feedback.type == 'scene_active') {
-		if (self.states['scene_active'] == feedback.options.scene) {
+
+	if (feedback.type === 'scene_active') {
+		if (self.states['scene_active'] === feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		} else if (self.states['scene_preview'] === feedback.options.scene && typeof feedback.options.fg_preview === 'number') {
+			//FIXME fg_preview/bg_preview is undefined when updating from an older version of the module
+			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview };
 		}
 	}
 
-	if (feedback.type == 'streaming') {
+	if (feedback.type === 'streaming') {
 		if (self.states['streaming'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
 
-	if (feedback.type == 'recording') {
+	if (feedback.type === 'recording') {
 		if (self.states['recording'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
@@ -405,29 +478,31 @@ instance.prototype.feedback = function(feedback, bank) {
 	return {};
 };
 
-instance.prototype.init_presets = function () {
+instance.prototype.init_presets = function() {
 	var self = this;
 	var presets = [];
 
 	for (var s in self.scenes) {
 		var scene = self.scenes[s];
 
-		presets.push({
-			category: 'Scenes',
+		let baseObj = {
+			category: 'Scene to program',
 			label: scene.name,
 			bank: {
 				style: 'text',
 				text: scene.name,
 				size: 'auto',
-				color: self.rgb(255,255,255),
+				color: self.rgb(255, 255, 255),
 				bgcolor: 0
 			},
 			feedbacks: [
 				{
 					type: 'scene_active',
 					options: {
-						bg: self.rgb(255,0,0),
-						fg: self.rgb(255,255,255),
+						bg: self.rgb(255, 0, 0),
+						fg: self.rgb(255, 255, 255),
+						bg_preview: self.rgb(0, 200, 0),
+						fg_preview: self.rgb(255, 255, 255),
 						scene: scene.name,
 					}
 				}
@@ -440,8 +515,40 @@ instance.prototype.init_presets = function () {
 					}
 				}
 			]
-		});
+		};
+
+		presets.push(baseObj);
+
+		let toPreview = {};
+		presets.push(Object.assign(toPreview, baseObj, {
+			category: 'Scene to preview',
+			actions: [
+				{
+					action: 'preview_scene',
+					options: {
+						scene: scene.name
+					}
+				}
+			]
+		}));
 	}
+
+	presets.push({
+		category: 'Transitions',
+		label: 'Send previewed scene to program',
+		bank: {
+			style: 'text',
+			text: 'AUTO',
+			size: 'auto',
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0
+		},
+		actions: [
+			{
+				action: 'do_transition'
+			}
+		]
+	});
 
 	// Preset for Start Streaming button with colors indicating streaming status
 	presets.push({
@@ -451,15 +558,15 @@ instance.prototype.init_presets = function () {
 			style: 'text',
 			text: 'OBS STREAM',
 			size: 'auto',
-			color: self.rgb(255,255,255),
+			color: self.rgb(255, 255, 255),
 			bgcolor: 0
 		},
 		feedbacks: [
 			{
 				type: 'streaming',
 				options: {
-					bg: self.rgb(51,204,51),
-					fg: self.rgb(255,255,255),
+					bg: self.rgb(51, 204, 51),
+					fg: self.rgb(255, 255, 255),
 				}
 			}
 		],
@@ -478,15 +585,15 @@ instance.prototype.init_presets = function () {
 			style: 'text',
 			text: 'OBS RECORD',
 			size: 'auto',
-			color: self.rgb(255,255,255),
+			color: self.rgb(255, 255, 255),
 			bgcolor: 0
 		},
 		feedbacks: [
 			{
 				type: 'recording',
 				options: {
-					bg: self.rgb(51,204,51),
-					fg: self.rgb(255,255,255),
+					bg: self.rgb(51, 204, 51),
+					fg: self.rgb(255, 255, 255),
 				}
 			}
 		],

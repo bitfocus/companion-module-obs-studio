@@ -16,6 +16,6 @@
 	"author": "William Viker <william@bitfocus.io>",
 	"license": "MIT",
 	"dependencies": {
-		"obs-websocket-js": "^1.2.0"
+		"obs-websocket-js": "^3.1.0"
 	}
 }
