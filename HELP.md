@@ -9,6 +9,8 @@ This module will allow you to control OBS Studio using a websocket connection.
 
 ### Available actions
 * Change Scene (pulls list of available scenes from OBS)
+* Change Previewed Scene (studio mode)
+* Execute transition (studio mode)
 * Change Transition Type
 * Start/Stop Streaming
 * Start/Stop Recording
