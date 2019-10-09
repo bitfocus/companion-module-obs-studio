@@ -314,6 +314,9 @@ instance.prototype.actions = function() {
 					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
 				}
 			]
+		},
+		'reconnect' : {
+			label: 'reconnect to OBS'
 		}
 	});
 };
@@ -362,6 +365,13 @@ instance.prototype.action = function(action) {
 			break;
 		case 'StartStopRecording':
 			self.obs.send('StartStopRecording');
+			break;
+		case 're-connect':
+			var self = this;
+			self.config = config;
+			debug('reconnecting, destroying and reiniting..');
+			self.destroy();
+			self.init();
 			break;
 	}
 };
