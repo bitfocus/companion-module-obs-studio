@@ -366,7 +366,7 @@ instance.prototype.action = function(action) {
 		case 'StartStopRecording':
 			self.obs.send('StartStopRecording');
 			break;
-		case 're-connect':
+		case 'reconnect':
 			var self = this;
 			self.config = config;
 			debug('reconnecting, destroying and reiniting..');
