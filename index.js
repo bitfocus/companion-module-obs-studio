@@ -1,5 +1,4 @@
 var instance_skel = require('../../instance_skel');
-var tcp = require("../../tcp");
 const OBSWebSocket = require('obs-websocket-js');
 var debug;
 var log;
@@ -18,7 +17,7 @@ function instance(system, id, config) {
 instance.prototype.updateConfig = function(config) {
 	var self = this;
 	self.config = config;
-	self.log('debug','updateConfig() destroying and reiniting..');
+	debug('updateConfig() destroying and reiniting..');
 	self.destroy();
 	self.init();
 };
@@ -26,104 +25,74 @@ instance.prototype.updateConfig = function(config) {
 instance.prototype.init = function() {
 	var self = this;
 
-	self.status(self.STATUS_WARN, "Connecting");
+	self.status(self.STATUS_ERROR, "Connecting");
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
 		self.obs = undefined;
 	}
+	self.obs = new OBSWebSocket();
+	self.states = {};
+	self.scenes = {};
+	self.transitions = {};
 
-	// Connecting on init not neccesary for OBSWebSocket. But during init try to tcp connect
-	// to get the status of the module right and automatically try reconnecting. Which is 
-	// implemented in ../../tcp by Companion core developers. 
-	self.tcp = new tcp((self.config.host !== '' ? self.config.host : '127.0.0.1'), (self.config.port !== '' ? self.config.port : '4444'));
-
-	self.tcp.on('status_change', function (status, message) {
-		self.status(status, message);
+	self.obs.connect({
+		address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
+		password: self.config.pass
+	}).then(() => {
+		self.status(self.STATUS_OK);
+		debug('Success! Connected.');
+		self.getStreamStatus();
+		self.updateScenes();
+	}).catch(err => {
+		self.status(self.STATUS_ERROR, err);
 	});
 
-	self.tcp.on('error', function () {
-		// Ignore
+	self.obs.on('error', err => {
+		debug('Error received: ' + err);
+		self.stats(self.STATUS_ERROR, err);
 	});
-	self.tcp.on('connect', function () {
-		// disconnect immediately because further comm takes place via OBSWebSocket and not
-		// via this tcp sockets.
-		self.tcp.destroy();
-		delete self.tcp;
 
-		// original init procedure continuing. Use OBSWebSocket to make the real connection.
-		self.obs = new OBSWebSocket();
-		self.states = {};
-		self.scenes = {};
-		self.transitions = {};
-	
-		self.obs.connect({
-			address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
-			password: self.config.pass
-		}).then(() => {
-			self.status(self.STATUS_OK);
-			self.log('debug','Success! Connected.');
-			self.getStreamStatus();
-			self.updateScenes();
-		}).catch(err => {
-			self.status(self.STATUS_ERROR, err);
-		});
-	
-		self.obs.on('error', err => {
-			self.log('debug','Error received: ' + err);
-			self.stats(self.STATUS_ERROR, err);
-		});
-	
-		self.obs.on('SwitchScenes', function(data) {
-			self.states['scene_active'] = data['scene-name'];
-			self.setVariable('scene_active', data['scene-name']);
-			self.checkFeedbacks('scene_active');
-		});
-	
-		self.obs.on('PreviewSceneChanged', function(data) {
-			self.states['scene_preview'] = data['scene-name'];
-			self.setVariable('scene_preview', data['scene-name']);
-			self.checkFeedbacks('scene_active');
-		});
-	
-		self.obs.on('ScenesChanged', function() {
-			self.updateScenes();
-		});
-	
-		self.obs.on('StreamStarted', function(data) {
-			self.process_stream_vars(data);
-			self.checkFeedbacks('streaming');
-		});
-	
-		self.obs.on('StreamStopped', function() {
-			self.setVariable('streaming', false);
-			self.states['streaming'] = false;
-			self.checkFeedbacks('streaming');
-		});
-	
-		self.obs.on('StreamStatus', function(data) {
-			self.process_stream_vars(data);
-		});
-	
-		self.obs.on('RecordingStarted', function() {
-			self.setVariable('recording', true);
-			self.states['recording'] = true;
-			self.checkFeedbacks('recording');
-		});
-	
-		self.obs.on('RecordingStopped', function() {
-			self.setVariable('recording', false);
-			self.states['recording'] = false;
-			self.checkFeedbacks('recording');
-		});
-		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if ( data['item-visible'] == true) {
-				self.states['item_visible'] = data['item-name'];
-			} else {
-				self.states['item_visible'] = 'xxxxx';
-			}
-			self.checkFeedbacks('scene_item_active');
-		});
-	
+	self.obs.on('SwitchScenes', function(data) {
+		self.states['scene_active'] = data['scene-name'];
+		self.setVariable('scene_active', data['scene-name']);
+		self.checkFeedbacks('scene_active');
+	});
+
+	self.obs.on('PreviewSceneChanged', function(data) {
+		self.states['scene_preview'] = data['scene-name'];
+		self.setVariable('scene_preview', data['scene-name']);
+		self.checkFeedbacks('scene_active');
+	});
+
+	self.obs.on('ScenesChanged', function() {
+		self.updateScenes();
+	});
+
+	self.obs.on('StreamStarted', function(data) {
+		self.process_stream_vars(data);
+		self.checkFeedbacks('streaming');
+	});
+
+	self.obs.on('StreamStopped', function() {
+		self.setVariable('streaming', false);
+		self.states['streaming'] = false;
+		self.checkFeedbacks('streaming');
+	});
+
+	self.obs.on('StreamStatus', function(data) {
+		self.process_stream_vars(data);
+	});
+
+	self.obs.on('RecordingStarted', function() {
+		self.setVariable('recording', true);
+		self.states['recording'] = true;
+		self.checkFeedbacks('recording');
+	});
+
+	self.obs.on('RecordingStopped', function() {
+		self.setVariable('recording', false);
+		self.states['recording'] = false;
+		self.checkFeedbacks('recording');
 	});
 
 	debug = self.debug;
@@ -235,14 +204,12 @@ instance.prototype.updateScenes = function() {
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
-	self.log('debug','destroy');
 	self.scenes = [];
 	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
-	if (self.obs !== undefined) {
-		self.obs.disconnect();
-	}
+	self.obs.disconnect();
+	debug('destroy');
 };
 
 instance.prototype.actions = function() {
@@ -348,24 +315,6 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
-		'toggle_scene_item' : {
-			label: 'Toggle visibility scene item',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Source',
-					id: 'source',
-					default: '',
-				},
-				{
-					type: 'dropdown',
-					label: 'Visible',
-					id: 'visible',
-					default: 'true',
-					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
-				}
-			]
-		},		
 		'reconnect' : {
 			label: 'reconnect to OBS'
 		}
@@ -374,28 +323,15 @@ instance.prototype.actions = function() {
 
 instance.prototype.action = function(action) {
 	var self = this;
-	var handle;
 
-	if (action.action == 'reconnect') {
-		self.log('debug','reconnecting, destroying and reiniting..');
-		self.destroy();
-		self.init();
-		return;
-	}
-
-	if (self.obs == null || self.obs.OBSWebSocket) {
-		self.log('warn', 'OBS action not possible, connection lost');
-		return;
-	}
-	
 	switch (action.action) {
 		case 'set_scene':
-			handle = self.obs.send('SetCurrentScene', {
+			self.obs.send('SetCurrentScene', {
 				'scene-name': action.options.scene
-			})
+			});
 			break;
 		case 'preview_scene':
-			handle = self.obs.send('SetPreviewScene', {
+			self.obs.send('SetPreviewScene', {
 				'scene-name': action.options.scene
 			});
 			break;
@@ -411,42 +347,33 @@ instance.prototype.action = function(action) {
 				}
 			}
 
-			handle = self.obs.send('TransitionToProgram', options);
+			self.obs.send('TransitionToProgram', options);
 			break;
 		case 'set_source_mute':
-			handle = self.obs.send('SetMute', {
+			self.obs.send('SetMute', {
 				'source': action.options.source,
 				'mute': (action.options.mute == 'true' ? true : false)
 			});
 			break;
 		case 'set_transition':
-			handle = self.obs.send('SetCurrentTransition', {
+			self.obs.send('SetCurrentTransition', {
 				'transition-name': action.options.transitions
 			});
 			break;
 		case 'StartStopStreaming':
-			handle = self.obs.send('StartStopStreaming');
+			self.obs.send('StartStopStreaming');
 			break;
 		case 'StartStopRecording':
-			handle = self.obs.send('StartStopRecording');
+			self.obs.send('StartStopRecording');
 			break;
-		case 'toggle_scene_item':
-			handle = self.obs.send('SetSceneItemProperties', {
-				'item': action.options.source,
-				'visible': (action.options.visible == 'true' ? true : false)
-			});
-			break;
-	}
-
-	handle.catch(error => { 
-		if (error.code == "NOT_CONNECTED") {
-			self.log('warn', 'Send to OBS failed. Re-start OBS manualy. Starting re-init');;
+		case 'reconnect':
+			var self = this;
+			self.config = config;
+			debug('reconnecting, destroying and reiniting..');
 			self.destroy();
 			self.init();
-		} else {
-			self.log('debug', error.error);
-		} 
-	});
+			break;
+	}
 };
 
 instance.prototype.init_feedbacks = function() {
@@ -492,6 +419,7 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
+
 	feedbacks['scene_active'] = {
 		label: 'Change colors from active/previewed scene',
 		description: 'If the scene specified is active or previewed in OBS, change colors of the bank',
@@ -530,40 +458,11 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
-	feedbacks['scene_item_active'] = {
-		label: 'Change colors when source visible',
-		description: 'If a source become (in)visible in current scene, change color',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255)
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(255, 0, 0)
-			},
-			{
-				type: 'textinput',
-				label: 'Source name',
-				id: 'source',
-				default: ''
-			}
-		]
-	};
-
 	self.setFeedbackDefinitions(feedbacks);
 };
 
 instance.prototype.feedback = function(feedback) {
 	var self = this;
-
-	if (self.states === undefined) {
-		return;
-	}
 
 	if (feedback.type === 'scene_active') {
 		if (self.states['scene_active'] === feedback.options.scene) {
@@ -582,11 +481,6 @@ instance.prototype.feedback = function(feedback) {
 
 	if (feedback.type === 'recording') {
 		if (self.states['recording'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
-		}
-	}
-	if (feedback.type === 'scene_item_active')  {
-		if (self.states['item_visible'] === feedback.options.source) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
