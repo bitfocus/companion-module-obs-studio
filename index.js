@@ -61,7 +61,7 @@ instance.prototype.init = function() {
 			password: self.config.pass
 		}).then(() => {
 			self.status(self.STATUS_OK);
-			self.log('debug','Success! Connected.');
+			self.log('info','Success! Connected to OBS.');
 			self.getStreamStatus();
 			self.updateScenes();
 		}).catch(err => {
