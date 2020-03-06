@@ -245,6 +245,9 @@ instance.prototype.destroy = function() {
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
 	}
+	if (self.tcp !== undefined) {
+		self.tcp.destroy();
+	}
 };
 
 instance.prototype.actions = function() {
