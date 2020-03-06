@@ -742,6 +742,8 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
 	variables.push({ name: 'total_stream_time', label: 'Total streaming time' });
+	variables.push({ name: 'scene_active', label: 'Current active scene' });
+	variables.push({ name: 'scene_preview', label: 'Current preview scene' });
 
 	self.setVariableDefinitions(variables);
 };
