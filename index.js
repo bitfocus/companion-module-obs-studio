@@ -61,7 +61,7 @@ instance.prototype.init = function() {
 			password: self.config.pass
 		}).then(() => {
 			self.status(self.STATUS_OK);
-			self.log('debug','Success! Connected.');
+			self.log('info','Success! Connected to OBS.');
 			self.getStreamStatus();
 			self.updateScenes();
 		}).catch(err => {
@@ -70,7 +70,14 @@ instance.prototype.init = function() {
 	
 		self.obs.on('error', err => {
 			self.log('debug','Error received: ' + err);
-			self.stats(self.STATUS_ERROR, err);
+			self.status(self.STATUS_ERROR, err);
+		});
+
+		self.obs.on('ConnectionClosed', function() {
+			self.log('error','Connection lost to OBS.');
+			self.status(self.STATUS_ERROR);
+			self.destroy();
+			self.init();
 		});
 	
 		self.obs.on('SwitchScenes', function(data) {
@@ -244,6 +251,9 @@ instance.prototype.destroy = function() {
 	self.scenelist = [];
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
+	}
+	if (self.tcp !== undefined) {
+		self.tcp.destroy();
 	}
 };
 
@@ -742,6 +752,8 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
 	variables.push({ name: 'total_stream_time', label: 'Total streaming time' });
+	variables.push({ name: 'scene_active', label: 'Current active scene' });
+	variables.push({ name: 'scene_preview', label: 'Current preview scene' });
 
 	self.setVariableDefinitions(variables);
 };
