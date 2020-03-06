@@ -33,8 +33,8 @@ instance.prototype.init = function() {
 	}
 
 	// Connecting on init not neccesary for OBSWebSocket. But during init try to tcp connect
-	// to get the status of the module right and automatically try reconnecting. Which is 
-	// implemented in ../../tcp by Companion core developers. 
+	// to get the status of the module right and automatically try reconnecting. Which is
+	// implemented in ../../tcp by Companion core developers.
 	self.tcp = new tcp((self.config.host !== '' ? self.config.host : '127.0.0.1'), (self.config.port !== '' ? self.config.port : '4444'));
 
 	self.tcp.on('status_change', function (status, message) {
@@ -55,7 +55,7 @@ instance.prototype.init = function() {
 		self.states = {};
 		self.scenes = {};
 		self.transitions = {};
-	
+
 		self.obs.connect({
 			address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
 			password: self.config.pass
@@ -67,7 +67,7 @@ instance.prototype.init = function() {
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
-	
+
 		self.obs.on('error', err => {
 			self.log('debug','Error received: ' + err);
 			self.status(self.STATUS_ERROR, err);
@@ -79,44 +79,44 @@ instance.prototype.init = function() {
 			self.destroy();
 			self.init();
 		});
-	
+
 		self.obs.on('SwitchScenes', function(data) {
 			self.states['scene_active'] = data['scene-name'];
 			self.setVariable('scene_active', data['scene-name']);
 			self.checkFeedbacks('scene_active');
 		});
-	
+
 		self.obs.on('PreviewSceneChanged', function(data) {
 			self.states['scene_preview'] = data['scene-name'];
 			self.setVariable('scene_preview', data['scene-name']);
 			self.checkFeedbacks('scene_active');
 		});
-	
+
 		self.obs.on('ScenesChanged', function() {
 			self.updateScenes();
 		});
-	
+
 		self.obs.on('StreamStarted', function(data) {
 			self.process_stream_vars(data);
 			self.checkFeedbacks('streaming');
 		});
-	
+
 		self.obs.on('StreamStopped', function() {
 			self.setVariable('streaming', false);
 			self.states['streaming'] = false;
 			self.checkFeedbacks('streaming');
 		});
-	
+
 		self.obs.on('StreamStatus', function(data) {
 			self.process_stream_vars(data);
 		});
-	
+
 		self.obs.on('RecordingStarted', function() {
 			self.setVariable('recording', true);
 			self.states['recording'] = true;
 			self.checkFeedbacks('recording');
 		});
-	
+
 		self.obs.on('RecordingStopped', function() {
 			self.setVariable('recording', false);
 			self.states['recording'] = false;
@@ -132,7 +132,7 @@ instance.prototype.init = function() {
 			}
 			self.checkFeedbacks('scene_item_active');
 		});
-	
+
 	});
 
 	debug = self.debug;
@@ -377,7 +377,7 @@ instance.prototype.actions = function() {
 					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
 				}
 			]
-		},		
+		},
 		'reconnect' : {
 			label: 'reconnect to OBS'
 		}
@@ -399,7 +399,7 @@ instance.prototype.action = function(action) {
 		self.log('warn', 'OBS action not possible, connection lost');
 		return;
 	}
-	
+
 	switch (action.action) {
 		case 'set_scene':
 			handle = self.obs.send('SetCurrentScene', {
@@ -450,14 +450,14 @@ instance.prototype.action = function(action) {
 			break;
 	}
 
-	handle.catch(error => { 
+	handle.catch(error => {
 		if (error.code == "NOT_CONNECTED") {
-			self.log('warn', 'Send to OBS failed. Re-start OBS manualy. Starting re-init');;
+			self.log('warn', 'Send to OBS failed. Re-start OBS manualy. Starting re-init');
 			self.destroy();
 			self.init();
 		} else {
 			self.log('debug', error.error);
-		} 
+		}
 	});
 };
 
