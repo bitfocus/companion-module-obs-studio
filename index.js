@@ -70,7 +70,7 @@ instance.prototype.init = function() {
 	
 		self.obs.on('error', err => {
 			self.log('debug','Error received: ' + err);
-			self.stats(self.STATUS_ERROR, err);
+			self.status(self.STATUS_ERROR, err);
 		});
 	
 		self.obs.on('SwitchScenes', function(data) {
