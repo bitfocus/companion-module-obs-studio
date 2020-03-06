@@ -72,6 +72,13 @@ instance.prototype.init = function() {
 			self.log('debug','Error received: ' + err);
 			self.status(self.STATUS_ERROR, err);
 		});
+
+		self.obs.on('ConnectionClosed', function() {
+			self.log('error','Connection lost to OBS.');
+			self.status(self.STATUS_ERROR);
+			self.destroy();
+			self.init();
+		});
 	
 		self.obs.on('SwitchScenes', function(data) {
 			self.states['scene_active'] = data['scene-name'];
