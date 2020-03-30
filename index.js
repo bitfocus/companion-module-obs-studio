@@ -365,6 +365,11 @@ instance.prototype.actions = function() {
 			options: [
 				{
 					type: 'textinput',
+					label: 'Scene (optional, defaults to current scene)',
+					id: 'scene'
+				},
+				{
+					type: 'textinput',
 					label: 'Source',
 					id: 'source',
 					default: '',
@@ -445,7 +450,8 @@ instance.prototype.action = function(action) {
 		case 'toggle_scene_item':
 			handle = self.obs.send('SetSceneItemProperties', {
 				'item': action.options.source,
-				'visible': (action.options.visible == 'true' ? true : false)
+				'visible': (action.options.visible == 'true' ? true : false),
+				'scene-name': action.options.scene && action.options.scene != "" ? action.options.scene : null
 			});
 			break;
 	}
