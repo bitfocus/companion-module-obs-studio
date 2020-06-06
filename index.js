@@ -365,6 +365,11 @@ instance.prototype.actions = function() {
 			options: [
 				{
 					type: 'textinput',
+					label: 'Scene (optional, defaults to current scene)',
+					id: 'scene'
+				},
+				{
+					type: 'textinput',
 					label: 'Source',
 					id: 'source',
 					default: '',
@@ -380,6 +385,40 @@ instance.prototype.actions = function() {
 		},
 		'reconnect' : {
 			label: 'reconnect to OBS'
+		},
+		'set-freetype-text': {
+			label: 'Set Source Text (FreeType 2)',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Source Name',
+					id: 'source',
+					required: true
+				},
+				{
+					type: 'textinput',
+					label: 'Text',
+					id: 'text',
+					required: true
+				}
+			]
+		},
+		'set-gdi-text': {
+			label: 'Set Source Text (GDI+)',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Source Name',
+					id: 'source',
+					required: true
+				},
+				{
+					type: 'textinput',
+					label: 'Text',
+					id: 'text',
+					required: true
+				}
+			]
 		}
 	});
 };
@@ -445,14 +484,27 @@ instance.prototype.action = function(action) {
 		case 'toggle_scene_item':
 			handle = self.obs.send('SetSceneItemProperties', {
 				'item': action.options.source,
-				'visible': (action.options.visible == 'true' ? true : false)
+				'visible': (action.options.visible == 'true' ? true : false),
+				'scene-name': action.options.scene && action.options.scene != "" ? action.options.scene : null
 			});
+			break;
+		case 'set-freetype-text':
+			handle = self.obs.send('SetTextFreetype2Properties', {
+				'source': action.options.source,
+				'text': action.options.text
+			})
+			break;
+		case 'set-gdi-text':
+			handle = self.obs.send('SetTextGDIPlusProperties', {
+				'source': action.options.source,
+				'text': action.options.text
+			})
 			break;
 	}
 
 	handle.catch(error => {
 		if (error.code == "NOT_CONNECTED") {
-			self.log('warn', 'Send to OBS failed. Re-start OBS manualy. Starting re-init');
+			self.log('warn', 'Send to OBS failed. Re-start OBS manually. Starting re-init');
 			self.destroy();
 			self.init();
 		} else {

@@ -15,3 +15,4 @@ This module will allow you to control OBS Studio using a websocket connection.
 * Start/Stop Streaming
 * Start/Stop Recording
 * Set Source Mute (Source: Name of Source or audio device in Mixer. Mute: True to mute, False to unmute)
+* Set Source Text (FreeType 2 and GDI+)
