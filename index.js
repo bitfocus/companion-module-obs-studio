@@ -124,10 +124,10 @@ instance.prototype.init = function() {
 		});
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
 			if ( data['item-visible'] == true) {
-				self.states['item_visible'] = data['item-name'];
+				self.states[data['item-name']] = true;
 				//self.setVariable('item_visible', data['item-name']);
 			} else {
-				self.states['item_visible'] = 'xxxxx';
+				self.states[data['item-name']] = false;
 				//self.setVariable('item_visible', 'xxxxx');
 			}
 			self.checkFeedbacks('scene_item_active');
@@ -651,7 +651,7 @@ instance.prototype.feedback = function(feedback) {
 		}
 	}
 	if (feedback.type === 'scene_item_active')  {
-		if (self.states['item_visible'] === feedback.options.source) {
+		if ((self.states[feedback.options.source] === true)) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
