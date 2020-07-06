@@ -98,6 +98,10 @@ instance.prototype.init = function() {
 			self.updateScenes();
 		});
 
+		self.obs.on('SceneItemAdded', function() {
+			self.updateSources();
+		});
+
 		self.obs.on('StreamStarted', function(data) {
 			self.process_stream_vars(data);
 			self.checkFeedbacks('streaming');
@@ -246,9 +250,16 @@ instance.prototype.updateScenes = function() {
 instance.prototype.updateSources = function() {
 	var self = this;
 	self.obs.send('GetSourcesList').then(data => {
+		self.sources = {};
+		for (var s in data.sources) {
+			var source = data.sources[s];
+			self.sources[source.name] = source;
+		}
+		self.actions();
+		self.init_feedbacks();
 		data.sources.forEach(source => {
 			self.states[source.name] = false;
-        });
+		});
 	});
 	self.obs.send('GetCurrentScene').then(data => {
 		data.sources.forEach(source => {
@@ -272,6 +283,7 @@ instance.prototype.destroy = function() {
 	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
+	self.sourcelist = [];
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
 	}
@@ -284,12 +296,18 @@ instance.prototype.actions = function() {
 	var self = this;
 
 	self.scenelist = [];
+	self.sourcelist = [];
 	self.transitionlist = [];
 
 	var s;
 	if (self.scenes !== undefined) {
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
+		}
+	}
+	if (self.sources !== undefined) {
+		for (s in self.sources) {
+			self.sourcelist.push({ id: s, label: s });
 		}
 	}
 
@@ -635,10 +653,11 @@ instance.prototype.init_feedbacks = function() {
 				default: self.rgb(255, 0, 0)
 			},
 			{
-				type: 'textinput',
+				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: ''
+				default: self.sourcelist[0],
+				choices: self.sourcelist
 			}
 		]
 	};
