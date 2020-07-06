@@ -64,6 +64,7 @@ instance.prototype.init = function() {
 			self.log('info','Success! Connected to OBS.');
 			self.getStreamStatus();
 			self.updateScenes();
+			self.updateSources();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
@@ -84,6 +85,7 @@ instance.prototype.init = function() {
 			self.states['scene_active'] = data['scene-name'];
 			self.setVariable('scene_active', data['scene-name']);
 			self.checkFeedbacks('scene_active');
+			self.updateSources();
 		});
 
 		self.obs.on('PreviewSceneChanged', function(data) {
@@ -238,6 +240,27 @@ instance.prototype.updateScenes = function() {
 		self.init_presets();
 		self.init_feedbacks();
 		self.init_variables();
+	});
+};
+
+instance.prototype.updateSources = function() {
+	var self = this;
+	self.obs.send('GetSourcesList').then(data => {
+		data.sources.forEach(source => {
+			self.states[source.name] = false;
+        });
+	});
+	self.obs.send('GetCurrentScene').then(data => {
+		data.sources.forEach(source => {
+            self.obs.send('GetSceneItemProperties',  { item: source}).then(data => {
+				if ( data['visible'] == true) {
+					self.states[data['name']] = true;
+				} else {
+					self.states[data['name']] = false;
+				}
+				self.checkFeedbacks('scene_item_active');
+			});
+        });
 	});
 };
 
