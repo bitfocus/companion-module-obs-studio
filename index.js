@@ -263,7 +263,7 @@ instance.prototype.updateSources = function() {
 	});
 	self.obs.send('GetCurrentScene').then(data => {
 		data.sources.forEach(source => {
-            self.obs.send('GetSceneItemProperties',  { item: source}).then(data => {
+			self.obs.send('GetSceneItemProperties', { item: source}).then(data => {
 				if ( data['visible'] == true) {
 					self.states[data['name']] = true;
 				} else {
@@ -271,7 +271,7 @@ instance.prototype.updateSources = function() {
 				}
 				self.checkFeedbacks('scene_item_active');
 			});
-        });
+		});
 	});
 };
 
