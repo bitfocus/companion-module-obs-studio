@@ -102,6 +102,10 @@ instance.prototype.init = function() {
 			self.updateSources();
 		});
 
+		self.obs.on('SourceDestroyed', function() {
+			self.updateSources();
+		});
+
 		self.obs.on('StreamStarted', function(data) {
 			self.process_stream_vars(data);
 			self.checkFeedbacks('streaming');
@@ -129,7 +133,7 @@ instance.prototype.init = function() {
 			self.checkFeedbacks('recording');
 		});
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if ( data['item-visible'] == true) {
+			if ((data['item-visible'] == true) && (data['scene-name'] == self.states['scene_active'])) {
 				self.states[data['item-name']] = true;
 				//self.setVariable('item_visible', data['item-name']);
 			} else {
@@ -263,8 +267,8 @@ instance.prototype.updateSources = function() {
 	});
 	self.obs.send('GetCurrentScene').then(data => {
 		data.sources.forEach(source => {
-			self.obs.send('GetSceneItemProperties', { item: source}).then(data => {
-				if ( data['visible'] == true) {
+			self.obs.send('GetSceneItemProperties', {item: source}).then(data => {
+				if (data['visible'] == true) {
 					self.states[data['name']] = true;
 				} else {
 					self.states[data['name']] = false;
@@ -656,7 +660,7 @@ instance.prototype.init_feedbacks = function() {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: self.sourcelist[0],
+				default: '',
 				choices: self.sourcelist
 			}
 		]
