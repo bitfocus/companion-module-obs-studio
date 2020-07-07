@@ -65,6 +65,7 @@ instance.prototype.init = function() {
 			self.getStreamStatus();
 			self.updateScenes();
 			self.updateSources();
+			self.updateInfo();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
@@ -132,17 +133,29 @@ instance.prototype.init = function() {
 			self.states['recording'] = false;
 			self.checkFeedbacks('recording');
 		});
-		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if ((data['item-visible'] == true) && (data['scene-name'] == self.states['scene_active'])) {
-				self.states[data['item-name']] = true;
-				//self.setVariable('item_visible', data['item-name']);
+
+		self.obs.on('StudioModeSwitched', function(data) {
+			if (data['new-state'] == true) {
+				self.states['studio_mode'] = true;
 			} else {
-				self.states[data['item-name']] = false;
-				//self.setVariable('item_visible', 'xxxxx');
+				self.states['studio_mode'] = false;
+			}
+		});
+		
+		self.obs.on('SceneItemVisibilityChanged', function(data) {
+			if (self.states['studio_mode'] == true) { 
+				//Item in preview, no change
+			} else {
+				if ((data['item-visible'] == true) && (data['scene-name'] == self.states['scene_active'])) {
+					self.states[data['item-name']] = true;
+					//self.setVariable('item_visible', data['item-name']);
+				} else {
+					self.states[data['item-name']] = false;
+					//self.setVariable('item_visible', 'xxxxx');
+				}
 			}
 			self.checkFeedbacks('scene_item_active');
 		});
-
 	});
 
 	debug = self.debug;
@@ -265,6 +278,7 @@ instance.prototype.updateSources = function() {
 			self.states[source.name] = false;
 		});
 	});
+
 	self.obs.send('GetCurrentScene').then(data => {
 		data.sources.forEach(source => {
 			self.obs.send('GetSceneItemProperties', {item: source}).then(data => {
@@ -276,6 +290,17 @@ instance.prototype.updateSources = function() {
 				self.checkFeedbacks('scene_item_active');
 			});
 		});
+	});
+};
+
+instance.prototype.updateInfo = function() {
+	var self = this;
+	self.obs.send('GetStudioModeStatus').then(data => {
+		if (data['studio-mode'] == true) {
+			self.states['studio_mode'] = true;
+		} else {
+			self.states['studio_mode'] = false;
+		}
 	});
 };
 
