@@ -64,6 +64,8 @@ instance.prototype.init = function() {
 			self.log('info','Success! Connected to OBS.');
 			self.getStreamStatus();
 			self.updateScenes();
+			self.updateSources();
+			self.updateInfo();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
@@ -84,6 +86,7 @@ instance.prototype.init = function() {
 			self.states['scene_active'] = data['scene-name'];
 			self.setVariable('scene_active', data['scene-name']);
 			self.checkFeedbacks('scene_active');
+			self.updateSources();
 		});
 
 		self.obs.on('PreviewSceneChanged', function(data) {
@@ -94,6 +97,14 @@ instance.prototype.init = function() {
 
 		self.obs.on('ScenesChanged', function() {
 			self.updateScenes();
+		});
+
+		self.obs.on('SceneItemAdded', function() {
+			self.updateSources();
+		});
+
+		self.obs.on('SourceDestroyed', function() {
+			self.updateSources();
 		});
 
 		self.obs.on('StreamStarted', function(data) {
@@ -122,17 +133,29 @@ instance.prototype.init = function() {
 			self.states['recording'] = false;
 			self.checkFeedbacks('recording');
 		});
-		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if ( data['item-visible'] == true) {
-				self.states['item_visible'] = data['item-name'];
-				//self.setVariable('item_visible', data['item-name']);
+
+		self.obs.on('StudioModeSwitched', function(data) {
+			if (data['new-state'] == true) {
+				self.states['studio_mode'] = true;
 			} else {
-				self.states['item_visible'] = 'xxxxx';
-				//self.setVariable('item_visible', 'xxxxx');
+				self.states['studio_mode'] = false;
+			}
+		});
+		
+		self.obs.on('SceneItemVisibilityChanged', function(data) {
+			if (self.states['studio_mode'] == true) { 
+				//Item in preview, no change
+			} else {
+				if ((data['item-visible'] == true) && (data['scene-name'] == self.states['scene_active'])) {
+					self.states[data['item-name']] = true;
+					//self.setVariable('item_visible', data['item-name']);
+				} else {
+					self.states[data['item-name']] = false;
+					//self.setVariable('item_visible', 'xxxxx');
+				}
 			}
 			self.checkFeedbacks('scene_item_active');
 		});
-
 	});
 
 	debug = self.debug;
@@ -241,6 +264,46 @@ instance.prototype.updateScenes = function() {
 	});
 };
 
+instance.prototype.updateSources = function() {
+	var self = this;
+	self.obs.send('GetSourcesList').then(data => {
+		self.sources = {};
+		for (var s in data.sources) {
+			var source = data.sources[s];
+			self.sources[source.name] = source;
+		}
+		self.actions();
+		self.init_feedbacks();
+		data.sources.forEach(source => {
+			self.states[source.name] = false;
+		});
+	});
+
+	self.obs.send('GetCurrentScene').then(data => {
+		data.sources.forEach(source => {
+			self.obs.send('GetSceneItemProperties', {item: source}).then(data => {
+				if (data['visible'] == true) {
+					self.states[data['name']] = true;
+				} else {
+					self.states[data['name']] = false;
+				}
+				self.checkFeedbacks('scene_item_active');
+			});
+		});
+	});
+};
+
+instance.prototype.updateInfo = function() {
+	var self = this;
+	self.obs.send('GetStudioModeStatus').then(data => {
+		if (data['studio-mode'] == true) {
+			self.states['studio_mode'] = true;
+		} else {
+			self.states['studio_mode'] = false;
+		}
+	});
+};
+
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
@@ -249,6 +312,7 @@ instance.prototype.destroy = function() {
 	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
+	self.sourcelist = [];
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
 	}
@@ -261,12 +325,18 @@ instance.prototype.actions = function() {
 	var self = this;
 
 	self.scenelist = [];
+	self.sourcelist = [];
 	self.transitionlist = [];
 
 	var s;
 	if (self.scenes !== undefined) {
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
+		}
+	}
+	if (self.sources !== undefined) {
+		for (s in self.sources) {
+			self.sourcelist.push({ id: s, label: s });
 		}
 	}
 
@@ -612,10 +682,11 @@ instance.prototype.init_feedbacks = function() {
 				default: self.rgb(255, 0, 0)
 			},
 			{
-				type: 'textinput',
+				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: ''
+				default: '',
+				choices: self.sourcelist
 			}
 		]
 	};
@@ -651,7 +722,7 @@ instance.prototype.feedback = function(feedback) {
 		}
 	}
 	if (feedback.type === 'scene_item_active')  {
-		if (self.states['item_visible'] === feedback.options.source) {
+		if ((self.states[feedback.options.source] === true)) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
