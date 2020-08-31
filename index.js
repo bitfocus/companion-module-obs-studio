@@ -280,8 +280,8 @@ instance.prototype.updateSources = function() {
 	});
 
 	self.obs.send('GetCurrentScene').then(data => {
-		data.sources.forEach(source => {
-			self.obs.send('GetSceneItemProperties', {item: source}).then(data => {
+		data.sources.forEach(name => {
+			self.obs.send('GetSceneItemProperties', {item: name}).then(data => {
 				if (data['visible'] == true) {
 					self.states[data['name']] = true;
 				} else {
