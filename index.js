@@ -19,13 +19,13 @@ instance.prototype.updateConfig = function(config) {
 	var self = this;
 	self.config = config;
 	self.log('debug','updateConfig() destroying and reiniting..');
-	self.destroy();
+	self.obs.disconnect();
 	self.init();
 };
 
 instance.prototype.init = function() {
 	var self = this;
-
+	self.disable = false;
 	self.status(self.STATUS_WARN, "Connecting");
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
@@ -76,10 +76,13 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('ConnectionClosed', function() {
-			self.log('error','Connection lost to OBS.');
-			self.status(self.STATUS_ERROR);
-			self.destroy();
-			self.init();
+			if (self.disable != true) {	
+				self.log('error','Connection lost to OBS.');
+				self.status(self.STATUS_ERROR);
+				self.init();
+			} else {
+				
+			}
 		});
 
 		self.obs.on('SwitchScenes', function(data) {
@@ -307,18 +310,19 @@ instance.prototype.updateInfo = function() {
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
-	self.log('debug','destroy');
 	self.scenes = [];
 	self.transitions = [];
 	self.states = {};
 	self.scenelist = [];
 	self.sourcelist = [];
+	self.feedbacks = {};
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
 	}
 	if (self.tcp !== undefined) {
 		self.tcp.destroy();
 	}
+	self.disable = true;
 };
 
 instance.prototype.actions = function() {
@@ -499,7 +503,7 @@ instance.prototype.action = function(action) {
 
 	if (action.action == 'reconnect') {
 		self.log('debug','reconnecting, destroying and reiniting..');
-		self.destroy();
+		self.obs.disconnect();
 		self.init();
 		return;
 	}
@@ -575,7 +579,7 @@ instance.prototype.action = function(action) {
 	handle.catch(error => {
 		if (error.code == "NOT_CONNECTED") {
 			self.log('warn', 'Send to OBS failed. Re-start OBS manually. Starting re-init');
-			self.destroy();
+			self.obs.disconnect();
 			self.init();
 		} else {
 			self.log('debug', error.error);
@@ -585,7 +589,6 @@ instance.prototype.action = function(action) {
 
 instance.prototype.init_feedbacks = function() {
 	var self = this;
-
 	// feedbacks
 	var feedbacks = {};
 	feedbacks['streaming'] = {
