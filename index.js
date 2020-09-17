@@ -434,6 +434,17 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'toggle_source_mute' : {
+			label: 'Toggle Source Mute',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Source',
+					id: 'source',
+					default: '',
+				}
+			]
+		},
 		'toggle_scene_item' : {
 			label: 'Toggle visibility scene item',
 			options: [
@@ -542,6 +553,11 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('SetMute', {
 				'source': action.options.source,
 				'mute': (action.options.mute == 'true' ? true : false)
+			});
+			break;
+		case 'toggle_source_mute':
+			handle = self.obs.send('ToggleMute', {
+				'source': action.options.source
 			});
 			break;
 		case 'set_transition':
