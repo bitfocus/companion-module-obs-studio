@@ -504,6 +504,18 @@ instance.prototype.actions = function() {
 					required: true
 				}
 			]
+		},
+		'trigger-hotkey': {
+			label: 'Trigger hotkey by ID',
+			tooltip: 'Find the hotkey ID in your profile settings file',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Hotkey ID',
+					id: 'id',
+					required: true
+				}
+			]
 		}
 	});
 };
@@ -588,6 +600,11 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('SetTextGDIPlusProperties', {
 				'source': action.options.source,
 				'text': action.options.text
+			})
+			break;
+		case 'trigger-hotkey':
+			handle = self.obs.send('TriggerHotkeyByName', {
+				'hotkeyName': action.options.id,
 			})
 			break;
 	}
