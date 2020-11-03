@@ -25,6 +25,7 @@ instance.prototype.updateConfig = function(config) {
 	if (self.tcp !== undefined) {
 		self.tcp.destroy();
 		delete self.tcp;
+	}
 	self.init();
 };
 
