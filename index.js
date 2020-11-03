@@ -19,7 +19,12 @@ instance.prototype.updateConfig = function(config) {
 	var self = this;
 	self.config = config;
 	self.log('debug','updateConfig() destroying and reiniting..');
-	self.obs.disconnect();
+	if (self.obs !== undefined) {
+		self.obs.disconnect();
+	}
+	if (self.tcp !== undefined) {
+		self.tcp.destroy();
+		delete self.tcp;
 	self.init();
 };
 
