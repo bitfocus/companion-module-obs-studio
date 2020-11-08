@@ -289,16 +289,18 @@ instance.prototype.updateSources = function() {
 	});
 
 	self.obs.send('GetCurrentScene').then(data => {
-		data.sources.forEach(name => {
-			self.obs.send('GetSceneItemProperties', {item: name}).then(data => {
-				if (data['visible'] == true) {
-					self.states[data['name']] = true;
-				} else {
-					self.states[data['name']] = false;
-				}
-				self.checkFeedbacks('scene_item_active');
+		if (data.sources !== undefined && data.sources.length > 0) {
+			data.sources.forEach(name => {
+				self.obs.send('GetSceneItemProperties', {item: name}).then(data => {
+					if (data['visible'] == true) {
+						self.states[data['name']] = true;
+					} else {
+						self.states[data['name']] = false;
+					}
+					self.checkFeedbacks('scene_item_active');
+				});
 			});
-		});
+		}
 	});
 };
 
