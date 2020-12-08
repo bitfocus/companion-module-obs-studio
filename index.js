@@ -69,8 +69,7 @@ instance.prototype.init = function() {
 			self.status(self.STATUS_OK);
 			self.log('info','Success! Connected to OBS.');
 			self.getStreamStatus();
-			self.updateScenes();
-			self.updateSources();
+			self.updateScenesAndSources();
 			self.updateInfo();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
@@ -95,7 +94,7 @@ instance.prototype.init = function() {
 			self.states['scene_active'] = data['scene-name'];
 			self.setVariable('scene_active', data['scene-name']);
 			self.checkFeedbacks('scene_active');
-			self.updateSources();
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('PreviewSceneChanged', function(data) {
@@ -105,15 +104,15 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('ScenesChanged', function() {
-			self.updateScenes();
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('SceneItemAdded', function() {
-			self.updateSources();
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('SourceDestroyed', function() {
-			self.updateSources();
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('StreamStarted', function(data) {
@@ -155,15 +154,8 @@ instance.prototype.init = function() {
 			if (self.states['studio_mode'] == true) { 
 				//Item in preview, no change
 			} else {
-				if ((data['item-visible'] == true) && (data['scene-name'] == self.states['scene_active'])) {
-					self.states[data['item-name']] = true;
-					//self.setVariable('item_visible', data['item-name']);
-				} else {
-					self.states[data['item-name']] = false;
-					//self.setVariable('item_visible', 'xxxxx');
-				}
+				self.updateScenesAndSources();
 			}
-			self.checkFeedbacks('scene_item_active');
 		});
 	});
 
@@ -243,10 +235,10 @@ instance.prototype.getStreamStatus = function() {
 	});
 };
 
-instance.prototype.updateScenes = function() {
+instance.prototype.updateScenesAndSources = async function() {
 	var self = this;
 
-	self.obs.send('GetTransitionList').then(data => {
+	await self.obs.send('GetTransitionList').then(data => {
 		self.transitions = {};
 		self.states['current_transition'] = data['current-transition'];
 		for (var s in data.transitions) {
@@ -259,23 +251,7 @@ instance.prototype.updateScenes = function() {
 		self.init_variables();
 	});
 
-	self.obs.send('GetSceneList').then(data => {
-		self.scenes = {};
-		self.states['scene_active'] = data['current-scene'];
-		for (var s in data.scenes) {
-			var scene = data.scenes[s];
-			self.scenes[scene.name] = scene;
-		}
-		self.actions();
-		self.init_presets();
-		self.init_feedbacks();
-		self.init_variables();
-	});
-};
-
-instance.prototype.updateSources = function() {
-	var self = this;
-	self.obs.send('GetSourcesList').then(data => {
+	await self.obs.send('GetSourcesList').then(data => {
 		self.sources = {};
 		for (var s in data.sources) {
 			var source = data.sources[s];
@@ -288,20 +264,48 @@ instance.prototype.updateSources = function() {
 		});
 	});
 
-	self.obs.send('GetCurrentScene').then(data => {
-		if (data.sources !== undefined && data.sources.length > 0) {
-			data.sources.forEach(name => {
-				self.obs.send('GetSceneItemProperties', {item: name}).then(data => {
-					if (data['visible'] == true) {
-						self.states[data['name']] = true;
-					} else {
-						self.states[data['name']] = false;
-					}
-					self.checkFeedbacks('scene_item_active');
-				});
-			});
+	let sceneList = await self.obs.send('GetSceneList')
+	self.scenes = {};
+	self.states['scene_active'] = sceneList.currentScene;
+	for (let scene of sceneList.scenes) {
+		self.scenes[scene.name] = scene;
+	}
+
+	let findNestedScenes = (sceneName) => {
+		let nested = []
+		for (let source of self.scenes[sceneName].sources) {
+			if (self.scenes[source.name] && source.render) {
+				nested.push(source.name)
+			}
 		}
-	});
+		return nested;
+	}
+
+	// Recursively find all nested visible scenes
+	let lastNestedCount
+	let nestedVisibleScenes = {}
+	nestedVisibleScenes[sceneList.currentScene] = true
+
+	do {
+		lastNestedCount = nestedVisibleScenes.length
+		for (let sceneName in nestedVisibleScenes) {
+			for (let nested of findNestedScenes(sceneName)) {
+				nestedVisibleScenes[nested] = true
+			}
+		}
+	} while (lastNestedCount != nestedVisibleScenes.length)
+
+	for (let sceneName in nestedVisibleScenes) {
+		for (let source of self.scenes[sceneName].sources) {
+			self.states[source.name] = source.render
+		}
+	}
+
+	self.actions();
+	self.init_presets();
+	self.init_feedbacks();
+	self.init_variables();
+	self.checkFeedbacks('scene_item_active');
 };
 
 instance.prototype.updateInfo = function() {
@@ -341,13 +345,17 @@ instance.prototype.actions = function() {
 	self.transitionlist = [];
 
 	var s;
+	if (self.sources !== undefined) {
+		for (s in self.sources) {
+			self.sourcelist.push({ id: s, label: s });
+		}
+	}
+
 	if (self.scenes !== undefined) {
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
-		}
-	}
-	if (self.sources !== undefined) {
-		for (s in self.sources) {
+
+			// Scenes can also be sources
 			self.sourcelist.push({ id: s, label: s });
 		}
 	}
