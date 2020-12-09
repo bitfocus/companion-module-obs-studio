@@ -82,12 +82,10 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('ConnectionClosed', function() {
-			if (self.disable != true) {	
 				self.log('error','Connection lost to OBS.');
 				self.status(self.STATUS_ERROR);
 				self.init();
 			} else {
-				
 			}
 		});
 
@@ -150,9 +148,7 @@ instance.prototype.init = function() {
 				self.states['studio_mode'] = false;
 			}
 		});
-		
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if (self.states['studio_mode'] == true) { 
 				//Item in preview, no change
 			} else {
 				if ((data['item-visible'] == true) && (data['scene-name'] == self.states['scene_active'])) {
@@ -359,6 +355,18 @@ instance.prototype.actions = function() {
 	}
 
 	self.setActions({
+		'StartRecording': {
+			label: 'Start Recording',
+		},
+		'StopRecording': {
+			label: 'Stop Recording',
+		},
+		'StartStreaming': {
+			label: 'Start Streaming',
+		},
+		'StopStreaming': {
+			label: 'Stop Streaming',
+		},
 		'set_scene': {
 			label: 'Change scene',
 			options: [
@@ -545,6 +553,18 @@ instance.prototype.action = function(action) {
 	}
 
 	switch (action.action) {
+		case 'StartRecording':
+			handle = self.obs.send('StartRecording');
+			break;
+		case 'StopRecording':
+			handle = self.obs.send('StopRecording');
+			break;
+		case 'StartStreaming':
+			handle = self.obs.send('StartStreaming');
+			break;
+		case 'StopStreaming':
+			handle = self.obs.send('StopStreaming');
+			break;
 		case 'set_scene':
 			handle = self.obs.send('SetCurrentScene', {
 				'scene-name': action.options.scene
