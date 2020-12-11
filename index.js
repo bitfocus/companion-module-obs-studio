@@ -359,6 +359,18 @@ instance.prototype.actions = function() {
 	}
 
 	self.setActions({
+		'start_recording': {
+			label: 'Start Recording',
+		},
+		'stop_recording': {
+			label: 'Stop Recording',
+		},
+		'start_streaming': {
+			label: 'Start Streaming',
+		},
+		'stop_streaming': {
+			label: 'Stop Streaming',
+		},
 		'set_scene': {
 			label: 'Change scene',
 			options: [
@@ -545,6 +557,18 @@ instance.prototype.action = function(action) {
 	}
 
 	switch (action.action) {
+		case 'start_recording':
+			handle = self.obs.send('StartRecording');
+			break;
+		case 'stop_recording':
+			handle = self.obs.send('StopRecording');
+			break;
+		case 'start_streaming':
+			handle = self.obs.send('StartStreaming');
+			break;
+		case 'stop_streaming':
+			handle = self.obs.send('StopStreaming');
+			break;
 		case 'set_scene':
 			handle = self.obs.send('SetCurrentScene', {
 				'scene-name': action.options.scene
