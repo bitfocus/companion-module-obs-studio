@@ -267,6 +267,7 @@ instance.prototype.updateScenesAndSources = async function() {
 	let sceneList = await self.obs.send('GetSceneList')
 	self.scenes = {};
 	self.states['scene_active'] = sceneList.currentScene;
+	self.setVariable('scene_active', sceneList.currentScene);
 	for (let scene of sceneList.scenes) {
 		self.scenes[scene.name] = scene;
 	}
@@ -306,6 +307,7 @@ instance.prototype.updateScenesAndSources = async function() {
 	self.init_feedbacks();
 	self.init_variables();
 	self.checkFeedbacks('scene_item_active');
+	self.checkFeedbacks('scene_active');
 };
 
 instance.prototype.updateInfo = function() {
