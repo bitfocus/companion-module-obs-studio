@@ -187,6 +187,10 @@ instance.prototype.process_stream_vars = function(data) {
 	self.setVariable('num_total_frames', data['num-total-frames']);
 	self.setVariable('output_skipped_frames', data['output-skipped-frames']);
 	self.setVariable('output_total_frames', data['output-total-frames']);
+	self.setVariable('render_missed_frames', data['render-missed-frames']);
+	self.setVariable('render_total_frames', data['render-total-frames']);
+	self.setVariable('average_frame_time', data['average-frame-time']);
+	self.setVariable('cpu_usage', data['cpu-usage']);
 	self.setVariable('preview_only', data['preview-only']);
 	self.setVariable('recording', data['recording']);
 	self.setVariable('strain', data['strain']);
