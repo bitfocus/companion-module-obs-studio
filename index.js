@@ -179,18 +179,29 @@ instance.prototype.process_stream_vars = function(data) {
 		self.states[s] = data[s];
 	}
 
+	const roundIfDefined = (number, decimalPlaces) => {
+		if (number) {
+			return Number(Math.round(number + "e" + decimalPlaces) + "e-" + decimalPlaces)
+		} else {
+			return number
+		}
+	}
+
 	self.setVariable('bytes_per_sec', data['bytes-per-sec']);
-	self.setVariable('fps', data['fps']);
-	self.setVariable('average_frame_time', data['average-frame-time']);
-	self.setVariable('kbits_per_sec', data['kbits-per-sec']);
 	self.setVariable('num_dropped_frames', data['num-dropped-frames']);
 	self.setVariable('num_total_frames', data['num-total-frames']);
 	self.setVariable('output_skipped_frames', data['output-skipped-frames']);
 	self.setVariable('output_total_frames', data['output-total-frames']);
 	self.setVariable('render_missed_frames', data['render-missed-frames']);
 	self.setVariable('render_total_frames', data['render-total-frames']);
-	self.setVariable('average_frame_time', data['average-frame-time']);
-	self.setVariable('cpu_usage', data['cpu-usage']);
+
+	if (data['kbits-per-sec']) {
+		self.setVariable('kbits_per_sec', data['kbits-per-sec'].toLocaleString());
+	}
+
+	self.setVariable('fps', roundIfDefined(data['fps'], 2));
+	self.setVariable('average_frame_time', roundIfDefined(data['average-frame-time'], 2));
+	self.setVariable('cpu_usage', roundIfDefined(data['cpu-usage'], 2));
 	self.setVariable('preview_only', data['preview-only']);
 	self.setVariable('recording', data['recording']);
 	self.setVariable('strain', data['strain']);
@@ -916,10 +927,16 @@ instance.prototype.init_variables = function() {
 	var variables = [];
 
 	variables.push({ name: 'bytes_per_sec', label: 'Stream is active' });
-	variables.push({ name: 'fps', label: 'Frames per second' });
-	variables.push({ name: 'kbits_per_sec', label: 'Kilobits per second' });
-	variables.push({ name: 'num_dropped_frames', label: 'Number of dropped frames' });
-	variables.push({ name: 'num_total_frames', label: 'Number of total frames' });
+	variables.push({ name: 'fps', label: 'Current framerate' });
+	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' });
+	variables.push({ name: 'kbits_per_sec', label: 'Amount of data per second (in kilobits) transmitted by the stream encoder' });
+	variables.push({ name: 'render_missed_frames', label: 'Number of frames missed due to rendering lag' });
+	variables.push({ name: 'render_total_frames', label: 'Number of frames rendered' });
+	variables.push({ name: 'output_skipped_frames', label: 'Number of encoder frames skipped' });
+	variables.push({ name: 'output_total_frames', label: 'Number of total encoder frames' });
+	variables.push({ name: 'num_dropped_frames', label: 'Number of frames dropped by the encoder since the stream started' });
+	variables.push({ name: 'num_total_frames', label: 'Total number of frames transmitted since the stream started' });
+	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' });
 	variables.push({ name: 'preview_only', label: 'Preview only' });
 	variables.push({ name: 'recording', label: 'Recording State' });
 	variables.push({ name: 'strain', label: 'Strain' });
