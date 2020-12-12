@@ -68,6 +68,8 @@ instance.prototype.init = function() {
 		}).then(() => {
 			self.status(self.STATUS_OK);
 			self.log('info','Success! Connected to OBS.');
+			self.getStats();
+			self.startStatsPoller();
 			self.getStreamStatus();
 			self.updateScenes();
 			self.updateSources();
@@ -190,18 +192,12 @@ instance.prototype.process_stream_vars = function(data) {
 	self.setVariable('bytes_per_sec', data['bytes-per-sec']);
 	self.setVariable('num_dropped_frames', data['num-dropped-frames']);
 	self.setVariable('num_total_frames', data['num-total-frames']);
-	self.setVariable('output_skipped_frames', data['output-skipped-frames']);
-	self.setVariable('output_total_frames', data['output-total-frames']);
-	self.setVariable('render_missed_frames', data['render-missed-frames']);
-	self.setVariable('render_total_frames', data['render-total-frames']);
 
 	if (data['kbits-per-sec']) {
 		self.setVariable('kbits_per_sec', data['kbits-per-sec'].toLocaleString());
 	}
 
-	self.setVariable('fps', roundIfDefined(data['fps'], 2));
 	self.setVariable('average_frame_time', roundIfDefined(data['average-frame-time'], 2));
-	self.setVariable('cpu_usage', roundIfDefined(data['cpu-usage'], 2));
 	self.setVariable('preview_only', data['preview-only']);
 	self.setVariable('recording', data['recording']);
 	self.setVariable('strain', data['strain']);
@@ -209,9 +205,37 @@ instance.prototype.process_stream_vars = function(data) {
 	self.setVariable('streaming', data['streaming']);
 	self.setVariable('total_stream_time', data['total-stream-time']);
 
-	self.checkFeedbacks('streaming');
+	self.process_obs_stats(data);
 
+	self.checkFeedbacks('streaming');
 };
+
+instance.prototype.process_obs_stats = function(data) {
+	var self = this;
+
+	for (var s in data) {
+		self.states[s] = data[s];
+	}
+
+	const roundIfDefined = (number, decimalPlaces) => {
+		if (number) {
+			return Number(Math.round(number + "e" + decimalPlaces) + "e-" + decimalPlaces)
+		} else {
+			return number
+		}
+	}
+
+	self.setVariable('fps', roundIfDefined(data['fps'], 2));
+	self.setVariable('render_total_frames', data['render-total-frames']);
+	self.setVariable('render_missed_frames', data['render-missed-frames']);
+	self.setVariable('output_total_frames', data['output-total-frames']);
+	self.setVariable('output_skipped_frames', data['output-skipped-frames']);
+	self.setVariable('average_frame_time', roundIfDefined(data['average-frame-time'], 2));
+	self.setVariable('cpu_usage', roundIfDefined(data['cpu-usage'], 2));
+	self.setVariable('memory_usage', roundIfDefined(data['memory-usage'], 2));
+	self.setVariable('free_disk_space', roundIfDefined(data['free-disk-space'], 2));
+};
+
 
 // Return config fields for web config
 instance.prototype.config_fields = function() {
@@ -239,8 +263,28 @@ instance.prototype.config_fields = function() {
 			width: 4,
 		}
 	]
-
 };
+
+instance.prototype.getStats = async function() {
+	let {stats} = await this.obs.send('GetStats')
+	this.process_obs_stats(stats);
+};
+
+instance.prototype.startStatsPoller = function() {
+	let self = this
+	this.statsPoller = setInterval(() => {
+		if (self.obs && !self.states['streaming']) {
+			self.getStats()
+		}
+	}, 1000)
+}
+
+instance.prototype.stopStatsPoller = function() {
+	if (this.statsPoller) {
+		clearInterval(this.statsPoller)
+		this.statsPoller = null
+	}
+}
 
 instance.prototype.getStreamStatus = function() {
 	var self = this;
@@ -254,10 +298,7 @@ instance.prototype.getStreamStatus = function() {
 		self.states['streaming'] = data['streaming'];
 		self.checkFeedbacks('streaming');
 
-		self.actions();
-		self.init_presets();
 		self.init_feedbacks();
-		self.init_variables();
 	});
 };
 
@@ -349,6 +390,7 @@ instance.prototype.destroy = function() {
 		self.tcp.destroy();
 	}
 	self.disable = true;
+	self.startStatsPoller();
 };
 
 instance.prototype.actions = function() {
@@ -926,9 +968,11 @@ instance.prototype.init_variables = function() {
 
 	var variables = [];
 
-	variables.push({ name: 'bytes_per_sec', label: 'Stream is active' });
+	variables.push({ name: 'bytes_per_sec', label: 'Amount of data per second (in bytes) transmitted by the stream encoder' });
 	variables.push({ name: 'fps', label: 'Current framerate' });
 	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' });
+	variables.push({ name: 'memory_usage', label: 'Current RAM usage (in megabytes)' });
+	variables.push({ name: 'free_disk_space', label: 'Free recording disk space (in megabytes)' });
 	variables.push({ name: 'kbits_per_sec', label: 'Amount of data per second (in kilobits) transmitted by the stream encoder' });
 	variables.push({ name: 'render_missed_frames', label: 'Number of frames missed due to rendering lag' });
 	variables.push({ name: 'render_total_frames', label: 'Number of frames rendered' });
