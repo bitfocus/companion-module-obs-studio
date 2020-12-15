@@ -365,6 +365,12 @@ instance.prototype.actions = function() {
 		'stop_recording': {
 			label: 'Stop Recording',
 		},
+		'pause_recording': {
+			label: 'Pause Recording',
+		},
+		'resume_recording': {
+			label: 'Resume Recording',
+		},
 		'start_streaming': {
 			label: 'Start Streaming',
 		},
@@ -562,6 +568,12 @@ instance.prototype.action = function(action) {
 			break;
 		case 'stop_recording':
 			handle = self.obs.send('StopRecording');
+			break;
+		case 'pause_recording':
+			handle = self.obs.send('PauseRecording');
+			break;
+		case 'resume_recording':
+			handle = self.obs.send('ResumeRecording');
 			break;
 		case 'start_streaming':
 			handle = self.obs.send('StartStreaming');
