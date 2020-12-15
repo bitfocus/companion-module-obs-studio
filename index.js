@@ -386,6 +386,15 @@ instance.prototype.actions = function() {
 		'stop_streaming': {
 			label: 'Stop Streaming',
 		},
+		'start_ReplayBuffer': {
+			label: 'Start ReplayBuffer  ',
+		},
+		'stop_ReplayBuffer': {
+			label: 'Stop ReplayBuffer  ',
+		},
+		'save_ReplayBuffer': {
+			label: 'Save ReplayBuffer  ',
+		},
 		'set_scene': {
 			label: 'Change scene',
 			options: [
@@ -598,6 +607,15 @@ instance.prototype.action = function(action) {
 			break;
 		case 'stop_streaming':
 			handle = self.obs.send('StopStreaming');
+			break;
+		case 'start_ReplayBuffer':
+			handle = self.obs.send('StartReplayBuffer');
+			break;
+		case 'stop_ReplayBuffer':
+			handle = self.obs.send('StopReplayBuffer');
+			break;
+		case 'save_ReplayBuffer':
+			handle = self.obs.send('SaveReplayBuffer');
 			break;
 		case 'set_scene':
 			handle = self.obs.send('SetCurrentScene', {
