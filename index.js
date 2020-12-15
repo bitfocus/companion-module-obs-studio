@@ -31,6 +31,7 @@ instance.prototype.updateConfig = function(config) {
 
 instance.prototype.init = function() {
 	var self = this;
+	self.stopStatsPoller()
 	self.disable = false;
 	self.status(self.STATUS_WARN, "Connecting");
 	if (self.obs !== undefined) {
@@ -271,6 +272,8 @@ instance.prototype.getStats = async function() {
 };
 
 instance.prototype.startStatsPoller = function() {
+	this.stopStatsPoller()
+
 	let self = this
 	this.statsPoller = setInterval(() => {
 		if (self.obs && !self.states['streaming']) {
@@ -390,7 +393,7 @@ instance.prototype.destroy = function() {
 		self.tcp.destroy();
 	}
 	self.disable = true;
-	self.startStatsPoller();
+	self.stopStatsPoller();
 };
 
 instance.prototype.actions = function() {
