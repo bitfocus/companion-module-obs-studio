@@ -359,6 +359,15 @@ instance.prototype.actions = function() {
 	}
 
 	self.setActions({
+		'enable_StudioMode': {
+			label: 'Enable StudioMode',
+		},
+		'disable_StudioMode': {
+			label: 'Disable StudioMode',
+		},
+		'toggle_StudioMode': {
+			label: 'Toggle StudioMode',
+		},
 		'start_recording': {
 			label: 'Start Recording',
 		},
@@ -563,6 +572,15 @@ instance.prototype.action = function(action) {
 	}
 
 	switch (action.action) {
+		case 'enable_StudioMode':
+			handle = self.obs.send('EnableStudioMode');
+			break;
+		case 'disable_StudioMode':
+			handle = self.obs.send('DisableStudioMode');
+			break;
+		case 'toggle_StudioMode':
+			handle = self.obs.send('ToggleStudioMode');
+			break;
 		case 'start_recording':
 			handle = self.obs.send('StartRecording');
 			break;
