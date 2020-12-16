@@ -288,13 +288,13 @@ instance.prototype.updateScenesAndSources = async function() {
 	nestedVisibleScenes[sceneList.currentScene] = true
 
 	do {
-		lastNestedCount = nestedVisibleScenes.length
+		lastNestedCount = Object.keys(nestedVisibleScenes).length
 		for (let sceneName in nestedVisibleScenes) {
 			for (let nested of findNestedScenes(sceneName)) {
 				nestedVisibleScenes[nested] = true
 			}
 		}
-	} while (lastNestedCount != nestedVisibleScenes.length)
+	} while (lastNestedCount != Object.keys(nestedVisibleScenes).length)
 
 	for (let sceneName in nestedVisibleScenes) {
 		for (let source of self.scenes[sceneName].sources) {
