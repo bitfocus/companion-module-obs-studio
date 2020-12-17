@@ -365,7 +365,7 @@ instance.prototype.actions = function() {
 		'disable_studio_mode': {
 			label: 'Disable StudioMode',
 		},
-		'toggle_StudioMode': {
+		'toggle_studio_mode': {
 			label: 'Toggle StudioMode',
 		},
 		'start_recording': {
