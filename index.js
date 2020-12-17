@@ -359,7 +359,7 @@ instance.prototype.actions = function() {
 	}
 
 	self.setActions({
-		'enable_StudioMode': {
+		'enable_studio_mode': {
 			label: 'Enable StudioMode',
 		},
 		'disable_StudioMode': {
