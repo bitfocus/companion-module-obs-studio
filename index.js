@@ -386,7 +386,7 @@ instance.prototype.actions = function() {
 		'stop_streaming': {
 			label: 'Stop Streaming',
 		},
-		'start_ReplayBuffer': {
+		'start_replay_buffer': {
 			label: 'Start ReplayBuffer  ',
 		},
 		'stop_ReplayBuffer': {
