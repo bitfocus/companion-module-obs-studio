@@ -389,10 +389,10 @@ instance.prototype.actions = function() {
 		'start_replay_buffer': {
 			label: 'Start ReplayBuffer  ',
 		},
-		'stop_ReplayBuffer': {
+		'stop_replay_buffer': {
 			label: 'Stop ReplayBuffer  ',
 		},
-		'save_ReplayBuffer': {
+		'save_replay_buffer': {
 			label: 'Save ReplayBuffer  ',
 		},
 		'set_scene': {
@@ -581,13 +581,13 @@ instance.prototype.action = function(action) {
 	}
 
 	switch (action.action) {
-		case 'enable_StudioMode':
+		case 'enable_studio_mode':
 			handle = self.obs.send('EnableStudioMode');
 			break;
-		case 'disable_StudioMode':
+		case 'disable_studio_mode':
 			handle = self.obs.send('DisableStudioMode');
 			break;
-		case 'toggle_StudioMode':
+		case 'toggle_studio_mode':
 			handle = self.obs.send('ToggleStudioMode');
 			break;
 		case 'start_recording':
@@ -608,13 +608,13 @@ instance.prototype.action = function(action) {
 		case 'stop_streaming':
 			handle = self.obs.send('StopStreaming');
 			break;
-		case 'start_ReplayBuffer':
+		case 'start_replay_buffer':
 			handle = self.obs.send('StartReplayBuffer');
 			break;
-		case 'stop_ReplayBuffer':
+		case 'stop_replay_buffer':
 			handle = self.obs.send('StopReplayBuffer');
 			break;
-		case 'save_ReplayBuffer':
+		case 'save_replay_buffer':
 			handle = self.obs.send('SaveReplayBuffer');
 			break;
 		case 'set_scene':
