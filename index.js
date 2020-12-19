@@ -359,6 +359,42 @@ instance.prototype.actions = function() {
 	}
 
 	self.setActions({
+		'enable_studio_mode': {
+			label: 'Enable StudioMode',
+		},
+		'disable_studio_mode': {
+			label: 'Disable StudioMode',
+		},
+		'toggle_studio_mode': {
+			label: 'Toggle StudioMode',
+		},
+		'start_recording': {
+			label: 'Start Recording',
+		},
+		'stop_recording': {
+			label: 'Stop Recording',
+		},
+		'pause_recording': {
+			label: 'Pause Recording',
+		},
+		'resume_recording': {
+			label: 'Resume Recording',
+		},
+		'start_streaming': {
+			label: 'Start Streaming',
+		},
+		'stop_streaming': {
+			label: 'Stop Streaming',
+		},
+		'start_replay_buffer': {
+			label: 'Start Replay Buffer',
+		},
+		'stop_replay_buffer': {
+			label: 'Stop Replay Buffer',
+		},
+		'save_replay_buffer': {
+			label: 'Save Replay Buffer',
+		},
 		'set_scene': {
 			label: 'Change scene',
 			options: [
@@ -545,6 +581,42 @@ instance.prototype.action = function(action) {
 	}
 
 	switch (action.action) {
+		case 'enable_studio_mode':
+			handle = self.obs.send('EnableStudioMode');
+			break;
+		case 'disable_studio_mode':
+			handle = self.obs.send('DisableStudioMode');
+			break;
+		case 'toggle_studio_mode':
+			handle = self.obs.send('ToggleStudioMode');
+			break;
+		case 'start_recording':
+			handle = self.obs.send('StartRecording');
+			break;
+		case 'stop_recording':
+			handle = self.obs.send('StopRecording');
+			break;
+		case 'pause_recording':
+			handle = self.obs.send('PauseRecording');
+			break;
+		case 'resume_recording':
+			handle = self.obs.send('ResumeRecording');
+			break;
+		case 'start_streaming':
+			handle = self.obs.send('StartStreaming');
+			break;
+		case 'stop_streaming':
+			handle = self.obs.send('StopStreaming');
+			break;
+		case 'start_replay_buffer':
+			handle = self.obs.send('StartReplayBuffer');
+			break;
+		case 'stop_replay_buffer':
+			handle = self.obs.send('StopReplayBuffer');
+			break;
+		case 'save_replay_buffer':
+			handle = self.obs.send('SaveReplayBuffer');
+			break;
 		case 'set_scene':
 			handle = self.obs.send('SetCurrentScene', {
 				'scene-name': action.options.scene
