@@ -387,13 +387,13 @@ instance.prototype.actions = function() {
 			label: 'Stop Streaming',
 		},
 		'start_replay_buffer': {
-			label: 'Start ReplayBuffer  ',
+			label: 'Start Replay Buffer',
 		},
 		'stop_replay_buffer': {
-			label: 'Stop ReplayBuffer  ',
+			label: 'Stop Replay Buffer',
 		},
 		'save_replay_buffer': {
-			label: 'Save ReplayBuffer  ',
+			label: 'Save Replay Buffer',
 		},
 		'set_scene': {
 			label: 'Change scene',
