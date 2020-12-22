@@ -274,9 +274,11 @@ instance.prototype.updateScenesAndSources = async function() {
 
 	let findNestedScenes = (sceneName) => {
 		let nested = []
-		for (let source of self.scenes[sceneName].sources) {
-			if (self.scenes[source.name] && source.render) {
-				nested.push(source.name)
+		if (self.scenes[sceneName]){
+			for (let source of self.scenes[sceneName].sources) {
+				if (self.scenes[source.name] && source.render) {
+					nested.push(source.name)
+				}
 			}
 		}
 		return nested;
