@@ -175,19 +175,19 @@ instance.prototype.init = function() {
 
 };
 
+instance.prototype.roundIfDefined = (number, decimalPlaces) => {
+	if (number) {
+		return Number(Math.round(number + "e" + decimalPlaces) + "e-" + decimalPlaces)
+	} else {
+		return number
+	}
+}
+
 instance.prototype.process_stream_vars = function(data) {
 	var self = this;
 
 	for (var s in data) {
 		self.states[s] = data[s];
-	}
-
-	const roundIfDefined = (number, decimalPlaces) => {
-		if (number) {
-			return Number(Math.round(number + "e" + decimalPlaces) + "e-" + decimalPlaces)
-		} else {
-			return number
-		}
 	}
 
 	self.setVariable('bytes_per_sec', data['bytes-per-sec']);
@@ -198,7 +198,7 @@ instance.prototype.process_stream_vars = function(data) {
 		self.setVariable('kbits_per_sec', data['kbits-per-sec'].toLocaleString());
 	}
 
-	self.setVariable('average_frame_time', roundIfDefined(data['average-frame-time'], 2));
+	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2));
 	self.setVariable('preview_only', data['preview-only']);
 	self.setVariable('recording', data['recording']);
 	self.setVariable('strain', data['strain']);
@@ -218,23 +218,15 @@ instance.prototype.process_obs_stats = function(data) {
 		self.states[s] = data[s];
 	}
 
-	const roundIfDefined = (number, decimalPlaces) => {
-		if (number) {
-			return Number(Math.round(number + "e" + decimalPlaces) + "e-" + decimalPlaces)
-		} else {
-			return number
-		}
-	}
-
-	self.setVariable('fps', roundIfDefined(data['fps'], 2));
+	self.setVariable('fps', self.roundIfDefined(data['fps'], 2));
 	self.setVariable('render_total_frames', data['render-total-frames']);
 	self.setVariable('render_missed_frames', data['render-missed-frames']);
 	self.setVariable('output_total_frames', data['output-total-frames']);
 	self.setVariable('output_skipped_frames', data['output-skipped-frames']);
-	self.setVariable('average_frame_time', roundIfDefined(data['average-frame-time'], 2));
-	self.setVariable('cpu_usage', roundIfDefined(data['cpu-usage'], 2));
-	self.setVariable('memory_usage', roundIfDefined(data['memory-usage'], 2));
-	self.setVariable('free_disk_space', roundIfDefined(data['free-disk-space'], 2));
+	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2));
+	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2));
+	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 2));
+	self.setVariable('free_disk_space', self.roundIfDefined(data['free-disk-space'], 2));
 };
 
 
