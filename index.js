@@ -196,7 +196,19 @@ instance.prototype.process_stream_vars = function(data) {
 	self.setVariable('strain', data['strain']);
 	self.setVariable('stream_timecode', data['stream-timecode']);
 	self.setVariable('streaming', data['streaming']);
-	self.setVariable('total_stream_time', data['total-stream-time']);
+
+	const toTimecode = (value) => {
+		let valueNum = parseInt(value, 10)
+		let hours = Math.floor(valueNum / 3600)
+		let minutes = Math.floor(valueNum / 60) % 60
+		let seconds = valueNum % 60
+
+		return [hours, minutes, seconds]
+			.map(v => v < 10 ? "0" + v : v)
+			.join(":")
+	}
+
+	self.setVariable('total_stream_time', toTimecode(data['total-stream-time']));
 
 	self.process_obs_stats(data);
 
