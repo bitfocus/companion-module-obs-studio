@@ -72,6 +72,7 @@ instance.prototype.init = function() {
 			self.getStats();
 			self.startStatsPoller();
 			self.getStreamStatus();
+			self.updateTransitionList();
 			self.updateScenesAndSources();
 			self.updateInfo();
 		}).catch(err => {
@@ -92,6 +93,16 @@ instance.prototype.init = function() {
 				
 			}
 		});
+
+		self.obs.on('SceneCollectionChanged', function() {
+			self.updateTransitionList();
+			self.updateScenesAndSources();
+		})
+
+		self.obs.on('SceneCollectionListChanged', function() {
+			self.updateTransitionList();
+			self.updateScenesAndSources();
+		})
 
 		self.obs.on('SwitchScenes', function(data) {
 			self.states['scene_active'] = data['scene-name'];
@@ -114,8 +125,15 @@ instance.prototype.init = function() {
 			self.updateScenesAndSources();
 		});
 
-		self.obs.on('SourceDestroyed', function() {
-			self.updateScenesAndSources();
+		self.obs.on('SourceDestroyed', function(data) {
+			self.states[data.sourceName] = false;
+			self.sources[data.sourceName] = null;
+
+			self.actions();
+			self.init_presets();
+			self.init_feedbacks();
+			self.checkFeedbacks('scene_item_active');
+			self.checkFeedbacks('scene_active');
 		});
 
 		self.obs.on('StreamStarted', function(data) {
@@ -159,6 +177,14 @@ instance.prototype.init = function() {
 			} else {
 				self.updateScenesAndSources();
 			}
+		});
+
+		self.obs.on('TransitionListChanged', function(data) {
+			self.updateTransitionList();
+		});
+
+		self.obs.on('TransitionDurationChanged', function(data) {
+			self.updateTransitionList();
 		});
 	});
 
@@ -289,21 +315,24 @@ instance.prototype.getStreamStatus = function() {
 	});
 };
 
-instance.prototype.updateScenesAndSources = async function() {
+instance.prototype.updateTransitionList = async function() {
 	var self = this;
 
-	await self.obs.send('GetTransitionList').then(data => {
-		self.transitions = {};
-		self.states['current_transition'] = data['current-transition'];
-		for (var s in data.transitions) {
-			var transition = data.transitions[s];
-			self.transitions[transition.name] = transition;
-		}
-		self.actions();
-		self.init_presets();
-		self.init_feedbacks();
-		self.init_variables();
-	});
+	let data = await self.obs.send('GetTransitionList')
+	self.transitions = {};
+	self.states['current_transition'] = data['current-transition'];
+	for (var s in data.transitions) {
+		var transition = data.transitions[s];
+		self.transitions[transition.name] = transition;
+	}
+	self.actions();
+	self.init_presets();
+	self.init_feedbacks();
+	self.init_variables();
+}
+
+instance.prototype.updateScenesAndSources = async function() {
+	var self = this;
 
 	await self.obs.send('GetSourcesList').then(data => {
 		self.sources = {};
