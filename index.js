@@ -999,7 +999,7 @@ instance.prototype.init_feedbacks = function() {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(100, 255, 0)
+				default: self.rgb(0, 204, 0)
 			},
 			{
 				type: 'dropdown',
@@ -1025,7 +1025,7 @@ instance.prototype.init_feedbacks = function() {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(100, 255, 0)
+				default: self.rgb(0, 204, 0)
 			},
 			{
 				type: 'dropdown',
