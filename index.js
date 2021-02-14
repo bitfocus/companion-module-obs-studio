@@ -1157,7 +1157,7 @@ instance.prototype.feedback = function(feedback) {
 
 	if (feedback.type === 'scene_item_active_in_scene') {
 		let scene = self.scenes[feedback.options.scene];
-		if (scene) {
+		if (scene && scene.sources) {
 			for (let source of scene.sources) {
 				if (source.name == feedback.options.source && source.render) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
