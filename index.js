@@ -560,22 +560,25 @@ instance.prototype.actions = function() {
 			label: 'Toggle visibility scene item',
 			options: [
 				{
-					type: 'textinput',
+					type: 'dropdown',
 					label: 'Scene (optional, defaults to current scene)',
-					id: 'scene'
+					id: 'scene',
+					default: '',
+					choices: self.scenelist
 				},
 				{
-					type: 'textinput',
+					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
 					default: '',
+					choices: self.sourcelist
 				},
 				{
 					type: 'dropdown',
 					label: 'Visible',
 					id: 'visible',
 					default: 'true',
-					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
+					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' }, { id: 'toggle', label: 'Toggle' } ]
 				}
 			]
 		},
@@ -731,10 +734,31 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('StartStopRecording');
 			break;
 		case 'toggle_scene_item':
+			let visible = true
+			let sceneName = action.options.scene && action.options.scene != "" ? action.options.scene : null
+
+			if (action.options.visible == "toggle") {
+				if (sceneName) {
+					let scene = self.scenes[sceneName]
+					if (scene) {
+						for (let source of scene.sources) {
+							if (source.name == action.options.source) {
+								visible = !source.render
+								break
+							}
+						}
+					}
+				} else {
+					visible = !self.states[action.options.source]
+				}
+			} else {
+				visible = action.options.visible == "true"
+			}
+
 			handle = self.obs.send('SetSceneItemProperties', {
 				'item': action.options.source,
-				'visible': (action.options.visible == 'true' ? true : false),
-				'scene-name': action.options.scene && action.options.scene != "" ? action.options.scene : null
+				'visible': visible,
+				'scene-name': sceneName
 			});
 			break;
 		case 'set-freetype-text':
@@ -808,7 +832,6 @@ instance.prototype.init_feedbacks = function() {
 			},
 		]
 	};
-
 
 	feedbacks['scene_active'] = {
 		label: 'Change colors from active/previewed scene',
