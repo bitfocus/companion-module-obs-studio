@@ -397,6 +397,7 @@ instance.prototype.updateScenesAndSources = async function() {
 	self.init_presets();
 	self.init_feedbacks();
 	self.checkFeedbacks('scene_item_active');
+	self.checkFeedbacks('scene_item_active_in_scene');
 	self.checkFeedbacks('scene_active');
 };
 
@@ -1072,6 +1073,39 @@ instance.prototype.init_feedbacks = function() {
 		]
 	}
 
+	feedbacks['scene_item_active_in_scene'] = {
+		label: 'Change colors when source enabled in scene',
+		description: 'If a source become visible or invisible in a specific scene, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Scene name',
+				id: 'scene',
+				default: '',
+				choices: self.scenelist
+			},
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: '',
+				choices: self.sourcelist
+			}
+		]
+	};
+
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -1102,6 +1136,7 @@ instance.prototype.feedback = function(feedback) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
+
 	if (feedback.type === 'scene_item_active')  {
 		if ((self.states[feedback.options.source] === true)) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
@@ -1117,6 +1152,17 @@ instance.prototype.feedback = function(feedback) {
 	if (feedback.type === 'scene_collection_active') {
 		if (self.states['current_scene_collection'] === feedback.options.scene_collection) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'scene_item_active_in_scene') {
+		let scene = self.scenes[feedback.options.scene];
+		if (scene && scene.sources) {
+			for (let source of scene.sources) {
+				if (source.name == feedback.options.source && source.render) {
+					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+				}
+			}
 		}
 	}
 
