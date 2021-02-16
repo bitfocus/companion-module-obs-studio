@@ -2,10 +2,6 @@
 # yarn lockfile v1
 
 
-async-limiter@~1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/async-limiter/-/async-limiter-1.0.0.tgz#78faed8c3d074ab81f22b4e985d79e8738f720f8"
-
 debug@^4.1.0:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.1.1.tgz#3b72260255109c6b589cee050f1d516139664791"
@@ -17,18 +13,24 @@ inherits@^2.0.1:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.3.tgz#633c2c83e3da42a502f52466022480f4208261de"
 
+isomorphic-ws@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/isomorphic-ws/-/isomorphic-ws-4.0.1.tgz#55fd4cd6c5e6491e76dc125938dd863f5cd4f2dc"
+  integrity sha512-BhBvN2MBpWTaSHdWRb/bwdZJ1WaehQ2L1KngkCkfLUGF0mAWAT1sQUQacEmQ0jXkFw/czDXPNQSL5u2/Krsz1w==
+
 ms@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.1.tgz#30a5864eb3ebb0a66f2ebe6d727af06a09d86e0a"
 
-obs-websocket-js@^3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/obs-websocket-js/-/obs-websocket-js-3.1.0.tgz#0c04b19c70b73ec7cf33467f892ed64abe3369c4"
-  integrity sha512-0p0VoInUeL0k/uaK5vV5iOfm6Bjpc4QLie/6bLGbGiG6AM6QKELcj7zwt9vSsb5rV3Is0k362tsabIKhRaDvKQ==
+obs-websocket-js@^4.0.2:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/obs-websocket-js/-/obs-websocket-js-4.0.2.tgz#b0dc6df1141f14878e04f927d12379f9ab234d52"
+  integrity sha512-e+tGp0DQNXSnitc5lfuzEC1dG3VdWy7VLePUVb6aq7bC33Sgjoi695k0eOg4UPTIQI71Z9aJ+yn3nvBX9dQkEg==
   dependencies:
     debug "^4.1.0"
+    isomorphic-ws "^4.0.1"
     sha.js "^2.4.9"
-    ws "^5.1.0"
+    ws "^7.2.0"
 
 safe-buffer@^5.0.1:
   version "5.1.2"
@@ -41,8 +43,7 @@ sha.js@^2.4.9:
     inherits "^2.0.1"
     safe-buffer "^5.0.1"
 
-ws@^5.1.0:
-  version "5.2.2"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-5.2.2.tgz#dffef14866b8e8dc9133582514d1befaf96e980f"
-  dependencies:
-    async-limiter "~1.0.0"
+ws@^7.2.0:
+  version "7.4.3"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-7.4.3.tgz#1f9643de34a543b8edb124bdcbc457ae55a6e5cd"
+  integrity sha512-hr6vCR76GsossIRsr8OLR9acVVm1jyfEWvhbNjtgPOrfvAlKzvyeg/P6r8RuDjRyrcQoPQT7K0DGEPc7Ae6jzA==
