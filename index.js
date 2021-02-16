@@ -77,6 +77,7 @@ instance.prototype.init = function() {
 			self.getStats();
 			self.startStatsPoller();
 			self.getStreamStatus();
+			self.updateTransitionList();
 			self.updateScenesAndSources();
 			self.updateInfo();
 			self.updateProfiles();
@@ -100,6 +101,16 @@ instance.prototype.init = function() {
 			}
 		});
 
+		self.obs.on('SceneCollectionChanged', function() {
+			self.updateTransitionList();
+			self.updateScenesAndSources();
+		})
+
+		self.obs.on('SceneCollectionListChanged', function() {
+			self.updateTransitionList();
+			self.updateScenesAndSources();
+		})
+
 		self.obs.on('SwitchScenes', function(data) {
 			self.states['scene_active'] = data['scene-name'];
 			self.setVariable('scene_active', data['scene-name']);
@@ -121,8 +132,15 @@ instance.prototype.init = function() {
 			self.updateScenesAndSources();
 		});
 
-		self.obs.on('SourceDestroyed', function() {
-			self.updateScenesAndSources();
+		self.obs.on('SourceDestroyed', function(data) {
+			self.states[data.sourceName] = false;
+			self.sources[data.sourceName] = null;
+
+			self.actions();
+			self.init_presets();
+			self.init_feedbacks();
+			self.checkFeedbacks('scene_item_active');
+			self.checkFeedbacks('scene_active');
 		});
 
 		self.obs.on('StreamStarted', function(data) {
@@ -166,6 +184,14 @@ instance.prototype.init = function() {
 			} else {
 				self.updateScenesAndSources();
 			}
+		});
+
+		self.obs.on('TransitionListChanged', function(data) {
+			self.updateTransitionList();
+		});
+
+		self.obs.on('TransitionDurationChanged', function(data) {
+			self.updateTransitionList();
 		});
 
 		self.obs.on('ProfileChanged', (data) => {
@@ -325,20 +351,23 @@ instance.prototype.getStreamStatus = function() {
 	});
 };
 
-instance.prototype.updateScenesAndSources = async function() {
+instance.prototype.updateTransitionList = async function() {
 	var self = this;
 
-	await self.obs.send('GetTransitionList').then(data => {
-		self.transitions = {};
-		self.states['current_transition'] = data['current-transition'];
-		for (var s in data.transitions) {
-			var transition = data.transitions[s];
-			self.transitions[transition.name] = transition;
-		}
-		self.actions();
-		self.init_presets();
-		self.init_feedbacks();
-	});
+	let data = await self.obs.send('GetTransitionList')
+	self.transitions = {};
+	self.states['current_transition'] = data['current-transition'];
+	for (var s in data.transitions) {
+		var transition = data.transitions[s];
+		self.transitions[transition.name] = transition;
+	}
+	self.actions();
+	self.init_presets();
+	self.init_feedbacks();
+}
+
+instance.prototype.updateScenesAndSources = async function() {
+	var self = this;
 
 	await self.obs.send('GetSourcesList').then(data => {
 		self.sources = {};
@@ -397,6 +426,7 @@ instance.prototype.updateScenesAndSources = async function() {
 	self.init_presets();
 	self.init_feedbacks();
 	self.checkFeedbacks('scene_item_active');
+	self.checkFeedbacks('scene_item_active_in_scene');
 	self.checkFeedbacks('scene_active');
 };
 
@@ -1072,6 +1102,39 @@ instance.prototype.init_feedbacks = function() {
 		]
 	}
 
+	feedbacks['scene_item_active_in_scene'] = {
+		label: 'Change colors when source enabled in scene',
+		description: 'If a source become visible or invisible in a specific scene, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Scene name',
+				id: 'scene',
+				default: '',
+				choices: self.scenelist
+			},
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: '',
+				choices: self.sourcelist
+			}
+		]
+	};
+
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -1102,6 +1165,7 @@ instance.prototype.feedback = function(feedback) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
+
 	if (feedback.type === 'scene_item_active')  {
 		if ((self.states[feedback.options.source] === true)) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
@@ -1117,6 +1181,17 @@ instance.prototype.feedback = function(feedback) {
 	if (feedback.type === 'scene_collection_active') {
 		if (self.states['current_scene_collection'] === feedback.options.scene_collection) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'scene_item_active_in_scene') {
+		let scene = self.scenes[feedback.options.scene];
+		if (scene && scene.sources) {
+			for (let source of scene.sources) {
+				if (source.name == feedback.options.source && source.render) {
+					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+				}
+			}
 		}
 	}
 
