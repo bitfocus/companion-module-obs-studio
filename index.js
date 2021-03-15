@@ -92,7 +92,7 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('ConnectionClosed', function() {
-			if (self.disable != true) {	
+			if ((self.disable != true) && (self.authenticated != false)) {	
 				self.log('error','Connection lost to OBS.');
 				self.status(self.STATUS_ERROR);
 				self.init();
@@ -101,9 +101,15 @@ instance.prototype.init = function() {
 			}
 		});
 
-		self.obs.on('SceneCollectionChanged', function() {
-			self.updateTransitionList();
-			self.updateScenesAndSources();
+		self.obs.on('error', err => {
+			self.log('debug','Error received: ' + err);
+			self.status(self.STATUS_ERROR, err);
+		});
+
+		self.obs.on('AuthenticationFailure', function() {
+				self.log('error','Incorrect password configured for OBS websocket.');
+				self.status(self.STATUS_ERROR);
+				self.authenticated = false;
 		})
 
 		self.obs.on('SceneCollectionListChanged', function() {
