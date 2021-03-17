@@ -528,6 +528,7 @@ instance.prototype.actions = function() {
 	}
 
 	if (self.transitions !== undefined) {
+		self.transitionlist.push({ id: 'Default', label: 'Default'});
 		for (s in self.transitions) {
 			self.transitionlist.push({ id: s, label: s });
 		}
