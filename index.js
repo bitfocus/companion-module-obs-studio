@@ -612,8 +612,8 @@ instance.prototype.actions = function() {
 				{
 					type: 'dropdown',
 					label: 'Transition to use',
+					id: 'transition',
 					default: 'Default',
-					default: null,
 					choices: self.transitionlist,
 					required: false
 				},
