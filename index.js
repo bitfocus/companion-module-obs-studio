@@ -986,10 +986,12 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('SetCurrentSceneCollection', {
 				'sc-name': action.options.scene_collection,
 			})
+			break;
 		case 'start_output':
 			handle = self.obs.send('StartOutput', {
 				'outputName': action.options.output,
 			})
+			break;
 		case 'stop_output':
 			handle = self.obs.send('StopOutput', {
 				'outputName': action.options.output,
