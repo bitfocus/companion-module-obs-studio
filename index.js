@@ -67,6 +67,7 @@ instance.prototype.init = function() {
 		self.states = {};
 		self.scenes = {};
 		self.transitions = {};
+		self.outputs = {};
 
 		self.obs.connect({
 			address: (self.config.host !== '' ? self.config.host : '127.0.0.1') + ':' + (self.config.port !== '' ? self.config.port : '4444'),
@@ -82,6 +83,7 @@ instance.prototype.init = function() {
 			self.updateInfo();
 			self.updateProfiles();
 			self.updateSceneCollections();
+			self.updateOutputs();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
@@ -481,6 +483,19 @@ instance.prototype.updateCurrentSceneCollection = async function() {
 	this.checkFeedbacks('scene_collection_active')
 }
 
+instance.prototype.updateOutputs = async function() {
+	var self = this;
+
+	await self.obs.send('ListOutputs').then(data => {
+		self.outputs = {};
+		for (var s in data.outputs) {
+			var output = data.outputs[s];
+			self.outputs[output.name] = output;
+		}
+		self.actions();
+	});
+}
+
 // When module gets deleted
 instance.prototype.destroy = function() {
 	var self = this;
@@ -491,6 +506,7 @@ instance.prototype.destroy = function() {
 	self.sourcelist = [];
 	self.profiles = [];
 	self.sceneCollections = [];
+	self.outputs = [];
 	self.feedbacks = {};
 	if (self.obs !== undefined) {
 		self.obs.disconnect();
@@ -510,6 +526,7 @@ instance.prototype.actions = function() {
 	self.transitionlist = [];
 	self.profilelist = []
 	self.scenecollectionlist = []
+	self.outputlist = [];
 
 	var s;
 	if (self.sources !== undefined) {
@@ -542,6 +559,18 @@ instance.prototype.actions = function() {
 	if (self.sceneCollections !== undefined) {
 		for (let s of self.sceneCollections) {
 			self.scenecollectionlist.push({ id: s, label: s });
+		}
+	}
+
+	if (self.outputs !== undefined) {
+		for (s in self.outputs) {
+			if (s == 'adv_file_output') {
+				//do nothing, this option doesn't work
+			 } else if (s == 'virtualcam_output') {
+				self.outputlist.push({ id: s, label: 'Virtual Camera'});
+			 } else {
+				self.outputlist.push({ id: s, label: s});
+			 }
 		}
 	}
 
@@ -774,6 +803,32 @@ instance.prototype.actions = function() {
 					choices: self.scenecollectionlist,
 				}
 			]
+		},
+		'start_output': {
+			label: 'Start Output',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Output',
+					id: 'output',
+					default: 'virtualcam_output',
+					choices: self.outputlist,
+					required: false
+				}
+			]
+		},
+		'stop_output': {
+			label: 'Stop Output',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Output',
+					id: 'output',
+					default: 'virtualcam_output',
+					choices: self.outputlist,
+					required: false
+				}
+			]
 		}
 	});
 };
@@ -930,6 +985,14 @@ instance.prototype.action = function(action) {
 		case 'set_scene_collection':
 			handle = self.obs.send('SetCurrentSceneCollection', {
 				'sc-name': action.options.scene_collection,
+			})
+		case 'start_output':
+			handle = self.obs.send('StartOutput', {
+				'outputName': action.options.output,
+			})
+		case 'stop_output':
+			handle = self.obs.send('StopOutput', {
+				'outputName': action.options.output,
 			})
 	}
 
