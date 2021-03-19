@@ -33,6 +33,9 @@ instance.prototype.updateConfig = function(config) {
 instance.prototype.init = function() {
 	var self = this;
 	self.stopStatsPoller()
+	self.init_presets();
+	self.init_variables();
+	self.init_feedbacks();
 	self.disable = false;
 	self.status(self.STATUS_WARN, "Connecting");
 	if (self.obs !== undefined) {
@@ -94,7 +97,7 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('ConnectionClosed', function() {
-			if (self.disable != true) {	
+			if ((self.disable != true) && (self.authenticated != false)) {	
 				self.log('error','Connection lost to OBS.');
 				self.status(self.STATUS_ERROR);
 				self.init();
@@ -103,14 +106,25 @@ instance.prototype.init = function() {
 			}
 		});
 
+		self.obs.on('AuthenticationFailure', function() {
+				self.log('error','Incorrect password configured for OBS websocket.');
+				self.status(self.STATUS_ERROR);
+				self.authenticated = false;
+				if (self.tcp !== undefined) {
+					self.tcp.destroy();
+				}
+		})
+
 		self.obs.on('SceneCollectionChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
+			self.updateCurrentSceneCollection();
 		})
 
 		self.obs.on('SceneCollectionListChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
+			self.updateSceneCollectionList();
 		})
 
 		self.obs.on('SwitchScenes', function(data) {
@@ -202,14 +216,6 @@ instance.prototype.init = function() {
 
 		self.obs.on('ProfileListChanged', (data) => {
 			self.updateProfileList()
-		})
-
-		self.obs.on('SceneCollectionChanged', (data) => {
-			self.updateCurrentSceneCollection()
-		})
-
-		self.obs.on('SceneCollectionListChanged', (data) => {
-			self.updateSceneCollectionList()
 		})
 
 	});
