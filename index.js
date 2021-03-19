@@ -110,6 +110,11 @@ instance.prototype.init = function() {
 				}
 		})
 
+		self.obs.on('SceneCollectionChanged', function() {
+			self.updateTransitionList();
+			self.updateScenesAndSources();
+		})
+
 		self.obs.on('SceneCollectionListChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
