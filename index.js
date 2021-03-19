@@ -528,6 +528,7 @@ instance.prototype.actions = function() {
 	}
 
 	if (self.transitions !== undefined) {
+		self.transitionlist.push({ id: 'Default', label: 'Default'});
 		for (s in self.transitions) {
 			self.transitionlist.push({ id: s, label: s });
 		}
@@ -613,7 +614,7 @@ instance.prototype.actions = function() {
 					type: 'dropdown',
 					label: 'Transition to use',
 					id: 'transition',
-					default: null,
+					default: 'Default',
 					choices: self.transitionlist,
 					required: false
 				},
@@ -844,12 +845,19 @@ instance.prototype.action = function(action) {
 		case 'do_transition':
 			var options = {};
 			if (action.options && action.options.transition) {
-				options['with-transition'] = {
-					name: action.options.transition
-				};
-
-				if (action.options.transition_time > 0) {
-					options['with-transition']['duration'] = action.options.transition_time;
+				if (action.options.transition == 'Default') {
+					options['with-transition'] = {
+					};
+					if (action.options.transition_time > 0) {
+						options['with-transition']['duration'] = action.options.transition_time;
+					}
+				} else {
+					options['with-transition'] = {
+						name: action.options.transition
+					};
+					if (action.options.transition_time > 0) {
+						options['with-transition']['duration'] = action.options.transition_time;
+					}
 				}
 			}
 
