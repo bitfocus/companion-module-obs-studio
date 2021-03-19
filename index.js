@@ -33,6 +33,9 @@ instance.prototype.updateConfig = function(config) {
 instance.prototype.init = function() {
 	var self = this;
 	self.stopStatsPoller()
+	self.init_presets();
+	self.init_variables();
+	self.init_feedbacks();
 	self.disable = false;
 	self.status(self.STATUS_WARN, "Connecting");
 	if (self.obs !== undefined) {
@@ -113,11 +116,13 @@ instance.prototype.init = function() {
 		self.obs.on('SceneCollectionChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
+			self.updateCurrentSceneCollection();
 		})
 
 		self.obs.on('SceneCollectionListChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
+			self.updateSceneCollectionList();
 		})
 
 		self.obs.on('SwitchScenes', function(data) {
@@ -209,14 +214,6 @@ instance.prototype.init = function() {
 
 		self.obs.on('ProfileListChanged', (data) => {
 			self.updateProfileList()
-		})
-
-		self.obs.on('SceneCollectionChanged', (data) => {
-			self.updateCurrentSceneCollection()
-		})
-
-		self.obs.on('SceneCollectionListChanged', (data) => {
-			self.updateSceneCollectionList()
 		})
 
 	});
