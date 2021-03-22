@@ -11,7 +11,6 @@ function instance(system, id, config) {
 	instance_skel.apply(this, arguments);
 
 	self.actions();
-	self.init_variables();
 
 	return self;
 }
