@@ -78,6 +78,7 @@ instance.prototype.init = function() {
 		}).then(() => {
 			self.status(self.STATUS_OK);
 			self.log('info','Success! Connected to OBS.');
+			self.getVersionInfo();
 			self.getStats();
 			self.startStatsPoller();
 			self.getStreamStatus();
@@ -318,6 +319,17 @@ instance.prototype.config_fields = function() {
 			width: 4,
 		}
 	]
+};
+
+instance.prototype.getVersionInfo = async function() {
+	let self = this
+
+	self.obs.send('GetVersion').then(data => {
+		var websocketVersion = parseFloat(data['obs-websocket-version']);
+		if (websocketVersion < 4.9) {
+			self.log('warn', 'Update to the latest version of the OBS Websocket plugin to ensure full feature compatibility. A download link is available in the help menu for the OBS module.')
+		}
+	});
 };
 
 instance.prototype.getStats = async function() {
