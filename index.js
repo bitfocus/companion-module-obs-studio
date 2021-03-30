@@ -195,11 +195,11 @@ instance.prototype.init = function() {
 		});
 		
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if (self.states['studio_mode'] == true) { 
-				//Item in preview, no change
-			} else {
 				self.updateScenesAndSources();
-			}
+		});
+
+		self.obs.on('SceneItemTransformChanged', function(data) {
+				self.updateScenesAndSources();
 		});
 
 		self.obs.on('TransitionListChanged', function(data) {
@@ -333,7 +333,7 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
-	}, 1000)
+	}, 10000)
 }
 
 instance.prototype.stopStatsPoller = function() {
@@ -383,8 +383,8 @@ instance.prototype.updateScenesAndSources = async function() {
 			var source = data.sources[s];
 			self.sources[source.name] = source;
 		}
-		self.actions();
-		self.init_feedbacks();
+		//self.actions();
+		//self.init_feedbacks();
 		data.sources.forEach(source => {
 			self.states[source.name] = false;
 		});
@@ -405,6 +405,13 @@ instance.prototype.updateScenesAndSources = async function() {
 				if (self.scenes[source.name] && source.render) {
 					nested.push(source.name)
 				}
+				if (source.type == 'group') {
+					for (var s in source.groupChildren) {
+						var groupedSource = source.groupChildren[s];
+						self.sources[groupedSource.name]['visible'] = groupedSource.render;
+					}
+				} 
+				self.sources[source.name]['visible'] = source.render;
 			}
 		}
 		return nested;
@@ -957,6 +964,11 @@ instance.prototype.action = function(action) {
 						for (let source of scene.sources) {
 							if (source.name == action.options.source) {
 								visible = !source.render
+								self.log('warn', 'toggle mode' + action.options.source + ' ' + source.render)
+								break
+							}
+							if (source.type == 'group') {
+								visible = !self.sources[action.options.source]['visible']
 								break
 							}
 						}
@@ -967,7 +979,6 @@ instance.prototype.action = function(action) {
 			} else {
 				visible = action.options.visible == "true"
 			}
-
 			handle = self.obs.send('SetSceneItemProperties', {
 				'item': action.options.source,
 				'visible': visible,
@@ -1246,7 +1257,7 @@ instance.prototype.feedback = function(feedback) {
 	}
 
 	if (feedback.type === 'scene_item_active')  {
-		if ((self.states[feedback.options.source] === true)) {
+		if ((self.sources[feedback.options.source]['visible'] === true)) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
