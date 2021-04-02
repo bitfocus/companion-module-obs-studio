@@ -397,7 +397,7 @@ instance.prototype.updateScenesAndSources = async function() {
 		self.scenes[scene.name] = scene;
 	}
 
-	if (self.states['studio_mode'] = true) {
+	if (self.states['studio_mode'] == true) {
 		let previewScene = await self.obs.send('GetPreviewScene')
 		self.states['scene_preview'] = previewScene.name;
 		self.setVariable('scene_preview', previewScene.name);
