@@ -86,7 +86,7 @@ instance.prototype.init = function() {
 			self.updateInfo();
 			self.updateProfiles();
 			self.updateSceneCollections();
-			self.updateOutputs();
+			self.updateOutputList();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
@@ -333,6 +333,9 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
+		if (self.obs) {
+			self.updateOutputs()
+		}
 	}, 1000)
 }
 
@@ -489,6 +492,21 @@ instance.prototype.updateCurrentSceneCollection = async function() {
 	this.checkFeedbacks('scene_collection_active')
 }
 
+instance.prototype.updateOutputList = async function() {
+	var self = this;
+
+	await self.obs.send('ListOutputs').then(data => {
+		self.outputs = {};
+		for (var s in data.outputs) {
+			var output = data.outputs[s];
+			self.outputs[output.name] = output;
+			self.states[output.name] = output.active;
+		}
+		self.actions();
+		self.checkFeedbacks('output_active');
+	});
+}
+
 instance.prototype.updateOutputs = async function() {
 	var self = this;
 
@@ -497,8 +515,9 @@ instance.prototype.updateOutputs = async function() {
 		for (var s in data.outputs) {
 			var output = data.outputs[s];
 			self.outputs[output.name] = output;
+			self.states[output.name] = output.active;
 		}
-		self.actions();
+		self.checkFeedbacks('output_active');
 	});
 }
 
@@ -572,6 +591,8 @@ instance.prototype.actions = function() {
 	if (self.outputs !== undefined) {
 		for (s in self.outputs) {
 			if (s == 'adv_file_output') {
+				//do nothing, this option doesn't work
+			 } else if (s == 'simple_file_output') {
 				//do nothing, this option doesn't work
 			 } else if (s == 'virtualcam_output') {
 				self.outputlist.push({ id: s, label: 'Virtual Camera'});
@@ -836,6 +857,19 @@ instance.prototype.actions = function() {
 					required: false
 				}
 			]
+		},
+		'start_stop_output': {
+			label: 'Start and Stop Output',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Output',
+					id: 'output',
+					default: 'virtualcam_output',
+					choices: self.outputlist,
+					required: false
+				}
+			]
 		}
 	});
 };
@@ -1010,6 +1044,17 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('StopOutput', {
 				'outputName': action.options.output,
 			})
+			break;
+		case 'start_stop_output':
+			if (self.states[action.options.output] === true) {
+				handle = self.obs.send('StopOutput', {
+					'outputName': action.options.output,
+				})	
+			} else {
+				handle = self.obs.send('StartOutput', {
+					'outputName': action.options.output,
+				})	
+			}
 	}
 
 	handle.catch(error => {
@@ -1214,6 +1259,32 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
+	feedbacks['output_active'] = {
+		label: 'Change colors when output active',
+		description: 'If an output is currently active, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Output name',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.outputlist
+			}
+		]
+	};
+
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -1271,6 +1342,12 @@ instance.prototype.feedback = function(feedback) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 				}
 			}
+		}
+	}
+
+	if (feedback.type === 'output_active')  {
+		if ((self.states[feedback.options.output] === true)) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
 
