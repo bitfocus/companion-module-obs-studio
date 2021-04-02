@@ -675,6 +675,18 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'smart_switcher': {
+			label: 'Smart switcher (Previews scene or transtions to scene if in preview)',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene',
+					id: 'scene',
+					default: '0',
+					choices: self.scenelist
+				}
+			]
+		},
 		'do_transition': {
 			label: 'Transition preview to program',
 			options: [
@@ -983,6 +995,15 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('SetPreviewScene', {
 				'scene-name': action.options.scene
 			});
+			break;
+		case 'smart_switcher':
+			if (self.states['scene_preview'] == action.options.scene) {
+				handle = self.obs.send('TransitionToProgram');
+			} else {
+				handle = self.obs.send('SetPreviewScene', {
+					'scene-name': action.options.scene
+				});
+			}
 			break;
 		case 'do_transition':
 			var options = {};
