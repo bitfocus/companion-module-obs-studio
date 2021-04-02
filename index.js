@@ -11,7 +11,6 @@ function instance(system, id, config) {
 	instance_skel.apply(this, arguments);
 
 	self.actions();
-	self.init_variables();
 
 	return self;
 }
@@ -411,6 +410,12 @@ instance.prototype.updateScenesAndSources = async function() {
 	self.setVariable('scene_active', sceneList.currentScene);
 	for (let scene of sceneList.scenes) {
 		self.scenes[scene.name] = scene;
+	}
+
+	if (self.states['studio_mode'] == true) {
+		let previewScene = await self.obs.send('GetPreviewScene')
+		self.states['scene_preview'] = previewScene.name;
+		self.setVariable('scene_preview', previewScene.name);
 	}
 
 	let findNestedScenes = (sceneName) => {
