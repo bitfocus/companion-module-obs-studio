@@ -713,6 +713,41 @@ instance.prototype.actions = function() {
 		'StartStopStreaming': {
 			label: 'Start and Stop Streaming'
 		},
+		'set_stream_settings' : {
+			label: 'Set Stream Settings',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Stream URL',
+					id: 'streamURL',
+					default: ''
+				},
+				{
+					type: 'textinput',
+					label: 'Stream Key',
+					id: 'streamKey',
+					default: ''
+				},
+				{
+					type: 'checkbox',
+					label: 'Use Authentication',
+					id: 'streamAuth',
+					default: false
+				},
+				{
+					type: 'textinput',
+					label: 'User Name (Optional)',
+					id: 'streamUserName',
+					default: ''
+				},
+				{
+					type: 'textinput',
+					label: 'Password (Optional)',
+					id: 'streamPassword',
+					default: ''
+				},
+			]
+		},
 		'StartStopRecording': {
 			label: 'Start and Stop Recording'
 		},
@@ -988,6 +1023,19 @@ instance.prototype.action = function(action) {
 			break;
 		case 'StartStopStreaming':
 			handle = self.obs.send('StartStopStreaming');
+			break;
+		case 'set_stream_settings':
+			var streamSettings = {};
+			
+			streamSettings['settings'] = {
+				server: action.options.streamURL,
+				key: action.options.streamKey,
+				use_auth: action.options.streamAuth,
+				username: action.options.streamUserName,
+				password: action.options.streamPassword
+			};
+
+			handle = self.obs.send('SetStreamSettings', streamSettings);
 			break;
 		case 'StartStopRecording':
 			handle = self.obs.send('StartStopRecording');
