@@ -726,7 +726,7 @@ instance.prototype.actions = function() {
 					type: 'number',
 					label: 'Volume in dB (-100 to 26) ',
 					id: 'volume',
-					default: null,
+					default: 0,
 					min: -100,
 					max: 26,
 					range: false,
