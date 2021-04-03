@@ -626,9 +626,6 @@ instance.prototype.actions = function() {
 		self.transitionlist.push({ id: 'Current Scene', label: 'Current Scene'});
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
-
-			// Scenes can also be sources
-			self.sourcelist.push({ id: s, label: s });
 		}
 	}
 
