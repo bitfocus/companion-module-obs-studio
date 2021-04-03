@@ -11,7 +11,6 @@ function instance(system, id, config) {
 	instance_skel.apply(this, arguments);
 
 	self.actions();
-	self.init_variables();
 
 	return self;
 }
@@ -431,9 +430,7 @@ instance.prototype.updateScenesAndSources = async function() {
 	sceneList.scenes.forEach(scene => {
 		for (let source of scene.sources) {
 			if (source.type == 'scene') {
-				self.sources[source.name] = source;
-				self.sources[source.name]['visible'] = source.render;
-				if (self.sources[source.name] && self.sources[source.name]['visible_program'] != null ) {
+				if (self.sources[source.name] && self.sources[source.name]['visible_program']) {
 					self.sources[source.name]['visible_program'] = true;
 				} else {
 					self.sources[source.name] = source;
@@ -607,8 +604,8 @@ instance.prototype.destroy = function() {
 
 instance.prototype.actions = function() {
 	var self = this;
-
 	self.scenelist = [];
+	self.scenelistToggle = [];
 	self.sourcelist = [];
 	self.transitionlist = [];
 	self.profilelist = []
@@ -623,9 +620,10 @@ instance.prototype.actions = function() {
 	}
 
 	if (self.scenes !== undefined) {
-		self.transitionlist.push({ id: 'Current Scene', label: 'Current Scene'});
+		self.scenelistToggle.push({ id: 'Current Scene', label: 'Current Scene'});
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
+			self.scenelistToggle.push({ id: s, label: s });
 		}
 	}
 
@@ -799,7 +797,7 @@ instance.prototype.actions = function() {
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: self.scenelist
+					choices: self.scenelistToggle
 				},
 				{
 					type: 'dropdown',
@@ -1034,9 +1032,7 @@ instance.prototype.action = function(action) {
 					if (scene) {
 						for (let source of scene.sources) {
 							if (source.type == 'scene') {
-								self.debug(source)
 								visible = !self.sources[action.options.source]['visible']
-								self.log('warn', source.name  + self.sources[action.options.source]['visible'])
 							}
 							else if (source.type == 'group') {
 								if (source.name == action.options.source) {
