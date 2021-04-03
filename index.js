@@ -332,7 +332,7 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
-	}, 20000) //log
+	}, 1000)
 }
 
 instance.prototype.stopStatsPoller = function() {
