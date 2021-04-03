@@ -797,6 +797,28 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'set_volume' : {
+			label: 'Set Source Volume',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist
+				},
+				{
+					type: 'number',
+					label: 'Volume in dB (-100 to 26) ',
+					id: 'volume',
+					default: 0,
+					min: -100,
+					max: 26,
+					range: false,
+					required: false
+				}
+			]
+		},
 		'toggle_scene_item' : {
 			label: 'Toggle visibility scene item',
 			options: [
@@ -1040,6 +1062,13 @@ instance.prototype.action = function(action) {
 		case 'toggle_source_mute':
 			handle = self.obs.send('ToggleMute', {
 				'source': action.options.source
+			});
+			break;
+		case 'set_volume':
+			handle = self.obs.send('SetVolume', {
+				'source': action.options.source,
+				'volume': action.options.volume,
+				'useDecibel': true
 			});
 			break;
 		case 'set_transition':
