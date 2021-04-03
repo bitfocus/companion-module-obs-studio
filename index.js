@@ -333,7 +333,7 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
-	}, 1000)
+	}, 20000) //log
 }
 
 instance.prototype.stopStatsPoller = function() {
@@ -431,6 +431,8 @@ instance.prototype.updateScenesAndSources = async function() {
 	sceneList.scenes.forEach(scene => {
 		for (let source of scene.sources) {
 			if (source.type == 'scene') {
+				self.sources[source.name] = source;
+				self.sources[source.name]['visible'] = source.render;
 				if (self.sources[source.name] && self.sources[source.name]['visible_program'] != null ) {
 					self.sources[source.name]['visible_program'] = true;
 				} else {
@@ -469,12 +471,12 @@ instance.prototype.updateScenesAndSources = async function() {
 							if (self.sources[groupedSource.name]['visible'] === true && scene.name == sceneList.currentScene && source.render === true) {
 								self.sources[groupedSource.name]['visible_program'] = true;
 							}
-							if (self.sources[groupedSource.name]['visible'] === true && source.render == true) {
+							if (groupedSource.name == sceneList.currentScene) {
 								self.sources[groupedSource.name]['visible_program'] = true;
 							}
 							if (groupedSource.render === true) {
 								for (let nestedSource of self.scenes[groupedSource.name].sources) {
-									if (nestedSource.render === true && self.sources[source.name]['visible'] === true) {
+									if (nestedSource.render === true && self.sources[source.name]['visible_program'] === true) {
 										self.sources[nestedSource.name]['visible_program'] = true;
 									}
 								}
@@ -1034,17 +1036,24 @@ instance.prototype.action = function(action) {
 					let scene = self.scenes[sceneName]
 					if (scene) {
 						for (let source of scene.sources) {
-							if (source.name == action.options.source) {
-								visible = !source.render
-								break
-							}
-							if (source.type == 'group') {
-								visible = !self.sources[action.options.source]['visible']
-								break
-							}
 							if (source.type == 'scene') {
+								self.debug(source)
 								visible = !self.sources[action.options.source]['visible']
-								break
+								self.log('warn', source.name  + self.sources[action.options.source]['visible'])
+							}
+							else if (source.type == 'group') {
+								if (source.name == action.options.source) {
+								visible = !self.sources[action.options.source]['visible']
+								} else { 
+									for (let groupedSource of source.groupChildren) {
+										if (groupedSource.name == action.options.source) {
+											visible = !groupedSource.render	
+										}
+									} 
+								}
+							}
+							else if (source.name == action.options.source) {
+								visible = !source.render
 							}
 						}
 					}
