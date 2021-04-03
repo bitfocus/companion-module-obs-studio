@@ -11,6 +11,7 @@ function instance(system, id, config) {
 	instance_skel.apply(this, arguments);
 
 	self.actions();
+	self.init_variables();
 
 	return self;
 }
@@ -77,16 +78,16 @@ instance.prototype.init = function() {
 		}).then(() => {
 			self.status(self.STATUS_OK);
 			self.log('info','Success! Connected to OBS.');
-			self.getVersionInfo();
 			self.getStats();
 			self.startStatsPoller();
 			self.getStreamStatus();
 			self.updateTransitionList();
+			self.updateFilterList();
 			self.updateScenesAndSources();
 			self.updateInfo();
 			self.updateProfiles();
 			self.updateSceneCollections();
-			self.updateOutputList();
+			self.updateOutputs();
 		}).catch(err => {
 			self.status(self.STATUS_ERROR, err);
 		});
@@ -97,12 +98,12 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('ConnectionClosed', function() {
-			if ((self.disable != true) && (self.authenticated != false)) {	
+			if ((self.disable != true) && (self.authenticated != false)) {
 				self.log('error','Connection lost to OBS.');
 				self.status(self.STATUS_ERROR);
 				self.init();
 			} else {
-				
+
 			}
 		});
 
@@ -118,12 +119,14 @@ instance.prototype.init = function() {
 		self.obs.on('SceneCollectionChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
+			self.updateFilterList();
 			self.updateCurrentSceneCollection();
 		})
 
 		self.obs.on('SceneCollectionListChanged', function() {
 			self.updateTransitionList();
 			self.updateScenesAndSources();
+			self.updateFilterList();
 			self.updateSceneCollectionList();
 		})
 
@@ -132,6 +135,7 @@ instance.prototype.init = function() {
 			self.setVariable('scene_active', data['scene-name']);
 			self.checkFeedbacks('scene_active');
 			self.updateScenesAndSources();
+			self.updateFilterList();
 		});
 
 		self.obs.on('PreviewSceneChanged', function(data) {
@@ -146,6 +150,9 @@ instance.prototype.init = function() {
 
 		self.obs.on('SceneItemAdded', function() {
 			self.updateScenesAndSources();
+		});
+		self.obs.on('SourceFilterAdded', function() {
+			self.updateFilterList();
 		});
 
 		self.obs.on('SourceDestroyed', function(data) {
@@ -193,12 +200,19 @@ instance.prototype.init = function() {
 				self.states['studio_mode'] = false;
 			}
 		});
-		
+
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if (self.states['studio_mode'] == true) { 
+			if (self.states['studio_mode'] == true) {
 				//Item in preview, no change
 			} else {
 				self.updateScenesAndSources();
+			}
+		});
+		self.obs.on('SourceFilterVisibilityChanged', function(data) {
+			if (self.states['studio_mode'] == true) {
+				//Item in preview, no change
+			} else {
+				self.updateFilterList();
 			}
 		});
 
@@ -320,17 +334,6 @@ instance.prototype.config_fields = function() {
 	]
 };
 
-instance.prototype.getVersionInfo = async function() {
-	let self = this
-
-	self.obs.send('GetVersion').then(data => {
-		var websocketVersion = parseFloat(data['obs-websocket-version']);
-		if (websocketVersion < 4.9) {
-			self.log('warn', 'Update to the latest version of the OBS Websocket plugin to ensure full feature compatibility. A download link is available in the help menu for the OBS module.')
-		}
-	});
-};
-
 instance.prototype.getStats = async function() {
 	let {stats} = await this.obs.send('GetStats')
 	this.process_obs_stats(stats);
@@ -343,9 +346,6 @@ instance.prototype.startStatsPoller = function() {
 	this.statsPoller = setInterval(() => {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
-		}
-		if (self.obs) {
-			self.updateOutputs()
 		}
 	}, 1000)
 }
@@ -388,6 +388,23 @@ instance.prototype.updateTransitionList = async function() {
 	self.init_feedbacks();
 }
 
+instance.prototype.updateFilterList = async function() {
+	var self = this;
+
+await self.obs.send('GetSourceFilters).then(data => {
+	self.filters = {};
+	for (var s in data.filters) {
+		var source = data.filters[s];
+		self.filters[filter.name] = filter;
+	}
+	self.actions();
+	self.init_feedbacks();
+	data.filters.forEach(filter => {
+		self.states[filter.name] = false;
+	});
+});
+}
+
 instance.prototype.updateScenesAndSources = async function() {
 	var self = this;
 
@@ -410,12 +427,6 @@ instance.prototype.updateScenesAndSources = async function() {
 	self.setVariable('scene_active', sceneList.currentScene);
 	for (let scene of sceneList.scenes) {
 		self.scenes[scene.name] = scene;
-	}
-
-	if (self.states['studio_mode'] == true) {
-		let previewScene = await self.obs.send('GetPreviewScene')
-		self.states['scene_preview'] = previewScene.name;
-		self.setVariable('scene_preview', previewScene.name);
 	}
 
 	let findNestedScenes = (sceneName) => {
@@ -509,21 +520,6 @@ instance.prototype.updateCurrentSceneCollection = async function() {
 	this.checkFeedbacks('scene_collection_active')
 }
 
-instance.prototype.updateOutputList = async function() {
-	var self = this;
-
-	await self.obs.send('ListOutputs').then(data => {
-		self.outputs = {};
-		for (var s in data.outputs) {
-			var output = data.outputs[s];
-			self.outputs[output.name] = output;
-			self.states[output.name] = output.active;
-		}
-		self.actions();
-		self.checkFeedbacks('output_active');
-	});
-}
-
 instance.prototype.updateOutputs = async function() {
 	var self = this;
 
@@ -532,9 +528,8 @@ instance.prototype.updateOutputs = async function() {
 		for (var s in data.outputs) {
 			var output = data.outputs[s];
 			self.outputs[output.name] = output;
-			self.states[output.name] = output.active;
 		}
-		self.checkFeedbacks('output_active');
+		self.actions();
 	});
 }
 
@@ -546,6 +541,7 @@ instance.prototype.destroy = function() {
 	self.states = {};
 	self.scenelist = [];
 	self.sourcelist = [];
+	self.filterlist = [];
 	self.profiles = [];
 	self.sceneCollections = [];
 	self.outputs = [];
@@ -565,6 +561,7 @@ instance.prototype.actions = function() {
 
 	self.scenelist = [];
 	self.sourcelist = [];
+	self.filterlist = [];
 	self.transitionlist = [];
 	self.profilelist = []
 	self.scenecollectionlist = []
@@ -583,6 +580,11 @@ instance.prototype.actions = function() {
 
 			// Scenes can also be sources
 			self.sourcelist.push({ id: s, label: s });
+		}
+	}
+	if (self.filters !== undefined) {
+		for (s in self.filters) {
+			self.filterlist.push({ id: s, label: s });
 		}
 	}
 
@@ -608,8 +610,6 @@ instance.prototype.actions = function() {
 	if (self.outputs !== undefined) {
 		for (s in self.outputs) {
 			if (s == 'adv_file_output') {
-				//do nothing, this option doesn't work
-			 } else if (s == 'simple_file_output') {
 				//do nothing, this option doesn't work
 			 } else if (s == 'virtualcam_output') {
 				self.outputlist.push({ id: s, label: 'Virtual Camera'});
@@ -680,18 +680,6 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
-		'smart_switcher': {
-			label: 'Smart switcher (Previews scene or transtions to scene if in preview)',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: '0',
-					choices: self.scenelist
-				}
-			]
-		},
 		'do_transition': {
 			label: 'Transition preview to program',
 			options: [
@@ -730,41 +718,6 @@ instance.prototype.actions = function() {
 		'StartStopStreaming': {
 			label: 'Start and Stop Streaming'
 		},
-		'set_stream_settings' : {
-			label: 'Set Stream Settings',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Stream URL',
-					id: 'streamURL',
-					default: ''
-				},
-				{
-					type: 'textinput',
-					label: 'Stream Key',
-					id: 'streamKey',
-					default: ''
-				},
-				{
-					type: 'checkbox',
-					label: 'Use Authentication',
-					id: 'streamAuth',
-					default: false
-				},
-				{
-					type: 'textinput',
-					label: 'User Name (Optional)',
-					id: 'streamUserName',
-					default: ''
-				},
-				{
-					type: 'textinput',
-					label: 'Password (Optional)',
-					id: 'streamPassword',
-					default: ''
-				},
-			]
-		},
 		'StartStopRecording': {
 			label: 'Start and Stop Recording'
 		},
@@ -797,30 +750,8 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
-		'set_volume' : {
-			label: 'Set Source Volume',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: '',
-					choices: self.sourcelist
-				},
-				{
-					type: 'number',
-					label: 'Volume in dB (-100 to 26) ',
-					id: 'volume',
-					default: 0,
-					min: -100,
-					max: 26,
-					range: false,
-					required: false
-				}
-			]
-		},
 		'toggle_scene_item' : {
-			label: 'Toggle visibility scene item',
+			label: 'Toggle Source Visibility ',
 			options: [
 				{
 					type: 'dropdown',
@@ -842,6 +773,39 @@ instance.prototype.actions = function() {
 					id: 'visible',
 					default: 'true',
 					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' }, { id: 'toggle', label: 'Toggle' } ]
+				}
+			]
+		},
+		'toggle_filter_item' : {
+			label: 'Toggle visibility filter',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene (optional, defaults to current scene)',
+					id: 'scene',
+					default: '',
+					choices: self.scenelist
+				},
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist
+				},
+				{
+					type: 'dropdown',
+					label: 'Filter',
+					id: 'filter',
+					default: '',
+					choices: self.filterlist
+				},
+				{
+					type: 'dropdown',
+					label: 'Visible',
+					id: 'visible',
+					default: 'true',
+					choices: [ { id: 'false', label: 'False' }, { id: 'true', label: 'True' } ]
 				}
 			]
 		},
@@ -943,19 +907,6 @@ instance.prototype.actions = function() {
 					required: false
 				}
 			]
-		},
-		'start_stop_output': {
-			label: 'Start and Stop Output',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Output',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.outputlist,
-					required: false
-				}
-			]
 		}
 	});
 };
@@ -1023,15 +974,6 @@ instance.prototype.action = function(action) {
 				'scene-name': action.options.scene
 			});
 			break;
-		case 'smart_switcher':
-			if (self.states['scene_preview'] == action.options.scene) {
-				handle = self.obs.send('TransitionToProgram');
-			} else {
-				handle = self.obs.send('SetPreviewScene', {
-					'scene-name': action.options.scene
-				});
-			}
-			break;
 		case 'do_transition':
 			var options = {};
 			if (action.options && action.options.transition) {
@@ -1064,13 +1006,6 @@ instance.prototype.action = function(action) {
 				'source': action.options.source
 			});
 			break;
-		case 'set_volume':
-			handle = self.obs.send('SetVolume', {
-				'source': action.options.source,
-				'volume': action.options.volume,
-				'useDecibel': true
-			});
-			break;
 		case 'set_transition':
 			handle = self.obs.send('SetCurrentTransition', {
 				'transition-name': action.options.transitions
@@ -1078,19 +1013,6 @@ instance.prototype.action = function(action) {
 			break;
 		case 'StartStopStreaming':
 			handle = self.obs.send('StartStopStreaming');
-			break;
-		case 'set_stream_settings':
-			var streamSettings = {};
-			
-			streamSettings['settings'] = {
-				server: action.options.streamURL,
-				key: action.options.streamKey,
-				use_auth: action.options.streamAuth,
-				username: action.options.streamUserName,
-				password: action.options.streamPassword
-			};
-
-			handle = self.obs.send('SetStreamSettings', streamSettings);
 			break;
 		case 'StartStopRecording':
 			handle = self.obs.send('StartStopRecording');
@@ -1123,6 +1045,36 @@ instance.prototype.action = function(action) {
 				'scene-name': sceneName
 			});
 			break;
+		case 'toggle_filter_item':
+				let visible = true
+				let sceneName = action.options.scene && action.options.scene != "" ? action.options.scene : null
+
+				if (action.options.visible == "toggle") {
+					if (sceneName) {
+						let scene = self.scenes[sceneName]
+						if (scene) {
+							for (let source of scene.sources) {
+								if (source.name == action.options.source) {
+									visible = !source.render
+									break
+								}
+							}
+						}
+					} else {
+						visible = !self.states[action.options.source]
+					}
+				} else {
+					visible = action.options.visible == "true"
+				}
+
+				handle = self.obs.send('SetSourceFilterVisibility', {
+					'item': action.options.filter,
+					'visible': visible,
+					'source-name': sourceName,
+					'scene-name': sceneName,
+					'filter-name': filterName
+				});
+				break;
 		case 'set-freetype-text':
 			handle = self.obs.send('SetTextFreetype2Properties', {
 				'source': action.options.source,
@@ -1159,17 +1111,6 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('StopOutput', {
 				'outputName': action.options.output,
 			})
-			break;
-		case 'start_stop_output':
-			if (self.states[action.options.output] === true) {
-				handle = self.obs.send('StopOutput', {
-					'outputName': action.options.output,
-				})	
-			} else {
-				handle = self.obs.send('StartOutput', {
-					'outputName': action.options.output,
-				})	
-			}
 	}
 
 	handle.catch(error => {
@@ -1374,32 +1315,6 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
-	feedbacks['output_active'] = {
-		label: 'Change colors when output active',
-		description: 'If an output is currently active, change color',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255)
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(255, 0, 0)
-			},
-			{
-				type: 'dropdown',
-				label: 'Output name',
-				id: 'output',
-				default: 'virtualcam_output',
-				choices: self.outputlist
-			}
-		]
-	};
-
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -1437,6 +1352,12 @@ instance.prototype.feedback = function(feedback) {
 		}
 	}
 
+	if (feedback.type === 'filter_item_active')  {
+		if ((self.states[feedback.options.filter] === true)) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
 	if (feedback.type === 'profile_active') {
 		if (self.states['current_profile'] === feedback.options.profile) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
@@ -1457,12 +1378,6 @@ instance.prototype.feedback = function(feedback) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 				}
 			}
-		}
-	}
-
-	if (feedback.type === 'output_active')  {
-		if ((self.states[feedback.options.output] === true)) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
 
