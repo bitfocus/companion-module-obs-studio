@@ -430,28 +430,28 @@ instance.prototype.updateScenesAndSources = async function() {
 	sceneList.scenes.forEach(scene => {
 		for (let source of scene.sources) {
 			if (source.type == 'scene') {
-				if (self.sources[source.name] && self.sources[source.name]['visible_program']) {
-					self.sources[source.name]['visible_program'] = true;
+				if (self.sources[source.name] && self.sources[source.name]['visible']) {
+					self.sources[source.name]['visible'] = true;
 				} else {
 					self.sources[source.name] = source;
-					self.sources[source.name]['visible'] = source.render;
+					self.sources[source.name]['enabled'] = source.render;
 					if (source.name == sceneList.currentScene ) {
-						self.sources[source.name]['visible_program'] = true;
+						self.sources[source.name]['visible'] = true;
 					}
 					if (source.render === true && scene.name == sceneList.currentScene) {
-						self.sources[source.name]['visible_program'] = true;
+						self.sources[source.name]['visible'] = true;
 						for (let nestedSource of self.scenes[source.name].sources) {
 							if (nestedSource.render === true && nestedSource.type !== 'scene') {
-								self.sources[nestedSource.name]['visible_program'] = true;
+								self.sources[nestedSource.name]['visible'] = true;
 							}
 						}
 					} 
 				}
 			}
 			if (source.type == 'group') {
-				self.sources[source.name]['visible'] = source.render;
-				if (self.sources[source.name]['visible'] === true && scene.name == sceneList.currentScene) {
-					self.sources[source.name]['visible_program'] = true;
+				self.sources[source.name]['enabled'] = source.render;
+				if (self.sources[source.name]['enabled'] === true && scene.name == sceneList.currentScene) {
+					self.sources[source.name]['visible'] = true;
 				}
 				self.sources[source.name]['muted'] = source.muted;
 				self.sources[source.name]['volume'] = source.volume;
@@ -460,29 +460,29 @@ instance.prototype.updateScenesAndSources = async function() {
 				for (var s in source.groupChildren) {
 					var groupedSource = source.groupChildren[s];
 					if (groupedSource.type == 'scene') {
-						if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible_program'] != null ) {
-							self.sources[groupedSource.name]['visible_program'] = true;
+						if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] != null ) {
+							self.sources[groupedSource.name]['visible'] = true;
 						} else {
 							self.sources[groupedSource.name] = groupedSource
-							self.sources[groupedSource.name]['visible'] = groupedSource.render;
-							if (self.sources[groupedSource.name]['visible'] === true && scene.name == sceneList.currentScene && source.render === true) {
-								self.sources[groupedSource.name]['visible_program'] = true;
+							self.sources[groupedSource.name]['enabled'] = groupedSource.render;
+							if (self.sources[groupedSource.name]['enabled'] === true && scene.name == sceneList.currentScene && source.render === true) {
+								self.sources[groupedSource.name]['visible'] = true;
 							}
 							if (groupedSource.name == sceneList.currentScene) {
-								self.sources[groupedSource.name]['visible_program'] = true;
+								self.sources[groupedSource.name]['visible'] = true;
 							}
 							if (groupedSource.render === true) {
 								for (let nestedSource of self.scenes[groupedSource.name].sources) {
-									if (nestedSource.render === true && self.sources[source.name]['visible_program'] === true) {
-										self.sources[nestedSource.name]['visible_program'] = true;
+									if (nestedSource.render === true && self.sources[source.name]['visible'] === true) {
+										self.sources[nestedSource.name]['visible'] = true;
 									}
 								}
 							} 
 						}
 					} else {
-						self.sources[groupedSource.name]['visible'] = groupedSource.render;
-						if (self.sources[groupedSource.name]['visible'] === true && scene.name == sceneList.currentScene && source.render === true) {
-							self.sources[groupedSource.name]['visible_program'] = true;
+						self.sources[groupedSource.name]['enabled'] = groupedSource.render;
+						if (self.sources[groupedSource.name]['enabled'] === true && scene.name == sceneList.currentScene && source.render === true) {
+							self.sources[groupedSource.name]['visible'] = true;
 						}
 						self.sources[groupedSource.name]['muted'] = source.muted;
 						self.sources[groupedSource.name]['volume'] = source.volume;
@@ -492,13 +492,13 @@ instance.prototype.updateScenesAndSources = async function() {
 				}
 			} 
 			if (source.type !== 'group' && source.type !== 'scene') {
-				if (self.sources[source.name] && self.sources[source.name]['visible_program'] != null ) {
-					self.sources[source.name]['visible'] = source.render;
-					self.sources[source.name]['visible_program'] = true;
+				if (self.sources[source.name] && self.sources[source.name]['visible'] != null ) {
+					self.sources[source.name]['enabled'] = source.render;
+					self.sources[source.name]['visible'] = true;
 				} else {
-					self.sources[source.name]['visible'] = source.render;
-					if (self.sources[source.name]['visible'] === true && scene.name == sceneList.currentScene) {
-						self.sources[source.name]['visible_program'] = true;
+					self.sources[source.name]['enabled'] = source.render;
+					if (self.sources[source.name]['enabled'] === true && scene.name == sceneList.currentScene) {
+						self.sources[source.name]['visible'] = true;
 					}
 					self.sources[source.name]['muted'] = source.muted;
 					self.sources[source.name]['volume'] = source.volume;
@@ -1032,11 +1032,11 @@ instance.prototype.action = function(action) {
 					if (scene) {
 						for (let source of scene.sources) {
 							if (source.type == 'scene') {
-								visible = !self.sources[action.options.source]['visible']
+								visible = !self.sources[action.options.source]['enabled']
 							}
 							else if (source.type == 'group') {
 								if (source.name == action.options.source) {
-								visible = !self.sources[action.options.source]['visible']
+								visible = !self.sources[action.options.source]['enabled']
 								} else { 
 									for (let groupedSource of source.groupChildren) {
 										if (groupedSource.name == action.options.source) {
@@ -1051,7 +1051,7 @@ instance.prototype.action = function(action) {
 						}
 					}
 				} else {
-					visible = !self.sources[action.options.source]['visible']
+					visible = !self.sources[action.options.source]['enabled']
 				}
 			} else {
 				visible = action.options.visible == "true"
@@ -1334,7 +1334,7 @@ instance.prototype.feedback = function(feedback) {
 	}
 
 	if (feedback.type === 'scene_item_active')  {
-		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible_program'] === true) {
+		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
@@ -1355,7 +1355,7 @@ instance.prototype.feedback = function(feedback) {
 		let scene = self.scenes[feedback.options.scene];
 		if (scene && scene.sources) {
 			for (let source of scene.sources) {
-				if (source.name == feedback.options.source && self.sources[feedback.options.source]['visible'] === true) {
+				if (source.name == feedback.options.source && self.sources[feedback.options.source]['enabled'] === true) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 				}
 				if (source.type == 'group') {
