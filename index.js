@@ -1334,7 +1334,7 @@ instance.prototype.feedback = function(feedback) {
 	}
 
 	if (feedback.type === 'scene_item_active')  {
-		if (self.sources[feedback.options.source]['visible_program'] === true) {
+		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible_program'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
