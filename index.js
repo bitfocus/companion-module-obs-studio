@@ -332,7 +332,7 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
-	}, 20000) //clean log
+	}, 1000)
 }
 
 instance.prototype.stopStatsPoller = function() {
@@ -434,8 +434,7 @@ instance.prototype.updateScenesAndSources = async function() {
 					self.sources[source.name]['visible'] = true;
 				} else {
 					self.sources[source.name] = source;
-					
-					if (source.name == sceneList.currentScene ) {
+					if (source.name == sceneList.currentScene) {
 						self.sources[source.name]['visible'] = true;
 					}
 					if (source.render === true && scene.name == sceneList.currentScene) {
@@ -458,7 +457,6 @@ instance.prototype.updateScenesAndSources = async function() {
 											self.sources[groupedSource.name]['visible'] = true;
 										} else {
 											self.sources[groupedSource.name] = groupedSource;
-											
 											if (groupedSource.render === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
 												self.sources[groupedSource.name]['visible'] = true;
 											}
@@ -471,17 +469,12 @@ instance.prototype.updateScenesAndSources = async function() {
 														self.sources[nestedSource.name]['visible'] = true;
 													}
 												}
-											} 
+											}
 										}
 									} else {
-										
 										if (groupedSource.render === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
 											self.sources[groupedSource.name]['visible'] = true;
 										}
-										self.sources[groupedSource.name]['muted'] = source.muted;
-										self.sources[groupedSource.name]['volume'] = source.volume;
-										self.sources[groupedSource.name]['type'] = source.type;
-										self.sources[groupedSource.name]['parentGroupName'] = groupedSource.parentGroupName;
 									}
 								}
 							}
@@ -489,26 +482,20 @@ instance.prototype.updateScenesAndSources = async function() {
 								self.sources[nestedSource.name]['visible'] = true;
 							}
 						}
-					} 
+					}
 				}
 			}
 			if (source.type == 'group') {
-				
 				if (source.render === true && scene.name == sceneList.currentScene) {
 					self.sources[source.name]['visible'] = true;
 				}
-				self.sources[source.name]['muted'] = source.muted;
-				self.sources[source.name]['volume'] = source.volume;
-				self.sources[source.name]['type'] = source.type;
-				
 				for (var s in source.groupChildren) {
 					var groupedSource = source.groupChildren[s];
 					if (groupedSource.type == 'scene') {
-						if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] != null ) {
+						if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] === true ) {
 							self.sources[groupedSource.name]['visible'] = true;
 						} else {
 							self.sources[groupedSource.name] = groupedSource
-							
 							if (groupedSource.render === true && scene.name == sceneList.currentScene && source.render === true) {
 								self.sources[groupedSource.name]['visible'] = true;
 							}
@@ -523,7 +510,7 @@ instance.prototype.updateScenesAndSources = async function() {
 									if (nestedSource.type === 'group' && self.sources[source.name]['visible'] === true) {
 										for (var s in nestedSource.groupChildren) {
 											var groupedSource = nestedSource.groupChildren[s];
-											if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] != null ) {
+											if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] === true) {
 												self.sources[groupedSource.name]['visible'] = true;
 											}
 											if (self.sources[groupedSource.name] && groupedSource.render === true) {
@@ -538,25 +525,16 @@ instance.prototype.updateScenesAndSources = async function() {
 						if (groupedSource.render === true && scene.name == sceneList.currentScene && source.render === true) {
 							self.sources[groupedSource.name]['visible'] = true;
 						}
-						self.sources[groupedSource.name]['muted'] = source.muted;
-						self.sources[groupedSource.name]['volume'] = source.volume;
-						self.sources[groupedSource.name]['type'] = source.type;
-						self.sources[groupedSource.name]['parentGroupName'] = groupedSource.parentGroupName;
 					}
 				}
 			}
 			if (source.type !== 'group' && source.type !== 'scene') {
-				if (self.sources[source.name] && self.sources[source.name]['visible'] != null ) {
-				
+				if (self.sources[source.name] && self.sources[source.name]['visible'] === true) {
 					self.sources[source.name]['visible'] = true;
 				} else {
-					
 					if (source.render === true && scene.name == sceneList.currentScene) {
 						self.sources[source.name]['visible'] = true;
 					}
-					self.sources[source.name]['muted'] = source.muted;
-					self.sources[source.name]['volume'] = source.volume;
-					self.sources[source.name]['type'] = source.type;
 				}
 			}
 		}
