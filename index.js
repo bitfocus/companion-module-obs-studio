@@ -332,7 +332,7 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
-	}, 1000)
+	}, 20000) //clean log
 }
 
 instance.prototype.stopStatsPoller = function() {
@@ -434,7 +434,7 @@ instance.prototype.updateScenesAndSources = async function() {
 					self.sources[source.name]['visible'] = true;
 				} else {
 					self.sources[source.name] = source;
-					self.sources[source.name]['enabled'] = source.render;
+					
 					if (source.name == sceneList.currentScene ) {
 						self.sources[source.name]['visible'] = true;
 					}
@@ -458,8 +458,8 @@ instance.prototype.updateScenesAndSources = async function() {
 											self.sources[groupedSource.name]['visible'] = true;
 										} else {
 											self.sources[groupedSource.name] = groupedSource;
-											self.sources[groupedSource.name]['enabled'] = groupedSource.render;
-											if (self.sources[groupedSource.name]['enabled'] === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
+											
+											if (groupedSource.render === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
 												self.sources[groupedSource.name]['visible'] = true;
 											}
 											if (groupedSource.name == sceneList.currentScene) {
@@ -467,15 +467,15 @@ instance.prototype.updateScenesAndSources = async function() {
 											}
 											if (groupedSource.render === true) {
 												for (let nestedSource of self.scenes[groupedSource.name].sources) {
-													if (nestedSource.render === true && self.sources[nestedSource.name]['visible'] === true) {
+													if (nestedSource.render === true) {
 														self.sources[nestedSource.name]['visible'] = true;
 													}
 												}
 											} 
 										}
 									} else {
-										self.sources[groupedSource.name]['enabled'] = groupedSource.render;
-										if (self.sources[groupedSource.name]['enabled'] === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
+										
+										if (groupedSource.render === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
 											self.sources[groupedSource.name]['visible'] = true;
 										}
 										self.sources[groupedSource.name]['muted'] = source.muted;
@@ -493,8 +493,8 @@ instance.prototype.updateScenesAndSources = async function() {
 				}
 			}
 			if (source.type == 'group') {
-				self.sources[source.name]['enabled'] = source.render;
-				if (self.sources[source.name]['enabled'] === true && scene.name == sceneList.currentScene) {
+				
+				if (source.render === true && scene.name == sceneList.currentScene) {
 					self.sources[source.name]['visible'] = true;
 				}
 				self.sources[source.name]['muted'] = source.muted;
@@ -508,8 +508,8 @@ instance.prototype.updateScenesAndSources = async function() {
 							self.sources[groupedSource.name]['visible'] = true;
 						} else {
 							self.sources[groupedSource.name] = groupedSource
-							self.sources[groupedSource.name]['enabled'] = groupedSource.render;
-							if (self.sources[groupedSource.name]['enabled'] === true && scene.name == sceneList.currentScene && source.render === true) {
+							
+							if (groupedSource.render === true && scene.name == sceneList.currentScene && source.render === true) {
 								self.sources[groupedSource.name]['visible'] = true;
 							}
 							if (groupedSource.name == sceneList.currentScene) {
@@ -520,12 +520,22 @@ instance.prototype.updateScenesAndSources = async function() {
 									if (nestedSource.render === true && self.sources[source.name]['visible'] === true) {
 										self.sources[nestedSource.name]['visible'] = true;
 									}
+									if (nestedSource.type === 'group' && self.sources[source.name]['visible'] === true) {
+										for (var s in nestedSource.groupChildren) {
+											var groupedSource = nestedSource.groupChildren[s];
+											if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] != null ) {
+												self.sources[groupedSource.name]['visible'] = true;
+											}
+											if (self.sources[groupedSource.name] && groupedSource.render === true) {
+												self.sources[groupedSource.name]['visible'] = true;
+											}
+										}
+									}
 								}
-							} 
+							}
 						}
 					} else {
-						self.sources[groupedSource.name]['enabled'] = groupedSource.render;
-						if (self.sources[groupedSource.name]['enabled'] === true && scene.name == sceneList.currentScene && source.render === true) {
+						if (groupedSource.render === true && scene.name == sceneList.currentScene && source.render === true) {
 							self.sources[groupedSource.name]['visible'] = true;
 						}
 						self.sources[groupedSource.name]['muted'] = source.muted;
@@ -537,11 +547,11 @@ instance.prototype.updateScenesAndSources = async function() {
 			}
 			if (source.type !== 'group' && source.type !== 'scene') {
 				if (self.sources[source.name] && self.sources[source.name]['visible'] != null ) {
-					self.sources[source.name]['enabled'] = source.render;
+				
 					self.sources[source.name]['visible'] = true;
 				} else {
-					self.sources[source.name]['enabled'] = source.render;
-					if (self.sources[source.name]['enabled'] === true && scene.name == sceneList.currentScene) {
+					
+					if (source.render === true && scene.name == sceneList.currentScene) {
 						self.sources[source.name]['visible'] = true;
 					}
 					self.sources[source.name]['muted'] = source.muted;
@@ -1075,7 +1085,7 @@ instance.prototype.action = function(action) {
 					let scene = self.scenes[sceneName]
 					if (scene) {
 						for (let source of scene.sources) {
-							if (source.type == 'scene') {
+							if (source.type == 'scene' && source.name == action.options.source) {
 								visible = !source.render
 							}
 							else if (source.type == 'group') {
@@ -1094,8 +1104,8 @@ instance.prototype.action = function(action) {
 							}
 						}
 					}
-				} else {
-					visible = !self.sources[action.options.source]['enabled']
+				} else if (self.sources[action.options.source]) {
+					visible = !self.sources[action.options.source].render
 				}
 			} else {
 				visible = action.options.visible == "true"
@@ -1399,7 +1409,7 @@ instance.prototype.feedback = function(feedback) {
 		let scene = self.scenes[feedback.options.scene];
 		if (scene && scene.sources) {
 			for (let source of scene.sources) {
-				if (source.name == feedback.options.source && self.sources[feedback.options.source]['enabled'] === true) {
+				if (source.name == feedback.options.source && source.render === true) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 				}
 				if (source.type == 'group') {
