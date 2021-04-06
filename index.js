@@ -427,115 +427,78 @@ instance.prototype.updateScenesAndSources = async function() {
 		}
 	}
 
+	let updateSceneSources = (source, scene) => {
+		if (self.sources[source.name] && self.sources[source.name]['visible']) {
+			self.sources[source.name]['visible'] = true;
+		} else {
+			self.sources[source.name] = source;
+			if (source.name == sceneList.currentScene) {
+				self.sources[source.name]['visible'] = true;
+			}
+			if (source.render === true && scene.name == sceneList.currentScene) {
+				self.sources[source.name]['visible'] = true;
+				for (let nestedSource of self.scenes[source.name].sources) {
+					self.sources[nestedSource.name] = nestedSource;
+					if (nestedSource.render === true && nestedSource.type == 'scene') {
+						self.sources[nestedSource.name]['visible'] = true;
+						for (let nestedSceneSource of self.scenes[nestedSource.name].sources) {
+							self.sources[nestedSceneSource.name] = nestedSceneSource;
+							if (nestedSceneSource.render === true) {
+								self.sources[nestedSceneSource.name]['visible'] = true;
+							}
+							if (nestedSceneSource.render === true && nestedSceneSource.type === 'group') {
+								updateGroupedSources(nestedSceneSource, scene)
+							}
+						}
+					} else if (nestedSource.render === true && nestedSource.type == 'group') {
+						self.sources[nestedSource.name]['visible'] = true;
+						updateGroupedSources(nestedSource, scene)
+					} else if (nestedSource.render === true) {
+						self.sources[nestedSource.name]['visible'] = true;
+					}
+				}
+			}
+		}
+	}
+
+	let updateGroupedSources = (source, scene) => {
+		if (source.render === true && self.sources[source.name] && scene.name == sceneList.currentScene) {
+			self.sources[source.name]['visible'] = true;
+		}
+		if (source.render === true) {
+			for (var s in source.groupChildren) {
+				var groupedSource = source.groupChildren[s];
+				if (groupedSource.type == 'scene') {
+					updateSceneSources(groupedSource, scene)
+				} else {
+					if (groupedSource.render === true && source.render === true && scene.name == sceneList.currentScene) {
+						self.sources[groupedSource.name]['visible'] = true;
+					}
+				}
+			}
+		}
+	}
+
+	let updateRegularSources = (source, scene) => {
+		if (self.sources[source.name] && self.sources[source.name]['visible'] === true) {
+			self.sources[source.name]['visible'] = true;
+		} else {
+			if (source.render === true && scene.name && scene.name == sceneList.currentScene) {
+				self.sources[source.name]['visible'] = true;
+			}
+		}
+	}
+
 	sceneList.scenes.forEach(scene => {
 		for (let source of scene.sources) {
 			if (source.type == 'scene') {
-				if (self.sources[source.name] && self.sources[source.name]['visible']) {
-					self.sources[source.name]['visible'] = true;
-				} else {
-					self.sources[source.name] = source;
-					if (source.name == sceneList.currentScene) {
-						self.sources[source.name]['visible'] = true;
-					}
-					if (source.render === true && scene.name == sceneList.currentScene) {
-						self.sources[source.name]['visible'] = true;
-						for (let nestedSource of self.scenes[source.name].sources) {
-							if (nestedSource.render === true && nestedSource.type == 'scene') {
-								self.sources[nestedSource.name]['visible'] = true;
-								for (let nestedSceneSource of self.scenes[nestedSource.name].sources) {
-									if (nestedSceneSource.render === true && self.sources[nestedSource.name]['visible'] === true) {
-										self.sources[nestedSceneSource.name]['visible'] = true;
-									}
-								}
-							}
-							else if (nestedSource.render === true && nestedSource.type == 'group') {
-								self.sources[nestedSource.name]['visible'] = true;
-								for (var s in nestedSource.groupChildren) {
-									var groupedSource = nestedSource.groupChildren[s];
-									if (groupedSource.type == 'scene') {
-										if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] != null ) {
-											self.sources[groupedSource.name]['visible'] = true;
-										} else {
-											self.sources[groupedSource.name] = groupedSource;
-											if (groupedSource.render === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
-												self.sources[groupedSource.name]['visible'] = true;
-											}
-											if (groupedSource.name == sceneList.currentScene) {
-												self.sources[groupedSource.name]['visible'] = true;
-											}
-											if (groupedSource.render === true) {
-												for (let nestedSource of self.scenes[groupedSource.name].sources) {
-													if (nestedSource.render === true) {
-														self.sources[nestedSource.name]['visible'] = true;
-													}
-												}
-											}
-										}
-									} else {
-										if (groupedSource.render === true && scene.name == sceneList.currentScene && nestedSource.render === true) {
-											self.sources[groupedSource.name]['visible'] = true;
-										}
-									}
-								}
-							}
-							else if (nestedSource.render === true) {
-								self.sources[nestedSource.name]['visible'] = true;
-							}
-						}
-					}
-				}
+				updateSceneSources(source, scene)
 			}
 			if (source.type == 'group') {
-				if (source.render === true && scene.name == sceneList.currentScene) {
-					self.sources[source.name]['visible'] = true;
-				}
-				for (var s in source.groupChildren) {
-					var groupedSource = source.groupChildren[s];
-					if (groupedSource.type == 'scene') {
-						if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] === true ) {
-							self.sources[groupedSource.name]['visible'] = true;
-						} else {
-							self.sources[groupedSource.name] = groupedSource
-							if (groupedSource.render === true && scene.name == sceneList.currentScene && source.render === true) {
-								self.sources[groupedSource.name]['visible'] = true;
-							}
-							if (groupedSource.name == sceneList.currentScene) {
-								self.sources[groupedSource.name]['visible'] = true;
-							}
-							if (groupedSource.render === true) {
-								for (let nestedSource of self.scenes[groupedSource.name].sources) {
-									if (nestedSource.render === true && self.sources[source.name]['visible'] === true) {
-										self.sources[nestedSource.name]['visible'] = true;
-									}
-									if (nestedSource.type === 'group' && self.sources[source.name]['visible'] === true) {
-										for (var s in nestedSource.groupChildren) {
-											var groupedSource = nestedSource.groupChildren[s];
-											if (self.sources[groupedSource.name] && self.sources[groupedSource.name]['visible'] === true) {
-												self.sources[groupedSource.name]['visible'] = true;
-											}
-											if (self.sources[groupedSource.name] && groupedSource.render === true) {
-												self.sources[groupedSource.name]['visible'] = true;
-											}
-										}
-									}
-								}
-							}
-						}
-					} else {
-						if (groupedSource.render === true && scene.name == sceneList.currentScene && source.render === true) {
-							self.sources[groupedSource.name]['visible'] = true;
-						}
-					}
-				}
+				updateGroupedSources(source, scene)
 			}
 			if (source.type !== 'group' && source.type !== 'scene') {
-				if (self.sources[source.name] && self.sources[source.name]['visible'] === true) {
-					self.sources[source.name]['visible'] = true;
-				} else {
-					if (source.render === true && scene.name == sceneList.currentScene) {
-						self.sources[source.name]['visible'] = true;
-					}
-				}
+				updateRegularSources(source, scene)
 			}
 		}
 	});
