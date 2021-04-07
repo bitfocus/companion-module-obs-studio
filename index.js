@@ -194,11 +194,11 @@ instance.prototype.init = function() {
 		});
 		
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
-				self.updateScenesAndSources();
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('SceneItemTransformChanged', function(data) {
-				self.updateScenesAndSources();
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('TransitionListChanged', function(data) {
@@ -466,14 +466,12 @@ instance.prototype.updateScenesAndSources = async function() {
 			self.sources[source.name]['visible'] = true;
 		}
 		if (source.render === true) {
-			for (var s in source.groupChildren) {
-				var groupedSource = source.groupChildren[s];
+			for (let s in source.groupChildren) {
+				let groupedSource = source.groupChildren[s];
 				if (groupedSource.type == 'scene') {
 					updateSceneSources(groupedSource, scene)
-				} else {
-					if (groupedSource.render === true && source.render === true && scene.name == sceneList.currentScene) {
-						self.sources[groupedSource.name]['visible'] = true;
-					}
+				} else if (groupedSource.render === true && source.render === true && scene.name == sceneList.currentScene) {
+					self.sources[groupedSource.name]['visible'] = true;
 				}
 			}
 		}
@@ -482,10 +480,8 @@ instance.prototype.updateScenesAndSources = async function() {
 	let updateRegularSources = (source, scene) => {
 		if (self.sources[source.name] && self.sources[source.name]['visible'] === true) {
 			self.sources[source.name]['visible'] = true;
-		} else {
-			if (source.render === true && scene.name && scene.name == sceneList.currentScene) {
-				self.sources[source.name]['visible'] = true;
-			}
+		} else if (source.render === true && scene.name && scene.name == sceneList.currentScene) {
+			self.sources[source.name]['visible'] = true;
 		}
 	}
 
@@ -493,11 +489,9 @@ instance.prototype.updateScenesAndSources = async function() {
 		for (let source of scene.sources) {
 			if (source.type == 'scene') {
 				updateSceneSources(source, scene)
-			}
-			if (source.type == 'group') {
+			} else if (source.type == 'group') {
 				updateGroupedSources(source, scene)
-			}
-			if (source.type !== 'group' && source.type !== 'scene') {
+			} else {
 				updateRegularSources(source, scene)
 			}
 		}
@@ -1028,10 +1022,9 @@ instance.prototype.action = function(action) {
 						for (let source of scene.sources) {
 							if (source.type == 'scene' && source.name == action.options.source) {
 								visible = !source.render
-							}
-							else if (source.type == 'group') {
+							} else if (source.type == 'group') {
 								if (source.name == action.options.source) {
-								visible = !source.render
+									visible = !source.render
 								} else { 
 									for (let groupedSource of source.groupChildren) {
 										if (groupedSource.name == action.options.source) {
@@ -1039,8 +1032,7 @@ instance.prototype.action = function(action) {
 										}
 									} 
 								}
-							}
-							else if (source.name == action.options.source) {
+							} else if (source.name == action.options.source) {
 								visible = !source.render
 							}
 						}
@@ -1354,7 +1346,7 @@ instance.prototype.feedback = function(feedback) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 				}
 				if (source.type == 'group') {
-					for (var s in source.groupChildren) {
+					for (let s in source.groupChildren) {
 						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
 							return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 						}
