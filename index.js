@@ -727,6 +727,20 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'set_transition_duration': {
+			label: 'Set transition duration',
+			options: [
+				{
+					type: 'number',
+					label: 'Transition time (in ms)',
+					id: 'duration',
+					default: null,
+					min: 0,
+					max: 60 * 1000, //max is required by api
+					range: false
+				}
+			]
+		},
 		'StartStopStreaming': {
 			label: 'Start and Stop Streaming'
 		},
@@ -1074,6 +1088,11 @@ instance.prototype.action = function(action) {
 		case 'set_transition':
 			handle = self.obs.send('SetCurrentTransition', {
 				'transition-name': action.options.transitions
+			});
+			break;
+		case 'set_transition_duration':
+			handle = self.obs.send('SetTransitionDuration', {
+				'duration': action.options.duration
 			});
 			break;
 		case 'StartStopStreaming':
