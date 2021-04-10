@@ -1002,7 +1002,20 @@ instance.prototype.actions = function() {
 					default: 'none',
 					choices: [ { id: 'none', label: 'None' }, { id: 'monitorOnly', label: 'Monitor Only' }, { id: 'monitorAndOutput', label: 'Monitor and Output' } ],
 					required: true
-				},
+				}
+			]
+		},
+		'take_screenshot': {
+			label: 'Take Screenshot',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Format',
+					id: 'format',
+					default: 'png',
+					choices: [ { id: 'png', label: 'png' }, { id: 'jpg', label: 'jpg' }, { id: 'bmp', label: 'bmp' } ],
+					required: true
+				}
 			]
 		}
 	});
@@ -1233,6 +1246,11 @@ instance.prototype.action = function(action) {
 			handle = self.obs.send('SetAudioMonitorType', {
 				'sourceName': action.options.source,
 				'monitorType': action.options.monitor
+			})
+			break;
+		case 'take_screenshot':
+			handle = self.obs.send('TakeSourceScreenshot', {
+				'embedPictureFormat': action.options.format,
 			})
 	}
 
