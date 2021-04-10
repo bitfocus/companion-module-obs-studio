@@ -983,6 +983,27 @@ instance.prototype.actions = function() {
 					required: false
 				}
 			]
+		},
+		'set_audio_monitor': {
+			label: 'Set Audio Monitor',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+					required: true
+				},
+				{
+					type: 'dropdown',
+					label: 'Monitor',
+					id: 'monitor',
+					default: 'none',
+					choices: [ { id: 'none', label: 'None' }, { id: 'monitorOnly', label: 'Monitor Only' }, { id: 'monitorAndOutput', label: 'Monitor and Output' } ],
+					required: true
+				},
+			]
 		}
 	});
 };
@@ -1205,7 +1226,13 @@ instance.prototype.action = function(action) {
 			break;
 		case 'refresh_browser_source':
 			handle = self.obs.send('RefreshBrowserSource', {
+				'sourceName': action.options.source
+			})
+			break;
+		case 'set_audio_monitor':
+			handle = self.obs.send('SetAudioMonitorType', {
 				'sourceName': action.options.source,
+				'monitorType': action.options.monitor
 			})
 	}
 
