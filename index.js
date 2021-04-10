@@ -970,6 +970,19 @@ instance.prototype.actions = function() {
 					required: false
 				}
 			]
+		},
+		'refresh_browser_source': {
+			label: 'Refresh Browser Source',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+					required: false
+				}
+			]
 		}
 	});
 };
@@ -1189,6 +1202,11 @@ instance.prototype.action = function(action) {
 					'outputName': action.options.output,
 				})	
 			}
+			break;
+		case 'refresh_browser_source':
+			handle = self.obs.send('RefreshBrowserSource', {
+				'sourceName': action.options.source,
+			})
 	}
 
 	handle.catch(error => {
