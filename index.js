@@ -467,6 +467,9 @@ instance.prototype.updateInfo = function() {
 			self.states['studio_mode'] = false;
 		}
 	});
+	self.obs.send('GetRecordingFolder').then(data => {
+		self.states['rec-folder'] = data['rec-folder'];
+	});
 };
 
 instance.prototype.updateProfiles = function() {
@@ -1015,6 +1018,30 @@ instance.prototype.actions = function() {
 					default: 'png',
 					choices: [ { id: 'png', label: 'png' }, { id: 'jpg', label: 'jpg' }, { id: 'bmp', label: 'bmp' } ],
 					required: true
+				},
+				{
+					type: 'number',
+					label: 'Compression Quality (1-100, 0 is automatic)',
+					id: 'compression',
+					default: 0,
+					min: 0,
+					max: 100,
+					range: false,
+					required: false
+				},
+				{
+					type: 'dropdown',
+					label: 'Source (Optional, default is current scene)',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+					required: false
+				},
+				{
+					type: 'textinput',
+					label: 'Custom File Path (Optional, default is recording path)',
+					id: 'path',
+					required: true
 				}
 			]
 		}
@@ -1249,8 +1276,19 @@ instance.prototype.action = function(action) {
 			})
 			break;
 		case 'take_screenshot':
+			let date = new Date().toISOString()
+			let day = date.slice(0, 10)
+			let time = date.slice(11,19).replaceAll(":", ".")
+			let fileName = action.options.source ? action.options.source : self.states['scene_active']
+			let fileLocation = action.options.path ? action.options.path : self.states['rec-folder']
+			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
+			let quality = action.options.compression == 0 ? -1 : action.options.compression
 			handle = self.obs.send('TakeSourceScreenshot', {
+				'sourceName': fileName,
 				'embedPictureFormat': action.options.format,
+				'saveToFilePath': filePath,
+				'fileFormat': action.options.format,
+				'compressionQuality': quality
 			})
 	}
 
