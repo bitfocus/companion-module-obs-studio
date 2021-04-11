@@ -218,6 +218,16 @@ instance.prototype.init = function() {
 			self.setVariable('current_transition', self.states['current_transition'])
 		});
 
+		self.obs.on('TransitionBegin', function() {
+			self.states['transition_active'] = true
+			self.checkFeedbacks('transition_active')
+		});
+
+		self.obs.on('TransitionEnd', function() {
+			self.states['transition_active'] = false
+			self.checkFeedbacks('transition_active')
+		});
+
 		self.obs.on('ProfileChanged', (data) => {
 			self.updateCurrentProfile()
 		})
@@ -388,6 +398,7 @@ instance.prototype.updateTransitionList = async function() {
 	self.transitions = {};
 	self.states['current_transition'] = data['current-transition'];
 	self.setVariable('current_transition', self.states['current_transition'])
+	self.states['transition_active'] = false
 	for (var s in data.transitions) {
 		var transition = data.transitions[s];
 		self.transitions[transition.name] = transition;
@@ -1529,6 +1540,25 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
+	feedbacks['transition_active'] = {
+		label: 'Change colors when a transition is in progress',
+		description: 'If an output is currently active, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			}
+		]
+	};
+
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -1591,6 +1621,12 @@ instance.prototype.feedback = function(feedback) {
 
 	if (feedback.type === 'output_active')  {
 		if ((self.states[feedback.options.output] === true)) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'transition_active')  {
+		if ((self.states['transition_active'] === true)) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
