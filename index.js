@@ -213,6 +213,11 @@ instance.prototype.init = function() {
 			self.updateTransitionList();
 		});
 
+		self.obs.on('SwitchTransition', function(data) {
+			self.states['current_transition'] = data['transition-name'];
+			self.setVariable('current_transition', self.states['current_transition'])
+		});
+
 		self.obs.on('ProfileChanged', (data) => {
 			self.updateCurrentProfile()
 		})
@@ -382,6 +387,7 @@ instance.prototype.updateTransitionList = async function() {
 	let data = await self.obs.send('GetTransitionList')
 	self.transitions = {};
 	self.states['current_transition'] = data['current-transition'];
+	self.setVariable('current_transition', self.states['current_transition'])
 	for (var s in data.transitions) {
 		var transition = data.transitions[s];
 		self.transitions[transition.name] = transition;
@@ -1750,6 +1756,7 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'scene_preview', label: 'Current preview scene' });
 	variables.push({ name: 'profile', label: 'Current profile' })
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
+	variables.push({ name: 'current_transition', label: 'Current transition' })
 
 	self.setVariableDefinitions(variables);
 };
