@@ -174,9 +174,12 @@ instance.prototype.init = function() {
 			self.process_stream_vars(data);
 		});
 
-		self.obs.on('RecordingStarted', function() {
+		self.obs.on('RecordingStarted', function(data) {
 			self.setVariable('recording', true);
 			self.states['recording'] = true;
+			self.setVariable('recording', true);
+			self.states['recordingFilename'] = data['recordingFilename'].substring((data['recordingFilename'].lastIndexOf('/')) + 1)
+			self.setVariable('recording_file_name', self.states['recordingFilename'])
 			self.checkFeedbacks('recording');
 		});
 
@@ -1738,6 +1741,7 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' });
 	variables.push({ name: 'preview_only', label: 'Preview only' });
 	variables.push({ name: 'recording', label: 'Recording State' });
+	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
 	variables.push({ name: 'strain', label: 'Strain' });
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
