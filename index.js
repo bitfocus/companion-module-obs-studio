@@ -363,6 +363,9 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
+		if (self.obs && self.states['recording']) {
+			self.getRecordingStatus()
+		}
 		if (self.obs) {
 			self.updateOutputs()
 		}
@@ -389,6 +392,16 @@ instance.prototype.getStreamStatus = function() {
 		self.checkFeedbacks('streaming');
 
 		self.init_feedbacks();
+	});
+};
+
+instance.prototype.getRecordingStatus = async function() {
+	var self = this;
+
+	self.obs.send('GetRecordingStatus').then(data => {
+		self.states['recording_timecode'] = data['recordTimecode'].slice(0,8)
+		self.setVariable('recording_timecode', self.states['recording_timecode'])
+		self.log('warn', 'checking rec')
 	});
 };
 
@@ -1818,6 +1831,7 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'preview_only', label: 'Preview only' });
 	variables.push({ name: 'recording', label: 'Recording State' });
 	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
+	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
 	variables.push({ name: 'strain', label: 'Strain' });
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
