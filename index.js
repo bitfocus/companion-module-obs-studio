@@ -214,8 +214,9 @@ instance.prototype.init = function() {
 		});
 
 		self.obs.on('SwitchTransition', function(data) {
-			self.states['current_transition'] = data['transition-name'];
+			self.states['current_transition'] = data['transition-name']
 			self.setVariable('current_transition', self.states['current_transition'])
+			self.checkFeedbacks('current_transition')
 		});
 
 		self.obs.on('TransitionBegin', function() {
@@ -398,6 +399,7 @@ instance.prototype.updateTransitionList = async function() {
 	self.transitions = {};
 	self.states['current_transition'] = data['current-transition'];
 	self.setVariable('current_transition', self.states['current_transition'])
+	self.checkFeedbacks('current_transition')
 	self.states['transition_active'] = false
 	for (var s in data.transitions) {
 		var transition = data.transitions[s];
@@ -1542,7 +1544,7 @@ instance.prototype.init_feedbacks = function() {
 
 	feedbacks['transition_active'] = {
 		label: 'Change colors when a transition is in progress',
-		description: 'If an output is currently active, change color',
+		description: 'If a transition is in progress, change color',
 		options: [
 			{
 				type: 'colorpicker',
@@ -1555,6 +1557,32 @@ instance.prototype.init_feedbacks = function() {
 				label: 'Background color',
 				id: 'bg',
 				default: self.rgb(255, 0, 0)
+			}
+		]
+	};
+
+	feedbacks['current_transition'] = {
+		label: 'Change colors when a transition is selected',
+		description: 'If an transititon type is selected, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Transition',
+				id: 'transition',
+				default: 'Default',
+				choices: self.transitionlist
 			}
 		]
 	};
@@ -1627,6 +1655,12 @@ instance.prototype.feedback = function(feedback) {
 
 	if (feedback.type === 'transition_active')  {
 		if ((self.states['transition_active'] === true)) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'current_transition')  {
+		if (feedback.options.transition === self.states['current_transition']) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
