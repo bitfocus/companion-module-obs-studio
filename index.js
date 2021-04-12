@@ -168,6 +168,10 @@ instance.prototype.init = function() {
 			self.setVariable('streaming', false);
 			self.states['streaming'] = false;
 			self.checkFeedbacks('streaming');
+			self.states['stream_timecode'] = '00:00:00.000'
+			self.setVariable('stream_timecode', self.states['stream_timecode'])
+			self.states['total_stream_time'] = '00:00:00'
+			self.setVariable('total_stream_time', self.states['total_stream_time'])
 		});
 
 		self.obs.on('StreamStatus', function(data) {
@@ -187,6 +191,8 @@ instance.prototype.init = function() {
 			self.setVariable('recording', false);
 			self.states['recording'] = false;
 			self.checkFeedbacks('recording');
+			self.states['recording_timecode'] = '00:00:00'
+			self.setVariable('recording_timecode', self.states['recording_timecode'])
 		});
 
 		self.obs.on('StudioModeSwitched', function(data) {
