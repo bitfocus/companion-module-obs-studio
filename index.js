@@ -407,7 +407,6 @@ instance.prototype.getRecordingStatus = async function() {
 	self.obs.send('GetRecordingStatus').then(data => {
 		self.states['recording_timecode'] = data['recordTimecode'].slice(0,8)
 		self.setVariable('recording_timecode', self.states['recording_timecode'])
-		self.log('warn', 'checking rec')
 	});
 };
 
