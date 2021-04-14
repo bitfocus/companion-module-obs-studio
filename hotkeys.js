@@ -110,7 +110,7 @@ var hotkeyList = [
 	{ label: '$ (Dollar Sign)', id: 'OBS_KEY_DOLLAR' },
 	{ label: '% (Percent)', id: 'OBS_KEY_PERCENT' },
 	{ label: '& (Ampersand)', id: 'OBS_KEY_AMPERSAND' },
-	{ label: '\' (Apostrophe)', id: 'OBS_KEY_APOSTROPHE' },
+	{ label: "' (Apostrophe)", id: 'OBS_KEY_APOSTROPHE' },
 	{ label: '( (Parenthesis Left)', id: 'OBS_KEY_PARENLEFT' },
 	{ label: ') (Parenthesis Right)', id: 'OBS_KEY_PARENRIGHT' },
 	{ label: '* (Asterisk)', id: 'OBS_KEY_ASTERISK' },
@@ -138,7 +138,7 @@ var hotkeyList = [
 	{ label: 'Numpad 9', id: 'OBS_KEY_NUM9' },
 	{ label: ': (Colon)', id: 'OBS_KEY_COLON' },
 	{ label: '; (Semicolon)', id: 'OBS_KEY_SEMICOLON' },
-	{ label: '\" (Quote)', id: 'OBS_KEY_QUOTE' },
+	{ label: '" (Quote)', id: 'OBS_KEY_QUOTE' },
 	{ label: '< (Less Than)', id: 'OBS_KEY_LESS' },
 	{ label: '= (Equals)', id: 'OBS_KEY_EQUAL' },
 	{ label: '> (Greater Than)', id: 'OBS_KEY_GREATER' },
@@ -153,7 +153,7 @@ var hotkeyList = [
 	{ label: '[ (Brace Left)', id: 'OBS_KEY_BRACELEFT' },
 	{ label: '| (Bar)', id: 'OBS_KEY_BAR' },
 	{ label: '] (Brace Right)', id: 'OBS_KEY_BRACERIGHT' },
-	{ label: '` (Dead Grave)', id: 'OBS_KEY_DEAD_GRAVE' }
+	{ label: '` (Dead Grave)', id: 'OBS_KEY_DEAD_GRAVE' },
 ]
 
 exports.hotkeyList = hotkeyList
