@@ -1,5 +1,6 @@
 var instance_skel = require('../../instance_skel');
 var tcp = require("../../tcp");
+var hotkeys = require('./hotkeys');
 const OBSWebSocket = require('obs-websocket-js');
 var debug;
 var log;
@@ -1018,6 +1019,44 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'trigger-hotkey-sequence': {
+			label: 'Trigger hotkey by key',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Key',
+					id: 'keyId',
+					minChoicesForSearch: 5,
+					default: 'OBS_KEY_A',
+					choices: hotkeys.hotkeyList,
+					required: true
+				},
+				{
+					type: 'checkbox',
+					label: 'Shift',
+					id: 'keyShift',
+					default: false
+				},
+				{
+					type: 'checkbox',
+					label: 'Alt / Option',
+					id: 'keyAlt',
+					default: false
+				},
+				{
+					type: 'checkbox',
+					label: 'Control',
+					id: 'keyControl',
+					default: false
+				},
+				{
+					type: 'checkbox',
+					label: 'Command (Mac)',
+					id: 'keyCommand',
+					default: false
+				}
+			]
+		},
 		'set_profile': {
 			label: 'Set Profile',
 			options: [
@@ -1347,6 +1386,21 @@ instance.prototype.action = function(action) {
 		case 'trigger-hotkey':
 			handle = self.obs.send('TriggerHotkeyByName', {
 				'hotkeyName': action.options.id,
+			})
+			break;
+		case 'trigger-hotkey-sequence':
+			var keyModifiers = {}
+			
+			keyModifiers = {
+				shift: action.options.keyShift,
+				alt: action.options.keyAlt,
+				control: action.options.keyControl,
+				command: action.options.keyCommand,
+			}
+			
+			handle = self.obs.send('TriggerHotkeyBySequence', {
+				'keyId': action.options.keyId,
+				'keyModifiers': keyModifiers
 			})
 			break;
 		case 'set_profile':
