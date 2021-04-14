@@ -168,15 +168,22 @@ instance.prototype.init = function() {
 			self.setVariable('streaming', false);
 			self.states['streaming'] = false;
 			self.checkFeedbacks('streaming');
+			self.states['stream_timecode'] = '00:00:00.000'
+			self.setVariable('stream_timecode', self.states['stream_timecode'])
+			self.states['total_stream_time'] = '00:00:00'
+			self.setVariable('total_stream_time', self.states['total_stream_time'])
 		});
 
 		self.obs.on('StreamStatus', function(data) {
 			self.process_stream_vars(data);
 		});
 
-		self.obs.on('RecordingStarted', function() {
+		self.obs.on('RecordingStarted', function(data) {
 			self.setVariable('recording', true);
 			self.states['recording'] = true;
+			self.setVariable('recording', true);
+			self.states['recordingFilename'] = data['recordingFilename'].substring((data['recordingFilename'].lastIndexOf('/')) + 1)
+			self.setVariable('recording_file_name', self.states['recordingFilename'])
 			self.checkFeedbacks('recording');
 		});
 
@@ -184,6 +191,8 @@ instance.prototype.init = function() {
 			self.setVariable('recording', false);
 			self.states['recording'] = false;
 			self.checkFeedbacks('recording');
+			self.states['recording_timecode'] = '00:00:00'
+			self.setVariable('recording_timecode', self.states['recording_timecode'])
 		});
 
 		self.obs.on('StudioModeSwitched', function(data) {
@@ -208,6 +217,22 @@ instance.prototype.init = function() {
 
 		self.obs.on('TransitionDurationChanged', function(data) {
 			self.updateTransitionList();
+		});
+
+		self.obs.on('SwitchTransition', function(data) {
+			self.states['current_transition'] = data['transition-name']
+			self.setVariable('current_transition', self.states['current_transition'])
+			self.checkFeedbacks('current_transition')
+		});
+
+		self.obs.on('TransitionBegin', function() {
+			self.states['transition_active'] = true
+			self.checkFeedbacks('transition_active')
+		});
+
+		self.obs.on('TransitionEnd', function() {
+			self.states['transition_active'] = false
+			self.checkFeedbacks('transition_active')
 		});
 
 		self.obs.on('ProfileChanged', (data) => {
@@ -344,6 +369,9 @@ instance.prototype.startStatsPoller = function() {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
+		if (self.obs && self.states['recording']) {
+			self.getRecordingStatus()
+		}
 		if (self.obs) {
 			self.updateOutputs()
 		}
@@ -373,12 +401,24 @@ instance.prototype.getStreamStatus = function() {
 	});
 };
 
+instance.prototype.getRecordingStatus = async function() {
+	var self = this;
+
+	self.obs.send('GetRecordingStatus').then(data => {
+		self.states['recording_timecode'] = data['recordTimecode'].slice(0,8)
+		self.setVariable('recording_timecode', self.states['recording_timecode'])
+	});
+};
+
 instance.prototype.updateTransitionList = async function() {
 	var self = this;
 
 	let data = await self.obs.send('GetTransitionList')
 	self.transitions = {};
 	self.states['current_transition'] = data['current-transition'];
+	self.setVariable('current_transition', self.states['current_transition'])
+	self.checkFeedbacks('current_transition')
+	self.states['transition_active'] = false
 	for (var s in data.transitions) {
 		var transition = data.transitions[s];
 		self.transitions[transition.name] = transition;
@@ -534,6 +574,9 @@ instance.prototype.updateInfo = function() {
 		} else {
 			self.states['studio_mode'] = false;
 		}
+	});
+	self.obs.send('GetRecordingFolder').then(data => {
+		self.states['rec-folder'] = data['rec-folder'];
 	});
 };
 
@@ -794,6 +837,20 @@ instance.prototype.actions = function() {
 				}
 			]
 		},
+		'set_transition_duration': {
+			label: 'Set transition duration',
+			options: [
+				{
+					type: 'number',
+					label: 'Transition time (in ms)',
+					id: 'duration',
+					default: null,
+					min: 0,
+					max: 60 * 1000, //max is required by api
+					range: false
+				}
+			]
+		},
 		'StartStopStreaming': {
 			label: 'Start and Stop Streaming'
 		},
@@ -1023,6 +1080,77 @@ instance.prototype.actions = function() {
 					required: false
 				}
 			]
+		},
+		'refresh_browser_source': {
+			label: 'Refresh Browser Source',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+					required: false
+				}
+			]
+		},
+		'set_audio_monitor': {
+			label: 'Set Audio Monitor',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+					required: true
+				},
+				{
+					type: 'dropdown',
+					label: 'Monitor',
+					id: 'monitor',
+					default: 'none',
+					choices: [ { id: 'none', label: 'None' }, { id: 'monitorOnly', label: 'Monitor Only' }, { id: 'monitorAndOutput', label: 'Monitor and Output' } ],
+					required: true
+				}
+			]
+		},
+		'take_screenshot': {
+			label: 'Take Screenshot',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Format',
+					id: 'format',
+					default: 'png',
+					choices: [ { id: 'png', label: 'png' }, { id: 'jpg', label: 'jpg' }, { id: 'bmp', label: 'bmp' } ],
+					required: true
+				},
+				{
+					type: 'number',
+					label: 'Compression Quality (1-100, 0 is automatic)',
+					id: 'compression',
+					default: 0,
+					min: 0,
+					max: 100,
+					range: false,
+					required: false
+				},
+				{
+					type: 'dropdown',
+					label: 'Source (Optional, default is current scene)',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+					required: false
+				},
+				{
+					type: 'textinput',
+					label: 'Custom File Path (Optional, default is recording path)',
+					id: 'path',
+					required: true
+				}
+			]
 		}
 	});
 };
@@ -1143,6 +1271,11 @@ instance.prototype.action = function(action) {
 				'transition-name': action.options.transitions
 			});
 			break;
+		case 'set_transition_duration':
+			handle = self.obs.send('SetTransitionDuration', {
+				'duration': action.options.duration
+			});
+			break;
 		case 'StartStopStreaming':
 			handle = self.obs.send('StartStopStreaming');
 			break;
@@ -1246,6 +1379,33 @@ instance.prototype.action = function(action) {
 					'outputName': action.options.output,
 				})	
 			}
+			break;
+		case 'refresh_browser_source':
+			handle = self.obs.send('RefreshBrowserSource', {
+				'sourceName': action.options.source
+			})
+			break;
+		case 'set_audio_monitor':
+			handle = self.obs.send('SetAudioMonitorType', {
+				'sourceName': action.options.source,
+				'monitorType': action.options.monitor
+			})
+			break;
+		case 'take_screenshot':
+			let date = new Date().toISOString()
+			let day = date.slice(0, 10)
+			let time = date.slice(11,19).replaceAll(":", ".")
+			let fileName = action.options.source ? action.options.source : self.states['scene_active']
+			let fileLocation = action.options.path ? action.options.path : self.states['rec-folder']
+			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
+			let quality = action.options.compression == 0 ? -1 : action.options.compression
+			handle = self.obs.send('TakeSourceScreenshot', {
+				'sourceName': fileName,
+				'embedPictureFormat': action.options.format,
+				'saveToFilePath': filePath,
+				'fileFormat': action.options.format,
+				'compressionQuality': quality
+			})
 	}
 
 	handle.catch(error => {
@@ -1476,6 +1636,51 @@ instance.prototype.init_feedbacks = function() {
 		]
 	};
 
+	feedbacks['transition_active'] = {
+		label: 'Change colors when a transition is in progress',
+		description: 'If a transition is in progress, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			}
+		]
+	};
+
+	feedbacks['current_transition'] = {
+		label: 'Change colors when a transition is selected',
+		description: 'If an transititon type is selected, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Transition',
+				id: 'transition',
+				default: 'Default',
+				choices: self.transitionlist
+			}
+		]
+	};
+
 	self.setFeedbackDefinitions(feedbacks);
 };
 
@@ -1545,6 +1750,18 @@ instance.prototype.feedback = function(feedback) {
 
 	if (feedback.type === 'output_active')  {
 		if ((self.states[feedback.options.output] === true)) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'transition_active')  {
+		if ((self.states['transition_active'] === true)) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+		}
+	}
+
+	if (feedback.type === 'current_transition')  {
+		if (feedback.options.transition === self.states['current_transition']) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
@@ -1701,6 +1918,8 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' });
 	variables.push({ name: 'preview_only', label: 'Preview only' });
 	variables.push({ name: 'recording', label: 'Recording State' });
+	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
+	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
 	variables.push({ name: 'strain', label: 'Strain' });
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' });
 	variables.push({ name: 'streaming', label: 'Streaming State' });
@@ -1709,6 +1928,7 @@ instance.prototype.init_variables = function() {
 	variables.push({ name: 'scene_preview', label: 'Current preview scene' });
 	variables.push({ name: 'profile', label: 'Current profile' })
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
+	variables.push({ name: 'current_transition', label: 'Current transition' })
 
 	self.setVariableDefinitions(variables);
 };
