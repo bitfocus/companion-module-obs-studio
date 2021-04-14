@@ -195,11 +195,11 @@ instance.prototype.init = function() {
 		});
 		
 		self.obs.on('SceneItemVisibilityChanged', function(data) {
-			if (self.states['studio_mode'] == true) { 
-				//Item in preview, no change
-			} else {
-				self.updateScenesAndSources();
-			}
+			self.updateScenesAndSources();
+		});
+
+		self.obs.on('SceneItemTransformChanged', function(data) {
+			self.updateScenesAndSources();
 		});
 
 		self.obs.on('TransitionListChanged', function(data) {
@@ -397,8 +397,6 @@ instance.prototype.updateScenesAndSources = async function() {
 			var source = data.sources[s];
 			self.sources[source.name] = source;
 		}
-		self.actions();
-		self.init_feedbacks();
 		data.sources.forEach(source => {
 			self.states[source.name] = false;
 		});
@@ -449,6 +447,76 @@ instance.prototype.updateScenesAndSources = async function() {
 			self.states[source.name] = source.render
 		}
 	}
+
+	let updateSceneSources = (source, scene) => {
+		if (self.sources[source.name] && self.sources[source.name]['visible']) {
+			self.sources[source.name]['visible'] = true;
+		} else {
+			self.sources[source.name] = source;
+			if (source.name == sceneList.currentScene) {
+				self.sources[source.name]['visible'] = true;
+			}
+			if (source.render === true && scene.name == sceneList.currentScene) {
+				self.sources[source.name]['visible'] = true;
+				for (let nestedSource of self.scenes[source.name].sources) {
+					self.sources[nestedSource.name] = nestedSource;
+					if (nestedSource.render === true && nestedSource.type == 'scene') {
+						self.sources[nestedSource.name]['visible'] = true;
+						for (let nestedSceneSource of self.scenes[nestedSource.name].sources) {
+							self.sources[nestedSceneSource.name] = nestedSceneSource;
+							if (nestedSceneSource.render === true) {
+								self.sources[nestedSceneSource.name]['visible'] = true;
+							}
+							if (nestedSceneSource.render === true && nestedSceneSource.type === 'group') {
+								updateGroupedSources(nestedSceneSource, scene)
+							}
+						}
+					} else if (nestedSource.render === true && nestedSource.type == 'group') {
+						self.sources[nestedSource.name]['visible'] = true;
+						updateGroupedSources(nestedSource, scene)
+					} else if (nestedSource.render === true) {
+						self.sources[nestedSource.name]['visible'] = true;
+					}
+				}
+			}
+		}
+	}
+
+	let updateGroupedSources = (source, scene) => {
+		if (source.render === true && self.sources[source.name] && scene.name == sceneList.currentScene) {
+			self.sources[source.name]['visible'] = true;
+		}
+		if (source.render === true) {
+			for (let s in source.groupChildren) {
+				let groupedSource = source.groupChildren[s];
+				if (groupedSource.type == 'scene') {
+					updateSceneSources(groupedSource, scene)
+				} else if (groupedSource.render === true && source.render === true && scene.name == sceneList.currentScene) {
+					self.sources[groupedSource.name]['visible'] = true;
+				}
+			}
+		}
+	}
+
+	let updateRegularSources = (source, scene) => {
+		if (self.sources[source.name] && self.sources[source.name]['visible'] === true) {
+			self.sources[source.name]['visible'] = true;
+		} else if (source.render === true && scene.name && scene.name == sceneList.currentScene) {
+			self.sources[source.name]['visible'] = true;
+		}
+	}
+
+	sceneList.scenes.forEach(scene => {
+		for (let source of scene.sources) {
+			if (source.type == 'scene') {
+				updateSceneSources(source, scene)
+			} else if (source.type == 'group') {
+				updateGroupedSources(source, scene)
+			} else {
+				updateRegularSources(source, scene)
+			}
+		}
+	});
 
 	self.actions();
 	self.init_presets();
@@ -562,8 +630,8 @@ instance.prototype.destroy = function() {
 
 instance.prototype.actions = function() {
 	var self = this;
-
 	self.scenelist = [];
+	self.scenelistToggle = [];
 	self.sourcelist = [];
 	self.transitionlist = [];
 	self.profilelist = []
@@ -578,11 +646,10 @@ instance.prototype.actions = function() {
 	}
 
 	if (self.scenes !== undefined) {
+		self.scenelistToggle.push({ id: 'Current Scene', label: 'Current Scene'});
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s });
-
-			// Scenes can also be sources
-			self.sourcelist.push({ id: s, label: s });
+			self.scenelistToggle.push({ id: s, label: s });
 		}
 	}
 
@@ -826,8 +893,8 @@ instance.prototype.actions = function() {
 					type: 'dropdown',
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
-					default: '',
-					choices: self.scenelist
+					default: 'Current Scene',
+					choices: self.scenelistToggle
 				},
 				{
 					type: 'dropdown',
@@ -1097,26 +1164,35 @@ instance.prototype.action = function(action) {
 			break;
 		case 'toggle_scene_item':
 			let visible = true
-			let sceneName = action.options.scene && action.options.scene != "" ? action.options.scene : null
-
+			let sceneName = action.options.scene && action.options.scene != 'Current Scene' ? action.options.scene : self.states['scene_active']
 			if (action.options.visible == "toggle") {
 				if (sceneName) {
 					let scene = self.scenes[sceneName]
 					if (scene) {
 						for (let source of scene.sources) {
-							if (source.name == action.options.source) {
+							if (source.type == 'scene' && source.name == action.options.source) {
 								visible = !source.render
-								break
+							} else if (source.type == 'group') {
+								if (source.name == action.options.source) {
+									visible = !source.render
+								} else { 
+									for (let groupedSource of source.groupChildren) {
+										if (groupedSource.name == action.options.source) {
+											visible = !groupedSource.render	
+										}
+									} 
+								}
+							} else if (source.name == action.options.source) {
+								visible = !source.render
 							}
 						}
 					}
-				} else {
-					visible = !self.states[action.options.source]
+				} else if (self.sources[action.options.source]) {
+					visible = !self.sources[action.options.source].render
 				}
 			} else {
 				visible = action.options.visible == "true"
 			}
-
 			handle = self.obs.send('SetSceneItemProperties', {
 				'item': action.options.source,
 				'visible': visible,
@@ -1432,7 +1508,7 @@ instance.prototype.feedback = function(feedback) {
 	}
 
 	if (feedback.type === 'scene_item_active')  {
-		if ((self.states[feedback.options.source] === true)) {
+		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg };
 		}
 	}
@@ -1453,8 +1529,15 @@ instance.prototype.feedback = function(feedback) {
 		let scene = self.scenes[feedback.options.scene];
 		if (scene && scene.sources) {
 			for (let source of scene.sources) {
-				if (source.name == feedback.options.source && source.render) {
+				if (source.name == feedback.options.source && source.render === true) {
 					return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+				}
+				if (source.type == 'group') {
+					for (let s in source.groupChildren) {
+						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+							return { color: feedback.options.fg, bgcolor: feedback.options.bg };
+						}
+					}
 				}
 			}
 		}
