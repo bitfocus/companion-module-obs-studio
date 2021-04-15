@@ -695,6 +695,12 @@ instance.prototype.actions = function () {
 		for (s in self.sources) {
 			self.sourcelist.push({ id: s, label: s })
 		}
+		if (self.sourcelist[0]) {
+			self.sourcelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.sourcelistDefault = self.sourcelist[0].id
+		} else {
+			self.sourcelistDefault = ''
+		}
 	}
 
 	if (self.scenes !== undefined) {
@@ -702,6 +708,15 @@ instance.prototype.actions = function () {
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s })
 			self.scenelistToggle.push({ id: s, label: s })
+		}
+		if (self.scenelist[0]) {
+			self.scenelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.scenelistDefault = self.scenelist[0].id
+		} else {
+			self.scenelistDefault = ''
+		}
+		if (self.scenelistToggle[0]) {
+			self.scenelistToggle.sort((a, b) => a.id < b.id ? -1 : 1)
 		}
 	}
 
@@ -782,7 +797,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: '0',
+					default: self.scenelistDefault,
 					choices: self.scenelist,
 				},
 			],
@@ -794,7 +809,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: '0',
+					default: self.scenelistDefault,
 					choices: self.scenelist,
 				},
 			],
@@ -806,7 +821,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: '0',
+					default: self.scenelistDefault,
 					choices: self.scenelist,
 				},
 			],
@@ -940,7 +955,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 				},
 				{
@@ -969,7 +984,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 				},
 				{
@@ -1142,7 +1157,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: false,
 				},
@@ -1155,7 +1170,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: true,
 				},
@@ -1202,7 +1217,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source (Optional, default is current scene)',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: false,
 				},
@@ -1572,7 +1587,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
-				default: '',
+				default: self.scenelistDefault,
 				choices: self.scenelist,
 			},
 		],
@@ -1598,7 +1613,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: '',
+				default: self.sourcelistDefault,
 				choices: self.sourcelist,
 			},
 		],
@@ -1676,14 +1691,14 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene name',
 				id: 'scene',
-				default: '',
+				default: self.scenelistDefault,
 				choices: self.scenelist,
 			},
 			{
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: '',
+				default: self.sourcelistDefault,
 				choices: self.sourcelist,
 			},
 		],
