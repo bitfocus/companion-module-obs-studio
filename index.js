@@ -405,7 +405,7 @@ instance.prototype.updateTransitionList = async function() {
 instance.prototype.updateFilterList = async function() {
 	var self = this;
 
-await self.obs.send('GetSourceFilters).then(data => {
+await self.obs.send('GetSourceFilters', 'source': action.options.source).then(data => {
 	self.filters = {};
 	for (var s in data.filters) {
 		var source = data.filters[s];
