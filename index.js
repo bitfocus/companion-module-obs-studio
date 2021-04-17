@@ -169,8 +169,8 @@ instance.prototype.init = function () {
 			self.checkFeedbacks('scene_active')
 		})
 
-		self.obs.on('StreamStarted', function (data) {
-			self.process_stream_vars(data)
+		self.obs.on('StreamStarted', function () {
+			self.states['streaming'] = true
 			self.checkFeedbacks('streaming')
 		})
 
