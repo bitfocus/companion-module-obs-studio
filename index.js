@@ -1531,7 +1531,7 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['recording'] = {
-		label: 'Recording is active',
+		label: 'Recording status',
 		description: 'If the recording is active, change colors of the bank',
 		options: [
 			{
