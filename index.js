@@ -441,6 +441,11 @@ instance.prototype.updateTransitionList = async function () {
 		var transition = data.transitions[s]
 		self.transitions[transition.name] = transition
 	}
+	self.obs.send('GetTransitionDuration').then((data) => {
+		self.states['transition_duration'] = data['transition-duration'] === undefined ? 0 : data['transition-duration']
+		self.setVariable('transition_duration', self.states['transition_duration'])
+		self.checkFeedbacks('transition_duration')
+	})
 	self.actions()
 	self.init_presets()
 	self.init_feedbacks()
@@ -1781,6 +1786,34 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['transition_duration'] = {
+		label: 'Change colors when the transition duration is matched',
+		description: 'If the transition duration is matched, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(255, 0, 0),
+			},
+			{
+				type: 'number',
+				label: 'Transition time (in ms)',
+				id: 'duration',
+				default: null,
+				min: 0,
+				max: 60 * 1000, //max is required by api
+				range: false,
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -1867,6 +1900,12 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'current_transition') {
 		if (feedback.options.transition === self.states['current_transition']) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+		}
+	}
+
+	if (feedback.type === 'transition_duration') {
+		if (feedback.options.duration === self.states['transition_duration']) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 		}
 	}
@@ -2045,6 +2084,7 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'profile', label: 'Current profile' })
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
 	variables.push({ name: 'current_transition', label: 'Current transition' })
+	variables.push({ name: 'transition_duration', label: 'Current transition duration' })
 
 	self.setVariableDefinitions(variables)
 }
