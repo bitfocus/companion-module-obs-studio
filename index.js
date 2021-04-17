@@ -1530,7 +1530,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(100, 255, 0),
+				default: self.rgb(0, 200, 0),
 			},
 		],
 	}
@@ -1549,7 +1549,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color (Recording)',
 				id: 'bg',
-				default: self.rgb(100, 255, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'colorpicker',
@@ -1580,7 +1580,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color (program)',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'colorpicker',
@@ -1618,7 +1618,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1644,7 +1644,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(0, 204, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1670,7 +1670,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(0, 204, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1696,7 +1696,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1729,7 +1729,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1755,7 +1755,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 		],
 	}
@@ -1774,7 +1774,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1800,7 +1800,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'number',
