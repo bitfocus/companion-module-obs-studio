@@ -255,7 +255,7 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('SourceFilterVisibilityChanged', () => {
-			self.updateScenesAndSources()
+			self.updateFilters()
 		})
 	})
 
@@ -460,9 +460,7 @@ instance.prototype.updateScenesAndSources = async function () {
 				for (var s in data.filters) {
 					var filter = data.filters[s]
 					self.filters[filter.name] = filter
-					self.log('warn', filter.name)
 				}
-				self.debug(data.filters)
 			})
 		})
 	})
@@ -582,7 +580,7 @@ instance.prototype.updateScenesAndSources = async function () {
 			}
 		}
 	})
-
+	self.updateFilters()
 	self.actions()
 	self.init_presets()
 	self.init_feedbacks()
@@ -672,6 +670,25 @@ instance.prototype.updateOutputs = async function () {
 		}
 		self.checkFeedbacks('output_active')
 	})
+}
+
+instance.prototype.updateFilters = function () {
+	var self = this
+	self.filters = {}
+	if (self.sources !== undefined) {
+		for (s in self.sources) {
+			let source = self.sources[s]
+		self.obs.send('GetSourceFilters', {
+			'sourceName': source.name,
+		}).then((data) => {
+			self.sources[source.name]['filters'] = data.filters
+			for (var s in data.filters) {
+				var filter = data.filters[s]
+				self.filters[filter.name] = filter
+			}
+			})
+		}
+	}
 }
 
 // When module gets deleted
