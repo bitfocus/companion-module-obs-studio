@@ -253,6 +253,10 @@ instance.prototype.init = function () {
 		self.obs.on('ProfileListChanged', (data) => {
 			self.updateProfileList()
 		})
+
+		self.obs.on('SourceFilterVisibilityChanged', () => {
+			self.updateScenesAndSources()
+		})
 	})
 
 	debug = self.debug
@@ -442,12 +446,24 @@ instance.prototype.updateScenesAndSources = async function () {
 
 	await self.obs.send('GetSourcesList').then((data) => {
 		self.sources = {}
+		self.filters = {}
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
 		}
 		data.sources.forEach((source) => {
 			self.states[source.name] = false
+			self.obs.send('GetSourceFilters', {
+				'sourceName': source.name,
+			}).then((data) => {
+				self.sources[source.name]['filters'] = data.filters
+				for (var s in data.filters) {
+					var filter = data.filters[s]
+					self.filters[filter.name] = filter
+					self.log('warn', filter.name)
+				}
+				self.debug(data.filters)
+			})
 		})
 	})
 
@@ -669,6 +685,7 @@ instance.prototype.destroy = function () {
 	self.profiles = []
 	self.sceneCollections = []
 	self.outputs = []
+	self.filterlist = []
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -689,6 +706,7 @@ instance.prototype.actions = function () {
 	self.profilelist = []
 	self.scenecollectionlist = []
 	self.outputlist = []
+	self.filterlist = []
 
 	var s
 	if (self.sources !== undefined) {
@@ -735,6 +753,18 @@ instance.prototype.actions = function () {
 			} else {
 				self.outputlist.push({ id: s, label: s })
 			}
+		}
+	}
+
+	if (self.filters !== undefined) {
+		for (s in self.filters) {
+			self.filterlist.push({ id: s, label: s })
+		}
+		if (self.filterlist[0]) {
+			self.filterlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.filterlistDefault = self.filterlist[0].id
+		} else {
+			self.filterlistDefault = ''
 		}
 	}
 
@@ -1214,6 +1244,36 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		toggle_filter: {
+			label: 'Toggle filter visibility',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: '',
+					choices: self.sourcelist,
+				},
+				{
+					type: 'dropdown',
+					label: 'Filter',
+					id: 'filter',
+					default: self.filterlistDefault,
+					choices: self.filterlist,
+				},
+				{
+					type: 'dropdown',
+					label: 'Visible',
+					id: 'visible',
+					default: 'true',
+					choices: [
+						{ id: 'false', label: 'False' },
+						{ id: 'true', label: 'True' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+				},
+			],
+		},
 	})
 }
 
@@ -1485,6 +1545,24 @@ instance.prototype.action = function (action) {
 				fileFormat: action.options.format,
 				compressionQuality: quality,
 			})
+			break
+		case 'toggle_filter':
+			if (self.sources[action.options.source] && self.sources[action.options.source]['filters']) {
+				for (s in self.sources[action.options.source]['filters']) {
+					let filter = self.sources[action.options.source]['filters'][s]
+					if (filter.name === action.options.filter && action.options.visible !== 'toggle') {
+						var filterVisibility = action.options.visible === 'true' ? true : false
+					} else if (filter.name === action.options.filter && action.options.visible === 'toggle') {
+						var filterVisibility = !filter.enabled
+					}
+				}
+			}
+			handle = self.obs.send('SetSourceFilterVisibility', {
+				sourceName: action.options.source,
+				filterName: action.options.filter,
+				filterEnabled: filterVisibility,
+			})
+			break
 	}
 
 	handle.catch((error) => {
