@@ -254,8 +254,8 @@ instance.prototype.init = function () {
 			self.updateProfileList()
 		})
 
-		self.obs.on('SourceFilterVisibilityChanged', () => {
-			self.updateFilters()
+		self.obs.on('SourceFilterVisibilityChanged', (data) => {
+			self.updateFilters(data.sourceName)
 		})
 	})
 
@@ -580,10 +580,10 @@ instance.prototype.updateScenesAndSources = async function () {
 			}
 		}
 	})
-	self.updateFilters()
 	self.actions()
 	self.init_presets()
 	self.init_feedbacks()
+	self.checkFeedbacks('filter_enabled')
 	self.checkFeedbacks('scene_item_active')
 	self.checkFeedbacks('scene_item_active_in_scene')
 	self.checkFeedbacks('scene_active')
@@ -672,23 +672,21 @@ instance.prototype.updateOutputs = async function () {
 	})
 }
 
-instance.prototype.updateFilters = function () {
+instance.prototype.updateFilters = function (source) {
 	var self = this
-	self.filters = {}
-	if (self.sources !== undefined) {
-		for (s in self.sources) {
-			let source = self.sources[s]
+	if (self.sources[source]) {
 		self.obs.send('GetSourceFilters', {
-			'sourceName': source.name,
+			'sourceName': source,
 		}).then((data) => {
-			self.sources[source.name]['filters'] = data.filters
+			self.sources[source]['filters'] = []
+			self.sources[source]['filters'] = data.filters
 			for (var s in data.filters) {
 				var filter = data.filters[s]
 				self.filters[filter.name] = filter
 			}
-			})
-		}
+		})
 	}
+	self.checkFeedbacks('filter_enabled')
 }
 
 // When module gets deleted
@@ -1855,6 +1853,39 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['filter_enabled'] = {
+		label: 'Change colors when a filter is enabled',
+		description: 'If a filter is enabled, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(0, 200, 0),
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: '',
+				choices: self.sourcelist,
+			},
+			{
+				type: 'dropdown',
+				label: 'Filter',
+				id: 'filter',
+				default: '',
+				choices: self.filterlist,
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -1940,6 +1971,17 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'current_transition') {
 		if (feedback.options.transition === self.states['current_transition']) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+		}
+	}
+
+	if (feedback.type === 'filter_enabled') {
+		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['filters']) {
+			for (var s in self.sources[feedback.options.source]['filters']) {
+				let filter = self.sources[feedback.options.source]['filters'][s]
+				if (filter.name === feedback.options.filter && filter.enabled === true) {
+					return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+				}
+			}
 		}
 	}
 
