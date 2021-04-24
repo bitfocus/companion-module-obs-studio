@@ -257,6 +257,15 @@ instance.prototype.init = function () {
 		self.obs.on('SourceFilterVisibilityChanged', (data) => {
 			self.updateFilters(data.sourceName)
 		})
+
+		self.obs.on('SourceFilterAdded', (data) => {
+			self.updateFilterList()
+		})
+
+		self.obs.on('SourceFilterRemoved', (data) => {
+			self.updateFilterList()
+		})
+
 	})
 
 	debug = self.debug
@@ -446,22 +455,12 @@ instance.prototype.updateScenesAndSources = async function () {
 
 	await self.obs.send('GetSourcesList').then((data) => {
 		self.sources = {}
-		self.filters = {}
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
 		}
 		data.sources.forEach((source) => {
 			self.states[source.name] = false
-			self.obs.send('GetSourceFilters', {
-				'sourceName': source.name,
-			}).then((data) => {
-				self.sources[source.name]['filters'] = data.filters
-				for (var s in data.filters) {
-					var filter = data.filters[s]
-					self.filters[filter.name] = filter
-				}
-			})
 		})
 	})
 
@@ -583,7 +582,7 @@ instance.prototype.updateScenesAndSources = async function () {
 	self.actions()
 	self.init_presets()
 	self.init_feedbacks()
-	self.checkFeedbacks('filter_enabled')
+	self.updateFilterList()
 	self.checkFeedbacks('scene_item_active')
 	self.checkFeedbacks('scene_item_active_in_scene')
 	self.checkFeedbacks('scene_active')
@@ -672,21 +671,36 @@ instance.prototype.updateOutputs = async function () {
 	})
 }
 
+instance.prototype.updateFilterList = function () {
+	var self = this
+	self.filters = {}
+	for (var s in self.sources) {
+		var source = self.sources[s]
+		self.updateFilters(source.name)
+		self.obs.send('GetSourceFilters', {
+			'sourceName': source.name,
+		}).then((data) => {
+			if (data.filters.length !== 0) {
+				for (var s in data.filters) {
+					var filter = data.filters[s]
+					self.filters[filter.name] = filter
+				}
+			self.actions()
+			}
+		})
+	}
+}
+
 instance.prototype.updateFilters = function (source) {
 	var self = this
 	if (self.sources[source]) {
 		self.obs.send('GetSourceFilters', {
 			'sourceName': source,
 		}).then((data) => {
-			self.sources[source]['filters'] = []
 			self.sources[source]['filters'] = data.filters
-			for (var s in data.filters) {
-				var filter = data.filters[s]
-				self.filters[filter.name] = filter
-			}
+			self.checkFeedbacks('filter_enabled')
 		})
 	}
-	self.checkFeedbacks('filter_enabled')
 }
 
 // When module gets deleted
@@ -1260,7 +1274,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		toggle_filter: {
-			label: 'Toggle filter visibility',
+			label: 'Set filter visibility',
 			options: [
 				{
 					type: 'dropdown',
@@ -1278,13 +1292,13 @@ instance.prototype.actions = function () {
 				},
 				{
 					type: 'dropdown',
-					label: 'Visible',
+					label: 'Visiblity',
 					id: 'visible',
-					default: 'true',
+					default: 'toggle',
 					choices: [
-						{ id: 'false', label: 'False' },
-						{ id: 'true', label: 'True' },
 						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'true', label: 'On' },
+						{ id: 'false', label: 'Off' }
 					],
 				},
 			],
@@ -1562,13 +1576,15 @@ instance.prototype.action = function (action) {
 			})
 			break
 		case 'toggle_filter':
-			if (self.sources[action.options.source] && self.sources[action.options.source]['filters']) {
-				for (s in self.sources[action.options.source]['filters']) {
-					let filter = self.sources[action.options.source]['filters'][s]
-					if (filter.name === action.options.filter && action.options.visible !== 'toggle') {
-						var filterVisibility = action.options.visible === 'true' ? true : false
-					} else if (filter.name === action.options.filter && action.options.visible === 'toggle') {
-						var filterVisibility = !filter.enabled
+			if (action.options.visible !== 'toggle') {
+				var filterVisibility = action.options.visible === 'true' ? true : false
+			} else if (action.options.visible === 'toggle') {
+				if (self.sources[action.options.source] && self.sources[action.options.source]['filters']) {
+					for (s in self.sources[action.options.source]['filters']) {
+						let filter = self.sources[action.options.source]['filters'][s]
+						if (filter.name === action.options.filter) {
+							var filterVisibility = !filter.enabled
+						}
 					}
 				}
 			}
@@ -1880,7 +1896,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Filter',
 				id: 'filter',
-				default: '',
+				default: self.filterlistDefault,
 				choices: self.filterlist,
 			},
 		],
