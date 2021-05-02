@@ -96,6 +96,7 @@ instance.prototype.init = function () {
 				self.updateProfiles()
 				self.updateSceneCollections()
 				self.updateOutputList()
+				self.getRecordingStatus()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -168,8 +169,8 @@ instance.prototype.init = function () {
 			self.checkFeedbacks('scene_active')
 		})
 
-		self.obs.on('StreamStarted', function (data) {
-			self.process_stream_vars(data)
+		self.obs.on('StreamStarted', function () {
+			self.states['streaming'] = true
 			self.checkFeedbacks('streaming')
 		})
 
@@ -188,22 +189,23 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('RecordingStarted', function (data) {
-			self.setVariable('recording', true)
-			self.states['recording'] = true
-			self.setVariable('recording', true)
+			self.getRecordingStatus()
 			self.states['recordingFilename'] = data['recordingFilename'].substring(
 				data['recordingFilename'].lastIndexOf('/') + 1
 			)
 			self.setVariable('recording_file_name', self.states['recordingFilename'])
-			self.checkFeedbacks('recording')
 		})
 
 		self.obs.on('RecordingStopped', function () {
-			self.setVariable('recording', false)
-			self.states['recording'] = false
-			self.checkFeedbacks('recording')
-			self.states['recording_timecode'] = '00:00:00'
-			self.setVariable('recording_timecode', self.states['recording_timecode'])
+			self.getRecordingStatus()
+		})
+
+		self.obs.on('RecordingPaused', function (data) {
+			self.getRecordingStatus()
+		})
+
+		self.obs.on('RecordingResumed', function (data) {
+			self.getRecordingStatus()
 		})
 
 		self.obs.on('StudioModeSwitched', function (data) {
@@ -284,7 +286,6 @@ instance.prototype.process_stream_vars = function (data) {
 
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
 	self.setVariable('preview_only', data['preview-only'])
-	self.setVariable('recording', data['recording'])
 	self.setVariable('strain', data['strain'])
 	self.setVariable('stream_timecode', data['stream-timecode'])
 	self.setVariable('streaming', data['streaming'])
@@ -378,7 +379,7 @@ instance.prototype.startStatsPoller = function () {
 		if (self.obs && !self.states['streaming']) {
 			self.getStats()
 		}
-		if (self.obs && self.states['recording']) {
+		if (self.obs && self.states['recording'] === true) {
 			self.getRecordingStatus()
 		}
 		if (self.obs) {
@@ -398,10 +399,6 @@ instance.prototype.getStreamStatus = function () {
 	var self = this
 
 	self.obs.send('GetStreamingStatus').then((data) => {
-		self.setVariable('recording', data['recording'])
-		self.states['recording'] = data['recording']
-		self.checkFeedbacks('recording')
-
 		self.setVariable('streaming', data['streaming'])
 		self.states['streaming'] = data['streaming']
 		self.checkFeedbacks('streaming')
@@ -414,8 +411,20 @@ instance.prototype.getRecordingStatus = async function () {
 	var self = this
 
 	self.obs.send('GetRecordingStatus').then((data) => {
-		self.states['recording_timecode'] = data['recordTimecode'].slice(0, 8)
+		if (data['isRecordingPaused']) {
+			self.setVariable('recording', 'Paused')
+			self.states['recording'] = 'paused'
+		} else {
+			self.setVariable('recording', data['isRecording'] == true ? 'Recording' : 'Stopped')
+			self.states['recording'] = data['isRecording']
+		}
+		self.checkFeedbacks('recording')
+		self.states['recording_timecode'] = data['recordTimecode'] ? data['recordTimecode'].slice(0, 8) : '00:00:00'
 		self.setVariable('recording_timecode', self.states['recording_timecode'])
+		if (self.states['recordingFilename'] === undefined) {
+			self.states['recordingFilename'] = 'No current recording'
+			self.setVariable('recording_file_name', self.states['recordingFilename'])
+		}
 	})
 }
 
@@ -432,6 +441,11 @@ instance.prototype.updateTransitionList = async function () {
 		var transition = data.transitions[s]
 		self.transitions[transition.name] = transition
 	}
+	self.obs.send('GetTransitionDuration').then((data) => {
+		self.states['transition_duration'] = data['transition-duration'] === undefined ? 0 : data['transition-duration']
+		self.setVariable('transition_duration', self.states['transition_duration'])
+		self.checkFeedbacks('transition_duration')
+	})
 	self.actions()
 	self.init_presets()
 	self.init_feedbacks()
@@ -1575,26 +1589,38 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(100, 255, 0),
+				default: self.rgb(0, 200, 0),
 			},
 		],
 	}
 
 	feedbacks['recording'] = {
-		label: 'Recording is active',
+		label: 'Recording status',
 		description: 'If the recording is active, change colors of the bank',
 		options: [
 			{
 				type: 'colorpicker',
-				label: 'Foreground color',
+				label: 'Foreground color (Recording)',
 				id: 'fg',
 				default: self.rgb(255, 255, 255),
 			},
 			{
 				type: 'colorpicker',
-				label: 'Background color',
+				label: 'Background color (Recording)',
 				id: 'bg',
-				default: self.rgb(100, 255, 0),
+				default: self.rgb(200, 0, 0),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Foreground color (Paused)',
+				id: 'fg_paused',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Paused)',
+				id: 'bg_paused',
+				default: self.rgb(212, 174, 0),
 			},
 		],
 	}
@@ -1613,7 +1639,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color (program)',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'colorpicker',
@@ -1652,7 +1678,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1679,7 +1705,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(0, 204, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1706,7 +1732,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(0, 204, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1733,7 +1759,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1768,7 +1794,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1795,7 +1821,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 		],
 	}
@@ -1814,7 +1840,7 @@ instance.prototype.init_feedbacks = function () {
 				type: 'colorpicker',
 				label: 'Background color',
 				id: 'bg',
-				default: self.rgb(255, 0, 0),
+				default: self.rgb(0, 200, 0),
 			},
 			{
 				type: 'dropdown',
@@ -1823,6 +1849,34 @@ instance.prototype.init_feedbacks = function () {
 				default: self.transitionlistDefault,
 				choices: self.transitionlist,
 				minChoicesForSearch: 5
+			},
+		],
+	}
+
+	feedbacks['transition_duration'] = {
+		label: 'Change colors when the transition duration is matched',
+		description: 'If the transition duration is matched, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(0, 200, 0),
+			},
+			{
+				type: 'number',
+				label: 'Transition time (in ms)',
+				id: 'duration',
+				default: null,
+				min: 0,
+				max: 60 * 1000, //max is required by api
+				range: false,
 			},
 		],
 	}
@@ -1858,6 +1912,8 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'recording') {
 		if (self.states['recording'] === true) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+		} else if (self.states['recording'] === 'paused') {
+			return { color: feedback.options.fg_paused, bgcolor: feedback.options.bg_paused }
 		}
 	}
 
@@ -1911,6 +1967,12 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'current_transition') {
 		if (feedback.options.transition === self.states['current_transition']) {
+			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+		}
+	}
+
+	if (feedback.type === 'transition_duration') {
+		if (feedback.options.duration === self.states['transition_duration']) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 		}
 	}
@@ -2089,6 +2151,7 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'profile', label: 'Current profile' })
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
 	variables.push({ name: 'current_transition', label: 'Current transition' })
+	variables.push({ name: 'transition_duration', label: 'Current transition duration' })
 
 	self.setVariableDefinitions(variables)
 }
