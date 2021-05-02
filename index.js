@@ -695,6 +695,12 @@ instance.prototype.actions = function () {
 		for (s in self.sources) {
 			self.sourcelist.push({ id: s, label: s })
 		}
+		if (self.sourcelist[0]) {
+			self.sourcelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.sourcelistDefault = self.sourcelist[0].id
+		} else {
+			self.sourcelistDefault = ''
+		}
 	}
 
 	if (self.scenes !== undefined) {
@@ -703,6 +709,15 @@ instance.prototype.actions = function () {
 			self.scenelist.push({ id: s, label: s })
 			self.scenelistToggle.push({ id: s, label: s })
 		}
+		if (self.scenelist[0]) {
+			self.scenelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.scenelistDefault = self.scenelist[0].id
+		} else {
+			self.scenelistDefault = ''
+		}
+		if (self.scenelistToggle[0]) {
+			self.scenelistToggle.sort((a, b) => a.id < b.id ? -1 : 1)
+		}
 	}
 
 	if (self.transitions !== undefined) {
@@ -710,17 +725,35 @@ instance.prototype.actions = function () {
 		for (s in self.transitions) {
 			self.transitionlist.push({ id: s, label: s })
 		}
+		if (self.transitionlist[0]) {
+			self.transitionlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.transitionlistDefault = self.transitionlist[0].id
+		} else {
+			self.transitionlistDefault = ''
+		}
 	}
 
 	if (self.profiles !== undefined) {
 		for (let s of self.profiles) {
 			self.profilelist.push({ id: s, label: s })
 		}
+		if (self.profilelist[0]) {
+			self.profilelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.profilelistDefault = self.profilelist[0].id
+		} else {
+			self.profilelistDefault = ''
+		}
 	}
 
 	if (self.sceneCollections !== undefined) {
 		for (let s of self.sceneCollections) {
 			self.scenecollectionlist.push({ id: s, label: s })
+		}
+		if (self.scenecollectionlist[0]) {
+			self.scenecollectionlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.scenecollectionlistDefault = self.scenecollectionlist[0].id
+		} else {
+			self.scenecollectionlistDefault = ''
 		}
 	}
 
@@ -782,8 +815,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: '0',
+					default: self.scenelistDefault,
 					choices: self.scenelist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -794,8 +828,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: '0',
+					default: self.scenelistDefault,
 					choices: self.scenelist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -806,8 +841,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: '0',
+					default: self.scenelistDefault,
 					choices: self.scenelist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -821,6 +857,7 @@ instance.prototype.actions = function () {
 					default: 'Default',
 					choices: self.transitionlist,
 					required: false,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'number',
@@ -841,8 +878,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
-					default: '0',
+					default: self.transitionlistDefault,
 					choices: self.transitionlist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -905,10 +943,12 @@ instance.prototype.actions = function () {
 			label: 'Set Source Mute',
 			options: [
 				{
-					type: 'textinput',
+					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'dropdown',
@@ -926,10 +966,12 @@ instance.prototype.actions = function () {
 			label: 'Toggle Source Mute',
 			options: [
 				{
-					type: 'textinput',
+					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -940,8 +982,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'number',
@@ -964,13 +1007,15 @@ instance.prototype.actions = function () {
 					id: 'scene',
 					default: 'Current Scene',
 					choices: self.scenelistToggle,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'dropdown',
@@ -992,10 +1037,13 @@ instance.prototype.actions = function () {
 			label: 'Set Source Text (FreeType 2)',
 			options: [
 				{
-					type: 'textinput',
-					label: 'Source Name',
+					type: 'dropdown',
+					label: 'Source',
 					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
 					required: true,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'textinput',
@@ -1009,10 +1057,13 @@ instance.prototype.actions = function () {
 			label: 'Set Source Text (GDI+)',
 			options: [
 				{
-					type: 'textinput',
-					label: 'Source Name',
+					type: 'dropdown',
+					label: 'Source',
 					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
 					required: true,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'textinput',
@@ -1041,10 +1092,10 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Key',
 					id: 'keyId',
-					minChoicesForSearch: 5,
 					default: 'OBS_KEY_A',
 					choices: hotkeys.hotkeyList,
 					required: true,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'checkbox',
@@ -1079,8 +1130,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Profile',
 					id: 'profile',
-					default: '',
+					default: self.profilelistDefault,
 					choices: self.profilelist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -1091,8 +1143,9 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Scene Collection',
 					id: 'scene_collection',
-					default: '',
+					default: self.scenecollectionlistDefault,
 					choices: self.scenecollectionlist,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -1106,6 +1159,7 @@ instance.prototype.actions = function () {
 					default: 'virtualcam_output',
 					choices: self.outputlist,
 					required: false,
+					minChoicesForSearch: 3
 				},
 			],
 		},
@@ -1119,6 +1173,7 @@ instance.prototype.actions = function () {
 					default: 'virtualcam_output',
 					choices: self.outputlist,
 					required: false,
+					minChoicesForSearch: 3
 				},
 			],
 		},
@@ -1132,6 +1187,7 @@ instance.prototype.actions = function () {
 					default: 'virtualcam_output',
 					choices: self.outputlist,
 					required: false,
+					minChoicesForSearch: 3
 				},
 			],
 		},
@@ -1142,9 +1198,10 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: false,
+					minChoicesForSearch: 5
 				},
 			],
 		},
@@ -1155,9 +1212,10 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: true,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'dropdown',
@@ -1202,9 +1260,10 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Source (Optional, default is current scene)',
 					id: 'source',
-					default: '',
+					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: false,
+					minChoicesForSearch: 5
 				},
 				{
 					type: 'textinput',
@@ -1572,8 +1631,9 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
-				default: '',
+				default: self.scenelistDefault,
 				choices: self.scenelist,
+				minChoicesForSearch: 5
 			},
 		],
 	}
@@ -1598,8 +1658,9 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: '',
+				default: self.sourcelistDefault,
 				choices: self.sourcelist,
+				minChoicesForSearch: 5
 			},
 		],
 	}
@@ -1624,8 +1685,9 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Profile name',
 				id: 'profile',
-				default: '',
+				default: self.profilelistDefault,
 				choices: self.profilelist,
+				minChoicesForSearch: 5
 			},
 		],
 	}
@@ -1650,8 +1712,9 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene collection name',
 				id: 'scene_collection',
-				default: '',
+				default: self.scenecollectionlistDefault,
 				choices: self.scenecollectionlist,
+				minChoicesForSearch: 5
 			},
 		],
 	}
@@ -1676,15 +1739,17 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene name',
 				id: 'scene',
-				default: '',
+				default: self.scenelistDefault,
 				choices: self.scenelist,
+				minChoicesForSearch: 5
 			},
 			{
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: '',
+				default: self.sourcelistDefault,
 				choices: self.sourcelist,
+				minChoicesForSearch: 5
 			},
 		],
 	}
@@ -1711,6 +1776,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'output',
 				default: 'virtualcam_output',
 				choices: self.outputlist,
+				minChoicesForSearch: 3
 			},
 		],
 	}
@@ -1754,8 +1820,9 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Transition',
 				id: 'transition',
-				default: 'Default',
+				default: self.transitionlistDefault,
 				choices: self.transitionlist,
+				minChoicesForSearch: 5
 			},
 		],
 	}
