@@ -397,7 +397,7 @@ instance.prototype.startStatsPoller = function () {
 		if (self.obs) {
 			self.updateOutputs()
 		}
-	}, 60000)
+	}, 1000)
 }
 
 instance.prototype.stopStatsPoller = function () {
