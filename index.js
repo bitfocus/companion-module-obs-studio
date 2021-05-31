@@ -97,6 +97,7 @@ instance.prototype.init = function () {
 				self.updateSceneCollections()
 				self.updateOutputList()
 				self.getRecordingStatus()
+				self.updateFilterList()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -129,6 +130,7 @@ instance.prototype.init = function () {
 			self.updateTransitionList()
 			self.updateScenesAndSources()
 			self.updateCurrentSceneCollection()
+			self.updateFilterList()
 		})
 
 		self.obs.on('SceneCollectionListChanged', function () {
@@ -161,7 +163,7 @@ instance.prototype.init = function () {
 		self.obs.on('SourceDestroyed', function (data) {
 			self.states[data.sourceName] = false
 			self.sources[data.sourceName] = null
-
+			self.updateFilterList()
 			self.actions()
 			self.init_presets()
 			self.init_feedbacks()
@@ -397,7 +399,7 @@ instance.prototype.startStatsPoller = function () {
 		if (self.obs) {
 			self.updateOutputs()
 		}
-	}, 1000)
+	}, 60000)
 }
 
 instance.prototype.stopStatsPoller = function () {
@@ -596,7 +598,6 @@ instance.prototype.updateScenesAndSources = async function () {
 	self.actions()
 	self.init_presets()
 	self.init_feedbacks()
-	self.updateFilterList()
 	self.checkFeedbacks('scene_item_active')
 	self.checkFeedbacks('scene_item_active_in_scene')
 	self.checkFeedbacks('scene_active')
@@ -688,35 +689,45 @@ instance.prototype.updateOutputs = async function () {
 instance.prototype.updateFilterList = function () {
 	var self = this
 	self.filters = {}
-	for (var s in self.sources) {
-		let source = self.sources[s]
+	self.sourceFilters = {}
+	self.obs.send('GetSourcesList').then((data) => {
+		for (var s in data.sources) {
+			let source = data.sources[s]
+			getSourceFilters(source.name)
+		}
+	})
+	self.obs.send('GetSceneList').then((data) => {
+		for (var s in data.scenes) {
+			let source = data.scenes[s]
+			getSourceFilters(source.name)
+		}
+	})
+	let getSourceFilters = (source) => {
 		self.obs.send('GetSourceFilters', {
-			'sourceName': source.name,
+			'sourceName': source,
 		}).then((data) => {
 			if (data.filters.length !== 0) {
 				for (var s in data.filters) {
 					var filter = data.filters[s]
 					self.filters[filter.name] = filter
 				}
+				self.sourceFilters[source] = data.filters
 				self.actions()
-				self.sources[source.name]['filters'] = data.filters
+				self.init_feedbacks()
 				self.checkFeedbacks('filter_enabled')
 			}
 		})
 	}
-	self.init_feedbacks()
 }
 
 instance.prototype.updateFilters = function (source) {
 	var self = this
-	if (self.sources[source]) {
-		self.obs.send('GetSourceFilters', {
-			'sourceName': source,
-		}).then((data) => {
-			self.sources[source]['filters'] = data.filters
-			self.checkFeedbacks('filter_enabled')
-		})
-	}
+	self.obs.send('GetSourceFilters', {
+		'sourceName': source,
+	}).then((data) => {
+		self.sourceFilters[source] = data.filters
+		self.checkFeedbacks('filter_enabled')
+	})
 }
 
 // When module gets deleted
@@ -731,6 +742,8 @@ instance.prototype.destroy = function () {
 	self.sceneCollections = []
 	self.outputs = []
 	self.filterlist = []
+	self.filters = {}
+	self.sourceFilters = {}
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -1653,9 +1666,9 @@ instance.prototype.action = function (action) {
 			if (action.options.visible !== 'toggle') {
 				var filterVisibility = action.options.visible === 'true' ? true : false
 			} else if (action.options.visible === 'toggle') {
-				if (self.sources[action.options.source] && self.sources[action.options.source]['filters']) {
-					for (s in self.sources[action.options.source]['filters']) {
-						let filter = self.sources[action.options.source]['filters'][s]
+				if (self.sourceFilters[action.options.source]) {
+					for (s in self.sourceFilters[action.options.source]) {
+						let filter = self.sourceFilters[action.options.source][s]
 						if (filter.name === action.options.filter) {
 							var filterVisibility = !filter.enabled
 						}
@@ -2121,7 +2134,7 @@ instance.prototype.feedback = function (feedback) {
 	}
 
 	if (feedback.type === 'filter_enabled') {
-		let filters = self.sources[feedback.options.source]['filters']
+		let filters = self.sourceFilters[feedback.options.source]
 		if (filters) {
 			for (let filter of filters) {
 				if (filter.name === feedback.options.filter && filter.enabled === true) {
