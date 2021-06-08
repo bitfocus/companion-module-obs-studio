@@ -97,6 +97,7 @@ instance.prototype.init = function () {
 				self.updateSceneCollections()
 				self.updateOutputList()
 				self.getRecordingStatus()
+				self.updateFilterList()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -129,6 +130,7 @@ instance.prototype.init = function () {
 			self.updateTransitionList()
 			self.updateScenesAndSources()
 			self.updateCurrentSceneCollection()
+			self.updateFilterList()
 		})
 
 		self.obs.on('SceneCollectionListChanged', function () {
@@ -161,7 +163,7 @@ instance.prototype.init = function () {
 		self.obs.on('SourceDestroyed', function (data) {
 			self.states[data.sourceName] = false
 			self.sources[data.sourceName] = null
-
+			self.updateFilterList()
 			self.actions()
 			self.init_presets()
 			self.init_feedbacks()
@@ -254,6 +256,18 @@ instance.prototype.init = function () {
 
 		self.obs.on('ProfileListChanged', (data) => {
 			self.updateProfileList()
+		})
+
+		self.obs.on('SourceFilterVisibilityChanged', (data) => {
+			self.updateFilters(data.sourceName)
+		})
+
+		self.obs.on('SourceFilterAdded', () => {
+			self.updateFilterList()
+		})
+
+		self.obs.on('SourceFilterRemoved', () => {
+			self.updateFilterList()
 		})
 	})
 
@@ -672,6 +686,50 @@ instance.prototype.updateOutputs = async function () {
 	})
 }
 
+instance.prototype.updateFilterList = function () {
+	var self = this
+	self.filters = {}
+	self.sourceFilters = {}
+	self.obs.send('GetSourcesList').then((data) => {
+		for (var s in data.sources) {
+			let source = data.sources[s]
+			getSourceFilters(source.name)
+		}
+	})
+	self.obs.send('GetSceneList').then((data) => {
+		for (var s in data.scenes) {
+			let source = data.scenes[s]
+			getSourceFilters(source.name)
+		}
+	})
+	let getSourceFilters = (source) => {
+		self.obs.send('GetSourceFilters', {
+			'sourceName': source,
+		}).then((data) => {
+			if (data.filters.length !== 0) {
+				for (var s in data.filters) {
+					var filter = data.filters[s]
+					self.filters[filter.name] = filter
+				}
+				self.sourceFilters[source] = data.filters
+				self.actions()
+				self.init_feedbacks()
+				self.checkFeedbacks('filter_enabled')
+			}
+		})
+	}
+}
+
+instance.prototype.updateFilters = function (source) {
+	var self = this
+	self.obs.send('GetSourceFilters', {
+		'sourceName': source,
+	}).then((data) => {
+		self.sourceFilters[source] = data.filters
+		self.checkFeedbacks('filter_enabled')
+	})
+}
+
 // When module gets deleted
 instance.prototype.destroy = function () {
 	var self = this
@@ -683,6 +741,9 @@ instance.prototype.destroy = function () {
 	self.profiles = []
 	self.sceneCollections = []
 	self.outputs = []
+	self.filterlist = []
+	self.filters = {}
+	self.sourceFilters = {}
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -703,6 +764,7 @@ instance.prototype.actions = function () {
 	self.profilelist = []
 	self.scenecollectionlist = []
 	self.outputlist = []
+	self.filterlist = []
 
 	var s
 	if (self.sources !== undefined) {
@@ -782,6 +844,18 @@ instance.prototype.actions = function () {
 			} else {
 				self.outputlist.push({ id: s, label: s })
 			}
+		}
+	}
+
+	if (self.filters !== undefined) {
+		for (s in self.filters) {
+			self.filterlist.push({ id: s, label: s })
+		}
+		if (self.filterlist[0]) {
+			self.filterlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.filterlistDefault = self.filterlist[0].id
+		} else {
+			self.filterlistDefault = ''
 		}
 	}
 
@@ -1287,6 +1361,36 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		toggle_filter: {
+			label: 'Set filter visibility',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+				{
+					type: 'dropdown',
+					label: 'Filter',
+					id: 'filter',
+					default: self.filterlistDefault,
+					choices: self.filterlist,
+				},
+				{
+					type: 'dropdown',
+					label: 'Visiblity',
+					id: 'visible',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'true', label: 'On' },
+						{ id: 'false', label: 'Off' }
+					],
+				},
+			],
+		},
 	})
 }
 
@@ -1558,6 +1662,25 @@ instance.prototype.action = function (action) {
 				fileFormat: action.options.format,
 				compressionQuality: quality,
 			})
+		case 'toggle_filter':
+			if (action.options.visible !== 'toggle') {
+				var filterVisibility = action.options.visible === 'true' ? true : false
+			} else if (action.options.visible === 'toggle') {
+				if (self.sourceFilters[action.options.source]) {
+					for (s in self.sourceFilters[action.options.source]) {
+						let filter = self.sourceFilters[action.options.source][s]
+						if (filter.name === action.options.filter) {
+							var filterVisibility = !filter.enabled
+						}
+					}
+				}
+			}
+			handle = self.obs.send('SetSourceFilterVisibility', {
+				sourceName: action.options.source,
+				filterName: action.options.filter,
+				filterEnabled: filterVisibility,
+			})
+			break
 	}
 
 	handle.catch((error) => {
@@ -1881,6 +2004,39 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['filter_enabled'] = {
+		label: 'Change colors when a filter is enabled',
+		description: 'If a filter is enabled, change color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(0, 200, 0),
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+			},
+			{
+				type: 'dropdown',
+				label: 'Filter',
+				id: 'filter',
+				default: self.filterlistDefault,
+				choices: self.filterlist,
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -1974,6 +2130,17 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'transition_duration') {
 		if (feedback.options.duration === self.states['transition_duration']) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+		}
+	}
+
+	if (feedback.type === 'filter_enabled') {
+		let filters = self.sourceFilters[feedback.options.source]
+		if (filters) {
+			for (let filter of filters) {
+				if (filter.name === feedback.options.filter && filter.enabled === true) {
+					return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+				}
+			}
 		}
 	}
 
