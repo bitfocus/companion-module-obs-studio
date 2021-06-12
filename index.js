@@ -921,7 +921,7 @@ instance.prototype.actions = function () {
 			label: 'Save Replay Buffer',
 		},
 		set_scene: {
-			label: 'Change scene',
+			label: 'Change Scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -934,7 +934,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		preview_scene: {
-			label: 'Preview scene',
+			label: 'Preview Scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -947,7 +947,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		smart_switcher: {
-			label: 'Smart scene switcher',
+			label: 'Smart Scene Switcher',
 			description: 'Previews selected scene or, if scene is already in preview, transtions the scene to program',
 			options: [
 				{
@@ -961,7 +961,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		do_transition: {
-			label: 'Transition preview to program',
+			label: 'Transition Preview to Program',
 			description: 'Performs the selected transition and then makes the transition the new default',
 			options: [
 				{
@@ -986,7 +986,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		quick_transition: {
-			label: 'Quick transition',
+			label: 'Quick Transition',
 			description: 'Performs the selected transition and then returns to the default transition',
 			options: [
 				{
@@ -1011,7 +1011,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		set_transition: {
-			label: 'Change transition type',
+			label: 'Set Transition Type',
 			options: [
 				{
 					type: 'dropdown',
@@ -1024,7 +1024,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		set_transition_duration: {
-			label: 'Set transition duration',
+			label: 'Set Transition Duration',
 			options: [
 				{
 					type: 'number',
@@ -1038,7 +1038,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		StartStopStreaming: {
-			label: 'Start and Stop Streaming',
+			label: 'Toggle Streaming',
 		},
 		set_stream_settings: {
 			label: 'Set Stream Settings',
@@ -1076,7 +1076,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		StartStopRecording: {
-			label: 'Start and Stop Recording',
+			label: 'Toggle Recording',
 		},
 		set_source_mute: {
 			label: 'Set Source Mute',
@@ -1138,7 +1138,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		toggle_scene_item: {
-			label: 'Set source visibility',
+			label: 'Set Source Visibility',
 			description: 'Set or toggle the visibility of a source within a scene',
 			options: [
 				{
@@ -1171,7 +1171,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		reconnect: {
-			label: 'reconnect to OBS',
+			label: 'Reconnect to OBS',
 		},
 		'set-freetype-text': {
 			label: 'Set Source Text (FreeType 2)',
@@ -1214,20 +1214,20 @@ instance.prototype.actions = function () {
 			],
 		},
 		'trigger-hotkey': {
-			label: 'Trigger hotkey by ID',
+			label: 'Trigger Hotkey by ID',
 			description: 'Find the hotkey ID in your profile settings file (see module help for more info)',
 			options: [
 				{
 					type: 'textinput',
 					label: 'Hotkey ID',
 					id: 'id',
-					default: 'OBS_KEY_A',
+					default: 'OBSBasic.StartRecording',
 					required: true,
 				},
 			],
 		},
 		'trigger-hotkey-sequence': {
-			label: 'Trigger hotkey by key',
+			label: 'Trigger Hotkey by Key',
 			options: [
 				{
 					type: 'dropdown',
@@ -1319,7 +1319,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		start_stop_output: {
-			label: 'Start and Stop Output',
+			label: 'Toggle Output',
 			options: [
 				{
 					type: 'dropdown',
@@ -1415,7 +1415,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		toggle_filter: {
-			label: 'Set filter visibility',
+			label: 'Set Filter Visibility',
 			options: [
 				{
 					type: 'dropdown',
@@ -1798,7 +1798,7 @@ instance.prototype.init_feedbacks = function () {
 	var feedbacks = {}
 	feedbacks['streaming'] = {
 		type: 'boolean',
-		label: 'Streaming is active',
+		label: 'Streaming Active',
 		description: 'If streaming is active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1807,7 +1807,7 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['recording'] = {
-		label: 'Recording status',
+		label: 'Recording Status',
 		description: 'If recording is active or paused, change the style of the button',
 		options: [
 			{
@@ -1838,7 +1838,7 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_active'] = {
-		label: 'Scene in preview / program',
+		label: 'Scene in Preview / Program',
 		description: 'If a scene is in preview or program, change colors of the button',
 		options: [
 			{
@@ -1878,7 +1878,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['scene_item_active'] = {
 		type: 'boolean',
-		label: 'Source visible',
+		label: 'Source Visible',
 		description: 'If a source is visible in the program, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1898,7 +1898,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['profile_active'] = {
 		type: 'boolean',
-		label: 'Profile active',
+		label: 'Profile Active',
 		description: 'If a profile is active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1918,7 +1918,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['scene_collection_active'] = {
 		type: 'boolean',
-		label: 'Scene collection active',
+		label: 'Scene Collection Active',
 		description: 'If a scene collection is active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1938,7 +1938,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
-		label: 'Source enabled in scene',
+		label: 'Source Enabled in Scene',
 		description: 'If a source is enabled in a specifc scene, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1966,7 +1966,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['output_active'] = {
 		type: 'boolean',
-		label: 'Output active',
+		label: 'Output Active',
 		description: 'If an output is currently active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1986,7 +1986,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['transition_active'] = {
 		type: 'boolean',
-		label: 'Transition in progress',
+		label: 'Transition in Progress',
 		description: 'If a transition is in progress, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -1996,7 +1996,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['current_transition'] = {
 		type: 'boolean',
-		label: 'Transition type is selected',
+		label: 'Current Transition Type',
 		description: 'If a transititon type is selected, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -2016,7 +2016,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['transition_duration'] = {
 		type: 'boolean',
-		label: 'Transition duration',
+		label: 'Transition Duration',
 		description: 'If the transition duration is matched, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
@@ -2037,7 +2037,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['filter_enabled'] = {
 		type: 'boolean',
-		label: 'Filter enabled',
+		label: 'Filter Enabled',
 		description: 'If a filter is enabled, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
