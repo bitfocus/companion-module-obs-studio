@@ -36,7 +36,7 @@ instance.GetUpgradeScripts = function() {
 instance.prototype.updateConfig = function (config) {
 	var self = this
 	self.config = config
-	self.log('debug', 'updateConfig() destroying and reiniting..')
+	self.log('debug', 'Updating configuration.')
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
 	}
@@ -102,7 +102,7 @@ instance.prototype.init = function () {
 			})
 			.then(() => {
 				self.status(self.STATUS_OK)
-				self.log('info', 'Success! Connected to OBS.')
+				self.log('info', 'Connected to OBS.')
 				self.getVersionInfo()
 				self.getStats()
 				self.startStatsPoller()
@@ -121,7 +121,7 @@ instance.prototype.init = function () {
 			})
 
 		self.obs.on('error', (err) => {
-			self.log('debug', 'Error received: ' + err)
+			self.log('debug', 'OBS Error: ' + err)
 			self.status(self.STATUS_ERROR, err)
 		})
 
@@ -769,6 +769,7 @@ instance.prototype.destroy = function () {
 		self.tcp.destroy()
 	}
 	self.disable = true
+	self.authenticated = false
 	self.stopStatsPoller()
 }
 
@@ -884,13 +885,13 @@ instance.prototype.actions = function () {
 
 	self.setActions({
 		enable_studio_mode: {
-			label: 'Enable StudioMode',
+			label: 'Enable Studio Mode',
 		},
 		disable_studio_mode: {
-			label: 'Disable StudioMode',
+			label: 'Disable Studio Mode',
 		},
 		toggle_studio_mode: {
-			label: 'Toggle StudioMode',
+			label: 'Toggle Studio Mode',
 		},
 		start_recording: {
 			label: 'Start Recording',
@@ -946,7 +947,8 @@ instance.prototype.actions = function () {
 			],
 		},
 		smart_switcher: {
-			label: 'Smart switcher (Previews scene or transtions to scene if in preview)',
+			label: 'Smart scene switcher',
+			description: 'Previews selected scene or, if scene is already in preview, transtions the scene to program',
 			options: [
 				{
 					type: 'dropdown',
@@ -960,6 +962,7 @@ instance.prototype.actions = function () {
 		},
 		do_transition: {
 			label: 'Transition preview to program',
+			description: 'Performs the selected transition and then makes the transition the new default',
 			options: [
 				{
 					type: 'dropdown',
@@ -984,6 +987,7 @@ instance.prototype.actions = function () {
 		},
 		quick_transition: {
 			label: 'Quick transition',
+			description: 'Performs the selected transition and then returns to the default transition',
 			options: [
 				{
 					type: 'dropdown',
@@ -1134,7 +1138,8 @@ instance.prototype.actions = function () {
 			],
 		},
 		toggle_scene_item: {
-			label: 'Toggle visibility scene item',
+			label: 'Set source visibility',
+			description: 'Set or toggle the visibility of a source within a scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -1210,12 +1215,13 @@ instance.prototype.actions = function () {
 		},
 		'trigger-hotkey': {
 			label: 'Trigger hotkey by ID',
-			tooltip: 'Find the hotkey ID in your profile settings file',
+			description: 'Find the hotkey ID in your profile settings file (see module help for more info)',
 			options: [
 				{
 					type: 'textinput',
 					label: 'Hotkey ID',
 					id: 'id',
+					default: 'OBS_KEY_A',
 					required: true,
 				},
 			],
@@ -1446,14 +1452,14 @@ instance.prototype.action = function (action) {
 	var handle
 
 	if (action.action == 'reconnect') {
-		self.log('debug', 'reconnecting, destroying and reiniting..')
+		self.log('warn', 'Reconnecting to OBS.')
 		self.obs.disconnect()
 		self.init()
 		return
 	}
 
 	if (self.obs == null || self.obs.OBSWebSocket) {
-		self.log('warn', 'OBS action not possible, connection lost')
+		self.log('warn', 'Unable to perform action, connection lost to OBS')
 		return
 	}
 
@@ -1777,7 +1783,7 @@ instance.prototype.action = function (action) {
 
 	handle.catch((error) => {
 		if (error.code == 'NOT_CONNECTED') {
-			self.log('warn', 'Send to OBS failed. Re-start OBS manually. Starting re-init')
+			self.log('warn', 'Unable to connect to OBS. Please re-start OBS manually.')
 			self.obs.disconnect()
 			self.init()
 		} else {
@@ -1833,7 +1839,7 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['scene_active'] = {
 		label: 'Scene in preview / program',
-		description: 'If a scene is in preview or program, change colors of the bank',
+		description: 'If a scene is in preview or program, change colors of the button',
 		options: [
 			{
 				type: 'colorpicker',
