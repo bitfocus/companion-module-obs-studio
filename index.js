@@ -803,6 +803,7 @@ instance.prototype.actions = function () {
 
 	if (self.scenes !== undefined) {
 		self.scenelistToggle.push({ id: 'Current Scene', label: 'Current Scene' })
+		self.scenelistToggle.push({ id: 'Preview Scene', label: 'Preview Scene' })
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s })
 			self.scenelistToggle.push({ id: s, label: s })
@@ -1557,10 +1558,14 @@ instance.prototype.action = function (action) {
 			break
 		case 'toggle_scene_item':
 			let visible = true
-			let sceneName =
-				action.options.scene && action.options.scene != 'Current Scene'
-					? action.options.scene
-					: self.states['scene_active']
+			let sceneName = action.options.scene
+			if (action.options.scene == 'Current Scene') {
+				sceneName = self.states['scene_active']
+		 	} else if (action.options.scene == 'Preview Scene') {
+				sceneName = self.states['scene_preview']
+		 	} else  {
+				sceneName = action.options.scene
+			}
 			if (action.options.visible == 'toggle') {
 				if (sceneName) {
 					let scene = self.scenes[sceneName]
