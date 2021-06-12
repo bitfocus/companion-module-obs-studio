@@ -387,8 +387,8 @@ instance.prototype.getVersionInfo = async function () {
 	let self = this
 
 	self.obs.send('GetVersion').then((data) => {
-		var websocketVersion = parseFloat(data['obs-websocket-version'])
-		if (websocketVersion < 4.9) {
+		var websocketVersion = parseInt(data['obs-websocket-version'].replaceAll('.', ''))
+		if (websocketVersion < 491) {
 			self.log(
 				'warn',
 				'Update to the latest version of the OBS Websocket plugin to ensure full feature compatibility. A download link is available in the help menu for the OBS module.'
