@@ -963,7 +963,7 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Transition to use',
+					label: 'Transition',
 					id: 'transition',
 					default: 'Default',
 					choices: self.transitionlist,
@@ -972,7 +972,31 @@ instance.prototype.actions = function () {
 				},
 				{
 					type: 'number',
-					label: 'Transition time (in ms)',
+					label: 'Duration (optional; in ms)',
+					id: 'transition_time',
+					default: null,
+					min: 0,
+					max: 60 * 1000, //max is required by api
+					range: false,
+					required: false,
+				},
+			],
+		},
+		quick_transition: {
+			label: 'Quick transition',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Transition',
+					id: 'transition',
+					default: 'Default',
+					choices: self.transitionlist,
+					required: false,
+					minChoicesForSearch: 5
+				},
+				{
+					type: 'number',
+					label: 'Duration (optional; in ms)',
 					id: 'transition_time',
 					default: null,
 					min: 0,
@@ -1506,8 +1530,49 @@ instance.prototype.action = function (action) {
 					}
 				}
 			}
-
 			handle = self.obs.send('TransitionToProgram', options)
+			break
+		case 'quick_transition':
+			if (action.options.transition == 'Default') {
+				handle = self.obs.send('TransitionToProgram')
+			} else {
+				let revertTransition = self.states['current_transition']
+				let revertTransitionDuration = self.states['transition_duration']
+				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
+					var transitonWaitTime = action.options.transition_time + 50	
+				} else if (action.options.transition_time == null) {
+					var transitonWaitTime = self.states['transition_duration'] + 50	
+				} else {
+					var transitonWaitTime = 100
+				}
+				if (action.options.transition_time != null) {
+					var transitionDuration = action.options.transition_time
+				} else {
+					var transitionDuration = self.states['transition_duration']
+				}
+				var requests = [
+					{
+					'request-type': 'TransitionToProgram',
+					'with-transition': {
+						name: action.options.transition,
+						duration: transitionDuration
+						}
+					},
+					{
+						'request-type': 'Sleep',
+						'sleepMillis': transitonWaitTime
+					},
+					{
+						'request-type': 'SetCurrentTransition',
+						'transition-name': revertTransition
+					},
+					{
+						'request-type': 'SetTransitionDuration',
+						'duration': revertTransitionDuration
+					}
+				]
+				handle = self.obs.send('ExecuteBatch', { requests })
+			}
 			break
 		case 'set_source_mute':
 			handle = self.obs.send('SetMute', {
