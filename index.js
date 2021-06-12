@@ -16,6 +16,23 @@ function instance(system, id, config) {
 	return self
 }
 
+instance.GetUpgradeScripts = function() {
+	return [
+		instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
+			'streaming': true,
+			'scene_item_active': true,
+			'profile_active': true,
+			'scene_collection_active': true,
+			'scene_item_active_in_scene': true,
+			'output_active': true,
+			'transition_active': true,
+			'current_transition': true,
+			'transition_duration': true,
+			'filter_enabled': true,
+		}),
+	]
+}
+
 instance.prototype.updateConfig = function (config) {
 	var self = this
 	self.config = config
@@ -1696,30 +1713,21 @@ instance.prototype.action = function (action) {
 
 instance.prototype.init_feedbacks = function () {
 	var self = this
-	// feedbacks
+
 	var feedbacks = {}
 	feedbacks['streaming'] = {
-		label: 'Stream is running',
-		description: 'If the stream is running, change colors of the bank',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
-		],
+		type: 'boolean',
+		label: 'Streaming is active',
+		description: 'If streaming is active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 	}
 
 	feedbacks['recording'] = {
 		label: 'Recording status',
-		description: 'If the recording is active, change colors of the bank',
+		description: 'If recording is active or paused, change the style of the button',
 		options: [
 			{
 				type: 'colorpicker',
@@ -1749,8 +1757,8 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_active'] = {
-		label: 'Change colors from active/previewed scene',
-		description: 'If the scene specified is active or previewed in OBS, change colors of the bank',
+		label: 'Scene in preview / program',
+		description: 'If a scene is in preview or program, change colors of the bank',
 		options: [
 			{
 				type: 'colorpicker',
@@ -1788,21 +1796,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_item_active'] = {
-		label: 'Change colors when source visible',
-		description: 'If a source become visible or invisible in current scene, change color',
+		type: 'boolean',
+		label: 'Source visible',
+		description: 'If a source is visible in the program, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(200, 0, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Source name',
@@ -1815,21 +1816,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['profile_active'] = {
-		label: 'Change colors when profile is active',
-		description: 'If the profile is active, change color',
+		type: 'boolean',
+		label: 'Profile active',
+		description: 'If a profile is active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Profile name',
@@ -1842,21 +1836,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_collection_active'] = {
-		label: 'Change colors when scene collection is active',
-		description: 'If the scene collection is active, change color',
+		type: 'boolean',
+		label: 'Scene collection active',
+		description: 'If a scene collection is active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Scene collection name',
@@ -1869,21 +1856,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_item_active_in_scene'] = {
-		label: 'Change colors when source enabled in scene',
-		description: 'If a source become visible or invisible in a specific scene, change color',
+		type: 'boolean',
+		label: 'Source enabled in scene',
+		description: 'If a source is enabled in a specifc scene, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Scene name',
@@ -1904,21 +1884,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['output_active'] = {
-		label: 'Change colors when output active',
-		description: 'If an output is currently active, change color',
+		type: 'boolean',
+		label: 'Output active',
+		description: 'If an output is currently active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(200, 0, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Output name',
@@ -1931,40 +1904,24 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['transition_active'] = {
-		label: 'Change colors when a transition is in progress',
-		description: 'If a transition is in progress, change color',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
-		],
+		type: 'boolean',
+		label: 'Transition in progress',
+		description: 'If a transition is in progress, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 	}
 
 	feedbacks['current_transition'] = {
-		label: 'Change colors when a transition is selected',
-		description: 'If an transititon type is selected, change color',
+		type: 'boolean',
+		label: 'Transition type is selected',
+		description: 'If a transititon type is selected, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Transition',
@@ -1977,21 +1934,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['transition_duration'] = {
-		label: 'Change colors when the transition duration is matched',
-		description: 'If the transition duration is matched, change color',
+		type: 'boolean',
+		label: 'Transition duration',
+		description: 'If the transition duration is matched, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'number',
 				label: 'Transition time (in ms)',
@@ -2005,21 +1955,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['filter_enabled'] = {
-		label: 'Change colors when a filter is enabled',
-		description: 'If a filter is enabled, change color',
+		type: 'boolean',
+		label: 'Filter enabled',
+		description: 'If a filter is enabled, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Source',
@@ -2050,18 +1993,16 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'scene_active') {
 		if (self.states['scene_active'] === feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		} else if (
-			self.states['scene_preview'] === feedback.options.scene &&
-			typeof feedback.options.fg_preview === 'number'
-		) {
-			//FIXME fg_preview/bg_preview is undefined when updating from an older version of the module
+		} else if (self.states['scene_preview'] === feedback.options.scene && typeof feedback.options.fg_preview === 'number') {
 			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
+		} else {
+			return {}
 		}
 	}
 
 	if (feedback.type === 'streaming') {
 		if (self.states['streaming'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
@@ -2070,24 +2011,26 @@ instance.prototype.feedback = function (feedback) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 		} else if (self.states['recording'] === 'paused') {
 			return { color: feedback.options.fg_paused, bgcolor: feedback.options.bg_paused }
+		} else {
+			return {}
 		}
 	}
 
 	if (feedback.type === 'scene_item_active') {
 		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'profile_active') {
 		if (self.states['current_profile'] === feedback.options.profile) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'scene_collection_active') {
 		if (self.states['current_scene_collection'] === feedback.options.scene_collection) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
@@ -2096,12 +2039,12 @@ instance.prototype.feedback = function (feedback) {
 		if (scene && scene.sources) {
 			for (let source of scene.sources) {
 				if (source.name == feedback.options.source && source.render === true) {
-					return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+					return true
 				}
 				if (source.type == 'group') {
 					for (let s in source.groupChildren) {
 						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
-							return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+							return true
 						}
 					}
 				}
@@ -2111,25 +2054,25 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'output_active') {
 		if (self.states[feedback.options.output] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'transition_active') {
 		if (self.states['transition_active'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'current_transition') {
 		if (feedback.options.transition === self.states['current_transition']) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'transition_duration') {
 		if (feedback.options.duration === self.states['transition_duration']) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
@@ -2138,13 +2081,13 @@ instance.prototype.feedback = function (feedback) {
 		if (filters) {
 			for (let filter of filters) {
 				if (filter.name === feedback.options.filter && filter.enabled === true) {
-					return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+					return true
 				}
 			}
 		}
 	}
 
-	return {}
+	return false
 }
 
 instance.prototype.init_presets = function () {
@@ -2168,7 +2111,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'scene_active',
 					options: {
-						bg: self.rgb(255, 0, 0),
+						bg: self.rgb(200, 0, 0),
 						fg: self.rgb(255, 255, 255),
 						bg_preview: self.rgb(0, 200, 0),
 						fg_preview: self.rgb(255, 255, 255),
@@ -2239,6 +2182,10 @@ instance.prototype.init_presets = function () {
 					bg: self.rgb(51, 204, 51),
 					fg: self.rgb(255, 255, 255),
 				},
+				style: {
+					bgcolor: self.rgb(0, 200, 0),
+					color: self.rgb(255, 255, 255),
+				}
 			},
 		],
 		actions: [
@@ -2263,8 +2210,10 @@ instance.prototype.init_presets = function () {
 			{
 				type: 'recording',
 				options: {
-					bg: self.rgb(51, 204, 51),
+					bg: self.rgb(200, 0, 0),
 					fg: self.rgb(255, 255, 255),
+					bg_paused: self.rgb(212, 174, 0),
+					fg_paused: self.rgb(255, 255, 255),
 				},
 			},
 		],
