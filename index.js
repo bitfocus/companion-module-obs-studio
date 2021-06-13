@@ -878,6 +878,8 @@ instance.prototype.actions = function () {
 				//do nothing, this option doesn't work
 			} else if (s == 'simple_file_output') {
 				//do nothing, this option doesn't work
+			} else if (s == 'simple_stream') {
+				//do nothing, this option is covered with other streaming actions
 			} else if (s == 'virtualcam_output') {
 				self.outputlist.push({ id: s, label: 'Virtual Camera' })
 			} else {
