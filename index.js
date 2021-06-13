@@ -352,9 +352,14 @@ instance.prototype.process_obs_stats = function (data) {
 	self.setVariable('output_total_frames', data['output-total-frames'])
 	self.setVariable('output_skipped_frames', data['output-skipped-frames'])
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
-	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2))
-	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 2))
-	self.setVariable('free_disk_space', self.roundIfDefined(data['free-disk-space'], 2))
+	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2) + '%')
+	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 0) +' MB')
+	let freeSpace = self.roundIfDefined(data['free-disk-space'], 0)
+	if (freeSpace > 1000) {
+		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace/1000, 0) + ' GB')
+	} else {
+		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace, 0) + ' MB')
+	}
 }
 
 // Return config fields for web config
@@ -2465,7 +2470,7 @@ instance.prototype.init_presets = function () {
 		label: 'Computer Stats',
 		bank: {
 			style: 'text',
-			text: 'CPU: $(obs:cpu_usage) \n RAM: $(obs:memory_usage)',
+			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
 			size: 'auto',
 			color: self.rgb(255, 255, 255),
 			bgcolor: 0,
@@ -2487,7 +2492,7 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'fps', label: 'Current framerate' })
 	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' })
 	variables.push({ name: 'memory_usage', label: 'Current RAM usage (in megabytes)' })
-	variables.push({ name: 'free_disk_space', label: 'Free recording disk space (in megabytes)' })
+	variables.push({ name: 'free_disk_space', label: 'Free recording disk space' })
 	variables.push({
 		name: 'kbits_per_sec',
 		label: 'Amount of data per second (in kilobits) transmitted by the stream encoder',
