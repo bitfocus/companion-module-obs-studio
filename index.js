@@ -197,10 +197,10 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('StreamStopped', function () {
-			self.setVariable('streaming', false)
+			self.setVariable('streaming', 'Off-Air')
 			self.states['streaming'] = false
 			self.checkFeedbacks('streaming')
-			self.states['stream_timecode'] = '00:00:00.000'
+			self.states['stream_timecode'] = '00:00:00'
 			self.setVariable('stream_timecode', self.states['stream_timecode'])
 			self.states['total_stream_time'] = '00:00:00'
 			self.setVariable('total_stream_time', self.states['total_stream_time'])
@@ -320,8 +320,8 @@ instance.prototype.process_stream_vars = function (data) {
 
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
 	self.setVariable('strain', data['strain'])
-	self.setVariable('stream_timecode', data['stream-timecode'])
-	self.setVariable('streaming', data['streaming'])
+	self.setVariable('stream_timecode', data['stream-timecode'] ? data['stream-timecode'].slice(0, 8) : '00:00:00')
+	self.setVariable('streaming', data['streaming'] ? 'Live' : 'Off-Air')
 
 	const toTimecode = (value) => {
 		let valueNum = parseInt(value, 10)
@@ -432,10 +432,18 @@ instance.prototype.getStreamStatus = function () {
 	var self = this
 
 	self.obs.send('GetStreamingStatus').then((data) => {
-		self.setVariable('streaming', data['streaming'])
+		self.setVariable('streaming', data['streaming'] ? 'Live' : 'Off-Air')
+		self.setVariable('stream_timecode', data['stream-timecode'] ? data['stream-timecode'].slice(0, 8) : '00:00:00')
 		self.states['streaming'] = data['streaming']
 		self.checkFeedbacks('streaming')
-
+		if (data['streaming'] === false) {
+			self.setVariable('bytes_per_sec', 0)
+			self.setVariable('kbits_per_sec', 0)
+			self.setVariable('num_dropped_frames', 0)
+			self.setVariable('num_total_frames', 0)
+			self.setVariable('strain', 0)
+			self.setVariable('total_stream_time', '00:00:00')
+		}
 		self.init_feedbacks()
 	})
 }
@@ -2337,8 +2345,8 @@ instance.prototype.init_presets = function () {
 		label: 'Streaming Status / Timecode',
 		bank: {
 			style: 'text',
-			text: 'Streaming: $(obs:streaming) \n $(obs:stream_timecode)',
-			size: 'auto',
+			text: 'Streaming:\\n$(obs:streaming)\\n$(obs:stream_timecode)',
+			size: 14,
 			color: self.rgb(255, 255, 255),
 			bgcolor: 0,
 		},
@@ -2392,7 +2400,7 @@ instance.prototype.init_presets = function () {
 		label: 'Recording Status / Timecode',
 		bank: {
 			style: 'text',
-			text: 'Recording: $(obs:recording) $(obs:recording_timecode)',
+			text: 'Recording:\\n$(obs:recording)\\n$(obs:recording_timecode)',
 			size: 'auto',
 			color: self.rgb(255, 255, 255),
 			bgcolor: 0,
