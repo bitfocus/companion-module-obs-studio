@@ -2182,7 +2182,7 @@ instance.prototype.init_presets = function () {
 		var scene = self.scenes[s]
 
 		let baseObj = {
-			category: 'Scene to program',
+			category: 'Scene to Program',
 			label: scene.name,
 			bank: {
 				style: 'text',
@@ -2218,11 +2218,23 @@ instance.prototype.init_presets = function () {
 		let toPreview = {}
 		presets.push(
 			Object.assign(toPreview, baseObj, {
-				category: 'Scene to preview',
+				category: 'Scene to Preview',
 				actions: [
 					{
 						action: 'preview_scene',
 						options: {
+							scene: scene.name,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'scene_active',
+						options: {
+							bg: self.rgb(200, 0, 0),
+							fg: self.rgb(255, 255, 255),
+							bg_preview: self.rgb(0, 200, 0),
+							fg_preview: self.rgb(255, 255, 255),
 							scene: scene.name,
 						},
 					},
@@ -2244,9 +2256,55 @@ instance.prototype.init_presets = function () {
 		actions: [
 			{
 				action: 'do_transition',
+				options: {
+					transition: 'Default',
+				},
+			},
+		],
+		feedbacks: [
+			{
+				type: 'transition_active',
+				style: {
+					bgcolor: self.rgb(0, 200, 0),
+					color: self.rgb(255, 255, 255),
+				}
 			},
 		],
 	})
+
+	for (var s in self.transitionlist) {
+		var transition = self.transitionlist[s]
+
+		let baseObj = {
+			category: 'Transitions',
+			label: transition.label,
+			bank: {
+				style: 'text',
+				text: transition.label,
+				size: 14,
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'transition_active',
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+			actions: [
+				{
+					action: 'quick_transition',
+					options: {
+						transition: transition.id,
+					},
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
 
 	// Preset for Start Streaming button with colors indicating streaming status
 	presets.push({
@@ -2262,10 +2320,32 @@ instance.prototype.init_presets = function () {
 		feedbacks: [
 			{
 				type: 'streaming',
-				options: {
-					bg: self.rgb(51, 204, 51),
-					fg: self.rgb(255, 255, 255),
-				},
+				style: {
+					bgcolor: self.rgb(0, 200, 0),
+					color: self.rgb(255, 255, 255),
+				}
+			},
+		],
+		actions: [
+			{
+				action: 'StartStopStreaming',
+			},
+		],
+	})
+
+	presets.push({
+		category: 'Streaming',
+		label: 'Streaming Status / Timecode',
+		bank: {
+			style: 'text',
+			text: 'Streaming: $(obs:streaming) \n $(obs:stream_timecode)',
+			size: 'auto',
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0,
+		},
+		feedbacks: [
+			{
+				type: 'streaming',
 				style: {
 					bgcolor: self.rgb(0, 200, 0),
 					color: self.rgb(255, 255, 255),
@@ -2306,6 +2386,83 @@ instance.prototype.init_presets = function () {
 				action: 'StartStopRecording',
 			},
 		],
+	})
+
+	presets.push({
+		category: 'Recording',
+		label: 'Recording Status / Timecode',
+		bank: {
+			style: 'text',
+			text: 'Recording: $(obs:recording) $(obs:recording_timecode)',
+			size: 'auto',
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0,
+		},
+		feedbacks: [
+			{
+				type: 'recording',
+				options: {
+					bg: self.rgb(200, 0, 0),
+					fg: self.rgb(255, 255, 255),
+					bg_paused: self.rgb(212, 174, 0),
+					fg_paused: self.rgb(255, 255, 255),
+				},
+			},
+		],
+		actions: [
+			{
+				action: 'StartStopRecording',
+			},
+		],
+	})
+
+	for (var s in self.outputlist) {
+		var output = self.outputlist[s]
+
+		let baseObj = {
+			category: 'Outputs',
+			label: 'Toggle ' + output.label,
+			bank: {
+				style: 'text',
+				text: 'OBS ' + output.label,
+				size: 'auto',
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'output_active',
+					options: {
+						output: output.id,
+					},
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+			actions: [
+				{
+					action: 'start_stop_output',
+					options: {
+						output: output.id,
+					},
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
+
+	presets.push({
+		category: 'General',
+		label: 'Computer Stats',
+		bank: {
+			style: 'text',
+			text: 'CPU: $(obs:cpu_usage) \n RAM: $(obs:memory_usage)',
+			size: 'auto',
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0,
+		},
 	})
 
 	self.setPresetDefinitions(presets)
