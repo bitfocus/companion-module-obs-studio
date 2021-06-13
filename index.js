@@ -319,7 +319,6 @@ instance.prototype.process_stream_vars = function (data) {
 	}
 
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
-	self.setVariable('preview_only', data['preview-only'])
 	self.setVariable('strain', data['strain'])
 	self.setVariable('stream_timecode', data['stream-timecode'])
 	self.setVariable('streaming', data['streaming'])
@@ -2495,7 +2494,6 @@ instance.prototype.init_variables = function () {
 	})
 	variables.push({ name: 'num_total_frames', label: 'Total number of frames transmitted since the stream started' })
 	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' })
-	variables.push({ name: 'preview_only', label: 'Preview only' })
 	variables.push({ name: 'recording', label: 'Recording State' })
 	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
 	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
