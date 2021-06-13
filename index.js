@@ -129,6 +129,9 @@ instance.prototype.init = function () {
 			if (self.disable != true && self.authenticated != false) {
 				self.log('error', 'Connection lost to OBS.')
 				self.status(self.STATUS_ERROR)
+				if (self.tcp !== undefined) {
+					self.tcp.destroy()
+				}
 				self.init()
 			} else {
 			}
@@ -769,7 +772,7 @@ instance.prototype.destroy = function () {
 		self.tcp.destroy()
 	}
 	self.disable = true
-	self.authenticated = false
+	self.authenticated = null
 	self.stopStatsPoller()
 }
 
