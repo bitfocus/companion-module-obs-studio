@@ -805,9 +805,9 @@ instance.prototype.actions = function () {
 			self.sourcelist.push({ id: s, label: s })
 		}
 		for (s in self.scenes) {
-			let scene = { id: s, label: s }
-			if (self.sourcelist.some(sourcelist => sourcelist.id === scene.id) === false)
-			self.sourcelist.push({ id: s, label: s })
+			if (self.sourcelist.some(sourcelist => sourcelist.id === s) === false) {
+				self.sourcelist.push({ id: s, label: s })
+			}
 		}
 		if (self.sourcelist[0]) {
 			self.sourcelist.sort((a, b) => a.id < b.id ? -1 : 1)
