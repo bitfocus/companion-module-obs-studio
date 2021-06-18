@@ -2091,7 +2091,7 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'scene_active') {
 		if (self.states['scene_active'] === feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		} else if (self.states['scene_preview'] === feedback.options.scene && typeof feedback.options.fg_preview === 'number') {
+		} else if (self.states['scene_preview'] === feedback.options.scene && typeof feedback.options.fg_preview === 'number' && self.states['studio_mode'] === true) {
 			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
 		} else {
 			return {}
