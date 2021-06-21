@@ -1,26 +1,101 @@
 ## OBS Studio
 
-This module will allow you to control OBS Studio using a websocket connection.
+This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 ### Configuration
-* Download and install the websocket plugin on the computer running OBS: https://github.com/Palakis/obs-websocket/releases
-* Configure the plugin as needed in the  Tools > WebSockets Server Settings menu
-* In Companion, specify the IP address of the computer running OBS and the port you are using for the websocket connection (defaults to 4444)
+* Download and install the latest version of the [obs-websocket plugin](https://github.com/Palakis/obs-websocket/releases) on the computer running OBS
+* Configure the plugin as needed in OBS under Tools > WebSockets Server Settings menu
+* In Companion, specify the IP address of the computer running OBS, the port you are using for the websocket connection (defaults to 4444), and the password (leave blank if authentication is not enabled)
 
 ### Available actions
-* Change Scene (pulls list of available scenes from OBS)
-* Change Previewed Scene (studio mode)
-* Smart Switcher (Previews scene; or transitions scene to program if already in preview)
-* Execute transition (studio mode)
-* Change Transition Type
-* Start/Stop Streaming
-* Start/Stop Recording
-* Set/Toggle Source Mute (Source: Name of Source or audio device in Mixer. Mute: True to mute, False to unmute)
-* Toggle Scene Item Visibility
-* Set Source Text (FreeType 2 and GDI+)
-* Trigger Hotkey by ID
-* Trigger Hotkey by key *(Note: if you have multiple hotkeys containing the same key, this may trigger both)*
-* Reconnect
+**Recording & Streaming & Outputs**
+* Recording (Start / Stop / Pause / Resume / Toggle)
+* Streaming (Start / Stop / Toggle)
+* Set Stream Settings
+* Output (Start / Stop / Toggle)
+* Replay Buffer (Start / Stop / Save)
+
+**Switching & Transitions**
+* Change Scene
+* Preview Scene
+* Smart Scene Switcher *(Previews selected scene or, if scene is already in preview, transtions the scene to program)*
+* Transition Preview to Program *(Performs the selected transition and then makes the transition the new default)*
+* Quick Transition *(Performs the selected transition and then returns to the default transition)*
+* Set Transition Type
+* Set Transition Duration
+
+**Sources**
+* Set Source Visibility
+* Set Filter Visibility
+* Source Mute (Set / Toggle)
+* Set Source Volume
+* Set Audio Monitor
+* Set Source Text (FreeType 2)
+* Set Source Text (GDI+)
+* Refresh Browser Source
+
+**General**
+* Studio Mode (Enable / Disable / Toggle)
+* Set Profile
+* Set Scene Collection
+* Trigger Hotkey by Key
+* Trigger Hotkey by ID *(See help info below for more info)*
+* Reconnect to OBS
+
+### Available feedbacks
+**Recording & Streaming & Outputs**
+* Streaming Active
+* Recording Status *(If recording is active or paused, change the style of the button)*
+* Output Active
+
+**Switching & Transitions**
+* Scene in Preview / Program
+* Transition in Progress
+* Current Transition Type
+* Transition Duration
+
+**Sources**
+* Source Visible *(If a source is visible in the program, change the style of the button)*
+* Source Enabled in Scene *(If a source is enabled in a specifc scene, change the style of the button)*
+* Filter Enabled
+
+**General**
+* Profile Active
+* Scene Collection Active
+
+### Available variables
+**Recording & Streaming & Outputs**
+* recording
+* recording_file_name
+* recording_timecode
+* streaming
+* stream_timecode
+* total_stream_time
+* bytes_per_sec *(Amount of data per second (in bytes) transmitted by the stream encoder)*
+* kbits_per_sec *(Amount of data per second (in kilobits) transmitted by the stream encoder)*
+* render_missed_frames
+* render_total_frames
+* output_skipped_frames
+* output_total_frames
+* num_dropped_frames
+* num_total_frames
+* average_frame_time
+
+**Switching & Transitions**
+* preview_only
+* scene_active
+* scene_preview
+* current_transition
+* transition_duration
+
+**General**
+* profile
+* scene_collection
+* fps
+* cpu_usage
+* memory_usage
+* strain
+* free_disk_space
 
 ### Using Trigger Hotkey by ID
 To use this feature, make sure you have obs-websocket 4.9.0 or greater installed. See the download link above to install the latest version.
@@ -36,4 +111,3 @@ To use this feature, make sure you have obs-websocket 4.9.0 or greater installed
 * Open the *SceneName* **.json** file in a text editor
 * This file will have multiple sections labeled **"hotkeys": {}**. It is likely easiest to use the search function to find them. Under each Hotkey  section, the text contained within the quotes above the "key" is the Hotkey ID. For example, a Hotkey ID might look like: **OBSBasic.SelectScene**
 * Enter this value into the your Trigger hotkey by ID action in Companion
-

@@ -16,10 +16,27 @@ function instance(system, id, config) {
 	return self
 }
 
+instance.GetUpgradeScripts = function() {
+	return [
+		instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
+			'streaming': true,
+			'scene_item_active': true,
+			'profile_active': true,
+			'scene_collection_active': true,
+			'scene_item_active_in_scene': true,
+			'output_active': true,
+			'transition_active': true,
+			'current_transition': true,
+			'transition_duration': true,
+			'filter_enabled': true,
+		}),
+	]
+}
+
 instance.prototype.updateConfig = function (config) {
 	var self = this
 	self.config = config
-	self.log('debug', 'updateConfig() destroying and reiniting..')
+	self.log('debug', 'Updating configuration.')
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
 	}
@@ -85,7 +102,7 @@ instance.prototype.init = function () {
 			})
 			.then(() => {
 				self.status(self.STATUS_OK)
-				self.log('info', 'Success! Connected to OBS.')
+				self.log('info', 'Connected to OBS.')
 				self.getVersionInfo()
 				self.getStats()
 				self.startStatsPoller()
@@ -104,7 +121,7 @@ instance.prototype.init = function () {
 			})
 
 		self.obs.on('error', (err) => {
-			self.log('debug', 'Error received: ' + err)
+			self.log('debug', 'OBS Error: ' + err)
 			self.status(self.STATUS_ERROR, err)
 		})
 
@@ -112,6 +129,9 @@ instance.prototype.init = function () {
 			if (self.disable != true && self.authenticated != false) {
 				self.log('error', 'Connection lost to OBS.')
 				self.status(self.STATUS_ERROR)
+				if (self.tcp !== undefined) {
+					self.tcp.destroy()
+				}
 				self.init()
 			} else {
 			}
@@ -177,10 +197,10 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('StreamStopped', function () {
-			self.setVariable('streaming', false)
+			self.setVariable('streaming', 'Off-Air')
 			self.states['streaming'] = false
 			self.checkFeedbacks('streaming')
-			self.states['stream_timecode'] = '00:00:00.000'
+			self.states['stream_timecode'] = '00:00:00'
 			self.setVariable('stream_timecode', self.states['stream_timecode'])
 			self.states['total_stream_time'] = '00:00:00'
 			self.setVariable('total_stream_time', self.states['total_stream_time'])
@@ -299,10 +319,9 @@ instance.prototype.process_stream_vars = function (data) {
 	}
 
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
-	self.setVariable('preview_only', data['preview-only'])
 	self.setVariable('strain', data['strain'])
-	self.setVariable('stream_timecode', data['stream-timecode'])
-	self.setVariable('streaming', data['streaming'])
+	self.setVariable('stream_timecode', data['stream-timecode'] ? data['stream-timecode'].slice(0, 8) : '00:00:00')
+	self.setVariable('streaming', data['streaming'] ? 'Live' : 'Off-Air')
 
 	const toTimecode = (value) => {
 		let valueNum = parseInt(value, 10)
@@ -333,9 +352,14 @@ instance.prototype.process_obs_stats = function (data) {
 	self.setVariable('output_total_frames', data['output-total-frames'])
 	self.setVariable('output_skipped_frames', data['output-skipped-frames'])
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
-	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2))
-	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 2))
-	self.setVariable('free_disk_space', self.roundIfDefined(data['free-disk-space'], 2))
+	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2) + '%')
+	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 0) +' MB')
+	let freeSpace = self.roundIfDefined(data['free-disk-space'], 0)
+	if (freeSpace > 1000) {
+		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace/1000, 0) + ' GB')
+	} else {
+		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace, 0) + ' MB')
+	}
 }
 
 // Return config fields for web config
@@ -370,8 +394,8 @@ instance.prototype.getVersionInfo = async function () {
 	let self = this
 
 	self.obs.send('GetVersion').then((data) => {
-		var websocketVersion = parseFloat(data['obs-websocket-version'])
-		if (websocketVersion < 4.9) {
+		var websocketVersion = parseInt(data['obs-websocket-version'].replaceAll('.', ''))
+		if (websocketVersion < 491) {
 			self.log(
 				'warn',
 				'Update to the latest version of the OBS Websocket plugin to ensure full feature compatibility. A download link is available in the help menu for the OBS module.'
@@ -413,10 +437,18 @@ instance.prototype.getStreamStatus = function () {
 	var self = this
 
 	self.obs.send('GetStreamingStatus').then((data) => {
-		self.setVariable('streaming', data['streaming'])
+		self.setVariable('streaming', data['streaming'] ? 'Live' : 'Off-Air')
+		self.setVariable('stream_timecode', data['stream-timecode'] ? data['stream-timecode'].slice(0, 8) : '00:00:00')
 		self.states['streaming'] = data['streaming']
 		self.checkFeedbacks('streaming')
-
+		if (data['streaming'] === false) {
+			self.setVariable('bytes_per_sec', 0)
+			self.setVariable('kbits_per_sec', 0)
+			self.setVariable('num_dropped_frames', 0)
+			self.setVariable('num_total_frames', 0)
+			self.setVariable('strain', 0)
+			self.setVariable('total_stream_time', '00:00:00')
+		}
 		self.init_feedbacks()
 	})
 }
@@ -752,6 +784,7 @@ instance.prototype.destroy = function () {
 		self.tcp.destroy()
 	}
 	self.disable = true
+	self.authenticated = null
 	self.stopStatsPoller()
 }
 
@@ -771,6 +804,11 @@ instance.prototype.actions = function () {
 		for (s in self.sources) {
 			self.sourcelist.push({ id: s, label: s })
 		}
+		for (s in self.scenes) {
+			if (self.sourcelist.some(sourcelist => sourcelist.id === s) === false) {
+				self.sourcelist.push({ id: s, label: s })
+			}
+		}
 		if (self.sourcelist[0]) {
 			self.sourcelist.sort((a, b) => a.id < b.id ? -1 : 1)
 			self.sourcelistDefault = self.sourcelist[0].id
@@ -781,6 +819,7 @@ instance.prototype.actions = function () {
 
 	if (self.scenes !== undefined) {
 		self.scenelistToggle.push({ id: 'Current Scene', label: 'Current Scene' })
+		self.scenelistToggle.push({ id: 'Preview Scene', label: 'Preview Scene' })
 		for (s in self.scenes) {
 			self.scenelist.push({ id: s, label: s })
 			self.scenelistToggle.push({ id: s, label: s })
@@ -839,6 +878,8 @@ instance.prototype.actions = function () {
 				//do nothing, this option doesn't work
 			} else if (s == 'simple_file_output') {
 				//do nothing, this option doesn't work
+			} else if (s == 'simple_stream') {
+				//do nothing, this option is covered with other streaming actions
 			} else if (s == 'virtualcam_output') {
 				self.outputlist.push({ id: s, label: 'Virtual Camera' })
 			} else {
@@ -861,13 +902,13 @@ instance.prototype.actions = function () {
 
 	self.setActions({
 		enable_studio_mode: {
-			label: 'Enable StudioMode',
+			label: 'Enable Studio Mode',
 		},
 		disable_studio_mode: {
-			label: 'Disable StudioMode',
+			label: 'Disable Studio Mode',
 		},
 		toggle_studio_mode: {
-			label: 'Toggle StudioMode',
+			label: 'Toggle Studio Mode',
 		},
 		start_recording: {
 			label: 'Start Recording',
@@ -897,7 +938,7 @@ instance.prototype.actions = function () {
 			label: 'Save Replay Buffer',
 		},
 		set_scene: {
-			label: 'Change scene',
+			label: 'Change Scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -910,7 +951,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		preview_scene: {
-			label: 'Preview scene',
+			label: 'Preview Scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -923,7 +964,8 @@ instance.prototype.actions = function () {
 			],
 		},
 		smart_switcher: {
-			label: 'Smart switcher (Previews scene or transtions to scene if in preview)',
+			label: 'Smart Scene Switcher',
+			description: 'Previews selected scene or, if scene is already in preview, transtions the scene to program',
 			options: [
 				{
 					type: 'dropdown',
@@ -936,11 +978,12 @@ instance.prototype.actions = function () {
 			],
 		},
 		do_transition: {
-			label: 'Transition preview to program',
+			label: 'Transition Preview to Program',
+			description: 'Performs the selected transition and then makes the transition the new default',
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Transition to use',
+					label: 'Transition',
 					id: 'transition',
 					default: 'Default',
 					choices: self.transitionlist,
@@ -949,7 +992,32 @@ instance.prototype.actions = function () {
 				},
 				{
 					type: 'number',
-					label: 'Transition time (in ms)',
+					label: 'Duration (optional; in ms)',
+					id: 'transition_time',
+					default: null,
+					min: 0,
+					max: 60 * 1000, //max is required by api
+					range: false,
+					required: false,
+				},
+			],
+		},
+		quick_transition: {
+			label: 'Quick Transition',
+			description: 'Performs the selected transition and then returns to the default transition',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Transition',
+					id: 'transition',
+					default: 'Default',
+					choices: self.transitionlist,
+					required: false,
+					minChoicesForSearch: 5
+				},
+				{
+					type: 'number',
+					label: 'Duration (optional; in ms)',
 					id: 'transition_time',
 					default: null,
 					min: 0,
@@ -960,7 +1028,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		set_transition: {
-			label: 'Change transition type',
+			label: 'Set Transition Type',
 			options: [
 				{
 					type: 'dropdown',
@@ -973,7 +1041,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		set_transition_duration: {
-			label: 'Set transition duration',
+			label: 'Set Transition Duration',
 			options: [
 				{
 					type: 'number',
@@ -987,7 +1055,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		StartStopStreaming: {
-			label: 'Start and Stop Streaming',
+			label: 'Toggle Streaming',
 		},
 		set_stream_settings: {
 			label: 'Set Stream Settings',
@@ -1025,7 +1093,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		StartStopRecording: {
-			label: 'Start and Stop Recording',
+			label: 'Toggle Recording',
 		},
 		set_source_mute: {
 			label: 'Set Source Mute',
@@ -1087,7 +1155,8 @@ instance.prototype.actions = function () {
 			],
 		},
 		toggle_scene_item: {
-			label: 'Toggle visibility scene item',
+			label: 'Set Source Visibility',
+			description: 'Set or toggle the visibility of a source within a scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -1119,7 +1188,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		reconnect: {
-			label: 'reconnect to OBS',
+			label: 'Reconnect to OBS',
 		},
 		'set-freetype-text': {
 			label: 'Set Source Text (FreeType 2)',
@@ -1162,19 +1231,20 @@ instance.prototype.actions = function () {
 			],
 		},
 		'trigger-hotkey': {
-			label: 'Trigger hotkey by ID',
-			tooltip: 'Find the hotkey ID in your profile settings file',
+			label: 'Trigger Hotkey by ID',
+			description: 'Find the hotkey ID in your profile settings file (see module help for more info)',
 			options: [
 				{
 					type: 'textinput',
 					label: 'Hotkey ID',
 					id: 'id',
+					default: 'OBSBasic.StartRecording',
 					required: true,
 				},
 			],
 		},
 		'trigger-hotkey-sequence': {
-			label: 'Trigger hotkey by key',
+			label: 'Trigger Hotkey by Key',
 			options: [
 				{
 					type: 'dropdown',
@@ -1266,7 +1336,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		start_stop_output: {
-			label: 'Start and Stop Output',
+			label: 'Toggle Output',
 			options: [
 				{
 					type: 'dropdown',
@@ -1362,7 +1432,7 @@ instance.prototype.actions = function () {
 			],
 		},
 		toggle_filter: {
-			label: 'Set filter visibility',
+			label: 'Set Filter Visibility',
 			options: [
 				{
 					type: 'dropdown',
@@ -1399,14 +1469,14 @@ instance.prototype.action = function (action) {
 	var handle
 
 	if (action.action == 'reconnect') {
-		self.log('debug', 'reconnecting, destroying and reiniting..')
+		self.log('warn', 'Reconnecting to OBS.')
 		self.obs.disconnect()
 		self.init()
 		return
 	}
 
 	if (self.obs == null || self.obs.OBSWebSocket) {
-		self.log('warn', 'OBS action not possible, connection lost')
+		self.log('warn', 'Unable to perform action, connection lost to OBS')
 		return
 	}
 
@@ -1483,8 +1553,49 @@ instance.prototype.action = function (action) {
 					}
 				}
 			}
-
 			handle = self.obs.send('TransitionToProgram', options)
+			break
+		case 'quick_transition':
+			if (action.options.transition == 'Default') {
+				handle = self.obs.send('TransitionToProgram')
+			} else {
+				let revertTransition = self.states['current_transition']
+				let revertTransitionDuration = self.states['transition_duration']
+				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
+					var transitonWaitTime = action.options.transition_time + 50	
+				} else if (action.options.transition_time == null) {
+					var transitonWaitTime = self.states['transition_duration'] + 50	
+				} else {
+					var transitonWaitTime = 100
+				}
+				if (action.options.transition_time != null) {
+					var transitionDuration = action.options.transition_time
+				} else {
+					var transitionDuration = self.states['transition_duration']
+				}
+				var requests = [
+					{
+					'request-type': 'TransitionToProgram',
+					'with-transition': {
+						name: action.options.transition,
+						duration: transitionDuration
+						}
+					},
+					{
+						'request-type': 'Sleep',
+						'sleepMillis': transitonWaitTime
+					},
+					{
+						'request-type': 'SetCurrentTransition',
+						'transition-name': revertTransition
+					},
+					{
+						'request-type': 'SetTransitionDuration',
+						'duration': revertTransitionDuration
+					}
+				]
+				handle = self.obs.send('ExecuteBatch', { requests })
+			}
 			break
 		case 'set_source_mute':
 			handle = self.obs.send('SetMute', {
@@ -1535,10 +1646,14 @@ instance.prototype.action = function (action) {
 			break
 		case 'toggle_scene_item':
 			let visible = true
-			let sceneName =
-				action.options.scene && action.options.scene != 'Current Scene'
-					? action.options.scene
-					: self.states['scene_active']
+			let sceneName = action.options.scene
+			if (action.options.scene == 'Current Scene') {
+				sceneName = self.states['scene_active']
+		 	} else if (action.options.scene == 'Preview Scene') {
+				sceneName = self.states['scene_preview']
+		 	} else  {
+				sceneName = action.options.scene
+			}
 			if (action.options.visible == 'toggle') {
 				if (sceneName) {
 					let scene = self.scenes[sceneName]
@@ -1685,7 +1800,7 @@ instance.prototype.action = function (action) {
 
 	handle.catch((error) => {
 		if (error.code == 'NOT_CONNECTED') {
-			self.log('warn', 'Send to OBS failed. Re-start OBS manually. Starting re-init')
+			self.log('warn', 'Unable to connect to OBS. Please re-start OBS manually.')
 			self.obs.disconnect()
 			self.init()
 		} else {
@@ -1696,30 +1811,21 @@ instance.prototype.action = function (action) {
 
 instance.prototype.init_feedbacks = function () {
 	var self = this
-	// feedbacks
+
 	var feedbacks = {}
 	feedbacks['streaming'] = {
-		label: 'Stream is running',
-		description: 'If the stream is running, change colors of the bank',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
-		],
+		type: 'boolean',
+		label: 'Streaming Active',
+		description: 'If streaming is active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 	}
 
 	feedbacks['recording'] = {
-		label: 'Recording status',
-		description: 'If the recording is active, change colors of the bank',
+		label: 'Recording Status',
+		description: 'If recording is active or paused, change the style of the button',
 		options: [
 			{
 				type: 'colorpicker',
@@ -1749,8 +1855,8 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_active'] = {
-		label: 'Change colors from active/previewed scene',
-		description: 'If the scene specified is active or previewed in OBS, change colors of the bank',
+		label: 'Scene in Preview / Program',
+		description: 'If a scene is in preview or program, change colors of the button',
 		options: [
 			{
 				type: 'colorpicker',
@@ -1788,21 +1894,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_item_active'] = {
-		label: 'Change colors when source visible',
-		description: 'If a source become visible or invisible in current scene, change color',
+		type: 'boolean',
+		label: 'Source Visible',
+		description: 'If a source is visible in the program, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(200, 0, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Source name',
@@ -1815,21 +1914,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['profile_active'] = {
-		label: 'Change colors when profile is active',
-		description: 'If the profile is active, change color',
+		type: 'boolean',
+		label: 'Profile Active',
+		description: 'If a profile is active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Profile name',
@@ -1842,21 +1934,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_collection_active'] = {
-		label: 'Change colors when scene collection is active',
-		description: 'If the scene collection is active, change color',
+		type: 'boolean',
+		label: 'Scene Collection Active',
+		description: 'If a scene collection is active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Scene collection name',
@@ -1869,21 +1954,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['scene_item_active_in_scene'] = {
-		label: 'Change colors when source enabled in scene',
-		description: 'If a source become visible or invisible in a specific scene, change color',
+		type: 'boolean',
+		label: 'Source Enabled in Scene',
+		description: 'If a source is enabled in a specifc scene, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Scene name',
@@ -1904,21 +1982,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['output_active'] = {
-		label: 'Change colors when output active',
-		description: 'If an output is currently active, change color',
+		type: 'boolean',
+		label: 'Output Active',
+		description: 'If an output is currently active, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(200, 0, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Output name',
@@ -1931,40 +2002,24 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['transition_active'] = {
-		label: 'Change colors when a transition is in progress',
-		description: 'If a transition is in progress, change color',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
-		],
+		type: 'boolean',
+		label: 'Transition in Progress',
+		description: 'If a transition is in progress, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 	}
 
 	feedbacks['current_transition'] = {
-		label: 'Change colors when a transition is selected',
-		description: 'If an transititon type is selected, change color',
+		type: 'boolean',
+		label: 'Current Transition Type',
+		description: 'If a transititon type is selected, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Transition',
@@ -1977,21 +2032,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['transition_duration'] = {
-		label: 'Change colors when the transition duration is matched',
-		description: 'If the transition duration is matched, change color',
+		type: 'boolean',
+		label: 'Transition Duration',
+		description: 'If the transition duration is matched, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'number',
 				label: 'Transition time (in ms)',
@@ -2005,21 +2053,14 @@ instance.prototype.init_feedbacks = function () {
 	}
 
 	feedbacks['filter_enabled'] = {
-		label: 'Change colors when a filter is enabled',
-		description: 'If a filter is enabled, change color',
+		type: 'boolean',
+		label: 'Filter Enabled',
+		description: 'If a filter is enabled, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
 		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color',
-				id: 'bg',
-				default: self.rgb(0, 200, 0),
-			},
 			{
 				type: 'dropdown',
 				label: 'Source',
@@ -2050,18 +2091,16 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'scene_active') {
 		if (self.states['scene_active'] === feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		} else if (
-			self.states['scene_preview'] === feedback.options.scene &&
-			typeof feedback.options.fg_preview === 'number'
-		) {
-			//FIXME fg_preview/bg_preview is undefined when updating from an older version of the module
+		} else if (self.states['scene_preview'] === feedback.options.scene && typeof feedback.options.fg_preview === 'number' && self.states['studio_mode'] === true) {
 			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
+		} else {
+			return {}
 		}
 	}
 
 	if (feedback.type === 'streaming') {
 		if (self.states['streaming'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
@@ -2070,24 +2109,26 @@ instance.prototype.feedback = function (feedback) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 		} else if (self.states['recording'] === 'paused') {
 			return { color: feedback.options.fg_paused, bgcolor: feedback.options.bg_paused }
+		} else {
+			return {}
 		}
 	}
 
 	if (feedback.type === 'scene_item_active') {
 		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'profile_active') {
 		if (self.states['current_profile'] === feedback.options.profile) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'scene_collection_active') {
 		if (self.states['current_scene_collection'] === feedback.options.scene_collection) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
@@ -2096,12 +2137,12 @@ instance.prototype.feedback = function (feedback) {
 		if (scene && scene.sources) {
 			for (let source of scene.sources) {
 				if (source.name == feedback.options.source && source.render === true) {
-					return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+					return true
 				}
 				if (source.type == 'group') {
 					for (let s in source.groupChildren) {
 						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
-							return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+							return true
 						}
 					}
 				}
@@ -2111,25 +2152,25 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'output_active') {
 		if (self.states[feedback.options.output] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'transition_active') {
 		if (self.states['transition_active'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'current_transition') {
 		if (feedback.options.transition === self.states['current_transition']) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
 	if (feedback.type === 'transition_duration') {
 		if (feedback.options.duration === self.states['transition_duration']) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+			return true
 		}
 	}
 
@@ -2138,13 +2179,13 @@ instance.prototype.feedback = function (feedback) {
 		if (filters) {
 			for (let filter of filters) {
 				if (filter.name === feedback.options.filter && filter.enabled === true) {
-					return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+					return true
 				}
 			}
 		}
 	}
 
-	return {}
+	return false
 }
 
 instance.prototype.init_presets = function () {
@@ -2155,7 +2196,7 @@ instance.prototype.init_presets = function () {
 		var scene = self.scenes[s]
 
 		let baseObj = {
-			category: 'Scene to program',
+			category: 'Scene to Program',
 			label: scene.name,
 			bank: {
 				style: 'text',
@@ -2168,7 +2209,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'scene_active',
 					options: {
-						bg: self.rgb(255, 0, 0),
+						bg: self.rgb(200, 0, 0),
 						fg: self.rgb(255, 255, 255),
 						bg_preview: self.rgb(0, 200, 0),
 						fg_preview: self.rgb(255, 255, 255),
@@ -2191,11 +2232,23 @@ instance.prototype.init_presets = function () {
 		let toPreview = {}
 		presets.push(
 			Object.assign(toPreview, baseObj, {
-				category: 'Scene to preview',
+				category: 'Scene to Preview',
 				actions: [
 					{
 						action: 'preview_scene',
 						options: {
+							scene: scene.name,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'scene_active',
+						options: {
+							bg: self.rgb(200, 0, 0),
+							fg: self.rgb(255, 255, 255),
+							bg_preview: self.rgb(0, 200, 0),
+							fg_preview: self.rgb(255, 255, 255),
 							scene: scene.name,
 						},
 					},
@@ -2217,9 +2270,55 @@ instance.prototype.init_presets = function () {
 		actions: [
 			{
 				action: 'do_transition',
+				options: {
+					transition: 'Default',
+				},
+			},
+		],
+		feedbacks: [
+			{
+				type: 'transition_active',
+				style: {
+					bgcolor: self.rgb(0, 200, 0),
+					color: self.rgb(255, 255, 255),
+				}
 			},
 		],
 	})
+
+	for (var s in self.transitionlist) {
+		var transition = self.transitionlist[s]
+
+		let baseObj = {
+			category: 'Transitions',
+			label: transition.label,
+			bank: {
+				style: 'text',
+				text: transition.label,
+				size: 14,
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'transition_active',
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+			actions: [
+				{
+					action: 'quick_transition',
+					options: {
+						transition: transition.id,
+					},
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
 
 	// Preset for Start Streaming button with colors indicating streaming status
 	presets.push({
@@ -2235,10 +2334,36 @@ instance.prototype.init_presets = function () {
 		feedbacks: [
 			{
 				type: 'streaming',
-				options: {
-					bg: self.rgb(51, 204, 51),
-					fg: self.rgb(255, 255, 255),
-				},
+				style: {
+					bgcolor: self.rgb(0, 200, 0),
+					color: self.rgb(255, 255, 255),
+				}
+			},
+		],
+		actions: [
+			{
+				action: 'StartStopStreaming',
+			},
+		],
+	})
+
+	presets.push({
+		category: 'Streaming',
+		label: 'Streaming Status / Timecode',
+		bank: {
+			style: 'text',
+			text: 'Streaming:\\n$(obs:streaming)\\n$(obs:stream_timecode)',
+			size: 14,
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0,
+		},
+		feedbacks: [
+			{
+				type: 'streaming',
+				style: {
+					bgcolor: self.rgb(0, 200, 0),
+					color: self.rgb(255, 255, 255),
+				}
 			},
 		],
 		actions: [
@@ -2263,8 +2388,10 @@ instance.prototype.init_presets = function () {
 			{
 				type: 'recording',
 				options: {
-					bg: self.rgb(51, 204, 51),
+					bg: self.rgb(200, 0, 0),
 					fg: self.rgb(255, 255, 255),
+					bg_paused: self.rgb(212, 174, 0),
+					fg_paused: self.rgb(255, 255, 255),
 				},
 			},
 		],
@@ -2273,6 +2400,83 @@ instance.prototype.init_presets = function () {
 				action: 'StartStopRecording',
 			},
 		],
+	})
+
+	presets.push({
+		category: 'Recording',
+		label: 'Recording Status / Timecode',
+		bank: {
+			style: 'text',
+			text: 'Recording:\\n$(obs:recording)\\n$(obs:recording_timecode)',
+			size: 'auto',
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0,
+		},
+		feedbacks: [
+			{
+				type: 'recording',
+				options: {
+					bg: self.rgb(200, 0, 0),
+					fg: self.rgb(255, 255, 255),
+					bg_paused: self.rgb(212, 174, 0),
+					fg_paused: self.rgb(255, 255, 255),
+				},
+			},
+		],
+		actions: [
+			{
+				action: 'StartStopRecording',
+			},
+		],
+	})
+
+	for (var s in self.outputlist) {
+		var output = self.outputlist[s]
+
+		let baseObj = {
+			category: 'Outputs',
+			label: 'Toggle ' + output.label,
+			bank: {
+				style: 'text',
+				text: 'OBS ' + output.label,
+				size: 'auto',
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'output_active',
+					options: {
+						output: output.id,
+					},
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+			actions: [
+				{
+					action: 'start_stop_output',
+					options: {
+						output: output.id,
+					},
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
+
+	presets.push({
+		category: 'General',
+		label: 'Computer Stats',
+		bank: {
+			style: 'text',
+			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
+			size: 'auto',
+			color: self.rgb(255, 255, 255),
+			bgcolor: 0,
+		},
 	})
 
 	self.setPresetDefinitions(presets)
@@ -2290,7 +2494,7 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'fps', label: 'Current framerate' })
 	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' })
 	variables.push({ name: 'memory_usage', label: 'Current RAM usage (in megabytes)' })
-	variables.push({ name: 'free_disk_space', label: 'Free recording disk space (in megabytes)' })
+	variables.push({ name: 'free_disk_space', label: 'Free recording disk space' })
 	variables.push({
 		name: 'kbits_per_sec',
 		label: 'Amount of data per second (in kilobits) transmitted by the stream encoder',
@@ -2305,7 +2509,6 @@ instance.prototype.init_variables = function () {
 	})
 	variables.push({ name: 'num_total_frames', label: 'Total number of frames transmitted since the stream started' })
 	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' })
-	variables.push({ name: 'preview_only', label: 'Preview only' })
 	variables.push({ name: 'recording', label: 'Recording State' })
 	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
 	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
