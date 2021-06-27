@@ -115,6 +115,7 @@ instance.prototype.init = function () {
 				self.updateOutputList()
 				self.getRecordingStatus()
 				self.updateFilterList()
+				self.updateSourceAudio()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -164,6 +165,7 @@ instance.prototype.init = function () {
 			self.setVariable('scene_active', data['scene-name'])
 			self.checkFeedbacks('scene_active')
 			self.updateScenesAndSources()
+			self.updateSourceAudio()
 		})
 
 		self.obs.on('PreviewSceneChanged', function (data) {
@@ -288,6 +290,23 @@ instance.prototype.init = function () {
 
 		self.obs.on('SourceFilterRemoved', () => {
 			self.updateFilterList()
+		})
+
+		self.obs.on('SourceMuteStateChanged', (data) => {
+			self.sourceAudio['muted'][data.sourceName] = data.muted
+			self.checkFeedbacks('audio_muted')
+		})
+
+		self.obs.on('SourceAudioActivated', () => {
+			self.updateSourceAudio()
+		})
+
+		self.obs.on('SourceAudioDeactivated', () => {
+			self.updateSourceAudio()
+		})
+
+		self.obs.on('SourceVolumeChanged', (data) => {
+			self.sourceAudio['volume'][data.sourceName] = self.roundIfDefined(data.volumeDb, 1)
 		})
 	})
 
@@ -762,6 +781,37 @@ instance.prototype.updateFilters = function (source) {
 	})
 }
 
+instance.prototype.updateSourceAudio = function () {
+	var self = this
+	self.sourceAudio = {
+		volume: [],
+		muted: [],
+		audio_monitor_type: []
+	}
+	self.obs.send('GetSourcesList').then((data) => {
+		for (var s in data.sources) {
+			let source = data.sources[s]
+			getSourceAudio(source.name)
+		}
+	})
+	let getSourceAudio = (source) => {
+		self.obs.send('GetVolume', {
+			'source': source,
+			'useDecibel': true
+		}).then((data) => {
+			self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
+			self.sourceAudio['muted'][source] = data.muted
+			self.checkFeedbacks('audio_muted')
+		})
+		self.obs.send('GetAudioMonitorType', {
+			'sourceName': source
+		}).then((data) => {
+			self.sourceAudio['audio_monitor_type'][source] = data.monitorType;
+			self.checkFeedbacks('audio_monitor_type')
+		})
+	}
+}
+
 // When module gets deleted
 instance.prototype.destroy = function () {
 	var self = this
@@ -776,6 +826,7 @@ instance.prototype.destroy = function () {
 	self.filterlist = []
 	self.filters = {}
 	self.sourceFilters = {}
+	self.sourceAudio = {}
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -1133,6 +1184,7 @@ instance.prototype.actions = function () {
 		},
 		set_volume: {
 			label: 'Set Source Volume',
+			description: 'Sets the volume of a source to a specific value',
 			options: [
 				{
 					type: 'dropdown',
@@ -1149,6 +1201,28 @@ instance.prototype.actions = function () {
 					default: 0,
 					min: -100,
 					max: 26,
+					range: false,
+					required: false,
+				},
+			],
+		},
+		adjust_volume: {
+			label: 'Adjust Source Volume',
+			description: 'Adjusts the volume of a source by a specific increment',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+					minChoicesForSearch: 5
+				},
+				{
+					type: 'number',
+					label: 'Volume adjustment amount in dB',
+					id: 'volume',
+					default: 0,
 					range: false,
 					required: false,
 				},
@@ -1615,6 +1689,19 @@ instance.prototype.action = function (action) {
 				useDecibel: true,
 			})
 			break
+		case 'adjust_volume':
+			var newVolume = self.sourceAudio['volume'][action.options.source] + action.options.volume
+			if (newVolume > 26) {
+				var newVolume = 26
+			} else if (newVolume < -100) {
+				var newVolume = -100
+			}
+			handle = self.obs.send('SetVolume', {
+				source: action.options.source,
+				volume: newVolume,
+				useDecibel: true,
+			})
+			break
 		case 'set_transition':
 			handle = self.obs.send('SetCurrentTransition', {
 				'transition-name': action.options.transitions,
@@ -2078,6 +2165,59 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['audio_muted'] = {
+		type: 'boolean',
+		label: 'Audio Muted',
+		description: 'If an audio source is muted, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+
+		],
+	}
+
+	feedbacks['audio_monitor_type'] = {
+		type: 'boolean',
+		label: 'Audio Monitor Type',
+		description: 'If the audio monitor type is matched, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+			{
+				type: 'dropdown',
+				label: 'Monitor',
+				id: 'monitor',
+				default: 'none',
+				choices: [
+					{ id: 'none', label: 'None' },
+					{ id: 'monitorOnly', label: 'Monitor Only' },
+					{ id: 'monitorAndOutput', label: 'Monitor and Output' },
+				],
+				required: true,
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -2182,6 +2322,18 @@ instance.prototype.feedback = function (feedback) {
 					return true
 				}
 			}
+		}
+	}
+
+	if (feedback.type === 'audio_muted') {
+		if (self.sourceAudio['muted'][feedback.options.source] === true) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'audio_monitor_type') {
+		if (self.sourceAudio['audio_monitor_type'][feedback.options.source] === feedback.options.monitor) {
+			return true
 		}
 	}
 

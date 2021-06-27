@@ -29,6 +29,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * Set Filter Visibility
 * Source Mute (Set / Toggle)
 * Set Source Volume
+* Adjust Source Volume
 * Set Audio Monitor
 * Set Source Text (FreeType 2)
 * Set Source Text (GDI+)
@@ -58,6 +59,8 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * Source Visible *(If a source is visible in the program, change the style of the button)*
 * Source Enabled in Scene *(If a source is enabled in a specifc scene, change the style of the button)*
 * Filter Enabled
+* Audio Muted
+* Audio Monitor Type
 
 **General**
 * Profile Active
