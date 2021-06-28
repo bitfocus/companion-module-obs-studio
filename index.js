@@ -172,6 +172,7 @@ instance.prototype.init = function () {
 			self.states['scene_preview'] = data['scene-name']
 			self.setVariable('scene_preview', data['scene-name'])
 			self.checkFeedbacks('scene_active')
+			self.checkFeedbacks('scene_item_previewed')
 		})
 
 		self.obs.on('ScenesChanged', function () {
@@ -238,6 +239,7 @@ instance.prototype.init = function () {
 			} else {
 				self.states['studio_mode'] = false
 			}
+			self.updateScenesAndSources()
 		})
 
 		self.obs.on('SceneItemVisibilityChanged', function (data) {
@@ -651,6 +653,7 @@ instance.prototype.updateScenesAndSources = async function () {
 	self.init_feedbacks()
 	self.checkFeedbacks('scene_item_active')
 	self.checkFeedbacks('scene_item_active_in_scene')
+	self.checkFeedbacks('scene_item_previewed')
 	self.checkFeedbacks('scene_active')
 }
 
@@ -2000,6 +2003,34 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['scene_item_previewed'] = {
+		type: 'boolean',
+		label: 'Source in Preview Scene',
+		description: 'If a source is enabled in the preview scene, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene name',
+				id: 'scene',
+				default: self.scenelistDefault,
+				choices: self.scenelist,
+				minChoicesForSearch: 5
+			},
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+		],
+	}
+
 	feedbacks['profile_active'] = {
 		type: 'boolean',
 		label: 'Profile Active',
@@ -2283,6 +2314,56 @@ instance.prototype.feedback = function (feedback) {
 					for (let s in source.groupChildren) {
 						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
 							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	if (feedback.type === 'scene_item_previewed') {
+		if (feedback.options.scene === self.states['scene_preview'] && self.states['studio_mode']) {
+			let scene = self.scenes[feedback.options.scene]
+			if (scene && scene.sources) {
+				for (let source of scene.sources) {
+					if (source.name == feedback.options.source && source.render === true) {
+						return true
+					}
+					if (source.type == 'group' && source.render === true) {
+						for (let s in source.groupChildren) {
+							if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+								return true
+							}
+							if (source.groupChildren[s].type == 'scene' && source.groupChildren[s].render === true) {
+								let scene = self.scenes[source.groupChildren[s].name]
+								for (let source of scene.sources) {
+									if (source.name == feedback.options.source && source.render === true) {
+										return true
+									}
+									if (source.type == 'group' && source.render === true) {
+										for (let s in source.groupChildren) {
+											if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+												return true
+											}
+										} 
+									}	
+								}
+							}
+						}
+					}
+					if (source.type == 'scene' && source.render === true) {
+						let scene = self.scenes[source.name]
+						for (let source of scene.sources) {
+							if (source.name == feedback.options.source && source.render === true) {
+								return true
+							}
+							if (source.type == 'group' && source.render === true) {
+								for (let s in source.groupChildren) {
+									if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+										return true
+									}
+								} 
+							}	
 						}
 					}
 				}
