@@ -858,6 +858,7 @@ instance.prototype.updateMediaSources = function () {
 			self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
 		}
 		self.init_variables()
+		self.actions()
 		self.checkFeedbacks('media_playing')
 	})
 }
@@ -878,6 +879,7 @@ instance.prototype.destroy = function () {
 	self.sourceFilters = {}
 	self.sourceAudio = {}
 	self.mediaSources = {}
+	self.mediaSourceList = []
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -900,6 +902,7 @@ instance.prototype.actions = function () {
 	self.scenecollectionlist = []
 	self.outputlist = []
 	self.filterlist = []
+	self.mediaSourceList = []
 
 	var s
 	if (self.sources !== undefined) {
@@ -999,6 +1002,18 @@ instance.prototype.actions = function () {
 			self.filterlistDefault = self.filterlist[0].id
 		} else {
 			self.filterlistDefault = ''
+		}
+	}
+
+	if (self.mediaSources !== undefined) {
+		for (s in self.mediaSources) {
+			self.mediaSourceList.push({ id: s, label: s })
+		}
+		if (self.mediaSourceList[0]) {
+			self.mediaSourceList.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.mediaSourceListDefault = self.mediaSourceList[0].id
+		} else {
+			self.mediaSourceListDefault = ''
 		}
 	}
 
@@ -1591,10 +1606,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 				{
 					type: 'dropdown',
@@ -1614,10 +1629,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 			],
 		},
@@ -1626,10 +1641,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 			],
 		},
@@ -1638,10 +1653,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 			],
 		},
@@ -1650,10 +1665,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 			],
 		},
@@ -1662,10 +1677,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 				{
 					type: 'number',
@@ -1681,10 +1696,10 @@ instance.prototype.actions = function () {
 			options: [
 				{
 					type: 'dropdown',
-					label: 'Source',
+					label: 'Media Source',
 					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
 				},
 				{
 					type: 'number',
@@ -2461,10 +2476,10 @@ instance.prototype.init_feedbacks = function () {
 		options: [
 			{
 				type: 'dropdown',
-				label: 'Source',
+				label: 'Media Source',
 				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
+				default: self.mediaSourceListDefault,
+				choices: self.mediaSourceList,
 				minChoicesForSearch: 5
 			},
 
