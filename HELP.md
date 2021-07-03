@@ -34,6 +34,13 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * Set Source Text (FreeType 2)
 * Set Source Text (GDI+)
 * Refresh Browser Source
+* Play / Pause Media
+* Restart Media
+* Stop Media
+* Next Media
+* Previous Media
+* Set Media Time
+* Scrub Media
 
 **General**
 * Studio Mode (Enable / Disable / Toggle)

@@ -1538,6 +1538,115 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		play_pause_media: {
+			label: 'Play / Pause Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+				{
+					type: 'dropdown',
+					label: 'Action',
+					id: 'playPause',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'false', label: 'Play' },
+						{ id: 'true', label: 'Pause' }
+					],
+				},
+			],
+		},
+		restart_media: {
+			label: 'Restart Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+			],
+		},
+		stop_media: {
+			label: 'Stop Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+			],
+		},
+		next_media: {
+			label: 'Next Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+			],
+		},
+		previous_media: {
+			label: 'Previous Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+			],
+		},
+		set_media_time: {
+			label: 'Set Media Time',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+				{
+					type: 'number',
+					label: 'Timecode (in seconds)',
+					id: 'mediaTime',
+					default: 1,
+					required: true,
+				},
+			],
+		},
+		scrub_media: {
+			label: 'Scrub Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+				{
+					type: 'number',
+					label: 'Scrub Amount (in seconds, positive or negative)',
+					id: 'scrubAmount',
+					default: 1,
+					required: true,
+				},
+			],
+		},
 	})
 }
 
@@ -1884,6 +1993,50 @@ instance.prototype.action = function (action) {
 				sourceName: action.options.source,
 				filterName: action.options.filter,
 				filterEnabled: filterVisibility,
+			})
+			break
+		case 'play_pause_media':
+			if (action.options.playPause === 'toggle') {
+				handle = self.obs.send('PlayPauseMedia', {
+					sourceName: action.options.source,
+				})
+			} else {
+				handle = self.obs.send('PlayPauseMedia', {
+					sourceName: action.options.source,
+					playPause: action.options.playPause == 'true' ? true : false,
+				})
+			}
+			break
+		case 'restart_media':
+			handle = self.obs.send('RestartMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'stop_media':
+			handle = self.obs.send('StopMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'next_media':
+			handle = self.obs.send('NextMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'previous_media':
+			handle = self.obs.send('PreviousMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'set_media_time':
+			handle = self.obs.send('SetMediaTime', {
+				sourceName: action.options.source,
+				timestamp: action.options.mediaTime * 1000,
+			})
+			break
+		case 'scrub_media':
+			handle = self.obs.send('ScrubMedia', {
+				sourceName: action.options.source,
+				timeOffset: action.options.scrubAmount * 1000,
 			})
 			break
 	}
