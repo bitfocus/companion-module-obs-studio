@@ -2959,16 +2959,6 @@ instance.prototype.init_presets = function () {
 					}
 				},
 			],
-			actions: [
-				{
-					action: 'toggle_scene_item',
-					options: {
-						scene: 'Current Scene',
-						source: source,
-						visible: 'toggle',
-					},
-				},
-			],
 		}
 		presets.push(baseObj)
 	}
