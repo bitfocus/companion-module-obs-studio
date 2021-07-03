@@ -18,7 +18,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 **Switching & Transitions**
 * Change Scene
 * Preview Scene
-* Smart Scene Switcher *(Previews selected scene or, if scene is already in preview, transtions the scene to program)*
+* Smart Scene Switcher *(Previews selected scene or, if scene is already in preview, transitions the scene to program)*
 * Transition Preview to Program *(Performs the selected transition and then makes the transition the new default)*
 * Quick Transition *(Performs the selected transition and then returns to the default transition)*
 * Set Transition Type
@@ -64,7 +64,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Sources**
 * Source Visible *(If a source is visible in the program, change the style of the button)*
-* Source Enabled in Scene *(If a source is enabled in a specifc scene, change the style of the button)*
+* Source Enabled in Scene *(If a source is enabled in a specific scene, change the style of the button)*
 * Filter Enabled
 * Audio Muted
 * Audio Monitor Type
@@ -116,7 +116,7 @@ To use this feature, make sure you have obs-websocket 4.9.0 or greater installed
 * This file should have a section labeled **[Hotkeys]**. Under that section, the left most text up until the equals sign is the Hotkey ID. For example, a Hotkey ID might look like: **OBSBasic.StartRecording**
 * Enter this value into the your Trigger hotkey by ID action in Companion
 
-*Note:* if you have scene-speicifc hotkeys, those Hotkey IDs are stored in a different file. To access those:
+*Note:* if you have scene-specific hotkeys, those Hotkey IDs are stored in a different file. To access those:
 * In the OBS > Scene Collection menu, select "Export" and choose a location. Click "Save"
 * Open the *SceneName* **.json** file in a text editor
 * This file will have multiple sections labeled **"hotkeys": {}**. It is likely easiest to use the search function to find them. Under each Hotkey  section, the text contained within the quotes above the "key" is the Hotkey ID. For example, a Hotkey ID might look like: **OBSBasic.SelectScene**
