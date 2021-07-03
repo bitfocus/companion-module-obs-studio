@@ -182,12 +182,14 @@ instance.prototype.init = function () {
 
 		self.obs.on('SceneItemAdded', function () {
 			self.updateScenesAndSources()
+			self.updateMediaSources()
 		})
 
 		self.obs.on('SourceDestroyed', function (data) {
 			self.states[data.sourceName] = false
 			self.sources[data.sourceName] = null
 			self.updateFilterList()
+			self.updateMediaSources()
 			self.actions()
 			self.init_presets()
 			self.init_feedbacks()
@@ -576,38 +578,6 @@ instance.prototype.updateScenesAndSources = async function () {
 		let previewScene = await self.obs.send('GetPreviewScene')
 		self.states['scene_preview'] = previewScene.name
 		self.setVariable('scene_preview', previewScene.name)
-	}
-
-	let findNestedScenes = (sceneName) => {
-		let nested = []
-		if (self.scenes[sceneName]) {
-			for (let source of self.scenes[sceneName].sources) {
-				if (self.scenes[source.name] && source.render) {
-					nested.push(source.name)
-				}
-			}
-		}
-		return nested
-	}
-
-	// Recursively find all nested visible scenes
-	let lastNestedCount
-	let nestedVisibleScenes = {}
-	nestedVisibleScenes[sceneList.currentScene] = true
-
-	do {
-		lastNestedCount = Object.keys(nestedVisibleScenes).length
-		for (let sceneName in nestedVisibleScenes) {
-			for (let nested of findNestedScenes(sceneName)) {
-				nestedVisibleScenes[nested] = true
-			}
-		}
-	} while (lastNestedCount != Object.keys(nestedVisibleScenes).length)
-
-	for (let sceneName in nestedVisibleScenes) {
-		for (let source of self.scenes[sceneName].sources) {
-			self.states[source.name] = source.render
-		}
 	}
 
 	let updateSceneSources = (source, scene) => {
