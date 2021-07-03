@@ -2925,6 +2925,44 @@ instance.prototype.init_presets = function () {
 		},
 	})
 
+	for (var s in self.mediaSources) {
+		let mediaSource = self.mediaSources[s].sourceName
+
+		let baseObj = {
+			category: 'Media Sources',
+			label: 'Play Pause' + mediaSource,
+			bank: {
+				style: 'text',
+				text: mediaSource + '\\n$(obs:media_status_'+ mediaSource + ')',
+				size: 'auto',
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'media_playing',
+					options: {
+						source: mediaSource,
+					},
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+			actions: [
+				{
+					action: 'play_pause_media',
+					options: {
+						source: mediaSource,
+						playPause: 'toggle',
+					},
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
+
 	self.setPresetDefinitions(presets)
 }
 
