@@ -60,7 +60,7 @@ instance.prototype.init = function () {
 		self.obs = undefined
 	}
 
-	// Connecting on init not neccesary for OBSWebSocket. But during init try to tcp connect
+	// Connecting on init not necessary for OBSWebSocket. But during init try to tcp connect
 	// to get the status of the module right and automatically try reconnecting. Which is
 	// implemented in ../../tcp by Companion core developers.
 	self.tcp = new tcp(
@@ -1019,7 +1019,7 @@ instance.prototype.actions = function () {
 		},
 		smart_switcher: {
 			label: 'Smart Scene Switcher',
-			description: 'Previews selected scene or, if scene is already in preview, transtions the scene to program',
+			description: 'Previews selected scene or, if scene is already in preview, transitions the scene to program',
 			options: [
 				{
 					type: 'dropdown',
@@ -1527,7 +1527,7 @@ instance.prototype.actions = function () {
 				},
 				{
 					type: 'dropdown',
-					label: 'Visiblity',
+					label: 'Visibility',
 					id: 'visible',
 					default: 'toggle',
 					choices: [
@@ -1639,11 +1639,11 @@ instance.prototype.action = function (action) {
 				let revertTransition = self.states['current_transition']
 				let revertTransitionDuration = self.states['transition_duration']
 				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-					var transitonWaitTime = action.options.transition_time + 50	
+					var transitionWaitTime = action.options.transition_time + 50	
 				} else if (action.options.transition_time == null) {
-					var transitonWaitTime = self.states['transition_duration'] + 50	
+					var transitionWaitTime = self.states['transition_duration'] + 50	
 				} else {
-					var transitonWaitTime = 100
+					var transitionWaitTime = 100
 				}
 				if (action.options.transition_time != null) {
 					var transitionDuration = action.options.transition_time
@@ -1660,7 +1660,7 @@ instance.prototype.action = function (action) {
 					},
 					{
 						'request-type': 'Sleep',
-						'sleepMillis': transitonWaitTime
+						'sleepMillis': transitionWaitTime
 					},
 					{
 						'request-type': 'SetCurrentTransition',
@@ -2074,7 +2074,7 @@ instance.prototype.init_feedbacks = function () {
 	feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
 		label: 'Source Enabled in Scene',
-		description: 'If a source is enabled in a specifc scene, change the style of the button',
+		description: 'If a source is enabled in a specific scene, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
 			bgcolor: self.rgb(0, 200, 0)
@@ -2132,7 +2132,7 @@ instance.prototype.init_feedbacks = function () {
 	feedbacks['current_transition'] = {
 		type: 'boolean',
 		label: 'Current Transition Type',
-		description: 'If a transititon type is selected, change the style of the button',
+		description: 'If a transition type is selected, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
 			bgcolor: self.rgb(0, 200, 0)
