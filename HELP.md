@@ -68,6 +68,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * Filter Enabled
 * Audio Muted
 * Audio Monitor Type
+* Media Playing
 
 **General**
 * Profile Active
@@ -97,6 +98,9 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * scene_preview
 * current_transition
 * transition_duration
+
+**Sources**
+* media_status_*source_name* *(Current status of media files, including: playing, paused, stopped, ended)*
 
 **General**
 * profile

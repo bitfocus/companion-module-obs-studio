@@ -116,6 +116,7 @@ instance.prototype.init = function () {
 				self.getRecordingStatus()
 				self.updateFilterList()
 				self.updateSourceAudio()
+				self.updateMediaSources()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -310,6 +311,37 @@ instance.prototype.init = function () {
 		self.obs.on('SourceVolumeChanged', (data) => {
 			self.sourceAudio['volume'][data.sourceName] = self.roundIfDefined(data.volumeDb, 1)
 		})
+
+		self.obs.on('MediaPlaying', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Playing')
+		})
+
+		self.obs.on('MediaStarted', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Playing')
+		})
+
+		self.obs.on('MediaPaused', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Paused')
+		})
+
+		self.obs.on('MediaStopped', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Stopped')
+		})
+
+		self.obs.on('MediaEnded', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Ended')
+		})
+
 	})
 
 	debug = self.debug
@@ -815,6 +847,21 @@ instance.prototype.updateSourceAudio = function () {
 	}
 }
 
+instance.prototype.updateMediaSources = function () {
+	var self = this
+	self.mediaSources = {}
+	self.obs.send('GetMediaSourcesList').then((data) => {
+		for (var s in data.mediaSources) {
+			let mediaSource = data.mediaSources[s]
+			self.mediaSources[mediaSource.sourceName] = mediaSource
+			self.mediaSources[mediaSource.sourceName]['mediaState'] = mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+			self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
+		}
+		self.init_variables()
+		self.checkFeedbacks('media_playing')
+	})
+}
+
 // When module gets deleted
 instance.prototype.destroy = function () {
 	var self = this
@@ -830,6 +877,7 @@ instance.prototype.destroy = function () {
 	self.filters = {}
 	self.sourceFilters = {}
 	self.sourceAudio = {}
+	self.mediaSources = {}
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -2402,6 +2450,27 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['media_playing'] = {
+		type: 'boolean',
+		label: 'Media Playing',
+		description: 'If a media source is playing, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -2567,6 +2636,12 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'audio_monitor_type') {
 		if (self.sourceAudio['audio_monitor_type'][feedback.options.source] === feedback.options.monitor) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'media_playing') {
+		if (self.mediaSources[feedback.options.source] && self.mediaSources[feedback.options.source]['mediaState'] === 'Playing') {
 			return true
 		}
 	}
@@ -2908,6 +2983,11 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
 	variables.push({ name: 'current_transition', label: 'Current transition' })
 	variables.push({ name: 'transition_duration', label: 'Current transition duration' })
+
+	for (var s in self.mediaSources) {
+		let media = self.mediaSources[s]
+		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
+	}
 
 	self.setVariableDefinitions(variables)
 }
