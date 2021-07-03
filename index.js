@@ -560,6 +560,7 @@ instance.prototype.updateScenesAndSources = async function () {
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
+			self.updateTextSources(source.name, source.typeId)
 		}
 		data.sources.forEach((source) => {
 			self.states[source.name] = false
@@ -831,6 +832,24 @@ instance.prototype.updateMediaSources = function () {
 		self.actions()
 		self.checkFeedbacks('media_playing')
 	})
+}
+
+instance.prototype.updateTextSources = function (source, typeId) {
+	var self = this
+	if (typeId === 'text_ft2_source_v2') {
+		self.obs.send('GetTextFreetype2Properties', {
+			source: source,
+		}).then((data) => {
+			self.setVariable('current_text_' + source, data.text)
+		})
+	}
+	if (typeId === 'text_gdiplus_v2') {
+		self.obs.send('GetTextGDIPlusProperties', {
+			source: source,
+		}).then((data) => {
+			self.setVariable('current_text_' + source, data.text)
+		})
+	}
 }
 
 // When module gets deleted
@@ -1925,12 +1944,14 @@ instance.prototype.action = function (action) {
 				source: action.options.source,
 				text: action.options.text,
 			})
+			self.updateTextSources(action.options.source, 'text_ft2_source_v2')
 			break
 		case 'set-gdi-text':
 			handle = self.obs.send('SetTextGDIPlusProperties', {
 				source: action.options.source,
 				text: action.options.text,
 			})
+			self.updateTextSources(action.options.source, 'text_gdiplus_v2')
 			break
 		case 'trigger-hotkey':
 			handle = self.obs.send('TriggerHotkeyByName', {
@@ -3010,6 +3031,16 @@ instance.prototype.init_variables = function () {
 	for (var s in self.mediaSources) {
 		let media = self.mediaSources[s]
 		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
+	}
+	
+	for (var s in self.sources) {
+		let source = self.sources[s]
+		if (source.typeId === 'text_ft2_source_v2') {
+			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+		}
+		if (source.typeId === 'text_gdiplus_v2') {
+			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+		}
 	}
 
 	self.setVariableDefinitions(variables)
