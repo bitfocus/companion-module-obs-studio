@@ -16,19 +16,19 @@ function instance(system, id, config) {
 	return self
 }
 
-instance.GetUpgradeScripts = function() {
+instance.GetUpgradeScripts = function () {
 	return [
 		instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
-			'streaming': true,
-			'scene_item_active': true,
-			'profile_active': true,
-			'scene_collection_active': true,
-			'scene_item_active_in_scene': true,
-			'output_active': true,
-			'transition_active': true,
-			'current_transition': true,
-			'transition_duration': true,
-			'filter_enabled': true,
+			streaming: true,
+			scene_item_active: true,
+			profile_active: true,
+			scene_collection_active: true,
+			scene_item_active_in_scene: true,
+			output_active: true,
+			transition_active: true,
+			current_transition: true,
+			transition_duration: true,
+			filter_enabled: true,
 		}),
 	]
 }
@@ -343,7 +343,6 @@ instance.prototype.init = function () {
 			self.checkFeedbacks('media_playing')
 			self.setVariable('media_status_' + data.sourceName, 'Ended')
 		})
-
 	})
 
 	debug = self.debug
@@ -408,10 +407,10 @@ instance.prototype.process_obs_stats = function (data) {
 	self.setVariable('output_skipped_frames', data['output-skipped-frames'])
 	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
 	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2) + '%')
-	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 0) +' MB')
+	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 0) + ' MB')
 	let freeSpace = self.roundIfDefined(data['free-disk-space'], 0)
 	if (freeSpace > 1000) {
-		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace/1000, 0) + ' GB')
+		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace / 1000, 0) + ' GB')
 	} else {
 		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace, 0) + ' MB')
 	}
@@ -760,31 +759,35 @@ instance.prototype.updateFilterList = function () {
 		}
 	})
 	let getSourceFilters = (source) => {
-		self.obs.send('GetSourceFilters', {
-			'sourceName': source,
-		}).then((data) => {
-			if (data.filters.length !== 0) {
-				for (var s in data.filters) {
-					var filter = data.filters[s]
-					self.filters[filter.name] = filter
+		self.obs
+			.send('GetSourceFilters', {
+				sourceName: source,
+			})
+			.then((data) => {
+				if (data.filters.length !== 0) {
+					for (var s in data.filters) {
+						var filter = data.filters[s]
+						self.filters[filter.name] = filter
+					}
+					self.sourceFilters[source] = data.filters
+					self.actions()
+					self.init_feedbacks()
+					self.checkFeedbacks('filter_enabled')
 				}
-				self.sourceFilters[source] = data.filters
-				self.actions()
-				self.init_feedbacks()
-				self.checkFeedbacks('filter_enabled')
-			}
-		})
+			})
 	}
 }
 
 instance.prototype.updateFilters = function (source) {
 	var self = this
-	self.obs.send('GetSourceFilters', {
-		'sourceName': source,
-	}).then((data) => {
-		self.sourceFilters[source] = data.filters
-		self.checkFeedbacks('filter_enabled')
-	})
+	self.obs
+		.send('GetSourceFilters', {
+			sourceName: source,
+		})
+		.then((data) => {
+			self.sourceFilters[source] = data.filters
+			self.checkFeedbacks('filter_enabled')
+		})
 }
 
 instance.prototype.updateSourceAudio = function () {
@@ -792,7 +795,7 @@ instance.prototype.updateSourceAudio = function () {
 	self.sourceAudio = {
 		volume: [],
 		muted: [],
-		audio_monitor_type: []
+		audio_monitor_type: [],
 	}
 	self.obs.send('GetSourcesList').then((data) => {
 		for (var s in data.sources) {
@@ -801,20 +804,24 @@ instance.prototype.updateSourceAudio = function () {
 		}
 	})
 	let getSourceAudio = (source) => {
-		self.obs.send('GetVolume', {
-			'source': source,
-			'useDecibel': true
-		}).then((data) => {
-			self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
-			self.sourceAudio['muted'][source] = data.muted
-			self.checkFeedbacks('audio_muted')
-		})
-		self.obs.send('GetAudioMonitorType', {
-			'sourceName': source
-		}).then((data) => {
-			self.sourceAudio['audio_monitor_type'][source] = data.monitorType;
-			self.checkFeedbacks('audio_monitor_type')
-		})
+		self.obs
+			.send('GetVolume', {
+				source: source,
+				useDecibel: true,
+			})
+			.then((data) => {
+				self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
+				self.sourceAudio['muted'][source] = data.muted
+				self.checkFeedbacks('audio_muted')
+			})
+		self.obs
+			.send('GetAudioMonitorType', {
+				sourceName: source,
+			})
+			.then((data) => {
+				self.sourceAudio['audio_monitor_type'][source] = data.monitorType
+				self.checkFeedbacks('audio_monitor_type')
+			})
 	}
 }
 
@@ -825,8 +832,12 @@ instance.prototype.updateMediaSources = function () {
 		for (var s in data.mediaSources) {
 			let mediaSource = data.mediaSources[s]
 			self.mediaSources[mediaSource.sourceName] = mediaSource
-			self.mediaSources[mediaSource.sourceName]['mediaState'] = mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
-			self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
+			self.mediaSources[mediaSource.sourceName]['mediaState'] =
+				mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+			self.setVariable(
+				'media_status_' + mediaSource.sourceName,
+				self.mediaSources[mediaSource.sourceName]['mediaState']
+			)
 		}
 		self.init_variables()
 		self.actions()
@@ -837,18 +848,22 @@ instance.prototype.updateMediaSources = function () {
 instance.prototype.updateTextSources = function (source, typeId) {
 	var self = this
 	if (typeId === 'text_ft2_source_v2') {
-		self.obs.send('GetTextFreetype2Properties', {
-			source: source,
-		}).then((data) => {
-			self.setVariable('current_text_' + source, data.text)
-		})
+		self.obs
+			.send('GetTextFreetype2Properties', {
+				source: source,
+			})
+			.then((data) => {
+				self.setVariable('current_text_' + source, data.text)
+			})
 	}
 	if (typeId === 'text_gdiplus_v2') {
-		self.obs.send('GetTextGDIPlusProperties', {
-			source: source,
-		}).then((data) => {
-			self.setVariable('current_text_' + source, data.text)
-		})
+		self.obs
+			.send('GetTextGDIPlusProperties', {
+				source: source,
+			})
+			.then((data) => {
+				self.setVariable('current_text_' + source, data.text)
+			})
 	}
 }
 
@@ -899,12 +914,12 @@ instance.prototype.actions = function () {
 			self.sourcelist.push({ id: s, label: s })
 		}
 		for (s in self.scenes) {
-			if (self.sourcelist.some(sourcelist => sourcelist.id === s) === false) {
+			if (self.sourcelist.some((sourcelist) => sourcelist.id === s) === false) {
 				self.sourcelist.push({ id: s, label: s })
 			}
 		}
 		if (self.sourcelist[0]) {
-			self.sourcelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.sourcelist.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.sourcelistDefault = self.sourcelist[0].id
 		} else {
 			self.sourcelistDefault = ''
@@ -919,13 +934,13 @@ instance.prototype.actions = function () {
 			self.scenelistToggle.push({ id: s, label: s })
 		}
 		if (self.scenelist[0]) {
-			self.scenelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.scenelist.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.scenelistDefault = self.scenelist[0].id
 		} else {
 			self.scenelistDefault = ''
 		}
 		if (self.scenelistToggle[0]) {
-			self.scenelistToggle.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.scenelistToggle.sort((a, b) => (a.id < b.id ? -1 : 1))
 		}
 	}
 
@@ -935,7 +950,7 @@ instance.prototype.actions = function () {
 			self.transitionlist.push({ id: s, label: s })
 		}
 		if (self.transitionlist[0]) {
-			self.transitionlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.transitionlist.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.transitionlistDefault = self.transitionlist[0].id
 		} else {
 			self.transitionlistDefault = ''
@@ -947,7 +962,7 @@ instance.prototype.actions = function () {
 			self.profilelist.push({ id: s, label: s })
 		}
 		if (self.profilelist[0]) {
-			self.profilelist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.profilelist.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.profilelistDefault = self.profilelist[0].id
 		} else {
 			self.profilelistDefault = ''
@@ -959,7 +974,7 @@ instance.prototype.actions = function () {
 			self.scenecollectionlist.push({ id: s, label: s })
 		}
 		if (self.scenecollectionlist[0]) {
-			self.scenecollectionlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.scenecollectionlist.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.scenecollectionlistDefault = self.scenecollectionlist[0].id
 		} else {
 			self.scenecollectionlistDefault = ''
@@ -987,7 +1002,7 @@ instance.prototype.actions = function () {
 			self.filterlist.push({ id: s, label: s })
 		}
 		if (self.filterlist[0]) {
-			self.filterlist.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.filterlist.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.filterlistDefault = self.filterlist[0].id
 		} else {
 			self.filterlistDefault = ''
@@ -999,7 +1014,7 @@ instance.prototype.actions = function () {
 			self.mediaSourceList.push({ id: s, label: s })
 		}
 		if (self.mediaSourceList[0]) {
-			self.mediaSourceList.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.mediaSourceList.sort((a, b) => (a.id < b.id ? -1 : 1))
 			self.mediaSourceListDefault = self.mediaSourceList[0].id
 		} else {
 			self.mediaSourceListDefault = ''
@@ -1052,7 +1067,7 @@ instance.prototype.actions = function () {
 					id: 'scene',
 					default: self.scenelistDefault,
 					choices: self.scenelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1065,7 +1080,7 @@ instance.prototype.actions = function () {
 					id: 'scene',
 					default: self.scenelistDefault,
 					choices: self.scenelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1079,7 +1094,7 @@ instance.prototype.actions = function () {
 					id: 'scene',
 					default: self.scenelistDefault,
 					choices: self.scenelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1094,7 +1109,7 @@ instance.prototype.actions = function () {
 					default: 'Default',
 					choices: self.transitionlist,
 					required: false,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -1119,7 +1134,7 @@ instance.prototype.actions = function () {
 					default: 'Default',
 					choices: self.transitionlist,
 					required: false,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -1142,7 +1157,7 @@ instance.prototype.actions = function () {
 					id: 'transitions',
 					default: self.transitionlistDefault,
 					choices: self.transitionlist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1210,7 +1225,7 @@ instance.prototype.actions = function () {
 					id: 'source',
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -1233,7 +1248,7 @@ instance.prototype.actions = function () {
 					id: 'source',
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1247,7 +1262,7 @@ instance.prototype.actions = function () {
 					id: 'source',
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -1271,7 +1286,7 @@ instance.prototype.actions = function () {
 					id: 'source',
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -1293,7 +1308,7 @@ instance.prototype.actions = function () {
 					id: 'scene',
 					default: 'Current Scene',
 					choices: self.scenelistToggle,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -1301,7 +1316,7 @@ instance.prototype.actions = function () {
 					id: 'source',
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -1329,7 +1344,7 @@ instance.prototype.actions = function () {
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: true,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'textinput',
@@ -1349,7 +1364,7 @@ instance.prototype.actions = function () {
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: true,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'textinput',
@@ -1382,7 +1397,7 @@ instance.prototype.actions = function () {
 					default: 'OBS_KEY_A',
 					choices: hotkeys.hotkeyList,
 					required: true,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'checkbox',
@@ -1419,7 +1434,7 @@ instance.prototype.actions = function () {
 					id: 'profile',
 					default: self.profilelistDefault,
 					choices: self.profilelist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1432,7 +1447,7 @@ instance.prototype.actions = function () {
 					id: 'scene_collection',
 					default: self.scenecollectionlistDefault,
 					choices: self.scenecollectionlist,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1446,7 +1461,7 @@ instance.prototype.actions = function () {
 					default: 'virtualcam_output',
 					choices: self.outputlist,
 					required: false,
-					minChoicesForSearch: 3
+					minChoicesForSearch: 3,
 				},
 			],
 		},
@@ -1460,7 +1475,7 @@ instance.prototype.actions = function () {
 					default: 'virtualcam_output',
 					choices: self.outputlist,
 					required: false,
-					minChoicesForSearch: 3
+					minChoicesForSearch: 3,
 				},
 			],
 		},
@@ -1474,7 +1489,7 @@ instance.prototype.actions = function () {
 					default: 'virtualcam_output',
 					choices: self.outputlist,
 					required: false,
-					minChoicesForSearch: 3
+					minChoicesForSearch: 3,
 				},
 			],
 		},
@@ -1488,7 +1503,7 @@ instance.prototype.actions = function () {
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: false,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 			],
 		},
@@ -1502,7 +1517,7 @@ instance.prototype.actions = function () {
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: true,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -1550,7 +1565,7 @@ instance.prototype.actions = function () {
 					default: self.sourcelistDefault,
 					choices: self.sourcelist,
 					required: false,
-					minChoicesForSearch: 5
+					minChoicesForSearch: 5,
 				},
 				{
 					type: 'textinput',
@@ -1585,7 +1600,7 @@ instance.prototype.actions = function () {
 					choices: [
 						{ id: 'toggle', label: 'Toggle' },
 						{ id: 'true', label: 'On' },
-						{ id: 'false', label: 'Off' }
+						{ id: 'false', label: 'Off' },
 					],
 				},
 			],
@@ -1608,7 +1623,7 @@ instance.prototype.actions = function () {
 					choices: [
 						{ id: 'toggle', label: 'Toggle' },
 						{ id: 'false', label: 'Play' },
-						{ id: 'true', label: 'Pause' }
+						{ id: 'true', label: 'Pause' },
 					],
 				},
 			],
@@ -1800,9 +1815,9 @@ instance.prototype.action = function (action) {
 				let revertTransition = self.states['current_transition']
 				let revertTransitionDuration = self.states['transition_duration']
 				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-					var transitionWaitTime = action.options.transition_time + 50	
+					var transitionWaitTime = action.options.transition_time + 50
 				} else if (action.options.transition_time == null) {
-					var transitionWaitTime = self.states['transition_duration'] + 50	
+					var transitionWaitTime = self.states['transition_duration'] + 50
 				} else {
 					var transitionWaitTime = 100
 				}
@@ -1813,24 +1828,24 @@ instance.prototype.action = function (action) {
 				}
 				var requests = [
 					{
-					'request-type': 'TransitionToProgram',
-					'with-transition': {
-						name: action.options.transition,
-						duration: transitionDuration
-						}
+						'request-type': 'TransitionToProgram',
+						'with-transition': {
+							name: action.options.transition,
+							duration: transitionDuration,
+						},
 					},
 					{
 						'request-type': 'Sleep',
-						'sleepMillis': transitionWaitTime
+						sleepMillis: transitionWaitTime,
 					},
 					{
 						'request-type': 'SetCurrentTransition',
-						'transition-name': revertTransition
+						'transition-name': revertTransition,
 					},
 					{
 						'request-type': 'SetTransitionDuration',
-						'duration': revertTransitionDuration
-					}
+						duration: revertTransitionDuration,
+					},
 				]
 				handle = self.obs.send('ExecuteBatch', { requests })
 			}
@@ -1900,9 +1915,9 @@ instance.prototype.action = function (action) {
 			let sceneName = action.options.scene
 			if (action.options.scene == 'Current Scene') {
 				sceneName = self.states['scene_active']
-		 	} else if (action.options.scene == 'Preview Scene') {
+			} else if (action.options.scene == 'Preview Scene') {
 				sceneName = self.states['scene_preview']
-		 	} else  {
+			} else {
 				sceneName = action.options.scene
 			}
 			if (action.options.visible == 'toggle') {
@@ -2116,7 +2131,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If streaming is active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 	}
 
@@ -2185,7 +2200,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'scene',
 				default: self.scenelistDefault,
 				choices: self.scenelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2196,7 +2211,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a source is visible in the program, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0)
+			bgcolor: self.rgb(200, 0, 0),
 		},
 		options: [
 			{
@@ -2205,7 +2220,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'source',
 				default: self.sourcelistDefault,
 				choices: self.sourcelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2216,7 +2231,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a source is enabled in the preview scene, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2225,7 +2240,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'source',
 				default: self.sourcelistDefault,
 				choices: self.sourcelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2236,7 +2251,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a profile is active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2245,7 +2260,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'profile',
 				default: self.profilelistDefault,
 				choices: self.profilelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2256,7 +2271,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a scene collection is active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2265,7 +2280,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'scene_collection',
 				default: self.scenecollectionlistDefault,
 				choices: self.scenecollectionlist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2276,7 +2291,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a source is enabled in a specific scene, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2285,7 +2300,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'scene',
 				default: self.scenelistDefault,
 				choices: self.scenelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 			{
 				type: 'dropdown',
@@ -2293,7 +2308,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'source',
 				default: self.sourcelistDefault,
 				choices: self.sourcelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2304,7 +2319,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If an output is currently active, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0)
+			bgcolor: self.rgb(200, 0, 0),
 		},
 		options: [
 			{
@@ -2313,7 +2328,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'output',
 				default: 'virtualcam_output',
 				choices: self.outputlist,
-				minChoicesForSearch: 3
+				minChoicesForSearch: 3,
 			},
 		],
 	}
@@ -2324,7 +2339,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a transition is in progress, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 	}
 
@@ -2334,7 +2349,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a transition type is selected, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2343,7 +2358,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'transition',
 				default: self.transitionlistDefault,
 				choices: self.transitionlist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 		],
 	}
@@ -2354,7 +2369,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If the transition duration is matched, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2375,7 +2390,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a filter is enabled, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2401,7 +2416,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If an audio source is muted, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0)
+			bgcolor: self.rgb(200, 0, 0),
 		},
 		options: [
 			{
@@ -2410,9 +2425,8 @@ instance.prototype.init_feedbacks = function () {
 				id: 'source',
 				default: self.sourcelistDefault,
 				choices: self.sourcelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
-
 		],
 	}
 
@@ -2422,7 +2436,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If the audio monitor type is matched, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0)
+			bgcolor: self.rgb(200, 0, 0),
 		},
 		options: [
 			{
@@ -2431,7 +2445,7 @@ instance.prototype.init_feedbacks = function () {
 				id: 'source',
 				default: self.sourcelistDefault,
 				choices: self.sourcelist,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
 			{
 				type: 'dropdown',
@@ -2454,7 +2468,7 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a media source is playing, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0)
+			bgcolor: self.rgb(0, 200, 0),
 		},
 		options: [
 			{
@@ -2463,9 +2477,8 @@ instance.prototype.init_feedbacks = function () {
 				id: 'source',
 				default: self.mediaSourceListDefault,
 				choices: self.mediaSourceList,
-				minChoicesForSearch: 5
+				minChoicesForSearch: 5,
 			},
-
 		],
 	}
 
@@ -2482,7 +2495,11 @@ instance.prototype.feedback = function (feedback) {
 	if (feedback.type === 'scene_active') {
 		if (self.states['scene_active'] === feedback.options.scene) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		} else if (self.states['scene_preview'] === feedback.options.scene && typeof feedback.options.fg_preview === 'number' && self.states['studio_mode'] === true) {
+		} else if (
+			self.states['scene_preview'] === feedback.options.scene &&
+			typeof feedback.options.fg_preview === 'number' &&
+			self.states['studio_mode'] === true
+		) {
 			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
 		} else {
 			return {}
@@ -2540,8 +2557,8 @@ instance.prototype.feedback = function (feedback) {
 			}
 		}
 	}
-	
-	if (feedback.type === 'scene_item_previewed') {	
+
+	if (feedback.type === 'scene_item_previewed') {
 		let scene = self.scenes[self.states['scene_preview']]
 		if (scene && scene.sources) {
 			for (let source of scene.sources) {
@@ -2637,7 +2654,10 @@ instance.prototype.feedback = function (feedback) {
 	}
 
 	if (feedback.type === 'media_playing') {
-		if (self.mediaSources[feedback.options.source] && self.mediaSources[feedback.options.source]['mediaState'] === 'Playing') {
+		if (
+			self.mediaSources[feedback.options.source] &&
+			self.mediaSources[feedback.options.source]['mediaState'] === 'Playing'
+		) {
 			return true
 		}
 	}
@@ -2738,7 +2758,7 @@ instance.prototype.init_presets = function () {
 				style: {
 					bgcolor: self.rgb(0, 200, 0),
 					color: self.rgb(255, 255, 255),
-				}
+				},
 			},
 		],
 	})
@@ -2762,7 +2782,7 @@ instance.prototype.init_presets = function () {
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
 						color: self.rgb(255, 255, 255),
-					}
+					},
 				},
 			],
 			actions: [
@@ -2794,7 +2814,7 @@ instance.prototype.init_presets = function () {
 				style: {
 					bgcolor: self.rgb(0, 200, 0),
 					color: self.rgb(255, 255, 255),
-				}
+				},
 			},
 		],
 		actions: [
@@ -2820,7 +2840,7 @@ instance.prototype.init_presets = function () {
 				style: {
 					bgcolor: self.rgb(0, 200, 0),
 					color: self.rgb(255, 255, 255),
-				}
+				},
 			},
 		],
 		actions: [
@@ -2909,7 +2929,7 @@ instance.prototype.init_presets = function () {
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
 						color: self.rgb(255, 255, 255),
-					}
+					},
 				},
 			],
 			actions: [
@@ -2929,7 +2949,7 @@ instance.prototype.init_presets = function () {
 
 		let baseObj = {
 			category: 'Sources',
-			label:  source + 'Status',
+			label: source + 'Status',
 			bank: {
 				style: 'text',
 				text: source,
@@ -2946,7 +2966,7 @@ instance.prototype.init_presets = function () {
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
 						color: self.rgb(255, 255, 255),
-					}
+					},
 				},
 				{
 					type: 'scene_item_active',
@@ -2956,7 +2976,7 @@ instance.prototype.init_presets = function () {
 					style: {
 						bgcolor: self.rgb(200, 0, 0),
 						color: self.rgb(255, 255, 255),
-					}
+					},
 				},
 			],
 		}
@@ -2983,7 +3003,7 @@ instance.prototype.init_presets = function () {
 			label: 'Play Pause' + mediaSource,
 			bank: {
 				style: 'text',
-				text: mediaSource + '\\n$(obs:media_status_'+ mediaSource + ')',
+				text: mediaSource + '\\n$(obs:media_status_' + mediaSource + ')',
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -2997,7 +3017,7 @@ instance.prototype.init_presets = function () {
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
 						color: self.rgb(255, 255, 255),
-					}
+					},
 				},
 			],
 			actions: [
@@ -3061,7 +3081,7 @@ instance.prototype.init_variables = function () {
 		let media = self.mediaSources[s]
 		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
 	}
-	
+
 	for (var s in self.sources) {
 		let source = self.sources[s]
 		if (source.typeId === 'text_ft2_source_v2') {
