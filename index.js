@@ -60,7 +60,7 @@ instance.prototype.init = function () {
 		self.obs = undefined
 	}
 
-	// Connecting on init not neccesary for OBSWebSocket. But during init try to tcp connect
+	// Connecting on init not necessary for OBSWebSocket. But during init try to tcp connect
 	// to get the status of the module right and automatically try reconnecting. Which is
 	// implemented in ../../tcp by Companion core developers.
 	self.tcp = new tcp(
@@ -115,6 +115,8 @@ instance.prototype.init = function () {
 				self.updateOutputList()
 				self.getRecordingStatus()
 				self.updateFilterList()
+				self.updateSourceAudio()
+				self.updateMediaSources()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -164,12 +166,14 @@ instance.prototype.init = function () {
 			self.setVariable('scene_active', data['scene-name'])
 			self.checkFeedbacks('scene_active')
 			self.updateScenesAndSources()
+			self.updateSourceAudio()
 		})
 
 		self.obs.on('PreviewSceneChanged', function (data) {
 			self.states['scene_preview'] = data['scene-name']
 			self.setVariable('scene_preview', data['scene-name'])
 			self.checkFeedbacks('scene_active')
+			self.checkFeedbacks('scene_item_previewed')
 		})
 
 		self.obs.on('ScenesChanged', function () {
@@ -178,12 +182,14 @@ instance.prototype.init = function () {
 
 		self.obs.on('SceneItemAdded', function () {
 			self.updateScenesAndSources()
+			self.updateMediaSources()
 		})
 
 		self.obs.on('SourceDestroyed', function (data) {
 			self.states[data.sourceName] = false
 			self.sources[data.sourceName] = null
 			self.updateFilterList()
+			self.updateMediaSources()
 			self.actions()
 			self.init_presets()
 			self.init_feedbacks()
@@ -236,6 +242,7 @@ instance.prototype.init = function () {
 			} else {
 				self.states['studio_mode'] = false
 			}
+			self.updateScenesAndSources()
 		})
 
 		self.obs.on('SceneItemVisibilityChanged', function (data) {
@@ -289,6 +296,54 @@ instance.prototype.init = function () {
 		self.obs.on('SourceFilterRemoved', () => {
 			self.updateFilterList()
 		})
+
+		self.obs.on('SourceMuteStateChanged', (data) => {
+			self.sourceAudio['muted'][data.sourceName] = data.muted
+			self.checkFeedbacks('audio_muted')
+		})
+
+		self.obs.on('SourceAudioActivated', () => {
+			self.updateSourceAudio()
+		})
+
+		self.obs.on('SourceAudioDeactivated', () => {
+			self.updateSourceAudio()
+		})
+
+		self.obs.on('SourceVolumeChanged', (data) => {
+			self.sourceAudio['volume'][data.sourceName] = self.roundIfDefined(data.volumeDb, 1)
+		})
+
+		self.obs.on('MediaPlaying', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Playing')
+		})
+
+		self.obs.on('MediaStarted', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Playing')
+		})
+
+		self.obs.on('MediaPaused', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Paused')
+		})
+
+		self.obs.on('MediaStopped', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Stopped')
+		})
+
+		self.obs.on('MediaEnded', (data) => {
+			self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
+			self.checkFeedbacks('media_playing')
+			self.setVariable('media_status_' + data.sourceName, 'Ended')
+		})
+
 	})
 
 	debug = self.debug
@@ -505,6 +560,7 @@ instance.prototype.updateScenesAndSources = async function () {
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
+			self.updateTextSources(source.name, source.typeId)
 		}
 		data.sources.forEach((source) => {
 			self.states[source.name] = false
@@ -523,38 +579,6 @@ instance.prototype.updateScenesAndSources = async function () {
 		let previewScene = await self.obs.send('GetPreviewScene')
 		self.states['scene_preview'] = previewScene.name
 		self.setVariable('scene_preview', previewScene.name)
-	}
-
-	let findNestedScenes = (sceneName) => {
-		let nested = []
-		if (self.scenes[sceneName]) {
-			for (let source of self.scenes[sceneName].sources) {
-				if (self.scenes[source.name] && source.render) {
-					nested.push(source.name)
-				}
-			}
-		}
-		return nested
-	}
-
-	// Recursively find all nested visible scenes
-	let lastNestedCount
-	let nestedVisibleScenes = {}
-	nestedVisibleScenes[sceneList.currentScene] = true
-
-	do {
-		lastNestedCount = Object.keys(nestedVisibleScenes).length
-		for (let sceneName in nestedVisibleScenes) {
-			for (let nested of findNestedScenes(sceneName)) {
-				nestedVisibleScenes[nested] = true
-			}
-		}
-	} while (lastNestedCount != Object.keys(nestedVisibleScenes).length)
-
-	for (let sceneName in nestedVisibleScenes) {
-		for (let source of self.scenes[sceneName].sources) {
-			self.states[source.name] = source.render
-		}
 	}
 
 	let updateSceneSources = (source, scene) => {
@@ -632,6 +656,7 @@ instance.prototype.updateScenesAndSources = async function () {
 	self.init_feedbacks()
 	self.checkFeedbacks('scene_item_active')
 	self.checkFeedbacks('scene_item_active_in_scene')
+	self.checkFeedbacks('scene_item_previewed')
 	self.checkFeedbacks('scene_active')
 }
 
@@ -762,6 +787,71 @@ instance.prototype.updateFilters = function (source) {
 	})
 }
 
+instance.prototype.updateSourceAudio = function () {
+	var self = this
+	self.sourceAudio = {
+		volume: [],
+		muted: [],
+		audio_monitor_type: []
+	}
+	self.obs.send('GetSourcesList').then((data) => {
+		for (var s in data.sources) {
+			let source = data.sources[s]
+			getSourceAudio(source.name)
+		}
+	})
+	let getSourceAudio = (source) => {
+		self.obs.send('GetVolume', {
+			'source': source,
+			'useDecibel': true
+		}).then((data) => {
+			self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
+			self.sourceAudio['muted'][source] = data.muted
+			self.checkFeedbacks('audio_muted')
+		})
+		self.obs.send('GetAudioMonitorType', {
+			'sourceName': source
+		}).then((data) => {
+			self.sourceAudio['audio_monitor_type'][source] = data.monitorType;
+			self.checkFeedbacks('audio_monitor_type')
+		})
+	}
+}
+
+instance.prototype.updateMediaSources = function () {
+	var self = this
+	self.mediaSources = {}
+	self.obs.send('GetMediaSourcesList').then((data) => {
+		for (var s in data.mediaSources) {
+			let mediaSource = data.mediaSources[s]
+			self.mediaSources[mediaSource.sourceName] = mediaSource
+			self.mediaSources[mediaSource.sourceName]['mediaState'] = mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+			self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
+		}
+		self.init_variables()
+		self.actions()
+		self.checkFeedbacks('media_playing')
+	})
+}
+
+instance.prototype.updateTextSources = function (source, typeId) {
+	var self = this
+	if (typeId === 'text_ft2_source_v2') {
+		self.obs.send('GetTextFreetype2Properties', {
+			source: source,
+		}).then((data) => {
+			self.setVariable('current_text_' + source, data.text)
+		})
+	}
+	if (typeId === 'text_gdiplus_v2') {
+		self.obs.send('GetTextGDIPlusProperties', {
+			source: source,
+		}).then((data) => {
+			self.setVariable('current_text_' + source, data.text)
+		})
+	}
+}
+
 // When module gets deleted
 instance.prototype.destroy = function () {
 	var self = this
@@ -776,6 +866,9 @@ instance.prototype.destroy = function () {
 	self.filterlist = []
 	self.filters = {}
 	self.sourceFilters = {}
+	self.sourceAudio = {}
+	self.mediaSources = {}
+	self.mediaSourceList = []
 	self.feedbacks = {}
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -798,6 +891,7 @@ instance.prototype.actions = function () {
 	self.scenecollectionlist = []
 	self.outputlist = []
 	self.filterlist = []
+	self.mediaSourceList = []
 
 	var s
 	if (self.sources !== undefined) {
@@ -900,6 +994,18 @@ instance.prototype.actions = function () {
 		}
 	}
 
+	if (self.mediaSources !== undefined) {
+		for (s in self.mediaSources) {
+			self.mediaSourceList.push({ id: s, label: s })
+		}
+		if (self.mediaSourceList[0]) {
+			self.mediaSourceList.sort((a, b) => a.id < b.id ? -1 : 1)
+			self.mediaSourceListDefault = self.mediaSourceList[0].id
+		} else {
+			self.mediaSourceListDefault = ''
+		}
+	}
+
 	self.setActions({
 		enable_studio_mode: {
 			label: 'Enable Studio Mode',
@@ -965,7 +1071,7 @@ instance.prototype.actions = function () {
 		},
 		smart_switcher: {
 			label: 'Smart Scene Switcher',
-			description: 'Previews selected scene or, if scene is already in preview, transtions the scene to program',
+			description: 'Previews selected scene or, if scene is already in preview, transitions the scene to program',
 			options: [
 				{
 					type: 'dropdown',
@@ -1133,6 +1239,7 @@ instance.prototype.actions = function () {
 		},
 		set_volume: {
 			label: 'Set Source Volume',
+			description: 'Sets the volume of a source to a specific value',
 			options: [
 				{
 					type: 'dropdown',
@@ -1149,6 +1256,28 @@ instance.prototype.actions = function () {
 					default: 0,
 					min: -100,
 					max: 26,
+					range: false,
+					required: false,
+				},
+			],
+		},
+		adjust_volume: {
+			label: 'Adjust Source Volume',
+			description: 'Adjusts the volume of a source by a specific increment',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+					minChoicesForSearch: 5
+				},
+				{
+					type: 'number',
+					label: 'Volume adjustment amount in dB',
+					id: 'volume',
+					default: 0,
 					range: false,
 					required: false,
 				},
@@ -1178,7 +1307,7 @@ instance.prototype.actions = function () {
 					type: 'dropdown',
 					label: 'Visible',
 					id: 'visible',
-					default: 'true',
+					default: 'toggle',
 					choices: [
 						{ id: 'false', label: 'False' },
 						{ id: 'true', label: 'True' },
@@ -1450,7 +1579,7 @@ instance.prototype.actions = function () {
 				},
 				{
 					type: 'dropdown',
-					label: 'Visiblity',
+					label: 'Visibility',
 					id: 'visible',
 					default: 'toggle',
 					choices: [
@@ -1458,6 +1587,115 @@ instance.prototype.actions = function () {
 						{ id: 'true', label: 'On' },
 						{ id: 'false', label: 'Off' }
 					],
+				},
+			],
+		},
+		play_pause_media: {
+			label: 'Play / Pause Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+				{
+					type: 'dropdown',
+					label: 'Action',
+					id: 'playPause',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'false', label: 'Play' },
+						{ id: 'true', label: 'Pause' }
+					],
+				},
+			],
+		},
+		restart_media: {
+			label: 'Restart Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+			],
+		},
+		stop_media: {
+			label: 'Stop Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+			],
+		},
+		next_media: {
+			label: 'Next Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+			],
+		},
+		previous_media: {
+			label: 'Previous Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+			],
+		},
+		set_media_time: {
+			label: 'Set Media Time',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Timecode (in seconds)',
+					id: 'mediaTime',
+					default: 1,
+					required: true,
+				},
+			],
+		},
+		scrub_media: {
+			label: 'Scrub Media',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Media Source',
+					id: 'source',
+					default: self.mediaSourceListDefault,
+					choices: self.mediaSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Scrub Amount (in seconds, positive or negative)',
+					id: 'scrubAmount',
+					default: 1,
+					required: true,
 				},
 			],
 		},
@@ -1562,11 +1800,11 @@ instance.prototype.action = function (action) {
 				let revertTransition = self.states['current_transition']
 				let revertTransitionDuration = self.states['transition_duration']
 				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-					var transitonWaitTime = action.options.transition_time + 50	
+					var transitionWaitTime = action.options.transition_time + 50	
 				} else if (action.options.transition_time == null) {
-					var transitonWaitTime = self.states['transition_duration'] + 50	
+					var transitionWaitTime = self.states['transition_duration'] + 50	
 				} else {
-					var transitonWaitTime = 100
+					var transitionWaitTime = 100
 				}
 				if (action.options.transition_time != null) {
 					var transitionDuration = action.options.transition_time
@@ -1583,7 +1821,7 @@ instance.prototype.action = function (action) {
 					},
 					{
 						'request-type': 'Sleep',
-						'sleepMillis': transitonWaitTime
+						'sleepMillis': transitionWaitTime
 					},
 					{
 						'request-type': 'SetCurrentTransition',
@@ -1612,6 +1850,19 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send('SetVolume', {
 				source: action.options.source,
 				volume: action.options.volume,
+				useDecibel: true,
+			})
+			break
+		case 'adjust_volume':
+			var newVolume = self.sourceAudio['volume'][action.options.source] + action.options.volume
+			if (newVolume > 26) {
+				var newVolume = 26
+			} else if (newVolume < -100) {
+				var newVolume = -100
+			}
+			handle = self.obs.send('SetVolume', {
+				source: action.options.source,
+				volume: newVolume,
 				useDecibel: true,
 			})
 			break
@@ -1693,12 +1944,14 @@ instance.prototype.action = function (action) {
 				source: action.options.source,
 				text: action.options.text,
 			})
+			self.updateTextSources(action.options.source, 'text_ft2_source_v2')
 			break
 		case 'set-gdi-text':
 			handle = self.obs.send('SetTextGDIPlusProperties', {
 				source: action.options.source,
 				text: action.options.text,
 			})
+			self.updateTextSources(action.options.source, 'text_gdiplus_v2')
 			break
 		case 'trigger-hotkey':
 			handle = self.obs.send('TriggerHotkeyByName', {
@@ -1794,6 +2047,50 @@ instance.prototype.action = function (action) {
 				sourceName: action.options.source,
 				filterName: action.options.filter,
 				filterEnabled: filterVisibility,
+			})
+			break
+		case 'play_pause_media':
+			if (action.options.playPause === 'toggle') {
+				handle = self.obs.send('PlayPauseMedia', {
+					sourceName: action.options.source,
+				})
+			} else {
+				handle = self.obs.send('PlayPauseMedia', {
+					sourceName: action.options.source,
+					playPause: action.options.playPause == 'true' ? true : false,
+				})
+			}
+			break
+		case 'restart_media':
+			handle = self.obs.send('RestartMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'stop_media':
+			handle = self.obs.send('StopMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'next_media':
+			handle = self.obs.send('NextMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'previous_media':
+			handle = self.obs.send('PreviousMedia', {
+				sourceName: action.options.source,
+			})
+			break
+		case 'set_media_time':
+			handle = self.obs.send('SetMediaTime', {
+				sourceName: action.options.source,
+				timestamp: action.options.mediaTime * 1000,
+			})
+			break
+		case 'scrub_media':
+			handle = self.obs.send('ScrubMedia', {
+				sourceName: action.options.source,
+				timeOffset: action.options.scrubAmount * 1000,
 			})
 			break
 	}
@@ -1895,11 +2192,31 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['scene_item_active'] = {
 		type: 'boolean',
-		label: 'Source Visible',
+		label: 'Source Visible in Program',
 		description: 'If a source is visible in the program, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
 			bgcolor: self.rgb(200, 0, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+		],
+	}
+
+	feedbacks['scene_item_previewed'] = {
+		type: 'boolean',
+		label: 'Source Active in Preview',
+		description: 'If a source is enabled in the preview scene, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
 		},
 		options: [
 			{
@@ -1956,7 +2273,7 @@ instance.prototype.init_feedbacks = function () {
 	feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
 		label: 'Source Enabled in Scene',
-		description: 'If a source is enabled in a specifc scene, change the style of the button',
+		description: 'If a source is enabled in a specific scene, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
 			bgcolor: self.rgb(0, 200, 0)
@@ -2014,7 +2331,7 @@ instance.prototype.init_feedbacks = function () {
 	feedbacks['current_transition'] = {
 		type: 'boolean',
 		label: 'Current Transition Type',
-		description: 'If a transititon type is selected, change the style of the button',
+		description: 'If a transition type is selected, change the style of the button',
 		style: {
 			color: self.rgb(255, 255, 255),
 			bgcolor: self.rgb(0, 200, 0)
@@ -2075,6 +2392,80 @@ instance.prototype.init_feedbacks = function () {
 				default: self.filterlistDefault,
 				choices: self.filterlist,
 			},
+		],
+	}
+
+	feedbacks['audio_muted'] = {
+		type: 'boolean',
+		label: 'Audio Muted',
+		description: 'If an audio source is muted, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+
+		],
+	}
+
+	feedbacks['audio_monitor_type'] = {
+		type: 'boolean',
+		label: 'Audio Monitor Type',
+		description: 'If the audio monitor type is matched, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(200, 0, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5
+			},
+			{
+				type: 'dropdown',
+				label: 'Monitor',
+				id: 'monitor',
+				default: 'none',
+				choices: [
+					{ id: 'none', label: 'None' },
+					{ id: 'monitorOnly', label: 'Monitor Only' },
+					{ id: 'monitorAndOutput', label: 'Monitor and Output' },
+				],
+				required: true,
+			},
+		],
+	}
+
+	feedbacks['media_playing'] = {
+		type: 'boolean',
+		label: 'Media Playing',
+		description: 'If a media source is playing, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0)
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.mediaSourceListDefault,
+				choices: self.mediaSourceList,
+				minChoicesForSearch: 5
+			},
+
 		],
 	}
 
@@ -2149,6 +2540,54 @@ instance.prototype.feedback = function (feedback) {
 			}
 		}
 	}
+	
+	if (feedback.type === 'scene_item_previewed') {	
+		let scene = self.scenes[self.states['scene_preview']]
+		if (scene && scene.sources) {
+			for (let source of scene.sources) {
+				if (source.name == feedback.options.source && source.render === true) {
+					return true
+				}
+				if (source.type == 'group' && source.render === true) {
+					for (let s in source.groupChildren) {
+						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+							return true
+						}
+						if (source.groupChildren[s].type == 'scene' && source.groupChildren[s].render === true) {
+							let scene = self.scenes[source.groupChildren[s].name]
+							for (let source of scene.sources) {
+								if (source.name == feedback.options.source && source.render === true) {
+									return true
+								}
+								if (source.type == 'group' && source.render === true) {
+									for (let s in source.groupChildren) {
+										if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+											return true
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				if (source.type == 'scene' && source.render === true) {
+					let scene = self.scenes[source.name]
+					for (let source of scene.sources) {
+						if (source.name == feedback.options.source && source.render === true) {
+							return true
+						}
+						if (source.type == 'group' && source.render === true) {
+							for (let s in source.groupChildren) {
+								if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
+									return true
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	if (feedback.type === 'output_active') {
 		if (self.states[feedback.options.output] === true) {
@@ -2182,6 +2621,24 @@ instance.prototype.feedback = function (feedback) {
 					return true
 				}
 			}
+		}
+	}
+
+	if (feedback.type === 'audio_muted') {
+		if (self.sourceAudio['muted'][feedback.options.source] === true) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'audio_monitor_type') {
+		if (self.sourceAudio['audio_monitor_type'][feedback.options.source] === feedback.options.monitor) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'media_playing') {
+		if (self.mediaSources[feedback.options.source] && self.mediaSources[feedback.options.source]['mediaState'] === 'Playing') {
+			return true
 		}
 	}
 
@@ -2467,6 +2924,45 @@ instance.prototype.init_presets = function () {
 		presets.push(baseObj)
 	}
 
+	for (var s in self.sources) {
+		let source = self.sources[s].name
+
+		let baseObj = {
+			category: 'Sources',
+			label:  source + 'Status',
+			bank: {
+				style: 'text',
+				text: source,
+				size: 'auto',
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'scene_item_previewed',
+					options: {
+						source: source,
+					},
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+				{
+					type: 'scene_item_active',
+					options: {
+						source: source,
+					},
+					style: {
+						bgcolor: self.rgb(200, 0, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
+
 	presets.push({
 		category: 'General',
 		label: 'Computer Stats',
@@ -2478,6 +2974,44 @@ instance.prototype.init_presets = function () {
 			bgcolor: 0,
 		},
 	})
+
+	for (var s in self.mediaSources) {
+		let mediaSource = self.mediaSources[s].sourceName
+
+		let baseObj = {
+			category: 'Media Sources',
+			label: 'Play Pause' + mediaSource,
+			bank: {
+				style: 'text',
+				text: mediaSource + '\\n$(obs:media_status_'+ mediaSource + ')',
+				size: 'auto',
+				color: self.rgb(255, 255, 255),
+				bgcolor: 0,
+			},
+			feedbacks: [
+				{
+					type: 'media_playing',
+					options: {
+						source: mediaSource,
+					},
+					style: {
+						bgcolor: self.rgb(0, 200, 0),
+						color: self.rgb(255, 255, 255),
+					}
+				},
+			],
+			actions: [
+				{
+					action: 'play_pause_media',
+					options: {
+						source: mediaSource,
+						playPause: 'toggle',
+					},
+				},
+			],
+		}
+		presets.push(baseObj)
+	}
 
 	self.setPresetDefinitions(presets)
 }
@@ -2522,6 +3056,21 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
 	variables.push({ name: 'current_transition', label: 'Current transition' })
 	variables.push({ name: 'transition_duration', label: 'Current transition duration' })
+
+	for (var s in self.mediaSources) {
+		let media = self.mediaSources[s]
+		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
+	}
+	
+	for (var s in self.sources) {
+		let source = self.sources[s]
+		if (source.typeId === 'text_ft2_source_v2') {
+			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+		}
+		if (source.typeId === 'text_gdiplus_v2') {
+			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+		}
+	}
 
 	self.setVariableDefinitions(variables)
 }
