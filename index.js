@@ -2669,15 +2669,15 @@ instance.prototype.init_presets = function () {
 	var self = this
 	var presets = []
 
-	for (var s in self.scenes) {
-		var scene = self.scenes[s]
+	for (var s in self.scenelist) {
+		var scene = self.scenelist[s]
 
 		let baseObj = {
 			category: 'Scene to Program',
-			label: scene.name,
+			label: scene.label,
 			bank: {
 				style: 'text',
-				text: scene.name,
+				text: scene.label,
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -2690,7 +2690,7 @@ instance.prototype.init_presets = function () {
 						fg: self.rgb(255, 255, 255),
 						bg_preview: self.rgb(0, 200, 0),
 						fg_preview: self.rgb(255, 255, 255),
-						scene: scene.name,
+						scene: scene.id,
 					},
 				},
 			],
@@ -2698,7 +2698,7 @@ instance.prototype.init_presets = function () {
 				{
 					action: 'set_scene',
 					options: {
-						scene: scene.name,
+						scene: scene.id,
 					},
 				},
 			],
@@ -2714,7 +2714,7 @@ instance.prototype.init_presets = function () {
 					{
 						action: 'preview_scene',
 						options: {
-							scene: scene.name,
+							scene: scene.id,
 						},
 					},
 				],
@@ -2726,7 +2726,7 @@ instance.prototype.init_presets = function () {
 							fg: self.rgb(255, 255, 255),
 							bg_preview: self.rgb(0, 200, 0),
 							fg_preview: self.rgb(255, 255, 255),
-							scene: scene.name,
+							scene: scene.id,
 						},
 					},
 				],
@@ -2908,7 +2908,7 @@ instance.prototype.init_presets = function () {
 	})
 
 	for (var s in self.outputlist) {
-		var output = self.outputlist[s]
+		let output = self.outputlist[s]
 
 		let baseObj = {
 			category: 'Outputs',
@@ -2944,15 +2944,15 @@ instance.prototype.init_presets = function () {
 		presets.push(baseObj)
 	}
 
-	for (var s in self.sources) {
-		let source = self.sources[s].name
+	for (var s in self.sourcelist) {
+		let source = self.sourcelist[s]
 
 		let baseObj = {
 			category: 'Sources',
-			label: source + 'Status',
+			label: source.label + 'Status',
 			bank: {
 				style: 'text',
-				text: source,
+				text: source.label,
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -2961,7 +2961,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'scene_item_previewed',
 					options: {
-						source: source,
+						source: source.id,
 					},
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
@@ -2971,7 +2971,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'scene_item_active',
 					options: {
-						source: source,
+						source: source.id,
 					},
 					style: {
 						bgcolor: self.rgb(200, 0, 0),
@@ -2995,15 +2995,15 @@ instance.prototype.init_presets = function () {
 		},
 	})
 
-	for (var s in self.mediaSources) {
-		let mediaSource = self.mediaSources[s].sourceName
+	for (var s in self.mediaSourceList) {
+		let mediaSource = self.mediaSourceList[s]
 
 		let baseObj = {
 			category: 'Media Sources',
-			label: 'Play Pause' + mediaSource,
+			label: 'Play Pause' + mediaSource.label,
 			bank: {
 				style: 'text',
-				text: mediaSource + '\\n$(obs:media_status_' + mediaSource + ')',
+				text: mediaSource.label + '\\n$(obs:media_status_' + mediaSource.label + ')',
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -3012,7 +3012,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'media_playing',
 					options: {
-						source: mediaSource,
+						source: mediaSource.id,
 					},
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
@@ -3024,7 +3024,7 @@ instance.prototype.init_presets = function () {
 				{
 					action: 'play_pause_media',
 					options: {
-						source: mediaSource,
+						source: mediaSource.id,
 						playPause: 'toggle',
 					},
 				},
