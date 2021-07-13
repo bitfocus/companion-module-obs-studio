@@ -148,16 +148,13 @@ instance.prototype.init = function () {
 			}
 		})
 
-		self.obs.on('SceneCollectionChanged', function () {
-			self.updateTransitionList()
-			self.updateScenesAndSources()
-			self.updateCurrentSceneCollection()
-			self.updateFilterList()
+		self.obs.on('SceneCollectionChanged', function (data) {
+			self.states['current_scene_collection'] = data.sceneCollection
+			self.setVariable('scene_collection', data.sceneCollection)
+			self.checkFeedbacks('scene_collection_active')
 		})
 
 		self.obs.on('SceneCollectionListChanged', function () {
-			self.updateTransitionList()
-			self.updateScenesAndSources()
 			self.updateSceneCollectionList()
 		})
 
@@ -185,16 +182,10 @@ instance.prototype.init = function () {
 			self.updateMediaSources()
 		})
 
-		self.obs.on('SourceDestroyed', function (data) {
-			self.states[data.sourceName] = false
-			self.sources[data.sourceName] = null
+		self.obs.on('SourceDestroyed', function () {
+			self.updateScenesAndSources()
 			self.updateFilterList()
 			self.updateMediaSources()
-			self.actions()
-			self.init_presets()
-			self.init_feedbacks()
-			self.checkFeedbacks('scene_item_active')
-			self.checkFeedbacks('scene_active')
 		})
 
 		self.obs.on('StreamStarted', function () {
@@ -228,11 +219,11 @@ instance.prototype.init = function () {
 			self.getRecordingStatus()
 		})
 
-		self.obs.on('RecordingPaused', function (data) {
+		self.obs.on('RecordingPaused', function () {
 			self.getRecordingStatus()
 		})
 
-		self.obs.on('RecordingResumed', function (data) {
+		self.obs.on('RecordingResumed', function () {
 			self.getRecordingStatus()
 		})
 
@@ -245,20 +236,22 @@ instance.prototype.init = function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemVisibilityChanged', function (data) {
+		self.obs.on('SceneItemVisibilityChanged', function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemTransformChanged', function (data) {
+		self.obs.on('SceneItemTransformChanged', function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('TransitionListChanged', function (data) {
+		self.obs.on('TransitionListChanged', function () {
 			self.updateTransitionList()
 		})
 
 		self.obs.on('TransitionDurationChanged', function (data) {
-			self.updateTransitionList()
+			self.states['transition_duration'] = data['new-duration'] === undefined ? 0 : data['new-duration']
+			self.setVariable('transition_duration', self.states['transition_duration'])
+			self.checkFeedbacks('transition_duration')
 		})
 
 		self.obs.on('SwitchTransition', function (data) {
@@ -278,10 +271,12 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('ProfileChanged', (data) => {
-			self.updateCurrentProfile()
+			self.states['current_profile'] = data.profile
+			self.setVariable('profile', data.profile)
+			self.checkFeedbacks('profile_active')
 		})
 
-		self.obs.on('ProfileListChanged', (data) => {
+		self.obs.on('ProfileListChanged', () => {
 			self.updateProfileList()
 		})
 
@@ -561,9 +556,6 @@ instance.prototype.updateScenesAndSources = async function () {
 			self.sources[source.name] = source
 			self.updateTextSources(source.name, source.typeId)
 		}
-		data.sources.forEach((source) => {
-			self.states[source.name] = false
-		})
 	})
 
 	let sceneList = await self.obs.send('GetSceneList')
@@ -578,6 +570,9 @@ instance.prototype.updateScenesAndSources = async function () {
 		let previewScene = await self.obs.send('GetPreviewScene')
 		self.states['scene_preview'] = previewScene.name
 		self.setVariable('scene_preview', previewScene.name)
+	} else {
+		self.states['scene_preview'] = 'None'
+		self.setVariable('scene_preview', 'None')
 	}
 
 	let updateSceneSources = (source, scene) => {
