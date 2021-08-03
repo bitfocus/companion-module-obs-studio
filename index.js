@@ -241,7 +241,7 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('SceneItemTransformChanged', function () {
-			self.updateScenesAndSources()
+			
 		})
 
 		self.obs.on('TransitionListChanged', function () {
