@@ -1752,6 +1752,57 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		source_properties: {
+			label: 'Set Source Properties',
+			description: 'All values optional, any paramter left blank is ignored',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene (optional, defaults to current scene)',
+					id: 'scene',
+					default: 'Current Scene',
+					choices: self.scenelistToggle,
+					minChoicesForSearch: 5,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+				{
+					type: 'number',
+					label: 'Position - X (pixels)',
+					id: 'positionX',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Position - Y (pixels)',
+					id: 'positionY',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Scale - X (multiplier, 1 is 100%)',
+					id: 'scaleX',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Scale - Y (multiplier, 1 is 100%)',
+					id: 'scaleY',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Rotation (degrees clockwise)',
+					id: 'rotation',
+					default: '',
+				},
+			],
+		},
 	})
 }
 
@@ -2152,6 +2203,29 @@ instance.prototype.action = function (action) {
 				type: action.options.type,
 				monitor: monitor,
 				name: action.options.source,
+			})
+			break
+		case 'source_properties':
+			let sourceScene = action.options.scene
+			if (action.options.scene == 'Current Scene') {
+				sourceScene = self.states['scene_active']
+			} else if (action.options.scene == 'Preview Scene') {
+				sourceScene = self.states['scene_preview']
+			} else {
+				sourceScene = action.options.scene
+			}
+			handle = self.obs.send('SetSceneItemProperties', {
+				'scene-name': sourceScene,
+				item: action.options.source,
+				position: {
+					x: parseFloat(action.options.positionX),
+					y: parseFloat(action.options.positionY),
+				},
+				scale: {
+					x: parseFloat(action.options.scaleX),
+					y: parseFloat(action.options.scaleY),
+				},
+				rotation: parseFloat(action.options.rotation),
 			})
 			break
 	}
