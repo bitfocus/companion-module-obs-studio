@@ -1709,6 +1709,49 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		open_projector: {
+			label: 'Open Projector',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Projector Type',
+					id: 'type',
+					default: 'Multiview',
+					choices: [
+						{ id: 'Multiview', label: 'Multiview' },
+						{ id: 'Preview', label: 'Preview' },
+						{ id: 'StudioProgram', label: 'Program' },
+						{ id: 'Source', label: 'Source' },
+						{ id: 'Scene', label: 'Scene' },
+					],
+				},
+				{
+					type: 'dropdown',
+					label: 'Window Type',
+					id: 'window',
+					default: 'window',
+					choices: [
+						{ id: 'window', label: 'Window' },
+						{ id: 'fullscreen', label: 'Fullscreen' },
+					],
+				},
+				{
+					type: 'number',
+					label: 'Fullscreen Display (required for fullscreen mode) ',
+					id: 'display',
+					default: 1,
+					min: 1,
+					range: false,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source / Scene (required if selected as projector type)',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+			],
+		},
 	})
 }
 
@@ -2101,6 +2144,14 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send('ScrubMedia', {
 				sourceName: action.options.source,
 				timeOffset: action.options.scrubAmount * 1000,
+			})
+			break
+		case 'open_projector':
+			let monitor = action.options.window === 'window' ? -1 : action.options.display - 1
+			handle = self.obs.send('OpenProjector', {
+				type: action.options.type,
+				monitor: monitor,
+				name: action.options.source,
 			})
 			break
 	}
