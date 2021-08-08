@@ -148,16 +148,13 @@ instance.prototype.init = function () {
 			}
 		})
 
-		self.obs.on('SceneCollectionChanged', function () {
-			self.updateTransitionList()
-			self.updateScenesAndSources()
-			self.updateCurrentSceneCollection()
-			self.updateFilterList()
+		self.obs.on('SceneCollectionChanged', function (data) {
+			self.states['current_scene_collection'] = data.sceneCollection
+			self.setVariable('scene_collection', data.sceneCollection)
+			self.checkFeedbacks('scene_collection_active')
 		})
 
 		self.obs.on('SceneCollectionListChanged', function () {
-			self.updateTransitionList()
-			self.updateScenesAndSources()
 			self.updateSceneCollectionList()
 		})
 
@@ -185,16 +182,10 @@ instance.prototype.init = function () {
 			self.updateMediaSources()
 		})
 
-		self.obs.on('SourceDestroyed', function (data) {
-			self.states[data.sourceName] = false
-			self.sources[data.sourceName] = null
+		self.obs.on('SourceDestroyed', function () {
+			self.updateScenesAndSources()
 			self.updateFilterList()
 			self.updateMediaSources()
-			self.actions()
-			self.init_presets()
-			self.init_feedbacks()
-			self.checkFeedbacks('scene_item_active')
-			self.checkFeedbacks('scene_active')
 		})
 
 		self.obs.on('StreamStarted', function () {
@@ -228,11 +219,11 @@ instance.prototype.init = function () {
 			self.getRecordingStatus()
 		})
 
-		self.obs.on('RecordingPaused', function (data) {
+		self.obs.on('RecordingPaused', function () {
 			self.getRecordingStatus()
 		})
 
-		self.obs.on('RecordingResumed', function (data) {
+		self.obs.on('RecordingResumed', function () {
 			self.getRecordingStatus()
 		})
 
@@ -245,20 +236,22 @@ instance.prototype.init = function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemVisibilityChanged', function (data) {
+		self.obs.on('SceneItemVisibilityChanged', function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemTransformChanged', function (data) {
-			self.updateScenesAndSources()
+		self.obs.on('SceneItemTransformChanged', function () {
+			
 		})
 
-		self.obs.on('TransitionListChanged', function (data) {
+		self.obs.on('TransitionListChanged', function () {
 			self.updateTransitionList()
 		})
 
 		self.obs.on('TransitionDurationChanged', function (data) {
-			self.updateTransitionList()
+			self.states['transition_duration'] = data['new-duration'] === undefined ? 0 : data['new-duration']
+			self.setVariable('transition_duration', self.states['transition_duration'])
+			self.checkFeedbacks('transition_duration')
 		})
 
 		self.obs.on('SwitchTransition', function (data) {
@@ -278,10 +271,12 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('ProfileChanged', (data) => {
-			self.updateCurrentProfile()
+			self.states['current_profile'] = data.profile
+			self.setVariable('profile', data.profile)
+			self.checkFeedbacks('profile_active')
 		})
 
-		self.obs.on('ProfileListChanged', (data) => {
+		self.obs.on('ProfileListChanged', () => {
 			self.updateProfileList()
 		})
 
@@ -561,9 +556,6 @@ instance.prototype.updateScenesAndSources = async function () {
 			self.sources[source.name] = source
 			self.updateTextSources(source.name, source.typeId)
 		}
-		data.sources.forEach((source) => {
-			self.states[source.name] = false
-		})
 	})
 
 	let sceneList = await self.obs.send('GetSceneList')
@@ -578,6 +570,9 @@ instance.prototype.updateScenesAndSources = async function () {
 		let previewScene = await self.obs.send('GetPreviewScene')
 		self.states['scene_preview'] = previewScene.name
 		self.setVariable('scene_preview', previewScene.name)
+	} else {
+		self.states['scene_preview'] = 'None'
+		self.setVariable('scene_preview', 'None')
 	}
 
 	let updateSceneSources = (source, scene) => {
@@ -1714,6 +1709,100 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		open_projector: {
+			label: 'Open Projector',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Projector Type',
+					id: 'type',
+					default: 'Multiview',
+					choices: [
+						{ id: 'Multiview', label: 'Multiview' },
+						{ id: 'Preview', label: 'Preview' },
+						{ id: 'StudioProgram', label: 'Program' },
+						{ id: 'Source', label: 'Source' },
+						{ id: 'Scene', label: 'Scene' },
+					],
+				},
+				{
+					type: 'dropdown',
+					label: 'Window Type',
+					id: 'window',
+					default: 'window',
+					choices: [
+						{ id: 'window', label: 'Window' },
+						{ id: 'fullscreen', label: 'Fullscreen' },
+					],
+				},
+				{
+					type: 'number',
+					label: 'Fullscreen Display (required for fullscreen mode) ',
+					id: 'display',
+					default: 1,
+					min: 1,
+					range: false,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source / Scene (required if selected as projector type)',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+			],
+		},
+		source_properties: {
+			label: 'Set Source Properties',
+			description: 'All values optional, any paramter left blank is ignored',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene (optional, defaults to current scene)',
+					id: 'scene',
+					default: 'Current Scene',
+					choices: self.scenelistToggle,
+					minChoicesForSearch: 5,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: self.sourcelistDefault,
+					choices: self.sourcelist,
+				},
+				{
+					type: 'number',
+					label: 'Position - X (pixels)',
+					id: 'positionX',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Position - Y (pixels)',
+					id: 'positionY',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Scale - X (multiplier, 1 is 100%)',
+					id: 'scaleX',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Scale - Y (multiplier, 1 is 100%)',
+					id: 'scaleY',
+					default: '',
+				},
+				{
+					type: 'number',
+					label: 'Rotation (degrees clockwise)',
+					id: 'rotation',
+					default: '',
+				},
+			],
+		},
 	})
 }
 
@@ -2106,6 +2195,37 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send('ScrubMedia', {
 				sourceName: action.options.source,
 				timeOffset: action.options.scrubAmount * 1000,
+			})
+			break
+		case 'open_projector':
+			let monitor = action.options.window === 'window' ? -1 : action.options.display - 1
+			handle = self.obs.send('OpenProjector', {
+				type: action.options.type,
+				monitor: monitor,
+				name: action.options.source,
+			})
+			break
+		case 'source_properties':
+			let sourceScene = action.options.scene
+			if (action.options.scene == 'Current Scene') {
+				sourceScene = self.states['scene_active']
+			} else if (action.options.scene == 'Preview Scene') {
+				sourceScene = self.states['scene_preview']
+			} else {
+				sourceScene = action.options.scene
+			}
+			handle = self.obs.send('SetSceneItemProperties', {
+				'scene-name': sourceScene,
+				item: action.options.source,
+				position: {
+					x: parseFloat(action.options.positionX),
+					y: parseFloat(action.options.positionY),
+				},
+				scale: {
+					x: parseFloat(action.options.scaleX),
+					y: parseFloat(action.options.scaleY),
+				},
+				rotation: parseFloat(action.options.rotation),
 			})
 			break
 	}
@@ -2669,15 +2789,15 @@ instance.prototype.init_presets = function () {
 	var self = this
 	var presets = []
 
-	for (var s in self.scenes) {
-		var scene = self.scenes[s]
+	for (var s in self.scenelist) {
+		var scene = self.scenelist[s]
 
 		let baseObj = {
 			category: 'Scene to Program',
-			label: scene.name,
+			label: scene.label,
 			bank: {
 				style: 'text',
-				text: scene.name,
+				text: scene.label,
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -2690,7 +2810,7 @@ instance.prototype.init_presets = function () {
 						fg: self.rgb(255, 255, 255),
 						bg_preview: self.rgb(0, 200, 0),
 						fg_preview: self.rgb(255, 255, 255),
-						scene: scene.name,
+						scene: scene.id,
 					},
 				},
 			],
@@ -2698,7 +2818,7 @@ instance.prototype.init_presets = function () {
 				{
 					action: 'set_scene',
 					options: {
-						scene: scene.name,
+						scene: scene.id,
 					},
 				},
 			],
@@ -2714,7 +2834,7 @@ instance.prototype.init_presets = function () {
 					{
 						action: 'preview_scene',
 						options: {
-							scene: scene.name,
+							scene: scene.id,
 						},
 					},
 				],
@@ -2726,7 +2846,7 @@ instance.prototype.init_presets = function () {
 							fg: self.rgb(255, 255, 255),
 							bg_preview: self.rgb(0, 200, 0),
 							fg_preview: self.rgb(255, 255, 255),
-							scene: scene.name,
+							scene: scene.id,
 						},
 					},
 				],
@@ -2908,7 +3028,7 @@ instance.prototype.init_presets = function () {
 	})
 
 	for (var s in self.outputlist) {
-		var output = self.outputlist[s]
+		let output = self.outputlist[s]
 
 		let baseObj = {
 			category: 'Outputs',
@@ -2944,15 +3064,15 @@ instance.prototype.init_presets = function () {
 		presets.push(baseObj)
 	}
 
-	for (var s in self.sources) {
-		let source = self.sources[s].name
+	for (var s in self.sourcelist) {
+		let source = self.sourcelist[s]
 
 		let baseObj = {
 			category: 'Sources',
-			label: source + 'Status',
+			label: source.label + 'Status',
 			bank: {
 				style: 'text',
-				text: source,
+				text: source.label,
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -2961,7 +3081,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'scene_item_previewed',
 					options: {
-						source: source,
+						source: source.id,
 					},
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
@@ -2971,7 +3091,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'scene_item_active',
 					options: {
-						source: source,
+						source: source.id,
 					},
 					style: {
 						bgcolor: self.rgb(200, 0, 0),
@@ -2995,15 +3115,15 @@ instance.prototype.init_presets = function () {
 		},
 	})
 
-	for (var s in self.mediaSources) {
-		let mediaSource = self.mediaSources[s].sourceName
+	for (var s in self.mediaSourceList) {
+		let mediaSource = self.mediaSourceList[s]
 
 		let baseObj = {
 			category: 'Media Sources',
-			label: 'Play Pause' + mediaSource,
+			label: 'Play Pause' + mediaSource.label,
 			bank: {
 				style: 'text',
-				text: mediaSource + '\\n$(obs:media_status_' + mediaSource + ')',
+				text: mediaSource.label + '\\n$(obs:media_status_' + mediaSource.label + ')',
 				size: 'auto',
 				color: self.rgb(255, 255, 255),
 				bgcolor: 0,
@@ -3012,7 +3132,7 @@ instance.prototype.init_presets = function () {
 				{
 					type: 'media_playing',
 					options: {
-						source: mediaSource,
+						source: mediaSource.id,
 					},
 					style: {
 						bgcolor: self.rgb(0, 200, 0),
@@ -3024,7 +3144,7 @@ instance.prototype.init_presets = function () {
 				{
 					action: 'play_pause_media',
 					options: {
-						source: mediaSource,
+						source: mediaSource.id,
 						playPause: 'toggle',
 					},
 				},

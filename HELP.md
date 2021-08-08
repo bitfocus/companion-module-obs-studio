@@ -27,6 +27,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 **Sources**
 * Set Source Visibility
 * Set Filter Visibility
+* Set Source Properties (Position / Scale / Rotation)
 * Source Mute (Set / Toggle)
 * Set Source Volume
 * Adjust Source Volume
@@ -44,6 +45,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **General**
 * Studio Mode (Enable / Disable / Toggle)
+* Open Projector
 * Set Profile
 * Set Scene Collection
 * Trigger Hotkey by Key
