@@ -240,9 +240,7 @@ instance.prototype.init = function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemTransformChanged', function () {
-			
-		})
+		self.obs.on('SceneItemTransformChanged', function () {})
 
 		self.obs.on('TransitionListChanged', function () {
 			self.updateTransitionList()
@@ -319,6 +317,7 @@ instance.prototype.init = function () {
 			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
 			self.checkFeedbacks('media_playing')
 			self.setVariable('media_status_' + data.sourceName, 'Playing')
+			self.updateMediaSources()
 		})
 
 		self.obs.on('MediaPaused', (data) => {
@@ -833,6 +832,33 @@ instance.prototype.updateMediaSources = function () {
 				'media_status_' + mediaSource.sourceName,
 				self.mediaSources[mediaSource.sourceName]['mediaState']
 			)
+			self.obs
+				.send('GetSourceSettings', {
+					sourceName: mediaSource.sourceName,
+				})
+				.then((data) => {
+					if (data.sourceSettings.is_local_file && data.sourceSettings.local_file) {
+						let filePath = data.sourceSettings.local_file
+						self.mediaSources[mediaSource.sourceName]['fileName'] = filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						self.setVariable(
+							'media_file_name_' + mediaSource.sourceName,
+							self.mediaSources[mediaSource.sourceName]['fileName']
+						)
+					} else if (data.sourceSettings.playlist) {
+						let vlcFiles = []
+						for (var s in data.sourceSettings.playlist) {
+							let filePath = data.sourceSettings.playlist[s].value
+							vlcFiles.push(filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
+						}
+						self.mediaSources[mediaSource.sourceName]['fileName'] = vlcFiles.length ? vlcFiles.join('\\n') : 'None'
+					} else {
+						self.mediaSources[mediaSource.sourceName]['fileName'] = 'None'
+					}
+					self.setVariable(
+						'media_file_name_' + mediaSource.sourceName,
+						self.mediaSources[mediaSource.sourceName]['fileName']
+					)
+				})
 		}
 		self.init_variables()
 		self.actions()
@@ -3200,6 +3226,7 @@ instance.prototype.init_variables = function () {
 	for (var s in self.mediaSources) {
 		let media = self.mediaSources[s]
 		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
+		variables.push({ name: 'media_file_name_' + media.sourceName, label: 'Media file name for ' + media.sourceName })
 	}
 
 	for (var s in self.sources) {
