@@ -305,6 +305,8 @@ instance.prototype.init = function () {
 
 		self.obs.on('SourceVolumeChanged', (data) => {
 			self.sourceAudio['volume'][data.sourceName] = self.roundIfDefined(data.volumeDb, 1)
+			self.checkFeedbacks('volume')
+			self.setVariable('volume_' + data.sourceName, self.sourceAudio['volume'][data.sourceName] + ' dB')
 		})
 
 		self.obs.on('MediaPlaying', (data) => {
@@ -807,6 +809,8 @@ instance.prototype.updateSourceAudio = function () {
 				self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
 				self.sourceAudio['muted'][source] = data.muted
 				self.checkFeedbacks('audio_muted')
+				self.checkFeedbacks('volume')
+				self.setVariable('volume_' + source, self.sourceAudio['volume'][source] + ' dB')
 			})
 		self.obs
 			.send('GetAudioMonitorType', {
@@ -2608,6 +2612,36 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['volume'] = {
+		type: 'boolean',
+		label: 'Volume',
+		description: 'If an audio source volume is matched, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0),
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5,
+			},
+			{
+				type: 'number',
+				label: 'Volume in dB (-100 to 26) ',
+				id: 'volume',
+				default: 0,
+				min: -100,
+				max: 26,
+				range: false,
+				required: false,
+			},
+		],
+	}
+
 	feedbacks['media_playing'] = {
 		type: 'boolean',
 		label: 'Media Playing',
@@ -2795,6 +2829,12 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'audio_monitor_type') {
 		if (self.sourceAudio['audio_monitor_type'][feedback.options.source] === feedback.options.monitor) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'volume') {
+		if (self.sourceAudio['volume'][feedback.options.source] === feedback.options.volume) {
 			return true
 		}
 	}
@@ -3237,6 +3277,7 @@ instance.prototype.init_variables = function () {
 		if (source.typeId === 'text_gdiplus_v2') {
 			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
 		}
+		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
 	}
 
 	self.setVariableDefinitions(variables)
