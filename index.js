@@ -54,6 +54,7 @@ instance.prototype.init = function () {
 	self.init_variables()
 	self.init_feedbacks()
 	self.disable = false
+	var rateLimiter = true
 	self.status(self.STATUS_WARN, 'Connecting')
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -240,7 +241,16 @@ instance.prototype.init = function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemTransformChanged', function () {})
+		self.obs.on('SceneItemTransformChanged', function (data) {
+			if (!rateLimiter) return
+			if (self.mediaSources[data.itemName]) {
+				self.updateMediaSourcesInfo()
+			}
+			rateLimiter = false
+			setTimeout(function () {
+				rateLimiter = true
+			}, 1000)
+		})
 
 		self.obs.on('TransitionListChanged', function () {
 			self.updateTransitionList()
@@ -310,34 +320,44 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('MediaPlaying', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Playing')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Playing')
+			}
 		})
 
 		self.obs.on('MediaStarted', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Playing')
-			self.updateMediaSources()
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Playing')
+				self.updateMediaSources()
+			}
 		})
 
 		self.obs.on('MediaPaused', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Paused')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Paused')
+			}
 		})
 
 		self.obs.on('MediaStopped', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Stopped')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Stopped')
+			}
 		})
 
 		self.obs.on('MediaEnded', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Ended')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Ended')
+			}
 		})
 	})
 
@@ -868,6 +888,47 @@ instance.prototype.updateMediaSources = function () {
 		self.actions()
 		self.checkFeedbacks('media_playing')
 	})
+}
+
+instance.prototype.updateMediaSourcesInfo = function () {
+	var self = this
+	for (var s in self.mediaSources) {
+		let mediaSource = self.mediaSources[s]
+		self.mediaSources[mediaSource.sourceName] = mediaSource
+		self.mediaSources[mediaSource.sourceName]['mediaState'] =
+			mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+		self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
+		self.obs
+			.send('GetSourceSettings', {
+				sourceName: mediaSource.sourceName,
+			})
+			.then((data) => {
+				if (data.sourceSettings.is_local_file && data.sourceSettings.local_file) {
+					let filePath = data.sourceSettings.local_file
+					self.mediaSources[mediaSource.sourceName]['fileName'] = filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+					self.setVariable(
+						'media_file_name_' + mediaSource.sourceName,
+						self.mediaSources[mediaSource.sourceName]['fileName']
+					)
+				} else if (data.sourceSettings.playlist) {
+					let vlcFiles = []
+					for (var s in data.sourceSettings.playlist) {
+						let filePath = data.sourceSettings.playlist[s].value
+						vlcFiles.push(filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
+					}
+					self.mediaSources[mediaSource.sourceName]['fileName'] = vlcFiles.length ? vlcFiles.join('\\n') : 'None'
+				} else {
+					self.mediaSources[mediaSource.sourceName]['fileName'] = 'None'
+				}
+				self.setVariable(
+					'media_file_name_' + mediaSource.sourceName,
+					self.mediaSources[mediaSource.sourceName]['fileName']
+				)
+			})
+	}
+	self.init_variables()
+	self.actions()
+	self.checkFeedbacks('media_playing')
 }
 
 instance.prototype.updateTextSources = function (source, typeId) {
