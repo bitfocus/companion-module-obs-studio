@@ -1845,7 +1845,7 @@ instance.prototype.actions = function () {
 		},
 		source_properties: {
 			label: 'Set Source Properties',
-			description: 'All values optional, any paramter left blank is ignored',
+			description: 'All values optional, any parameter left blank is ignored',
 			options: [
 				{
 					type: 'dropdown',
