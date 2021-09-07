@@ -54,6 +54,7 @@ instance.prototype.init = function () {
 	self.init_variables()
 	self.init_feedbacks()
 	self.disable = false
+	var rateLimiter = true
 	self.status(self.STATUS_WARN, 'Connecting')
 	if (self.obs !== undefined) {
 		self.obs.disconnect()
@@ -240,7 +241,16 @@ instance.prototype.init = function () {
 			self.updateScenesAndSources()
 		})
 
-		self.obs.on('SceneItemTransformChanged', function () {})
+		self.obs.on('SceneItemTransformChanged', function (data) {
+			if (!rateLimiter) return
+			if (self.mediaSources[data.itemName]) {
+				self.updateMediaSourcesInfo()
+			}
+			rateLimiter = false
+			setTimeout(function () {
+				rateLimiter = true
+			}, 1000)
+		})
 
 		self.obs.on('TransitionListChanged', function () {
 			self.updateTransitionList()
@@ -305,37 +315,49 @@ instance.prototype.init = function () {
 
 		self.obs.on('SourceVolumeChanged', (data) => {
 			self.sourceAudio['volume'][data.sourceName] = self.roundIfDefined(data.volumeDb, 1)
+			self.checkFeedbacks('volume')
+			self.setVariable('volume_' + data.sourceName, self.sourceAudio['volume'][data.sourceName] + ' dB')
 		})
 
 		self.obs.on('MediaPlaying', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Playing')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Playing')
+			}
 		})
 
 		self.obs.on('MediaStarted', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Playing')
-			self.updateMediaSources()
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Playing')
+				self.updateMediaSources()
+			}
 		})
 
 		self.obs.on('MediaPaused', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Paused')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Paused')
+			}
 		})
 
 		self.obs.on('MediaStopped', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Stopped')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Stopped')
+			}
 		})
 
 		self.obs.on('MediaEnded', (data) => {
-			self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
-			self.checkFeedbacks('media_playing')
-			self.setVariable('media_status_' + data.sourceName, 'Ended')
+			if (self.mediaSources[data.sourceName]) {
+				self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
+				self.checkFeedbacks('media_playing')
+				self.setVariable('media_status_' + data.sourceName, 'Ended')
+			}
 		})
 	})
 
@@ -807,6 +829,8 @@ instance.prototype.updateSourceAudio = function () {
 				self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
 				self.sourceAudio['muted'][source] = data.muted
 				self.checkFeedbacks('audio_muted')
+				self.checkFeedbacks('volume')
+				self.setVariable('volume_' + source, self.sourceAudio['volume'][source] + ' dB')
 			})
 		self.obs
 			.send('GetAudioMonitorType', {
@@ -864,6 +888,47 @@ instance.prototype.updateMediaSources = function () {
 		self.actions()
 		self.checkFeedbacks('media_playing')
 	})
+}
+
+instance.prototype.updateMediaSourcesInfo = function () {
+	var self = this
+	for (var s in self.mediaSources) {
+		let mediaSource = self.mediaSources[s]
+		self.mediaSources[mediaSource.sourceName] = mediaSource
+		self.mediaSources[mediaSource.sourceName]['mediaState'] =
+			mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+		self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
+		self.obs
+			.send('GetSourceSettings', {
+				sourceName: mediaSource.sourceName,
+			})
+			.then((data) => {
+				if (data.sourceSettings.is_local_file && data.sourceSettings.local_file) {
+					let filePath = data.sourceSettings.local_file
+					self.mediaSources[mediaSource.sourceName]['fileName'] = filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+					self.setVariable(
+						'media_file_name_' + mediaSource.sourceName,
+						self.mediaSources[mediaSource.sourceName]['fileName']
+					)
+				} else if (data.sourceSettings.playlist) {
+					let vlcFiles = []
+					for (var s in data.sourceSettings.playlist) {
+						let filePath = data.sourceSettings.playlist[s].value
+						vlcFiles.push(filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
+					}
+					self.mediaSources[mediaSource.sourceName]['fileName'] = vlcFiles.length ? vlcFiles.join('\\n') : 'None'
+				} else {
+					self.mediaSources[mediaSource.sourceName]['fileName'] = 'None'
+				}
+				self.setVariable(
+					'media_file_name_' + mediaSource.sourceName,
+					self.mediaSources[mediaSource.sourceName]['fileName']
+				)
+			})
+	}
+	self.init_variables()
+	self.actions()
+	self.checkFeedbacks('media_playing')
 }
 
 instance.prototype.updateTextSources = function (source, typeId) {
@@ -1780,7 +1845,7 @@ instance.prototype.actions = function () {
 		},
 		source_properties: {
 			label: 'Set Source Properties',
-			description: 'All values optional, any paramter left blank is ignored',
+			description: 'All values optional, any parameter left blank is ignored',
 			options: [
 				{
 					type: 'dropdown',
@@ -2608,6 +2673,36 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['volume'] = {
+		type: 'boolean',
+		label: 'Volume',
+		description: 'If an audio source volume is matched, change the style of the button',
+		style: {
+			color: self.rgb(255, 255, 255),
+			bgcolor: self.rgb(0, 200, 0),
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.sourcelistDefault,
+				choices: self.sourcelist,
+				minChoicesForSearch: 5,
+			},
+			{
+				type: 'number',
+				label: 'Volume in dB (-100 to 26) ',
+				id: 'volume',
+				default: 0,
+				min: -100,
+				max: 26,
+				range: false,
+				required: false,
+			},
+		],
+	}
+
 	feedbacks['media_playing'] = {
 		type: 'boolean',
 		label: 'Media Playing',
@@ -2795,6 +2890,12 @@ instance.prototype.feedback = function (feedback) {
 
 	if (feedback.type === 'audio_monitor_type') {
 		if (self.sourceAudio['audio_monitor_type'][feedback.options.source] === feedback.options.monitor) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'volume') {
+		if (self.sourceAudio['volume'][feedback.options.source] === feedback.options.volume) {
 			return true
 		}
 	}
@@ -3237,6 +3338,7 @@ instance.prototype.init_variables = function () {
 		if (source.typeId === 'text_gdiplus_v2') {
 			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
 		}
+		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
 	}
 
 	self.setVariableDefinitions(variables)
