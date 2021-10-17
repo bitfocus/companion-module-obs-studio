@@ -854,6 +854,9 @@ instance.prototype.updateMediaSources = function () {
 			self.mediaSources[mediaSource.sourceName] = mediaSource
 			self.mediaSources[mediaSource.sourceName]['mediaState'] =
 				mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+			if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
+				self.mediaSources[mediaSource.sourceName]['mediaState'] = 'Playing'
+			}
 			self.setVariable(
 				'media_status_' + mediaSource.sourceName,
 				self.mediaSources[mediaSource.sourceName]['mediaState']
