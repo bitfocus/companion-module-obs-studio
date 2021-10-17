@@ -2,7 +2,7 @@ var instance_skel = require('../../instance_skel')
 var tcp = require('../../tcp')
 var hotkeys = require('./hotkeys')
 const OBSWebSocket = require('obs-websocket-js')
-const e = require('cors')
+
 var debug
 var log
 
@@ -120,6 +120,7 @@ instance.prototype.init = function () {
 				self.updateFilterList()
 				self.updateSourceAudio()
 				self.updateMediaSources()
+				self.startMediaPoller()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -925,7 +926,6 @@ instance.prototype.updateMediaSources = function () {
 		self.init_variables()
 		self.actions()
 		self.checkFeedbacks('media_playing')
-		self.startMediaPoller()
 	})
 }
 
@@ -997,7 +997,7 @@ instance.prototype.startMediaPoller = function () {
 								'-' + new Date(timeRemaining).toISOString().slice(11, 19)
 							)
 						})
-				} else if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Stopped') {
+				} else if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Stopped' || 'Ended') {
 					self.setVariable('media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
 					self.setVariable('media_time_remaining_' + mediaSource.sourceName, '--:--:--')
 				}
