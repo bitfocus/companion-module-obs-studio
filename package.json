@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "1.0.25",
+	"version": "1.0.26",
 	"api_version": "1.0.0",
 	"keywords": [
 		"Stream"
@@ -14,6 +14,9 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"author": "William Viker <william@bitfocus.io>",
+	"contributors": [
+		"Bryce Seifert"
+	],
 	"license": "MIT",
 	"dependencies": {
 		"obs-websocket-js": "^4.0.3"
