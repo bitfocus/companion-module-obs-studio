@@ -249,6 +249,9 @@ instance.prototype.init = function () {
 			if (self.mediaSources[data.itemName]) {
 				self.updateMediaSourcesInfo()
 			}
+			if (self.imageSources[data.itemName]) {
+				self.updateImageSources(data.itemName)
+			}
 			rateLimiter = false
 			setTimeout(function () {
 				rateLimiter = true
@@ -575,10 +578,15 @@ instance.prototype.updateScenesAndSources = async function () {
 
 	await self.obs.send('GetSourcesList').then((data) => {
 		self.sources = {}
+		self.imageSources = {}
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
 			self.updateTextSources(source.name, source.typeId)
+			if (source.typeId === 'image_source') {
+				self.imageSources[source.name] = source
+				self.updateImageSources(source.name, source)
+			}
 		}
 	})
 
@@ -1033,6 +1041,22 @@ instance.prototype.updateTextSources = function (source, typeId) {
 				self.setVariable('current_text_' + source, data.text)
 			})
 	}
+}
+
+instance.prototype.updateImageSources = function (sourceName) {
+	var self = this
+	self.obs
+		.send('GetSourceSettings', {
+			sourceName: sourceName,
+		})
+		.then((data) => {
+			if (data.sourceSettings.file) {
+				let filePath = data.sourceSettings.file
+				self.setVariable('image_file_name_' + sourceName, filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
+			} else {
+				self.setVariable('image_file_name_' + sourceName, 'None')
+			}
+		})
 }
 
 // When module gets deleted
@@ -3425,6 +3449,9 @@ instance.prototype.init_variables = function () {
 		}
 		if (source.typeId === 'text_gdiplus_v2') {
 			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+		}
+		if (source.typeId === 'image_source') {
+			variables.push({ name: 'image_file_name_' + source.name, label: 'Image file name for ' + source.name })
 		}
 		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
 	}

@@ -107,6 +107,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * media_file_name*source_name* *(Current file name of media sources, not including the extension)*
 * media_time_elapsed_*source_name*
 * media_time_remaining_*source_name*
+* image_file_name_*source_name*
 * current_text_*source_name* *(Current text value of text sources)*
 * volume_*source_name* *(Current volume in dB of a source)*
 
