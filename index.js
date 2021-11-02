@@ -2,6 +2,7 @@ var instance_skel = require('../../instance_skel')
 var tcp = require('../../tcp')
 var hotkeys = require('./hotkeys')
 const OBSWebSocket = require('obs-websocket-js')
+
 var debug
 var log
 
@@ -50,6 +51,7 @@ instance.prototype.updateConfig = function (config) {
 instance.prototype.init = function () {
 	var self = this
 	self.stopStatsPoller()
+	self.stopMediaPoller()
 	self.init_presets()
 	self.init_variables()
 	self.init_feedbacks()
@@ -118,6 +120,7 @@ instance.prototype.init = function () {
 				self.updateFilterList()
 				self.updateSourceAudio()
 				self.updateMediaSources()
+				self.startMediaPoller()
 			})
 			.catch((err) => {
 				self.status(self.STATUS_ERROR, err)
@@ -245,6 +248,9 @@ instance.prototype.init = function () {
 			if (!rateLimiter) return
 			if (self.mediaSources[data.itemName]) {
 				self.updateMediaSourcesInfo()
+			}
+			if (self.imageSources[data.itemName]) {
+				self.updateImageSources(data.itemName)
 			}
 			rateLimiter = false
 			setTimeout(function () {
@@ -572,10 +578,15 @@ instance.prototype.updateScenesAndSources = async function () {
 
 	await self.obs.send('GetSourcesList').then((data) => {
 		self.sources = {}
+		self.imageSources = {}
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
 			self.updateTextSources(source.name, source.typeId)
+			if (source.typeId === 'image_source') {
+				self.imageSources[source.name] = source
+				self.updateImageSources(source.name, source)
+			}
 		}
 	})
 
@@ -852,10 +863,46 @@ instance.prototype.updateMediaSources = function () {
 			self.mediaSources[mediaSource.sourceName] = mediaSource
 			self.mediaSources[mediaSource.sourceName]['mediaState'] =
 				mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+			if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
+				self.mediaSources[mediaSource.sourceName]['mediaState'] = 'Playing'
+			}
 			self.setVariable(
 				'media_status_' + mediaSource.sourceName,
 				self.mediaSources[mediaSource.sourceName]['mediaState']
 			)
+			self.obs
+				.send('GetMediaDuration', {
+					sourceName: mediaSource.sourceName,
+				})
+				.then((data) => {
+					self.mediaSources[mediaSource.sourceName]['mediaDuration'] = data.mediaDuration
+				})
+			self.obs
+				.send('GetMediaTime', {
+					sourceName: mediaSource.sourceName,
+				})
+				.then((data) => {
+					self.mediaSources[mediaSource.sourceName]['mediaTime'] = data.timestamp
+					self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining'] =
+						self.mediaSources[mediaSource.sourceName]['mediaDuration'] - data.timestamp
+					if (self.mediaSources[mediaSource.sourceName]['mediaTime'] > 0) {
+						self.setVariable(
+							'media_time_elapsed_' + mediaSource.sourceName,
+							new Date(data.timestamp).toISOString().slice(11, 19)
+						)
+					} else {
+						self.setVariable('media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
+					}
+					if (self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining'] > 0) {
+						self.setVariable(
+							'media_time_remaining_' + mediaSource.sourceName,
+							'-' +
+								new Date(self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining']).toISOString().slice(11, 19)
+						)
+					} else {
+						self.setVariable('media_time_remaining_' + mediaSource.sourceName, '--:--:--')
+					}
+				})
 			self.obs
 				.send('GetSourceSettings', {
 					sourceName: mediaSource.sourceName,
@@ -897,6 +944,9 @@ instance.prototype.updateMediaSourcesInfo = function () {
 		self.mediaSources[mediaSource.sourceName] = mediaSource
 		self.mediaSources[mediaSource.sourceName]['mediaState'] =
 			mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
+		if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
+			self.mediaSources[mediaSource.sourceName]['mediaState'] = 'Playing'
+		}
 		self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
 		self.obs
 			.send('GetSourceSettings', {
@@ -931,6 +981,46 @@ instance.prototype.updateMediaSourcesInfo = function () {
 	self.checkFeedbacks('media_playing')
 }
 
+instance.prototype.startMediaPoller = function () {
+	this.stopMediaPoller()
+	let self = this
+	this.mediaPoller = setInterval(() => {
+		if (self.mediaSources) {
+			for (var s in self.mediaSources) {
+				let mediaSource = self.mediaSources[s]
+				if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Playing') {
+					self.obs
+						.send('GetMediaTime', {
+							sourceName: mediaSource.sourceName,
+						})
+						.then((data) => {
+							self.mediaSources[mediaSource.sourceName]['mediaTime'] = data.timestamp
+							let timeRemaining = self.mediaSources[mediaSource.sourceName]['mediaDuration'] - data.timestamp
+							self.setVariable(
+								'media_time_elapsed_' + mediaSource.sourceName,
+								new Date(data.timestamp).toISOString().slice(11, 19)
+							)
+							self.setVariable(
+								'media_time_remaining_' + mediaSource.sourceName,
+								'-' + new Date(timeRemaining).toISOString().slice(11, 19)
+							)
+						})
+				} else if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Stopped' || 'Ended') {
+					self.setVariable('media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
+					self.setVariable('media_time_remaining_' + mediaSource.sourceName, '--:--:--')
+				}
+			}
+		}
+	}, 1000)
+}
+
+instance.prototype.stopMediaPoller = function () {
+	if (this.mediaPoller) {
+		clearInterval(this.mediaPoller)
+		this.mediaPoller = null
+	}
+}
+
 instance.prototype.updateTextSources = function (source, typeId) {
 	var self = this
 	if (typeId === 'text_ft2_source_v2') {
@@ -951,6 +1041,22 @@ instance.prototype.updateTextSources = function (source, typeId) {
 				self.setVariable('current_text_' + source, data.text)
 			})
 	}
+}
+
+instance.prototype.updateImageSources = function (sourceName) {
+	var self = this
+	self.obs
+		.send('GetSourceSettings', {
+			sourceName: sourceName,
+		})
+		.then((data) => {
+			if (data.sourceSettings.file) {
+				let filePath = data.sourceSettings.file
+				self.setVariable('image_file_name_' + sourceName, filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
+			} else {
+				self.setVariable('image_file_name_' + sourceName, 'None')
+			}
+		})
 }
 
 // When module gets deleted
@@ -980,6 +1086,7 @@ instance.prototype.destroy = function () {
 	self.disable = true
 	self.authenticated = null
 	self.stopStatsPoller()
+	self.stopMediaPoller()
 }
 
 instance.prototype.actions = function () {
@@ -3328,6 +3435,11 @@ instance.prototype.init_variables = function () {
 		let media = self.mediaSources[s]
 		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
 		variables.push({ name: 'media_file_name_' + media.sourceName, label: 'Media file name for ' + media.sourceName })
+		variables.push({ name: 'media_time_elapsed_' + media.sourceName, label: 'Time elapsed for ' + media.sourceName })
+		variables.push({
+			name: 'media_time_remaining_' + media.sourceName,
+			label: 'Time remaining for ' + media.sourceName,
+		})
 	}
 
 	for (var s in self.sources) {
@@ -3337,6 +3449,9 @@ instance.prototype.init_variables = function () {
 		}
 		if (source.typeId === 'text_gdiplus_v2') {
 			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+		}
+		if (source.typeId === 'image_source') {
+			variables.push({ name: 'image_file_name_' + source.name, label: 'Image file name for ' + source.name })
 		}
 		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
 	}
