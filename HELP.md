@@ -103,6 +103,9 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 * transition_duration
 
 **Sources**
+* current_media_name *(Will only reflect one source if multiple media sources are playing)*
+* current_media_time_elapsed *(Will only reflect one source if multiple media sources are playing)*
+* current_media_time_remaining *(Will only reflect one source if multiple media sources are playing)*
 * media_status_*source_name* *(Current status of media sources, including: playing, paused, stopped, ended)*
 * media_file_name*source_name* *(Current file name of media sources, not including the extension)*
 * media_time_elapsed_*source_name*
