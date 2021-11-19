@@ -985,10 +985,12 @@ instance.prototype.startMediaPoller = function () {
 	this.stopMediaPoller()
 	let self = this
 	this.mediaPoller = setInterval(() => {
+		let mediaSourcesPlaying = []
 		if (self.mediaSources) {
 			for (var s in self.mediaSources) {
 				let mediaSource = self.mediaSources[s]
 				if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Playing') {
+					mediaSourcesPlaying.push(self.mediaSources[mediaSource.sourceName])
 					self.obs
 						.send('GetMediaTime', {
 							sourceName: mediaSource.sourceName,
@@ -1004,11 +1006,22 @@ instance.prototype.startMediaPoller = function () {
 								'media_time_remaining_' + mediaSource.sourceName,
 								'-' + new Date(timeRemaining).toISOString().slice(11, 19)
 							)
+							self.setVariable('current_media_time_elapsed', new Date(data.timestamp).toISOString().slice(11, 19))
+							self.setVariable(
+								'current_media_time_remaining',
+								'-' + new Date(timeRemaining).toISOString().slice(11, 19)
+							)
+							self.setVariable('current_media_name', mediaSource.sourceName)
 						})
 				} else if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Stopped' || 'Ended') {
-					self.setVariable('media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
-					self.setVariable('media_time_remaining_' + mediaSource.sourceName, '--:--:--')
+					self.setVariable('current_media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
+					self.setVariable('current_media_time_remaining_' + mediaSource.sourceName, '--:--:--')
 				}
+			}
+			if (mediaSourcesPlaying.length == 0) {
+				self.setVariable('current_media_time_elapsed', '--:--:--')
+				self.setVariable('current_media_time_remaining', '--:--:--')
+				self.setVariable('current_media_name', 'None')
 			}
 		}
 	}, 1000)
@@ -3430,6 +3443,9 @@ instance.prototype.init_variables = function () {
 	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
 	variables.push({ name: 'current_transition', label: 'Current transition' })
 	variables.push({ name: 'transition_duration', label: 'Current transition duration' })
+	variables.push({ name: 'current_media_name', label: 'Source name for currently playing media source' })
+	variables.push({ name: 'current_media_time_elapsed', label: 'Time elapsed for currently playing media source' })
+	variables.push({ name: 'current_media_time_remaining', label: 'Time remaining for currently playing media source' })
 
 	for (var s in self.mediaSources) {
 		let media = self.mediaSources[s]
