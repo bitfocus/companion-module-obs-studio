@@ -476,7 +476,7 @@ instance.prototype.getVersionInfo = async function () {
 				'warn',
 				'Update to the latest version of the OBS Websocket plugin to ensure full feature compatibility. A download link is available in the help menu for the OBS module.'
 			)
-		} else if (websocketVersion < 500) {
+		} else if (websocketVersion >= 500) {
 			self.log('error', 'Version 5.0.0 of OBS Websocket is not yet supported. Please use the 4.9.1 release.')
 		}
 	})
