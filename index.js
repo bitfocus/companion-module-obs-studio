@@ -153,9 +153,11 @@ instance.prototype.init = function () {
 		})
 
 		self.obs.on('SceneCollectionChanged', function (data) {
-			self.states['current_scene_collection'] = data.sceneCollection
-			self.setVariable('scene_collection', data.sceneCollection)
-			self.checkFeedbacks('scene_collection_active')
+			//self.states['current_scene_collection'] = data.sceneCollection
+			//self.setVariable('scene_collection', data.sceneCollection)
+			//self.checkFeedbacks('scene_collection_active')
+			self.obs.disconnect()
+			self.log('warn', 'Briefly disconnecting from OBS while Scene Collection is changed')
 		})
 
 		self.obs.on('SceneCollectionListChanged', function () {
