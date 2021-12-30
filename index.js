@@ -1557,7 +1557,7 @@ instance.prototype.actions = function () {
 					minChoicesForSearch: 5,
 				},
 				{
-					type: 'textinput',
+					type: 'textwithvariables',
 					label: 'Text',
 					id: 'text',
 					required: true,
@@ -1577,7 +1577,7 @@ instance.prototype.actions = function () {
 					minChoicesForSearch: 5,
 				},
 				{
-					type: 'textinput',
+					type: 'textwithvariables',
 					label: 'Text',
 					id: 'text',
 					required: true,
@@ -2259,16 +2259,24 @@ instance.prototype.action = function (action) {
 			})
 			break
 		case 'set-freetype-text':
+			var text;
+			self.system.emit('variable_parse', action.options.text, function (value) {
+				text = value
+			})
 			handle = self.obs.send('SetTextFreetype2Properties', {
 				source: action.options.source,
-				text: action.options.text,
+				text: text,
 			})
 			self.updateTextSources(action.options.source, 'text_ft2_source_v2')
 			break
 		case 'set-gdi-text':
+			var text;
+			self.system.emit('variable_parse', action.options.text, function (value) {
+				text = value
+			})
 			handle = self.obs.send('SetTextGDIPlusProperties', {
 				source: action.options.source,
-				text: action.options.text,
+				text: text,
 			})
 			self.updateTextSources(action.options.source, 'text_gdiplus_v2')
 			break
