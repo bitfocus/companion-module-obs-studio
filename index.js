@@ -1987,31 +1987,31 @@ instance.prototype.actions = function () {
 					choices: self.sourcelist,
 				},
 				{
-					type: 'number',
+					type: 'textwithvariables',
 					label: 'Position - X (pixels)',
 					id: 'positionX',
 					default: '',
 				},
 				{
-					type: 'number',
+					type: 'textwithvariables',
 					label: 'Position - Y (pixels)',
 					id: 'positionY',
 					default: '',
 				},
 				{
-					type: 'number',
+					type: 'textwithvariables',
 					label: 'Scale - X (multiplier, 1 is 100%)',
 					id: 'scaleX',
 					default: '',
 				},
 				{
-					type: 'number',
+					type: 'textwithvariables',
 					label: 'Scale - Y (multiplier, 1 is 100%)',
 					id: 'scaleY',
 					default: '',
 				},
 				{
-					type: 'number',
+					type: 'textwithvariables',
 					label: 'Rotation (degrees clockwise)',
 					id: 'rotation',
 					default: '',
@@ -2259,7 +2259,7 @@ instance.prototype.action = function (action) {
 			})
 			break
 		case 'set-freetype-text':
-			var text;
+			var text
 			self.system.emit('variable_parse', action.options.text, function (value) {
 				text = value
 			})
@@ -2270,7 +2270,7 @@ instance.prototype.action = function (action) {
 			self.updateTextSources(action.options.source, 'text_ft2_source_v2')
 			break
 		case 'set-gdi-text':
-			var text;
+			var text
 			self.system.emit('variable_parse', action.options.text, function (value) {
 				text = value
 			})
@@ -2437,18 +2437,40 @@ instance.prototype.action = function (action) {
 			} else {
 				sourceScene = action.options.scene
 			}
+			let positionX
+			let positionY
+			let scaleX
+			let scaleY
+			let rotation
+
+			this.parseVariables(action.options.positionX, function (value) {
+				positionX = parseFloat(value)
+			})
+			this.parseVariables(action.options.positionY, function (value) {
+				positionY = parseFloat(value)
+			})
+			this.parseVariables(action.options.scaleX, function (value) {
+				scaleX = parseFloat(value)
+			})
+			this.parseVariables(action.options.scaleY, function (value) {
+				scaleY = parseFloat(value)
+			})
+			this.parseVariables(action.options.rotation, function (value) {
+				rotation = parseFloat(value)
+			})
+
 			handle = self.obs.send('SetSceneItemProperties', {
 				'scene-name': sourceScene,
 				item: action.options.source,
 				position: {
-					x: parseFloat(action.options.positionX),
-					y: parseFloat(action.options.positionY),
+					x: positionX,
+					y: positionY,
 				},
 				scale: {
-					x: parseFloat(action.options.scaleX),
-					y: parseFloat(action.options.scaleY),
+					x: scaleX,
+					y: scaleY,
 				},
-				rotation: parseFloat(action.options.rotation),
+				rotation: rotation,
 			})
 			break
 	}
