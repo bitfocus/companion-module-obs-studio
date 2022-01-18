@@ -1002,14 +1002,22 @@ instance.prototype.startMediaPoller = function () {
 						.then((data) => {
 							self.mediaSources[mediaSource.sourceName]['mediaTime'] = data.timestamp
 							let timeRemaining = self.mediaSources[mediaSource.sourceName]['mediaDuration'] - data.timestamp
-							self.setVariable(
-								'media_time_elapsed_' + mediaSource.sourceName,
-								new Date(data.timestamp).toISOString().slice(11, 19)
-							)
-							self.setVariable(
-								'media_time_remaining_' + mediaSource.sourceName,
-								'-' + new Date(timeRemaining).toISOString().slice(11, 19)
-							)
+							try {
+								self.setVariable(
+									'media_time_elapsed_' + mediaSource.sourceName,
+									new Date(data.timestamp).toISOString().slice(11, 19)
+								)
+							} catch (e) {
+								self.debug(`Media time elapsed parse error: ${e}`)
+							}
+							try {
+								self.setVariable(
+									'media_time_remaining_' + mediaSource.sourceName,
+									'-' + new Date(timeRemaining).toISOString().slice(11, 19)
+								)
+							} catch (e) {
+								self.debug(`Media time remaining parse error: ${e}`)
+							}
 							self.setVariable('current_media_time_elapsed', new Date(data.timestamp).toISOString().slice(11, 19))
 							self.setVariable(
 								'current_media_time_remaining',
