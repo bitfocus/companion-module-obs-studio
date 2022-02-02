@@ -20,5 +20,13 @@
 	"license": "MIT",
 	"dependencies": {
 		"obs-websocket-js": "^4.0.3"
+	},
+	"homepage": "https://github.com/bitfocus/companion-module-obs-studio#readme",
+	"bugs": {
+		"url": "https://github.com/bitfocus/companion-module-obs-studio/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	}
 }
