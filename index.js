@@ -127,7 +127,7 @@ instance.prototype.init = function () {
 			})
 
 		self.obs.on('error', (err) => {
-			self.log('debug', 'OBS Error: ' + err)
+			self.log('error', 'OBS Error: ' + err)
 			self.status(self.STATUS_ERROR, err)
 		})
 
@@ -2026,6 +2026,23 @@ instance.prototype.actions = function () {
 				},
 			],
 		},
+		custom_command: {
+			label: 'Custom Command',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Request Type',
+					id: 'command',
+					default: 'SetCurrentScene',
+				},
+				{
+					type: 'textinput',
+					label: 'Request Data (optional, JSON formatted)',
+					id: 'arg',
+					default: '{"scene-name": "Scene 1"}',
+				},
+			],
+		},
 	})
 }
 
@@ -2481,15 +2498,27 @@ instance.prototype.action = function (action) {
 				rotation: rotation,
 			})
 			break
+		case 'custom_command':
+			let arg
+			if (action.options.arg) {
+				try {
+					arg = JSON.parse(action.options.arg)
+				} catch (e) {
+					self.log('warn', 'Request data must be formatted as valid JSON.')
+					return
+				}
+			}
+			handle = self.obs.send(action.options.command, arg)
+			break
 	}
 
 	handle.catch((error) => {
 		if (error.code == 'NOT_CONNECTED') {
-			self.log('warn', 'Unable to connect to OBS. Please re-start OBS manually.')
+			self.log('error', 'Unable to connect to OBS. Please re-start OBS manually.')
 			self.obs.disconnect()
 			self.init()
 		} else {
-			self.log('debug', error.error)
+			self.log('warn', error.error)
 		}
 	})
 }
