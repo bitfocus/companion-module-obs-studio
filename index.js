@@ -2573,6 +2573,17 @@ instance.prototype.init_feedbacks = function () {
 		description: 'If a scene is in preview or program, change colors of the button',
 		options: [
 			{
+				type: 'dropdown',
+				label: 'mode',
+				id: 'mode',
+				default: 'programAndPreview',
+				choices: [
+					{ id: 'programAndPreview', label: 'Program and Preview' },
+					{ id: 'program', label: 'Program' },
+					{ id: 'preview', label: 'Preview' },
+				],
+			},
+			{
 				type: 'colorpicker',
 				label: 'Foreground color (program)',
 				id: 'fg',
@@ -2925,12 +2936,19 @@ instance.prototype.feedback = function (feedback) {
 	}
 
 	if (feedback.type === 'scene_active') {
-		if (self.states['scene_active'] === feedback.options.scene) {
+		let mode = feedback.options.mode;
+		if (!mode) {
+			mode = 'programAndPreview';
+		}
+		if (self.states['scene_active'] === feedback.options.scene &&
+			(mode === 'programAndPreview' || mode === 'program')
+		) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 		} else if (
 			self.states['scene_preview'] === feedback.options.scene &&
 			typeof feedback.options.fg_preview === 'number' &&
-			self.states['studio_mode'] === true
+			self.states['studio_mode'] === true &&
+			(mode === 'programAndPreview' || mode === 'preview')
 		) {
 			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
 		} else {
