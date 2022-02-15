@@ -1533,7 +1533,7 @@ instance.prototype.actions = function () {
 					label: 'Source',
 					id: 'source',
 					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					choices: [{id: '__all_sources__', label: '<ALL SOURCES>'}, ...self.sourcelist],
 					minChoicesForSearch: 5,
 				},
 				{
@@ -2240,48 +2240,50 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send('StartStopRecording')
 			break
 		case 'toggle_scene_item':
-			let visible = true
 			let sceneName = action.options.scene
-			if (action.options.scene == 'Current Scene') {
+			let sourceName = action.options.source
+
+			// special scene names
+			if (!sceneName || sceneName === 'Current Scene') {
 				sceneName = self.states['scene_active']
-			} else if (action.options.scene == 'Preview Scene') {
+			} else if (sceneName === 'Preview Scene') {
 				sceneName = self.states['scene_preview']
-			} else {
-				sceneName = action.options.scene
 			}
-			if (action.options.visible == 'toggle') {
-				if (sceneName) {
-					let scene = self.scenes[sceneName]
-					if (scene) {
-						for (let source of scene.sources) {
-							if (source.type == 'scene' && source.name == action.options.source) {
-								visible = !source.render
-							} else if (source.type == 'group') {
-								if (source.name == action.options.source) {
-									visible = !source.render
-								} else {
-									for (let groupedSource of source.groupChildren) {
-										if (groupedSource.name == action.options.source) {
-											visible = !groupedSource.render
-										}
-									}
-								}
-							} else if (source.name == action.options.source) {
-								visible = !source.render
-							}
+			let scene = self.scenes[sceneName]
+
+			// build an array of source names for which we've to update the visible property
+			let actionSourcesNames = []
+			if (sourceName === '__all_sources__') {
+				for (let source of scene.sources) {
+					if (source.type === 'group') {
+						// only the group members are added here, not the group itself. Is there any use case for considering groups as well?
+						for (let sourceGroupChild of source.groupChildren) {
+							actionSourcesNames.push(sourceGroupChild.name)
 						}
+					} else {
+						actionSourcesNames.push(source.name)
 					}
-				} else if (self.sources[action.options.source]) {
-					visible = !self.sources[action.options.source].render
 				}
 			} else {
-				visible = action.options.visible == 'true'
+				actionSourcesNames.push(sourceName)
 			}
-			handle = self.obs.send('SetSceneItemProperties', {
-				item: action.options.source,
-				visible: visible,
-				'scene-name': sceneName,
-			})
+
+			actionSourcesNames.forEach( (actionSourceName) => {
+				let source = self.sources[actionSourceName]
+				if (source) {
+					let visible
+					if (action.options.visible === 'toggle') { 
+						visible = !source.render
+					} else {
+						visible = action.options.visible == 'true'
+					}
+					handle = self.obs.send('SetSceneItemProperties', {
+						item: actionSourceName,
+						visible: visible,
+						'scene-name': sceneName,
+					})
+				}
+			});
 			break
 		case 'set-freetype-text':
 			var text
