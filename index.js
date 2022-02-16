@@ -2,6 +2,7 @@ var instance_skel = require('../../instance_skel')
 var tcp = require('../../tcp')
 var hotkeys = require('./hotkeys')
 const OBSWebSocket = require('obs-websocket-js')
+const url = require('url');
 
 var debug
 var log
@@ -464,6 +465,13 @@ instance.prototype.config_fields = function () {
 			id: 'pass',
 			label: 'Password',
 			width: 4,
+		},
+		{
+			type: 'textinput',
+			id: 'custom_presets_file_name',
+			label: 'Custom Presets File (.mjs)',
+			width: 12,
+			regex: '/\.mjs$/',
 		},
 	]
 }
@@ -3103,9 +3111,22 @@ instance.prototype.feedback = function (feedback) {
 	return false
 }
 
-instance.prototype.init_presets = function () {
+instance.prototype.init_presets = async function () {
 	var self = this
 	var presets = []
+
+	let customPresets = []
+	const customPresetsFilename = url.pathToFileURL(self.config.custom_presets_file_name)
+	if (customPresetsFilename) {
+		try {
+			const customPresetsModule = await import(customPresetsFilename)
+			customPresetsModule.customPresets(self, customPresets)
+			presets.push.apply(presets, customPresets)
+		}
+		catch(err) {
+			self.log('warn', err.toString())
+		}
+	} 
 
 	for (var s in self.scenelist) {
 		var scene = self.scenelist[s]
