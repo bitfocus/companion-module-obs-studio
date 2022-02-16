@@ -2709,7 +2709,7 @@ instance.prototype.init_feedbacks = function () {
 				label: 'Source name',
 				id: 'source',
 				default: self.sourcelistDefault,
-				choices: self.sourcelist,
+				choices: [{id: '__all_sources__', label: '<ALL SOURCES>'}, ...self.sourcelist],
 				minChoicesForSearch: 5,
 			},
 		],
@@ -2978,11 +2978,18 @@ instance.prototype.feedback = function (feedback) {
 			for (let source of scene.sources) {
 				if (source.name == feedback.options.source && source.render === true) {
 					return true
+				} else if (source.type != 'group' && feedback.options.source === '__all_sources__' && source.render === true) {
+					return true
 				}
 				if (source.type == 'group') {
 					for (let s in source.groupChildren) {
 						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
 							return true
+						} else if (source.render === true) {
+							// consider group members only if the parent group is active
+							if  (feedback.options.source === '__all_sources__' && source.groupChildren[s].render) {
+								return true
+							}
 						}
 					}
 				}
