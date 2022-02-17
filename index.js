@@ -2574,36 +2574,36 @@ instance.prototype.init_feedbacks = function () {
 		options: [
 			{
 				type: 'dropdown',
-				label: 'mode',
+				label: 'Mode',
 				id: 'mode',
 				default: 'programAndPreview',
 				choices: [
 					{ id: 'programAndPreview', label: 'Program and Preview' },
-					{ id: 'program', label: 'Program' },
-					{ id: 'preview', label: 'Preview' },
+					{ id: 'program', label: 'Program Only' },
+					{ id: 'preview', label: 'Preview Only' },
 				],
 			},
 			{
 				type: 'colorpicker',
-				label: 'Foreground color (program)',
+				label: 'Foreground color (Program)',
 				id: 'fg',
 				default: self.rgb(255, 255, 255),
 			},
 			{
 				type: 'colorpicker',
-				label: 'Background color (program)',
+				label: 'Background color (Program)',
 				id: 'bg',
 				default: self.rgb(200, 0, 0),
 			},
 			{
 				type: 'colorpicker',
-				label: 'Foreground color (preview)',
+				label: 'Foreground color (Preview)',
 				id: 'fg_preview',
 				default: self.rgb(255, 255, 255),
 			},
 			{
 				type: 'colorpicker',
-				label: 'Background color (preview)',
+				label: 'Background color (Preview)',
 				id: 'bg_preview',
 				default: self.rgb(0, 200, 0),
 			},
@@ -2936,11 +2936,12 @@ instance.prototype.feedback = function (feedback) {
 	}
 
 	if (feedback.type === 'scene_active') {
-		let mode = feedback.options.mode;
+		let mode = feedback.options.mode
 		if (!mode) {
-			mode = 'programAndPreview';
+			mode = 'programAndPreview'
 		}
-		if (self.states['scene_active'] === feedback.options.scene &&
+		if (
+			self.states['scene_active'] === feedback.options.scene &&
 			(mode === 'programAndPreview' || mode === 'program')
 		) {
 			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
