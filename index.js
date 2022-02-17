@@ -2251,39 +2251,47 @@ instance.prototype.action = function (action) {
 			}
 			let scene = self.scenes[sceneName]
 
-			// build an array of source names for which we've to update the visible property
-			let actionSourcesNames = []
-			if (sourceName === '__all_sources__') {
-				for (let source of scene.sources) {
-					if (source.type === 'group') {
-						// only the group members are added here, not the group itself. Is there any use case for considering groups as well?
-						for (let sourceGroupChild of source.groupChildren) {
-							actionSourcesNames.push(sourceGroupChild.name)
-						}
-					} else {
-						actionSourcesNames.push(source.name)
-					}
+			let setSourceVisibility = function (sourceName, render)  {
+				let visible
+				if (action.options.visible === 'toggle') { 
+					visible = !render
+				} else {
+					visible = action.options.visible == 'true'
 				}
-			} else {
-				actionSourcesNames.push(sourceName)
+				//console.log('sourceName: ' + sourceName + ', render: ' + render + ' -> ' + visible)
+				handle = self.obs.send('SetSceneItemProperties', {
+					item: sourceName,
+					visible: visible,
+					'scene-name': sceneName,
+				})
 			}
 
-			actionSourcesNames.forEach( (actionSourceName) => {
-				let source = self.sources[actionSourceName]
-				if (source) {
-					let visible
-					if (action.options.visible === 'toggle') { 
-						visible = !source.render
-					} else {
-						visible = action.options.visible == 'true'
+			if (scene) {
+				let actionSources = {}
+				let finished = false;
+				for (let source of scene.sources) {
+					// __all_sources__ does not include the group, is there any use case for considering groups as well?
+					if (source.type === 'group') {
+						if (sourceName === source.name ) {
+							setSourceVisibility(source.name, source.render) // this is the group
+							if (sourceName !== '__all_sources__') break
+						}
+						for (let sourceGroupChild of source.groupChildren) {
+							if (sourceName === '__all_sources__' || sourceGroupChild.name === sourceName ) {
+								setSourceVisibility(sourceGroupChild.name, sourceGroupChild.render)
+								if (sourceName !== '__all_sources__') {
+									finished = true
+									break
+								}
+							}
+						}
+						if (finished) break
+					}  else if (sourceName === '__all_sources__' || source.name === sourceName ) {
+						setSourceVisibility(source.name, source.render)
+						if (sourceName !== '__all_sources__') break
 					}
-					handle = self.obs.send('SetSceneItemProperties', {
-						item: actionSourceName,
-						visible: visible,
-						'scene-name': sceneName,
-					})
 				}
-			});
+			}
 			break
 		case 'set-freetype-text':
 			var text
