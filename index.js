@@ -1533,7 +1533,7 @@ instance.prototype.actions = function () {
 					label: 'Source',
 					id: 'source',
 					default: self.sourcelistDefault,
-					choices: self.sourcelist,
+					choices: [{ id: 'allSources', label: '<ALL SOURCES>' }, ...self.sourcelist],
 					minChoicesForSearch: 5,
 				},
 				{
@@ -2240,48 +2240,56 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send('StartStopRecording')
 			break
 		case 'toggle_scene_item':
-			let visible = true
 			let sceneName = action.options.scene
-			if (action.options.scene == 'Current Scene') {
+			let sourceName = action.options.source
+
+			// special scene names
+			if (!sceneName || sceneName === 'Current Scene') {
 				sceneName = self.states['scene_active']
-			} else if (action.options.scene == 'Preview Scene') {
+			} else if (sceneName === 'Preview Scene') {
 				sceneName = self.states['scene_preview']
-			} else {
-				sceneName = action.options.scene
 			}
-			if (action.options.visible == 'toggle') {
-				if (sceneName) {
-					let scene = self.scenes[sceneName]
-					if (scene) {
-						for (let source of scene.sources) {
-							if (source.type == 'scene' && source.name == action.options.source) {
-								visible = !source.render
-							} else if (source.type == 'group') {
-								if (source.name == action.options.source) {
-									visible = !source.render
-								} else {
-									for (let groupedSource of source.groupChildren) {
-										if (groupedSource.name == action.options.source) {
-											visible = !groupedSource.render
-										}
-									}
+			let scene = self.scenes[sceneName]
+
+			let setSourceVisibility = function (sourceName, render) {
+				let visible
+				if (action.options.visible === 'toggle') {
+					visible = !render
+				} else {
+					visible = action.options.visible == 'true'
+				}
+				handle = self.obs.send('SetSceneItemProperties', {
+					item: sourceName,
+					visible: visible,
+					'scene-name': sceneName,
+				})
+			}
+
+			if (scene) {
+				let finished = false
+				for (let source of scene.sources) {
+					// allSources does not include the group, is there any use case for considering groups as well?
+					if (source.type === 'group') {
+						if (sourceName === source.name) {
+							setSourceVisibility(source.name, source.render) // this is the group
+							if (sourceName !== 'allSources') break
+						}
+						for (let sourceGroupChild of source.groupChildren) {
+							if (sourceName === 'allSources' || sourceGroupChild.name === sourceName) {
+								setSourceVisibility(sourceGroupChild.name, sourceGroupChild.render)
+								if (sourceName !== 'allSources') {
+									finished = true
+									break
 								}
-							} else if (source.name == action.options.source) {
-								visible = !source.render
 							}
 						}
+						if (finished) break
+					} else if (sourceName === 'allSources' || source.name === sourceName) {
+						setSourceVisibility(source.name, source.render)
+						if (sourceName !== 'allSources') break
 					}
-				} else if (self.sources[action.options.source]) {
-					visible = !self.sources[action.options.source].render
 				}
-			} else {
-				visible = action.options.visible == 'true'
 			}
-			handle = self.obs.send('SetSceneItemProperties', {
-				item: action.options.source,
-				visible: visible,
-				'scene-name': sceneName,
-			})
 			break
 		case 'set-freetype-text':
 			var text
@@ -2511,16 +2519,17 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send(action.options.command, arg)
 			break
 	}
-
-	handle.catch((error) => {
-		if (error.code == 'NOT_CONNECTED') {
-			self.log('error', 'Unable to connect to OBS. Please re-start OBS manually.')
-			self.obs.disconnect()
-			self.init()
-		} else {
-			self.log('warn', error.error)
-		}
-	})
+	if (handle) {
+		handle.catch((error) => {
+			if (error.code == 'NOT_CONNECTED') {
+				self.log('error', 'Unable to connect to OBS. Please re-start OBS manually.')
+				self.obs.disconnect()
+				self.init()
+			} else {
+				self.log('warn', error.error)
+			}
+		})
+	}
 }
 
 instance.prototype.init_feedbacks = function () {

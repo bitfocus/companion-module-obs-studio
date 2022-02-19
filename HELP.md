@@ -30,7 +30,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Sources**
 
-- Set Source Visibility
+- Set Source Visibility _(Individual sources, or All Sources within a scene)_
 - Set Filter Visibility
 - Set Source Properties (Position / Scale / Rotation)
 - Source Mute (Set / Toggle)
@@ -69,7 +69,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Switching & Transitions**
 
-- Scene in Preview / Program
+- Scene in Preview / Program _(Program and Preview, Program Only, or Preview Only)_
 - Transition in Progress
 - Current Transition Type
 - Transition Duration
