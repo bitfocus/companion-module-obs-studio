@@ -2521,16 +2521,17 @@ instance.prototype.action = function (action) {
 			handle = self.obs.send(action.options.command, arg)
 			break
 	}
-
-	handle.catch((error) => {
-		if (error.code == 'NOT_CONNECTED') {
-			self.log('error', 'Unable to connect to OBS. Please re-start OBS manually.')
-			self.obs.disconnect()
-			self.init()
-		} else {
-			self.log('warn', error.error)
-		}
-	})
+	if (handle) {
+		handle.catch((error) => {
+			if (error.code == 'NOT_CONNECTED') {
+				self.log('error', 'Unable to connect to OBS. Please re-start OBS manually.')
+				self.obs.disconnect()
+				self.init()
+			} else {
+				self.log('warn', error.error)
+			}
+		})
+	}
 }
 
 instance.prototype.init_feedbacks = function () {
