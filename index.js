@@ -1533,7 +1533,7 @@ instance.prototype.actions = function () {
 					label: 'Source',
 					id: 'source',
 					default: self.sourcelistDefault,
-					choices: [{id: '__all_sources__', label: '<ALL SOURCES>'}, ...self.sourcelist],
+					choices: [{ id: 'allSources', label: '<ALL SOURCES>' }, ...self.sourcelist],
 					minChoicesForSearch: 5,
 				},
 				{
@@ -2251,14 +2251,13 @@ instance.prototype.action = function (action) {
 			}
 			let scene = self.scenes[sceneName]
 
-			let setSourceVisibility = function (sourceName, render)  {
+			let setSourceVisibility = function (sourceName, render) {
 				let visible
-				if (action.options.visible === 'toggle') { 
+				if (action.options.visible === 'toggle') {
 					visible = !render
 				} else {
 					visible = action.options.visible == 'true'
 				}
-				//console.log('sourceName: ' + sourceName + ', render: ' + render + ' -> ' + visible)
 				handle = self.obs.send('SetSceneItemProperties', {
 					item: sourceName,
 					visible: visible,
@@ -2267,28 +2266,27 @@ instance.prototype.action = function (action) {
 			}
 
 			if (scene) {
-				let actionSources = {}
-				let finished = false;
+				let finished = false
 				for (let source of scene.sources) {
-					// __all_sources__ does not include the group, is there any use case for considering groups as well?
+					// allSources does not include the group, is there any use case for considering groups as well?
 					if (source.type === 'group') {
-						if (sourceName === source.name ) {
+						if (sourceName === source.name) {
 							setSourceVisibility(source.name, source.render) // this is the group
-							if (sourceName !== '__all_sources__') break
+							if (sourceName !== 'allSources') break
 						}
 						for (let sourceGroupChild of source.groupChildren) {
-							if (sourceName === '__all_sources__' || sourceGroupChild.name === sourceName ) {
+							if (sourceName === 'allSources' || sourceGroupChild.name === sourceName) {
 								setSourceVisibility(sourceGroupChild.name, sourceGroupChild.render)
-								if (sourceName !== '__all_sources__') {
+								if (sourceName !== 'allSources') {
 									finished = true
 									break
 								}
 							}
 						}
 						if (finished) break
-					}  else if (sourceName === '__all_sources__' || source.name === sourceName ) {
+					} else if (sourceName === 'allSources' || source.name === sourceName) {
 						setSourceVisibility(source.name, source.render)
-						if (sourceName !== '__all_sources__') break
+						if (sourceName !== 'allSources') break
 					}
 				}
 			}
