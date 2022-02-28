@@ -3003,13 +3003,6 @@ instance.prototype.init_feedbacks = function () {
 				id: 'blinkingEnabled',
 				default: false
 			},
-			{
-				type: 'checkbox',
-				label: 'Debug',
-				id: 'debug',
-				default: false
-			},
-
 		],
 	}
 
@@ -3215,48 +3208,33 @@ instance.prototype.feedback = function (feedback) {
 	}
 
 	if (feedback.type === 'media_source_time_remaining') {
-		const sourceName = feedback.options.source
-		const rtThreshold = feedback.options.rtThreshold
-		const onlyIfSourceIsOnProgram = feedback.options.onlyIfSourceIsOnProgram
-		const onlyIfSourceIsPlaying = feedback.options.onlyIfSourceIsPlaying
-		const blinkingEnabled = feedback.options.blinkingEnabled
-
-		let debugLevel = 0
-		if (feedback.options.debug) debugLevel = 1
+		const {source: sourceName, rtThreshold, onlyIfSourceIsOnProgram, onlyIfSourceIsPlaying, blinkingEnabled} = feedback.options;
 
 		let remainingTime // remaining time in seconds
 		let mediaState
 		if (self.mediaSources && self.mediaSources[sourceName]) {
 			remainingTime = Math.round(self.mediaSources[sourceName].mediaTimeRemaining / 1000)
-			mediaState = self.mediaSources[sourceName].mediaState			
+			mediaState = self.mediaSources[sourceName].mediaState
 		}
 		if (remainingTime === undefined) return false
-		
-		if (debugLevel > 0) self.log('debug', 'media_source_time_remaining source: ' + sourceName + ', state: '  + mediaState + ', remaining time: ' + remainingTime + ' sec');
 
 		if (onlyIfSourceIsOnProgram && !self.isSourceOnProgram(sourceName)) {
-			if (debugLevel > 0) self.log('debug', 'media_source_time_remaining FEEDBACK OFF (not on program) [' + sourceName + ']');
 			return false;
 		}
 		
 		if (onlyIfSourceIsPlaying && mediaState !== 'Playing') {
-			if (debugLevel > 0) self.log('debug', 'media_source_time_remaining FEEDBACK OFF (not playing) [' + sourceName + ']');
 			return false
 		}
 
 		if (remainingTime <= rtThreshold) {
 			if (blinkingEnabled && mediaState === 'Playing') {
-				// TODO: implement a better button blinking
-				// or wait for https://github.com/bitfocus/companion/issues/674
+				// TODO: implement a better button blinking, or wait for https://github.com/bitfocus/companion/issues/674
 				if (remainingTime % 2 != 0) {  // flash in seconds interval (checkFeedbacks interval = media poller interval)
-					if (debugLevel > 0) self.log('debug', 'media_source_time_remaining FEEDBACK OFF (blink) [' + sourceName + ']');
 					return false
 				}
 			}
-			if (debugLevel > 0) self.log('debug', 'media_source_time_remaining FEEDBACK ON (remaining time below threshold) [' + sourceName + ']');
 			return true
 		}
-		if (debugLevel > 0) self.log('debug', 'media_source_time_remaining FEEDBACK OFF (remaining time above threshold) [' + sourceName + ']');
 	}
 
 	return false
