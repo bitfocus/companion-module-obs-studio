@@ -94,6 +94,7 @@ instance.prototype.init = function () {
 		self.scenes = {}
 		self.transitions = {}
 		self.outputs = {}
+		self.mediaSources = {}
 
 		self.obs
 			.connect({
@@ -860,11 +861,11 @@ instance.prototype.updateSourceAudio = function () {
 
 instance.prototype.updateMediaSources = function () {
 	var self = this
-	self.mediaSources = {}
 	self.obs.send('GetMediaSourcesList').then((data) => {
 		for (var s in data.mediaSources) {
 			let mediaSource = data.mediaSources[s]
-			self.mediaSources[mediaSource.sourceName] = mediaSource
+			if (!self.mediaSources[mediaSource.sourceName]) self.mediaSources[mediaSource.sourceName] = {}
+			self.mediaSources[mediaSource.sourceName] = Object.assign(self.mediaSources[mediaSource.sourceName], mediaSource)
 			self.mediaSources[mediaSource.sourceName]['mediaState'] =
 				mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
 			if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
@@ -1002,6 +1003,7 @@ instance.prototype.startMediaPoller = function () {
 						.then((data) => {
 							self.mediaSources[mediaSource.sourceName]['mediaTime'] = data.timestamp
 							let timeRemaining = self.mediaSources[mediaSource.sourceName]['mediaDuration'] - data.timestamp
+							self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining'] = timeRemaining
 							try {
 								self.setVariable(
 									'media_time_elapsed_' + mediaSource.sourceName,
@@ -1035,6 +1037,7 @@ instance.prototype.startMediaPoller = function () {
 				self.setVariable('current_media_time_remaining', '--:--:--')
 				self.setVariable('current_media_name', 'None')
 			}
+			self.checkFeedbacks('media_source_time_remaining')
 		}
 	}, 1000)
 }
@@ -1112,6 +1115,28 @@ instance.prototype.destroy = function () {
 	self.authenticated = null
 	self.stopStatsPoller()
 	self.stopMediaPoller()
+}
+
+// Returns true if a given scene name is in the active (on program) source, else false
+instance.prototype.isSourceOnProgram = function (sourceName) {
+	var self = this
+	let scene = self.scenes[self.states['scene_active']]
+	if (scene && scene.sources) {
+		for (let source of scene.sources) {
+			if (source.type == 'group') {
+				for (let sourceGroupChild of source.groupChildren) {
+					if (sourceGroupChild.name === sourceName) {
+						//console.log('source ' + sourceGroupChild.name + ' is on program')
+						return true
+					}
+				}
+			} else if (source.name === sourceName) {
+				//console.log('source ' + source.name + ' is on program')
+				return true
+			}
+		}
+	}
+	return false
 }
 
 instance.prototype.actions = function () {
@@ -2934,6 +2959,53 @@ instance.prototype.init_feedbacks = function () {
 		],
 	}
 
+	feedbacks['media_source_time_remaining'] = {
+		type: 'boolean',
+		label: 'Media Source Remaining Time',
+		description: 'If remaining time of a media source is below a threshold, change the style of the button',
+		style: {
+			color: self.rgb(0, 0, 0),
+			bgcolor: self.rgb(255, 0, 0),
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.mediaSourceListDefault,
+				choices: self.mediaSourceList,
+				minChoicesForSearch: 5,
+			},
+			{
+				type: 'number',
+				label: 'Remaining time threshold (in seconds)',
+				id: 'rtThreshold',
+				default: 20,
+				min: 0,
+				max: 3600, //max is required by api
+				range: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Feedback only if source is on program',
+				id: 'onlyIfSourceIsOnProgram',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Feedback only if source is playing',
+				id: 'onlyIfSourceIsPlaying',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Blinking',
+				id: 'blinkingEnabled',
+				default: false,
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -3131,6 +3203,43 @@ instance.prototype.feedback = function (feedback) {
 			self.mediaSources[feedback.options.source] &&
 			self.mediaSources[feedback.options.source]['mediaState'] === 'Playing'
 		) {
+			return true
+		}
+	}
+
+	if (feedback.type === 'media_source_time_remaining') {
+		const {
+			source: sourceName,
+			rtThreshold,
+			onlyIfSourceIsOnProgram,
+			onlyIfSourceIsPlaying,
+			blinkingEnabled,
+		} = feedback.options
+
+		let remainingTime // remaining time in seconds
+		let mediaState
+		if (self.mediaSources && self.mediaSources[sourceName]) {
+			remainingTime = Math.round(self.mediaSources[sourceName].mediaTimeRemaining / 1000)
+			mediaState = self.mediaSources[sourceName].mediaState
+		}
+		if (remainingTime === undefined) return false
+
+		if (onlyIfSourceIsOnProgram && !self.isSourceOnProgram(sourceName)) {
+			return false
+		}
+
+		if (onlyIfSourceIsPlaying && mediaState !== 'Playing') {
+			return false
+		}
+
+		if (remainingTime <= rtThreshold) {
+			if (blinkingEnabled && mediaState === 'Playing') {
+				// TODO: implement a better button blinking, or wait for https://github.com/bitfocus/companion/issues/674
+				if (remainingTime % 2 != 0) {
+					// flash in seconds interval (checkFeedbacks interval = media poller interval)
+					return false
+				}
+			}
 			return true
 		}
 	}
