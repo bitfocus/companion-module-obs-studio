@@ -865,7 +865,7 @@ instance.prototype.updateMediaSources = function () {
 		for (var s in data.mediaSources) {
 			let mediaSource = data.mediaSources[s]
 			if (!self.mediaSources[mediaSource.sourceName]) self.mediaSources[mediaSource.sourceName] = {}
-			self.mediaSources[mediaSource.sourceName] = Object.assign(self.mediaSources[mediaSource.sourceName], mediaSource);
+			self.mediaSources[mediaSource.sourceName] = Object.assign(self.mediaSources[mediaSource.sourceName], mediaSource)
 			self.mediaSources[mediaSource.sourceName]['mediaState'] =
 				mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
 			if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
@@ -1118,7 +1118,7 @@ instance.prototype.destroy = function () {
 }
 
 // Returns true if a given scene name is in the active (on program) source, else false
-instance.prototype.isSourceOnProgram = function(sourceName) {
+instance.prototype.isSourceOnProgram = function (sourceName) {
 	var self = this
 	let scene = self.scenes[self.states['scene_active']]
 	if (scene && scene.sources) {
@@ -2961,8 +2961,8 @@ instance.prototype.init_feedbacks = function () {
 
 	feedbacks['media_source_time_remaining'] = {
 		type: 'boolean',
-		label: 'Media source remaining time',
-		description: 'Change colors when remaining time of a media source is below a threshold',
+		label: 'Media Source Remaining Time',
+		description: 'If remaining time of a media source is below a threshold, change the style of the button',
 		style: {
 			color: self.rgb(0, 0, 0),
 			bgcolor: self.rgb(255, 0, 0),
@@ -2972,9 +2972,9 @@ instance.prototype.init_feedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-				minChoicesForSearch: 5
+				default: self.mediaSourceListDefault,
+				choices: self.mediaSourceList,
+				minChoicesForSearch: 5,
 			},
 			{
 				type: 'number',
@@ -2989,19 +2989,19 @@ instance.prototype.init_feedbacks = function () {
 				type: 'checkbox',
 				label: 'Feedback only if source is on program',
 				id: 'onlyIfSourceIsOnProgram',
-				default: false
+				default: false,
 			},
 			{
 				type: 'checkbox',
 				label: 'Feedback only if source is playing',
 				id: 'onlyIfSourceIsPlaying',
-				default: false
+				default: false,
 			},
 			{
 				type: 'checkbox',
 				label: 'Blinking',
 				id: 'blinkingEnabled',
-				default: false
+				default: false,
 			},
 		],
 	}
@@ -3208,7 +3208,13 @@ instance.prototype.feedback = function (feedback) {
 	}
 
 	if (feedback.type === 'media_source_time_remaining') {
-		const {source: sourceName, rtThreshold, onlyIfSourceIsOnProgram, onlyIfSourceIsPlaying, blinkingEnabled} = feedback.options;
+		const {
+			source: sourceName,
+			rtThreshold,
+			onlyIfSourceIsOnProgram,
+			onlyIfSourceIsPlaying,
+			blinkingEnabled,
+		} = feedback.options
 
 		let remainingTime // remaining time in seconds
 		let mediaState
@@ -3219,9 +3225,9 @@ instance.prototype.feedback = function (feedback) {
 		if (remainingTime === undefined) return false
 
 		if (onlyIfSourceIsOnProgram && !self.isSourceOnProgram(sourceName)) {
-			return false;
+			return false
 		}
-		
+
 		if (onlyIfSourceIsPlaying && mediaState !== 'Playing') {
 			return false
 		}
@@ -3229,7 +3235,8 @@ instance.prototype.feedback = function (feedback) {
 		if (remainingTime <= rtThreshold) {
 			if (blinkingEnabled && mediaState === 'Playing') {
 				// TODO: implement a better button blinking, or wait for https://github.com/bitfocus/companion/issues/674
-				if (remainingTime % 2 != 0) {  // flash in seconds interval (checkFeedbacks interval = media poller interval)
+				if (remainingTime % 2 != 0) {
+					// flash in seconds interval (checkFeedbacks interval = media poller interval)
 					return false
 				}
 			}

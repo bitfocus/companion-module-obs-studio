@@ -83,6 +83,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Audio Monitor Type
 - Volume
 - Media Playing
+- Media Source Remaining Time _(If remaining time of a media source is below a threshold, change the style of the button)_
 
 **General**
 
