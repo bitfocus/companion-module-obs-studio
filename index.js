@@ -1021,10 +1021,14 @@ instance.prototype.startMediaPoller = function () {
 								self.debug(`Media time remaining parse error: ${e}`)
 							}
 							self.setVariable('current_media_time_elapsed', new Date(data.timestamp).toISOString().slice(11, 19))
-							self.setVariable(
-								'current_media_time_remaining',
-								'-' + new Date(timeRemaining).toISOString().slice(11, 19)
-							)
+							try {
+								self.setVariable(
+									'current_media_time_remaining',
+									'-' + new Date(timeRemaining).toISOString().slice(11, 19)
+								)
+							} catch (e) {
+								self.log('error', `Media time remaining parse error: ${e}`)
+							}
 							self.setVariable('current_media_name', mediaSource.sourceName)
 						})
 				} else if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Stopped' || 'Ended') {
