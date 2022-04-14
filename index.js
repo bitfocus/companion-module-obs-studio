@@ -255,6 +255,10 @@ instance.prototype.init = function () {
 			if (self.imageSources[data.itemName]) {
 				self.updateImageSources(data.itemName)
 			}
+			if (self.textSources[data.itemName]) {
+				let type = self.textSources[data.itemName]?.typeId
+				self.updateTextSources(data.itemName, type)
+			}
 			rateLimiter = false
 			setTimeout(function () {
 				rateLimiter = true
@@ -584,10 +588,14 @@ instance.prototype.updateScenesAndSources = async function () {
 	await self.obs.send('GetSourcesList').then((data) => {
 		self.sources = {}
 		self.imageSources = {}
+		self.textSources = {}
 		for (var s in data.sources) {
 			var source = data.sources[s]
 			self.sources[source.name] = source
-			self.updateTextSources(source.name, source.typeId)
+			if (source.typeId === 'text_ft2_source_v2' || source.typeId === 'text_gdiplus_v2') {
+				self.textSources[source.name] = source
+				self.updateTextSources(source.name, source.typeId)
+			}
 			if (source.typeId === 'image_source') {
 				self.imageSources[source.name] = source
 				self.updateImageSources(source.name, source)
