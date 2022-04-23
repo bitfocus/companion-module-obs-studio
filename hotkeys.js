@@ -1,4 +1,4 @@
-var hotkeyList = [
+module.exports = [
 	{ label: 'A', id: 'OBS_KEY_A' },
 	{ label: 'B', id: 'OBS_KEY_B' },
 	{ label: 'C', id: 'OBS_KEY_C' },
@@ -155,5 +155,3 @@ var hotkeyList = [
 	{ label: '] (Brace Right)', id: 'OBS_KEY_BRACERIGHT' },
 	{ label: '` (Dead Grave)', id: 'OBS_KEY_DEAD_GRAVE' },
 ]
-
-exports.hotkeyList = hotkeyList
