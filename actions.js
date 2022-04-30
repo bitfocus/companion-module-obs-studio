@@ -8,12 +8,9 @@ module.exports = {
 		this.sourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
 		this.sceneList?.sort((a, b) => (a.id < b.id ? -1 : 1))
 		this.textSourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
-	
 
-
-		let scenelist = []
 		let scenelistToggle = []
-		let sourcelist = []
+
 		let transitionlist = []
 		let profilelist = []
 		let scenecollectionlist = []
@@ -73,7 +70,7 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: scenelistDefault,
-					choices: scenelist,
+					choices: this.sceneList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -86,7 +83,7 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: scenelistDefault,
-					choices: scenelist,
+					choices: this.sceneList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -100,7 +97,7 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: scenelistDefault,
-					choices: scenelist,
+					choices: this.sceneList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -162,8 +159,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
-					default: transitionlistDefault,
-					choices: transitionlist,
+					default: this.transitionList?.[0] ? this.transitionList[0].id : '',
+					choices: this.transitionList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -231,7 +228,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},
 				{
@@ -254,7 +251,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -268,7 +265,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},
 				{
@@ -292,7 +289,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},
 				{
@@ -322,7 +319,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: [{ id: 'allSources', label: '<ALL SOURCES>' }, ...sourcelist],
+					//choices: [{ id: 'allSources', label: '<ALL SOURCES>' }, ...this.sourceList],
 					minChoicesForSearch: 5,
 				},
 				{
@@ -341,14 +338,14 @@ module.exports = {
 		actions['reconnect'] = {
 			label: 'Reconnect to OBS',
 		}
-		actions['set-freetype-text'] = {
-			label: 'Set Source Text (FreeType 2)',
+		actions['setText'] = {
+			label: 'Set Source Text',
 			options: [
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: this.textSourceList ? this.textSourceList[0] : 'None',
+					default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
 					choices: this.textSourceList,
 					required: true,
 					minChoicesForSearch: 5,
@@ -361,15 +358,15 @@ module.exports = {
 				},
 			],
 		}
-		actions['set-gdi-text'] = {
+		actions['set-gdi-text'] = { ///REMOVE THIS, merge with SET TEXT action
 			label: 'Set Source Text (GDI+)',
 			options: [
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourcelistDefault,
-					choices: sourcelist,
+					default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
+					choices: this.textSourceList,
 					required: true,
 					minChoicesForSearch: 5,
 				},
@@ -440,8 +437,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Profile',
 					id: 'profile',
-					default: profilelistDefault,
-					choices: profilelist,
+					default: this.profileList?.[0] ? this.profileList[0].id : '',
+					choices: this.profileList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -453,8 +450,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene Collection',
 					id: 'scene_collection',
-					default: scenecollectionlistDefault,
-					choices: scenecollectionlist,
+					default: this.sceneCollectionList?.[0] ? this.sceneCollectionList[0].id : '',
+					choices: this.sceneCollectionList,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -509,7 +506,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					required: false,
 					minChoicesForSearch: 5,
 				},
@@ -523,7 +520,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					required: true,
 					minChoicesForSearch: 5,
 				},
@@ -571,7 +568,7 @@ module.exports = {
 					label: 'Source (Optional, default is current scene)',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 					required: false,
 					minChoicesForSearch: 5,
 				},
@@ -591,7 +588,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 				},
 				{
 					type: 'dropdown',
@@ -761,7 +758,7 @@ module.exports = {
 					label: 'Source / Scene (required if selected as projector type)',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 				},
 			],
 		}
@@ -782,7 +779,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: sourcelistDefault,
-					choices: sourcelist,
+					choices: this.sourceList,
 				},
 				{
 					type: 'textwithvariables',
@@ -813,6 +810,45 @@ module.exports = {
 					label: 'Rotation (degrees clockwise)',
 					id: 'rotation',
 					default: '',
+				},
+			],
+		}
+		actions['openInputPropertiesDialog'] = {
+			label: 'Open Properties Window',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: this.sourceList?.[0] ? this.sourceList[0].id : '',
+					choices: this.sourceList,
+					minChoicesForSearch: 5,
+				},
+			],
+		}
+		actions['openInputFiltersDialog'] = {
+			label: 'Open Filters Window',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: this.sourceList?.[0] ? this.sourceList[0].id : '',
+					choices: this.sourceList,
+					minChoicesForSearch: 5,
+				},
+			],
+		}
+		actions['openInputInteractDialog'] = {
+			label: 'Open Interact Window',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: this.sourceList?.[0] ? this.sourceList[0].id : '',
+					choices: this.sourceList,
+					minChoicesForSearch: 5,
 				},
 			],
 		}

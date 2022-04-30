@@ -1,52 +1,5 @@
-var instance_skel = require('../../instance_skel')
-var tcp = require('../../tcp')
-var hotkeys = require('./hotkeys')
-const OBSWebSocket = require('obs-websocket-js')
 
-var debug
-var log
 
-function instance(system, id, config) {
-	var self = this
-
-	// super-constructor
-	instance_skel.apply(this, arguments)
-
-	self.actions()
-
-	return self
-}
-
-instance.GetUpgradeScripts = function () {
-	return [
-		instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
-			streaming: true,
-			scene_item_active: true,
-			profile_active: true,
-			scene_collection_active: true,
-			scene_item_active_in_scene: true,
-			output_active: true,
-			transition_active: true,
-			current_transition: true,
-			transition_duration: true,
-			filter_enabled: true,
-		}),
-	]
-}
-
-instance.prototype.updateConfig = function (config) {
-	var self = this
-	self.config = config
-	self.log('debug', 'Updating configuration.')
-	if (self.obs !== undefined) {
-		self.obs.disconnect()
-	}
-	if (self.tcp !== undefined) {
-		self.tcp.destroy()
-		delete self.tcp
-	}
-	self.init()
-}
 
 instance.prototype.init = function () {
 	var self = this
@@ -63,30 +16,8 @@ instance.prototype.init = function () {
 		self.obs = undefined
 	}
 
-	// Connecting on init not necessary for OBSWebSocket. But during init try to tcp connect
-	// to get the status of the module right and automatically try reconnecting. Which is
-	// implemented in ../../tcp by Companion core developers.
-	self.tcp = new tcp(
-		self.config.host !== '' ? self.config.host : '127.0.0.1',
-		self.config.port !== '' ? self.config.port : '4444'
-	)
-
-	self.tcp.on('status_change', function (status, message) {
-		self.status(status, message)
-	})
-
-	self.tcp.on('error', function () {
-		// Ignore
-	})
 	self.tcp.on('connect', function () {
-		// disconnect immediately because further comm takes place via OBSWebSocket and not
-		// via this tcp sockets.
-		if (!self.tcp) {
-			return
-		}
-
-		self.tcp.destroy()
-		delete self.tcp
+		
 
 		// original init procedure continuing. Use OBSWebSocket to make the real connection.
 		self.obs = new OBSWebSocket()

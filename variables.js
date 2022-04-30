@@ -51,19 +51,18 @@ exports.updateVariableDefinitions = function () {
 		})
 	} */
 
-	/* for (var s in self.sources) {
-		let source = self.sources[s]
-		if (source.typeId === 'text_ft2_source_v2') {
-			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
+	 for (let s in this.sources) {
+		let source = this.sources[s]
+		this.debug(source)
+		if (source.inputKind === 'text_ft2_source_v2' || source.inputKind === 'text_gdiplus_v2') {
+			variables.push({ name: 'current_text_' + source.sourceName, label: 'Current text for ' + source.sourceName })
+			this.setVariable('current_text_' + source.sourceName, source.settings?.text ? source.settings.text : '')
 		}
-		if (source.typeId === 'text_gdiplus_v2') {
-			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
-		}
-		if (source.typeId === 'image_source') {
+		/* if (source.typeId === 'image_source') {
 			variables.push({ name: 'image_file_name_' + source.name, label: 'Image file name for ' + source.name })
 		}
-		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
-	} */
+		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name }) */
+	} 
 
 	this.setVariableDefinitions(variables)
 }

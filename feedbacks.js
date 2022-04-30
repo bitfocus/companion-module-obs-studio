@@ -7,7 +7,7 @@ exports.initFeedbacks = function () {
 	const ColorGreen = this.rgb(0, 200, 0)
 	const ColorOrange = this.rgb(255, 102, 0)
 
-	/* feedbacks['streaming'] = {
+	feedbacks['streaming'] = {
 		type: 'boolean',
 		label: 'Streaming Active',
 		description: 'If streaming is active, change the style of the button',
@@ -15,10 +15,8 @@ exports.initFeedbacks = function () {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
-		callback: (feedback) => {
-			if (this.states['streaming'] === true) {
-				return true
-			}
+		callback: () => {
+			return this.states.streaming
 		},
 	}
 
@@ -52,9 +50,9 @@ exports.initFeedbacks = function () {
 			},
 		],
 		callback: (feedback) => {
-			if (this.states['recording'] === true) {
+			if (this.states.recording === 'Recording') {
 				return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-			} else if (this.states['recording'] === 'paused') {
+			} else if (this.states.recording === 'Paused') {
 				return { color: feedback.options.fg_paused, bgcolor: feedback.options.bg_paused }
 			} else {
 				return {}
@@ -158,7 +156,7 @@ exports.initFeedbacks = function () {
 		},
 	}
 
-	feedbacks['scene_item_previewed'] = {
+	/* feedbacks['scene_item_previewed'] = {
 		type: 'boolean',
 		label: 'Source Active in Preview',
 		description: 'If a source is enabled in the preview scene, change the style of the button',
@@ -176,7 +174,7 @@ exports.initFeedbacks = function () {
 				minChoicesForSearch: 5,
 			},
 		],
-	}
+	} */
 
 	feedbacks['profile_active'] = {
 		type: 'boolean',
@@ -191,11 +189,16 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Profile name',
 				id: 'profile',
-				default: this.profilelistDefault,
-				choices: this.profilelist,
+				default: this.profileList?.[0] ? this.profileList[0].id : '',
+				choices: this.profileList,
 				minChoicesForSearch: 5,
 			},
 		],
+		callback: (feedback) => {
+			if (this.states.currentProfile === feedback.options.profile) {
+				return true
+			}
+		},
 	}
 
 	feedbacks['scene_collection_active'] = {
@@ -211,14 +214,19 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene collection name',
 				id: 'scene_collection',
-				default: this.scenecollectionlistDefault,
-				choices: this.scenecollectionlist,
+				default: this.sceneCollectionList?.[0] ? this.sceneCollectionList[0].id : '',
+				choices: this.sceneCollectionList,
 				minChoicesForSearch: 5,
 			},
 		],
+		callback: (feedback) => {
+			if (this.states.currentSceneCollection === feedback.options.scene_collection) {
+				return true
+			}
+		},
 	}
 
-	feedbacks['scene_item_active_in_scene'] = {
+	/* feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
 		label: 'Source Enabled in Scene',
 		description: 'If a source is enabled in a specific scene, change the style of the button',
@@ -264,7 +272,7 @@ exports.initFeedbacks = function () {
 				minChoicesForSearch: 3,
 			},
 		],
-	}
+	} */
 
 	feedbacks['transition_active'] = {
 		type: 'boolean',
@@ -273,6 +281,9 @@ exports.initFeedbacks = function () {
 		style: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
+		},
+		callback: () => {
+			return this.states.transitionActive
 		},
 	}
 
@@ -289,11 +300,16 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Transition',
 				id: 'transition',
-				default: this.transitionlistDefault,
-				choices: this.transitionlist,
+				default: this.transitionList?.[0] ? this.transitionList[0].id : '',
+				choices: this.transitionList,
 				minChoicesForSearch: 5,
 			},
 		],
+		callback: (feedback) => {
+			if (this.states.currentTransition === feedback.options.transition) {
+				return true
+			}
+		},
 	}
 
 	feedbacks['transition_duration'] = {
@@ -315,9 +331,14 @@ exports.initFeedbacks = function () {
 				range: false,
 			},
 		],
+		callback: (feedback) => {
+			if (this.states.transitionDuration === feedback.options.duration) {
+				return true
+			}
+		},
 	}
 
-	feedbacks['filter_enabled'] = {
+	/* feedbacks['filter_enabled'] = {
 		type: 'boolean',
 		label: 'Filter Enabled',
 		description: 'If a filter is enabled, change the style of the button',

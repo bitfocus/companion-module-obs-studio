@@ -121,6 +121,11 @@ class instance extends instance_skel {
 				this.obsListeners()
 				this.getVersionInfo()
 				this.getStats()
+				this.getStreamStatus()
+				this.getProfileList()
+				this.getSceneTransitionList()
+				this.getSceneCollectionList()
+				this.getRecordStatus()
 				this.getScenesSources()
 
 				//Basic Info
@@ -140,15 +145,22 @@ class instance extends instance_skel {
 				//Choices
 				this.sceneList = []
 				this.sourceList = []
+				this.profileList = []
+				this.sceneCollectionList = []
 				this.textSourceList = []
 				this.mediaSourceList = []
 				this.imageSourceList = []
 				this.hotkeyNames = []
+				this.transitionList = []
 			}
 		} catch (error) {
 			this.debug(error)
 			this.status(this.STATUS_ERROR)
-			this.log('error', 'Failed to connect', error.code, error.message)
+			if (error?.message.match(/(Server sent no subprotocol)/i)) {
+				this.log('error', 'Failed to connect to OBS. Please upgrade OBS Websocket to version 5.0.0 or above')
+			} else {
+				this.log('error', `Failed to connect to OBS (${error.code} ${error.message})`)
+			}
 		}
 	}
 
@@ -160,6 +172,9 @@ class instance extends instance_skel {
 			this.states = {}
 			this.sceneList = []
 			this.sourceList = []
+			this.profileList = []
+			this.sceneCollectionList = []
+			this.transitionList = []
 		}
 	}
 
@@ -171,22 +186,34 @@ class instance extends instance_skel {
 		obs.on('VendorEvent', () => {})
 		//Config
 		obs.on('CurrentSceneCollectionChanging', () => {})
-		obs.on('CurrentSceneCollectionChanged', () => {})
-		obs.on('SceneCollectionListChanged', () => {})
+		obs.on('CurrentSceneCollectionChanged', (data) => {
+			this.states.currentSceneCollection = data.sceneCollectionName
+			this.checkFeedbacks('scene_collection_active')
+			this.setVariable('scene_collection', this.states.currentSceneCollection)
+		})
+		obs.on('SceneCollectionListChanged', () => {
+			this.getSceneCollectionList()
+		})
 		obs.on('CurrentProfileChanging', () => {})
-		obs.on('CurrentProfileChanged', () => {})
-		obs.on('ProfileListChanged', () => {})
+		obs.on('CurrentProfileChanged', (data) => {
+			this.states.currentProfile = data.profileName
+			this.checkFeedbacks('profile_active')
+			this.setVariable('profile', this.states.currentProfile)
+		})
+		obs.on('ProfileListChanged', () => {
+			this.getProfileList()
+		})
 		//Scenes
 		obs.on('SceneCreated', () => {})
 		obs.on('SceneRemoved', () => {})
 		obs.on('SceneNameChanged', () => {})
 		obs.on('CurrentProgramSceneChanged', (data) => {
-			this.states.currentProgramSceneName = data.sceneName
-			this.setVariable('scene_active', this.states.currentProgramSceneName)
+			this.states.programScene = data.sceneName
+			this.setVariable('scene_active', this.states.programScene)
 		})
 		obs.on('CurrentPreviewSceneChanged', (data) => {
-			this.states.currentPreviewSceneName = data.sceneName ? data.sceneName : 'None'
-			this.setVariable('scene_preview', this.states.currentPreviewSceneName)
+			this.states.previewScene = data.sceneName ? data.sceneName : 'None'
+			this.setVariable('scene_preview', this.states.previewScene)
 		})
 		obs.on('SceneListChanged', () => {})
 		//Inputs
@@ -208,10 +235,29 @@ class instance extends instance_skel {
 		obs.on('InputAudioMonitorTypeChanged', () => {})
 		obs.on('InputVolumeMeters', () => {})
 		//Transitions
-		obs.on('CurrentSceneTransitionChanged', () => {})
-		obs.on('CurrentSceneTransitionDurationChanged', () => {})
-		obs.on('SceneTransitionStarted', () => {})
-		obs.on('SceneTransitionEnded', () => {})
+		obs.on('CurrentSceneTransitionChanged', (data) => {
+			this.states.currentTransition = data.transitionName
+			this.checkFeedbacks('current_transition')
+			this.setVariable('current_transition', this.states.currentTransition)
+			obs.call('GetCurrentSceneTransition').then((data) => {
+				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+				this.checkFeedbacks('transition_duration')
+				this.setVariable('transition_duration', this.states.transitionDuration)
+			})
+		})
+		obs.on('CurrentSceneTransitionDurationChanged', (data) => {
+			this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+			this.checkFeedbacks('transition_duration')
+			this.setVariable('transition_duration', this.states.transitionDuration)
+		})
+		obs.on('SceneTransitionStarted', () => {
+			this.states.transitionActive = true
+			this.checkFeedbacks('transition_active')
+		})
+		obs.on('SceneTransitionEnded', () => {
+			this.states.transitionActive = false
+			this.checkFeedbacks('transition_active')
+		})
 		obs.on('SceneTransitionVideoEnded', () => {})
 		//Filters
 		obs.on('SourceFilterListReindexed', () => {})
@@ -227,11 +273,28 @@ class instance extends instance_skel {
 		obs.on('SceneItemLockStateChanged', () => {})
 		obs.on('SceneItemSelected', () => {})
 		obs.on('SceneItemTransformChanged', (data) => {
-			this.debug(data)
+			//this.debug(data)
 		})
 		//Outputs
-		obs.on('StreamStateChanged', () => {})
-		obs.on('RecordStateChanged', () => {})
+		obs.on('StreamStateChanged', (data) => {
+			this.states.streaming = data.outputActive
+
+			this.setVariable('streaming', this.states.streaming ? 'Live' : 'Off-Air')
+			this.checkFeedbacks('streaming')
+		})
+		obs.on('RecordStateChanged', (data) => {
+			if (data.outputActive === true) {
+				this.states.recording = 'Recording'
+			} else {
+				if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
+					this.states.recording = 'Paused'
+				} else {
+					this.states.recording = 'Stopped'
+				}
+			}
+			this.setVariable('recording', this.states.recording)
+			this.checkFeedbacks('recording')
+		})
 		obs.on('ReplayBufferStateChanged', () => {})
 		obs.on('VirtualcamStateChanged', () => {})
 		obs.on('ReplayBufferSaved', () => {})
@@ -288,7 +351,7 @@ class instance extends instance_skel {
 					try {
 						arg = JSON.parse(action.options.arg)
 					} catch (e) {
-						self.log('warn', 'Request data must be formatted as valid JSON.')
+						this.log('warn', 'Request data must be formatted as valid JSON.')
 						return
 					}
 				}
@@ -299,11 +362,11 @@ class instance extends instance_skel {
 			//Config
 			case 'set_profile':
 				requestType = 'SetCurrentProfile'
-				requestData = { sceneCollectionName: action.options.profile }
+				requestData = { profileName: action.options.profile }
 				break
 			case 'set_scene_collection':
 				requestType = 'SetCurrentSceneCollection'
-				requestData = { profileName: action.options.scene_collection }
+				requestData = { sceneCollectionName: action.options.scene_collection }
 				break
 			case 'set_stream_settings': //NEEDS REWORK
 				var streamSettings = {}
@@ -329,7 +392,7 @@ class instance extends instance_skel {
 				break
 			case 'set_transition_duration':
 				requestType = 'SetCurrentSceneTransitionDuration'
-				requestData = { transitionName: action.options.duration }
+				requestData = { transitionDuration: action.options.duration }
 				break
 			//Filters
 			//Scene Items
@@ -446,21 +509,28 @@ class instance extends instance_skel {
 				requestData = { studioModeEnabled: false }
 				break
 			case 'toggle_studio_mode':
-				//FIGURE OUT LOGIC
+				//FIGURE OUT LOGIC, awaiting broken listener
 				break
-			case 'OpenInputPropertiesDialog': //NEW, add to actions help
+			case 'openInputPropertiesDialog': //NEW, add to actions + help
 				requestType = 'OpenInputPropertiesDialog'
-				requestData = { inputName: '' } //SETUP
+				requestData = { inputName: action.options.source } //SETUP
 				break
-			case 'OpenInputFiltersDialog': //NEW, add to actions help
+			case 'openInputFiltersDialog': //NEW, add to actions + help
 				requestType = 'OpenInputFiltersDialog'
-				requestData = { inputName: '' } //SETUP
+				requestData = { inputName: action.options.source } //SETUP
 				break
-			case 'OpenInputInteractDialog': //NEW, add to actions help
+			case 'openInputInteractDialog': //NEW, add to actions + help
 				requestType = 'OpenInputInteractDialog'
-				requestData = { inputName: '' } //SETUP
+				requestData = { inputName: action.options.source } //SETUP
 				break
-
+			case 'setText':
+				let newText
+				this.parseVariables(action.options.text, (value) => {
+					newText = value
+				})
+				requestType = 'SetInputSettings'
+				requestData = { inputName: action.options.source, inputSettings: { text: newText } }
+				break
 			/////////UNSORTED BELOW//////
 
 			case 'set_scene':
@@ -627,29 +697,6 @@ class instance extends instance_skel {
 					}
 				}
 				break
-			case 'set-freetype-text':
-				var text
-				self.system.emit('variable_parse', action.options.text, function (value) {
-					text = value
-				})
-				handle = self.obs.send('SetTextFreetype2Properties', {
-					source: action.options.source,
-					text: text,
-				})
-				self.updateTextSources(action.options.source, 'text_ft2_source_v2')
-				break
-			case 'set-gdi-text':
-				var text
-				self.system.emit('variable_parse', action.options.text, function (value) {
-					text = value
-				})
-				handle = self.obs.send('SetTextGDIPlusProperties', {
-					source: action.options.source,
-					text: text,
-				})
-				self.updateTextSources(action.options.source, 'text_gdiplus_v2')
-				break
-
 			case 'start_output':
 				handle = self.obs.send('StartOutput', {
 					outputName: action.options.output,
@@ -795,20 +842,132 @@ class instance extends instance_skel {
 		})
 	}
 
+	roundIfDefined(number, decimalPlaces) {
+		if (number) {
+			return Number(Math.round(number + 'e' + decimalPlaces) + 'e-' + decimalPlaces)
+		} else {
+			return number
+		}
+	}
+
 	getStats() {
 		obs.call('GetStats').then((data) => {
-			this.debug(data)
+			this.states.stats = data
+			this.setVariable('fps', this.roundIfDefined(data.activeFps, 2))
+			this.setVariable('render_total_frames', data.renderTotalFrames)
+			this.setVariable('render_missed_frames', data.renderSkippedFrames)
+			this.setVariable('output_total_frames', data.outputTotalFrames)
+			this.setVariable('output_skipped_frames', data.outputSkippedFrames)
+			this.setVariable('average_frame_time', this.roundIfDefined(data.averageFrameRenderTime, 2))
+			this.setVariable('cpu_usage', this.roundIfDefined(data.cpuUsage, 2) + '%')
+			this.setVariable('memory_usage', this.roundIfDefined(data.memoryUsage, 0) + ' MB')
+			let freeSpace = this.roundIfDefined(data.availableDiskSpace, 0)
+			if (freeSpace > 1000) {
+				this.setVariable('free_disk_space', this.roundIfDefined(freeSpace / 1000, 0) + ' GB')
+			} else {
+				this.setVariable('free_disk_space', this.roundIfDefined(freeSpace, 0) + ' MB')
+			}
 		})
+	}
+
+	getStreamStatus() {
+		obs.call('GetStreamStatus').then((data) => {
+			this.states.streaming = data.outputActive
+			this.setVariable('streaming', data.outputActive ? 'Live' : 'Off-Air')
+			this.checkFeedbacks('streaming')
+			this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			this.setVariable('stream_timecode', this.states.streamingTimecode)
+		})
+	}
+
+	getSceneTransitionList() {
+		this.transitionList = []
+		obs
+			.call('GetSceneTransitionList')
+			.then((data) => {
+				data.transitions.forEach((transition) => {
+					this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
+				})
+			})
+
+			.then(() => {
+				this.actions()
+				this.initVariables()
+				this.initFeedbacks()
+				//this.initPresets()
+			})
+		obs.call('GetCurrentSceneTransition').then((data) => {
+			this.debug(data)
+			this.states.currentTransition = data.transitionName
+			this.checkFeedbacks('current_transition')
+			this.setVariable('current_transition', this.states.currentTransition)
+
+			this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+			this.checkFeedbacks('transition_duration')
+			this.setVariable('transition_duration', this.states.transitionDuration)
+		})
+	}
+
+	getRecordStatus() {
+		obs.call('GetRecordStatus').then((data) => {
+			if (data.outputActive === true) {
+				this.states.recording = 'Recording'
+			} else {
+				this.states.recording = data.outputPaused ? 'Paused' : 'Stopped'
+			}
+			this.setVariable('recording', this.states.recording)
+			this.checkFeedbacks('recording')
+			this.states.recordingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			this.setVariable('recording_timecode', this.states.recordingTimecode)
+		})
+	}
+	getProfileList() {
+		this.profileList = []
+		obs
+			.call('GetProfileList')
+			.then((data) => {
+				this.states.currentProfile = data.currentProfileName
+				this.checkFeedbacks('profile_active')
+				this.setVariable('profile', this.states.currentProfile)
+				data.profiles.forEach((profile) => {
+					this.profileList.push({ id: profile, label: profile })
+				})
+			})
+			.then(() => {
+				this.actions()
+				this.initVariables()
+				this.initFeedbacks()
+				//this.initPresets()
+			})
+	}
+	getSceneCollectionList() {
+		this.sceneCollectionList = []
+		obs
+			.call('GetSceneCollectionList')
+			.then((data) => {
+				this.states.currentSceneCollection = data.currentSceneCollectionName
+				this.checkFeedbacks('scene_collection_active')
+				this.setVariable('scene_collection', this.states.currentSceneCollection)
+				data.sceneCollections.forEach((sceneCollection) => {
+					this.sceneCollectionList.push({ id: sceneCollection, label: sceneCollection })
+				})
+			})
+			.then(() => {
+				this.actions()
+				this.initVariables()
+				this.initFeedbacks()
+				//this.initPresets()
+			})
 	}
 	getScenesSources() {
 		obs
 			.call('GetSceneList')
 			.then((data) => {
 				this.scenes = data.scenes
-				this.states.currentPreviewSceneName = data.currentPreviewSceneName ? data.currentPreviewSceneName : 'None'
-				this.setVariable('scene_preview', this.states.currentPreviewSceneName)
-				this.states.currentProgramSceneName = data.currentProgramSceneName
-				this.setVariable('scene_active', this.states.currentProgramSceneName)
+				this.states.previewScene = data.currentPreviewSceneName ? data.currentPreviewSceneName : 'None'
+				this.setVariable('scene_preview', this.states.previewScene)
+				this.states.programScene = data.currentProgramSceneName
+				this.setVariable('scene_active', this.states.programScene)
 				return data
 			})
 			.then((data) => {
@@ -830,6 +989,7 @@ class instance extends instance_skel {
 								let inputKind = sceneItem.inputKind
 								obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
 									this.sources[sourceName].settings = settings.inputSettings
+									
 									if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 										this.textSourceList.push({ id: sourceName, label: sourceName })
 									}
