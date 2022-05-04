@@ -16,7 +16,6 @@ module.exports = {
 		let scenecollectionlist = []
 		let outputlist = []
 		let filterlist = []
-		let mediaSourceList = []
 
 		let sourcelistDefault = []
 		let scenelistDefault = []
@@ -53,6 +52,9 @@ module.exports = {
 		actions['stop_streaming'] = {
 			label: 'Stop Streaming',
 		}
+		actions['StartStopStreaming'] = {
+			label: 'Toggle Streaming',
+		}
 		actions['start_replay_buffer'] = {
 			label: 'Start Replay Buffer',
 		}
@@ -69,7 +71,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: scenelistDefault,
+					default: this.sceneList?.[0] ? this.sceneList[0].id : '',
 					choices: this.sceneList,
 					minChoicesForSearch: 5,
 				},
@@ -82,7 +84,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: scenelistDefault,
+					default: this.sceneList?.[0] ? this.sceneList[0].id : '',
 					choices: this.sceneList,
 					minChoicesForSearch: 5,
 				},
@@ -179,17 +181,25 @@ module.exports = {
 				},
 			],
 		}
-		actions['StartStopStreaming'] = {
-			label: 'Toggle Streaming',
-		}
 		actions['set_stream_settings'] = {
 			label: 'Set Stream Settings',
 			options: [
+				{
+					type: 'dropdown',
+					label: 'Stream Type',
+					id: 'streamType',
+					choices: [
+						{ id: 'rtmp_common', label: 'Preset Service' },
+						{ id: 'rtmp_custom', label: 'Custom' },
+					],
+					default: 'rtmp_custom',
+				},
 				{
 					type: 'textinput',
 					label: 'Stream URL',
 					id: 'streamURL',
 					default: '',
+					isVisible: (action) => action.options.streamType === 'rtmp_custom',
 				},
 				{
 					type: 'textinput',
@@ -202,18 +212,21 @@ module.exports = {
 					label: 'Use Authentication',
 					id: 'streamAuth',
 					default: false,
+					isVisible: (action) => action.options.streamType === 'rtmp_custom',
 				},
 				{
 					type: 'textinput',
 					label: 'User Name (Optional)',
 					id: 'streamUserName',
 					default: '',
+					isVisible: (action) => action.options.streamType === 'rtmp_custom',
 				},
 				{
 					type: 'textinput',
 					label: 'Password (Optional)',
 					id: 'streamPassword',
 					default: '',
+					isVisible: (action) => action.options.streamType === 'rtmp_custom',
 				},
 			],
 		}
@@ -358,7 +371,8 @@ module.exports = {
 				},
 			],
 		}
-		actions['set-gdi-text'] = { ///REMOVE THIS, merge with SET TEXT action
+		actions['set-gdi-text'] = {
+			///REMOVE THIS, merge with SET TEXT action
 			label: 'Set Source Text (GDI+)',
 			options: [
 				{
@@ -617,8 +631,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: mediaSourceList,
+					default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
+					choices: this.mediaSourceList,
 				},
 				{
 					type: 'dropdown',
@@ -640,8 +654,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: mediaSourceList,
+					default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
+					choices: this.mediaSourceList,
 				},
 			],
 		}
@@ -664,8 +678,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: mediaSourceList,
+					default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
+					choices: this.mediaSourceList,
 				},
 			],
 		}
@@ -676,8 +690,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: mediaSourceList,
+					default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
+					choices: this.mediaSourceList,
 				},
 			],
 		}
@@ -688,8 +702,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: mediaSourceList,
+					default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
+					choices: this.mediaSourceList,
 				},
 				{
 					type: 'number',
@@ -707,8 +721,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: mediaSourceList,
+					default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
+					choices: this.mediaSourceList,
 				},
 				{
 					type: 'number',
@@ -814,7 +828,7 @@ module.exports = {
 			],
 		}
 		actions['openInputPropertiesDialog'] = {
-			label: 'Open Properties Window',
+			label: 'Open Source Properties Window',
 			options: [
 				{
 					type: 'dropdown',
@@ -827,7 +841,7 @@ module.exports = {
 			],
 		}
 		actions['openInputFiltersDialog'] = {
-			label: 'Open Filters Window',
+			label: 'Open Source Filters Window',
 			options: [
 				{
 					type: 'dropdown',
@@ -840,7 +854,7 @@ module.exports = {
 			],
 		}
 		actions['openInputInteractDialog'] = {
-			label: 'Open Interact Window',
+			label: 'Open Source Interact Window',
 			options: [
 				{
 					type: 'dropdown',
@@ -859,13 +873,13 @@ module.exports = {
 					type: 'textinput',
 					label: 'Request Type',
 					id: 'command',
-					default: 'SetCurrentScene',
+					default: 'SetCurrentProgramScene',
 				},
 				{
 					type: 'textinput',
 					label: 'Request Data (optional, JSON formatted)',
 					id: 'arg',
-					default: '{"scene-name": "Scene 1"}',
+					default: '{"sceneName": "Scene 1"}',
 				},
 			],
 		}

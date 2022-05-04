@@ -420,35 +420,6 @@ instance.prototype.getVersionInfo = async function () {
 	})
 }
 
-instance.prototype.getStats = async function () {
-	let { stats } = await this.obs.send('GetStats')
-	this.process_obs_stats(stats)
-}
-
-instance.prototype.startStatsPoller = function () {
-	this.stopStatsPoller()
-
-	let self = this
-	this.statsPoller = setInterval(() => {
-		if (self.obs && !self.states['streaming']) {
-			self.getStats()
-		}
-		if (self.obs && self.states['recording'] === true) {
-			self.getRecordingStatus()
-		}
-		if (self.obs) {
-			self.updateOutputs()
-		}
-	}, 1000)
-}
-
-instance.prototype.stopStatsPoller = function () {
-	if (this.statsPoller) {
-		clearInterval(this.statsPoller)
-		this.statsPoller = null
-	}
-}
-
 instance.prototype.getStreamStatus = function () {
 	var self = this
 

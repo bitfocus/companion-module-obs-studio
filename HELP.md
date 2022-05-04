@@ -49,6 +49,9 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Previous Media
 - Set Media Time
 - Scrub Media
+- Open Source Properties Window
+- Open Source Filters Window
+- Open Source Interact Window
 
 **General**
 
@@ -98,10 +101,12 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 - recording
 - recording_file_name
+- recording_path
 - recording_timecode
 - streaming
 - stream_timecode
 - total_stream_time
+- stream_service
 - bytes*per_sec *(Amount of data per second (in bytes) transmitted by the stream encoder)\_
 - kbits*per_sec *(Amount of data per second (in kilobits) transmitted by the stream encoder)\_
 - render_missed_frames
@@ -142,6 +147,9 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - memory_usage
 - strain
 - free_disk_space
+- base_resolution
+- output_resolution
+- target_framerate
 
 ### Using Trigger Hotkey by ID
 

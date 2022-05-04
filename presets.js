@@ -1,6 +1,5 @@
 exports.getPresets = function () {
 	//let presets = []
-
 	/* for (var s in self.scenelist) {
 		var scene = self.scenelist[s]
 

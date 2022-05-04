@@ -1,11 +1,14 @@
 exports.updateVariableDefinitions = function () {
 	const variables = []
 
+	variables.push({ name: 'base_resolution', label: 'Current base (canvas) resolution' })
+	variables.push({ name: 'output_resolution', label: 'Current  output (scaled) resolution' })
+	variables.push({ name: 'target_framerate', label: 'Current profile framerate' })
 	variables.push({
 		name: 'bytes_per_sec',
 		label: 'Amount of data per second (in bytes) transmitted by the stream encoder',
 	})
-	variables.push({ name: 'fps', label: 'Current framerate' })
+	variables.push({ name: 'fps', label: 'Current actual framerate' })
 	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' })
 	variables.push({ name: 'memory_usage', label: 'Current RAM usage (in megabytes)' })
 	variables.push({ name: 'free_disk_space', label: 'Free recording disk space' })
@@ -25,9 +28,11 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' })
 	variables.push({ name: 'recording', label: 'Recording State' })
 	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
+	variables.push({ name: 'recording_path', label: 'File path of current recording' })
 	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
 	variables.push({ name: 'strain', label: 'Strain' })
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' })
+	variables.push({ name: 'stream_service', label: 'Stream Service' })
 	variables.push({ name: 'streaming', label: 'Streaming State' })
 	variables.push({ name: 'total_stream_time', label: 'Total streaming time' })
 	variables.push({ name: 'scene_active', label: 'Current active scene' })
@@ -40,18 +45,24 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'current_media_time_elapsed', label: 'Time elapsed for currently playing media source' })
 	variables.push({ name: 'current_media_time_remaining', label: 'Time remaining for currently playing media source' })
 
-	/* for (var s in self.mediaSources) {
-		let media = self.mediaSources[s]
-		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
-		variables.push({ name: 'media_file_name_' + media.sourceName, label: 'Media file name for ' + media.sourceName })
-		variables.push({ name: 'media_time_elapsed_' + media.sourceName, label: 'Time elapsed for ' + media.sourceName })
+	for (var s in this.mediaSourceList) {
+		let mediaSourceName = this.mediaSourceList[s].id
+		variables.push({ name: 'media_status_' + mediaSourceName, label: 'Media status for ' + mediaSourceName })
+		variables.push({ name: 'media_file_name_' + mediaSourceName, label: 'Media file name for ' + mediaSourceName })
+		variables.push({ name: 'media_time_elapsed_' + mediaSourceName, label: 'Time elapsed for ' + mediaSourceName })
 		variables.push({
-			name: 'media_time_remaining_' + media.sourceName,
-			label: 'Time remaining for ' + media.sourceName,
+			name: 'media_time_remaining_' + mediaSourceName,
+			label: 'Time remaining for ' + mediaSourceName,
 		})
-	} */
+		this.setVariable(
+			'media_file_name_' + mediaSourceName,
+			this.sources[mediaSourceName]?.settings?.local_file
+				? this.sources[mediaSourceName].settings.local_file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+				: ''
+		)
+	}
 
-	 for (let s in this.sources) {
+	for (let s in this.sources) {
 		let source = this.sources[s]
 		this.debug(source)
 		if (source.inputKind === 'text_ft2_source_v2' || source.inputKind === 'text_gdiplus_v2') {
@@ -62,7 +73,7 @@ exports.updateVariableDefinitions = function () {
 			variables.push({ name: 'image_file_name_' + source.name, label: 'Image file name for ' + source.name })
 		}
 		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name }) */
-	} 
+	}
 
 	this.setVariableDefinitions(variables)
 }
