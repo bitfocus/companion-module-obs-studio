@@ -277,6 +277,7 @@ class instance extends instance_skel {
 		obs.on('SceneItemSelected', () => {})
 		obs.on('SceneItemTransformChanged', (data) => {
 			this.debug(data)
+			//update text, update image source file names
 		})
 		//Outputs
 		obs.on('StreamStateChanged', (data) => {
@@ -302,9 +303,23 @@ class instance extends instance_skel {
 		obs.on('VirtualcamStateChanged', () => {})
 		obs.on('ReplayBufferSaved', () => {})
 		//Media Inputs
-		obs.on('MediaInputPlaybackStarted', () => {})
-		obs.on('MediaInputPlaybackEnded', () => {})
-		obs.on('MediaInputActionTriggered', (data) => {})
+		obs.on('MediaInputPlaybackStarted', (data) => {
+			this.states.currentMedia = data.inputName
+			this.setVariable('current_media_name', this.states.currentMedia)
+			this.setVariable(`media_status_${data.inputName}`, 'Playing')
+		})
+		obs.on('MediaInputPlaybackEnded', (data) => {
+			if (this.states.currentMedia == data.inputName) {
+				this.setVariable('current_media_name', 'None')
+				this.setVariable(`media_status_${data.inputName}`, 'Stopped')
+			}
+		})
+		obs.on('MediaInputActionTriggered', (data) => {
+			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE' && data.inputName == this.states.currentMedia) {
+				this.setVariable('current_media_name', 'None')
+				this.setVariable(`media_status_${data.inputName}`, 'Paused')
+			}
+		})
 		//UI
 		obs.on('StudioModeStateChanged', (data) => {
 			//Not working
@@ -421,8 +436,61 @@ class instance extends instance_skel {
 				break
 			//Filters
 			//Scene Items
+			case 'source_properties':
+				let sourceScene
+				if (action.options.scene == 'Current Scene') {
+					sourceScene = this.states.programScene
+				} else if (action.options.scene == 'Preview Scene') {
+					sourceScene = this.states.previewScene
+				} else {
+					sourceScene = action.options.scene
+				}
+
+				let positionX
+				let positionY
+				let scaleX
+				let scaleY
+				let rotation
+
+				this.parseVariables(action.options.positionX, function (value) {
+					positionX = parseFloat(value)
+				})
+				this.parseVariables(action.options.positionY, function (value) {
+					positionY = parseFloat(value)
+				})
+				this.parseVariables(action.options.scaleX, function (value) {
+					scaleX = parseFloat(value)
+				})
+				this.parseVariables(action.options.scaleY, function (value) {
+					scaleY = parseFloat(value)
+				})
+				this.parseVariables(action.options.rotation, function (value) {
+					rotation = parseFloat(value)
+				})
+
+				let transform = {
+					positionX: positionX,
+					positionY: positionY,
+					rotation: rotation,
+					scaleX: scaleX,
+					scaleY: scaleY,
+				}
+
+				obs.call('GetSceneItemId', { sceneName: sourceScene, sourceName: action.options.source }).then((data) => {
+					if (data.sceneItemId) {
+						requestType = 'SetSceneItemTransform'
+						requestData = {
+							sceneName: sourceScene,
+							sceneItemId: data.sceneItemId,
+							sceneItemTransform: transform,
+						}
+						this.sendRequest(requestType, requestData)
+					}
+				})
+
+				break
 			//Outputs
-			case 'ToggleReplayBuffer': //NEW, add to actions help
+			case 'ToggleReplayBuffer':
 				requestType = 'ToggleReplayBuffer'
 				break
 			case 'start_replay_buffer':
@@ -444,9 +512,15 @@ class instance extends instance_skel {
 			case 'stop_streaming':
 				requestType = 'StopStream'
 				break
-			case 'SendStreamCaption': //NEW, add to actions help
-				requestType = 'SendStreamCaption'
-				requestData = { captionText: '' } //LINK TO TEXT
+			case 'SendStreamCaption':
+				if (this.states.streaming) {
+					let captionText
+					this.parseVariables(action.options.text, (value) => {
+						captionText = value
+					})
+					requestType = 'SendStreamCaption'
+					requestData = { captionText: captionText }
+				}
 				break
 			//Record
 			case 'StartStopRecording':
@@ -772,54 +846,10 @@ class instance extends instance_skel {
 					name: action.options.source,
 				})
 				break
-			case 'source_properties':
-				let sourceScene = action.options.scene
-				if (action.options.scene == 'Current Scene') {
-					sourceScene = self.states['scene_active']
-				} else if (action.options.scene == 'Preview Scene') {
-					sourceScene = self.states['scene_preview']
-				} else {
-					sourceScene = action.options.scene
-				}
-				let positionX
-				let positionY
-				let scaleX
-				let scaleY
-				let rotation
-
-				this.parseVariables(action.options.positionX, function (value) {
-					positionX = parseFloat(value)
-				})
-				this.parseVariables(action.options.positionY, function (value) {
-					positionY = parseFloat(value)
-				})
-				this.parseVariables(action.options.scaleX, function (value) {
-					scaleX = parseFloat(value)
-				})
-				this.parseVariables(action.options.scaleY, function (value) {
-					scaleY = parseFloat(value)
-				})
-				this.parseVariables(action.options.rotation, function (value) {
-					rotation = parseFloat(value)
-				})
-
-				handle = self.obs.send('SetSceneItemProperties', {
-					'scene-name': sourceScene,
-					item: action.options.source,
-					position: {
-						x: positionX,
-						y: positionY,
-					},
-					scale: {
-						x: scaleX,
-						y: scaleY,
-					},
-					rotation: rotation,
-				})
-				break
 		}
-
-		this.sendRequest(requestType, requestData)
+		if (requestType) {
+			this.sendRequest(requestType, requestData)
+		}
 	}
 
 	sendRequest(requestType, requestData) {
@@ -846,7 +876,7 @@ class instance extends instance_skel {
 		obs.call('GetVideoSettings').then((data) => {
 			this.states.resolution = `${data.baseWidth}x${data.baseHeight}`
 			this.states.outputResolution = `${data.outputWidth}x${data.outputHeight}`
-			this.states.framerate = `${data.fpsNumerator / data.fpsDenominator} fps`
+			this.states.framerate = `${this.roundNumber(data.fpsNumerator / data.fpsDenominator, 2)} fps`
 			this.setVariable('base_resolution', this.states.resolution)
 			this.setVariable('output_resolution', this.states.outputResolution)
 			this.setVariable('target_framerate', this.states.framerate)
@@ -1025,7 +1055,7 @@ class instance extends instance_skel {
 					obs.call('GetSceneItemList', { sceneName: sceneName }).then((data) => {
 						this.sceneItems[sceneName] = data.sceneItems
 						//this.debug	(this.sceneItems[sceneName])
-						this.debug(this.sceneItems)
+						//this.debug(this.sceneItems)
 						data.sceneItems.forEach((sceneItem) => {
 							let sourceName = sceneItem.sourceName
 							this.sources[sourceName] = sceneItem
@@ -1035,9 +1065,9 @@ class instance extends instance_skel {
 							obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
 								this.sources[sourceName].active = active.videoActive
 							})
-							obs.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: sceneItem.sceneItemId }).then((data) => {
-								
-							})
+							obs
+								.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: sceneItem.sceneItemId })
+								.then((data) => {})
 							//this.getSourceAudio(sourceName) NEEDS TO CHECK IF SOURCE SUPPORTS AUDIO
 							if (sceneItem.inputKind) {
 								let inputKind = sceneItem.inputKind
@@ -1059,8 +1089,8 @@ class instance extends instance_skel {
 				})
 			})
 			.then(() => {
-				this.debug('ITEMS')
-				this.debug(this.sceneItems)
+				//this.debug('ITEMS')
+				//this.debug(this.sceneItems)
 				this.actions()
 				this.initVariables()
 				this.initFeedbacks()

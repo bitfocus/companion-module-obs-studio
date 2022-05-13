@@ -6,22 +6,19 @@ module.exports = {
 		this.log('warn', 'updating actions')
 
 		this.sourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
+		let sourcelistDefault = this.sourceList?.[0] ? this.sourceList[0].id : ''
 		this.sceneList?.sort((a, b) => (a.id < b.id ? -1 : 1))
 		this.textSourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
 
-		let scenelistToggle = []
+		let scenelistToggle = [
+			{ id: 'Current Scene', label: 'Current Scene' },
+			{ id: 'Preview Scene', label: 'Preview Scene' },
+		].concat(this.sceneList)
 
-		let transitionlist = []
-		let profilelist = []
-		let scenecollectionlist = []
 		let outputlist = []
 		let filterlist = []
 
-		let sourcelistDefault = []
 		let scenelistDefault = []
-		let transitionlistDefault = []
-		let profilelistDefault = []
-		let scenecollectionlistDefault = []
 		let filterlistDefault = []
 		let mediaSourceListDefault = []
 
@@ -113,7 +110,7 @@ module.exports = {
 					label: 'Transition',
 					id: 'transition',
 					default: 'Default',
-					choices: transitionlist,
+					choices: this.transitionList,
 					required: false,
 					minChoicesForSearch: 5,
 				},
@@ -138,7 +135,7 @@ module.exports = {
 					label: 'Transition',
 					id: 'transition',
 					default: 'Default',
-					choices: transitionlist,
+					choices: this.transitionList,
 					required: false,
 					minChoicesForSearch: 5,
 				},
@@ -227,6 +224,17 @@ module.exports = {
 					id: 'streamPassword',
 					default: '',
 					isVisible: (action) => action.options.streamType === 'rtmp_custom',
+				},
+			],
+		}
+		actions['SendStreamCaption'] = {
+			label: 'Send Stream Caption',
+			options: [
+				{
+					type: 'textwithvariables',
+					label: 'Caption Text',
+					id: 'text',
+					default: '',
 				},
 			],
 		}
@@ -777,15 +785,15 @@ module.exports = {
 			],
 		}
 		actions['source_properties'] = {
-			label: 'Set Source Properties',
-			description: 'All values optional, any parameter left blank is ignored',
+			label: 'Set Source Transform',
+			description: 'All transform values optional, any parameter left blank is ignored',
 			options: [
 				{
 					type: 'dropdown',
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: scenelistToggle,
+					choices: scenelistToggle, //needs toggle
 					minChoicesForSearch: 5,
 				},
 				{
@@ -834,7 +842,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: this.sourceList?.[0] ? this.sourceList[0].id : '',
+					default: sourcelistDefault,
 					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},
@@ -847,7 +855,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: this.sourceList?.[0] ? this.sourceList[0].id : '',
+					default: sourcelistDefault,
 					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},
@@ -860,7 +868,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: this.sourceList?.[0] ? this.sourceList[0].id : '',
+					default: sourcelistDefault,
 					choices: this.sourceList,
 					minChoicesForSearch: 5,
 				},

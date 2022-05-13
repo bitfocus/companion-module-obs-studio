@@ -14,11 +14,12 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Recording & Streaming & Outputs**
 
-- Recording (Start / Stop / Pause / Resume / Toggle)
+- Recording (Toggle / Start / Stop / Pause / Resume)
 - Streaming (Start / Stop / Toggle)
 - Set Stream Settings
-- Output (Start / Stop / Toggle)
-- Replay Buffer (Start / Stop / Save)
+- Send Stream Caption
+- Output (Toggle / Start / Stop)
+- Replay Buffer (Toggle / Start / Stop / Save)
 
 **Switching & Transitions**
 
@@ -34,7 +35,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 - Set Source Visibility _(Individual sources, or All Sources within a scene)_
 - Set Filter Visibility
-- Set Source Properties (Position / Scale / Rotation)
+- Set Source Transform (Position / Scale / Rotation)
 - Source Mute (Set / Toggle)
 - Set Source Volume
 - Adjust Source Volume

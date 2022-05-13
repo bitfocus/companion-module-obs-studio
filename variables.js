@@ -30,7 +30,6 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
 	variables.push({ name: 'recording_path', label: 'File path of current recording' })
 	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
-	variables.push({ name: 'strain', label: 'Strain' })
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' })
 	variables.push({ name: 'stream_service', label: 'Stream Service' })
 	variables.push({ name: 'streaming', label: 'Streaming State' })
@@ -64,15 +63,21 @@ exports.updateVariableDefinitions = function () {
 
 	for (let s in this.sources) {
 		let source = this.sources[s]
-		this.debug(source)
 		if (source.inputKind === 'text_ft2_source_v2' || source.inputKind === 'text_gdiplus_v2') {
 			variables.push({ name: 'current_text_' + source.sourceName, label: 'Current text for ' + source.sourceName })
 			this.setVariable('current_text_' + source.sourceName, source.settings?.text ? source.settings.text : '')
 		}
-		/* if (source.typeId === 'image_source') {
-			variables.push({ name: 'image_file_name_' + source.name, label: 'Image file name for ' + source.name })
+		if (source.inputKind === 'image_source') {
+			variables.push({
+				name: 'image_file_name_' + source.sourceName,
+				label: 'Image file name for ' + source.sourceName,
+			})
+			this.setVariable(
+				'image_file_name_' + source.sourceName,
+				source.settings?.file ? source.settings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
+			)
 		}
-		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name }) */
+		//variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
 	}
 
 	this.setVariableDefinitions(variables)
