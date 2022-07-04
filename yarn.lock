@@ -34,10 +34,10 @@ ms@2.1.2:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.2.tgz#d09d1f357b443f493382a8eb3ccd183872ae6009"
   integrity sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==
 
-obs-websocket-js@^5.0.0-beta.1:
-  version "5.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/obs-websocket-js/-/obs-websocket-js-5.0.0-beta.1.tgz#bc9ab3a23dd5485b89d98af858053889e20edf58"
-  integrity sha512-aU21cI2OqFw6iwX2OATiaItkzQmVgUB98NEJR99TCB537p7kei2jGCZ8byb+Mih1uUBVRwcCNs2oVQXtg7u5+Q==
+obs-websocket-js@5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/obs-websocket-js/-/obs-websocket-js-5.0.0.tgz#403d3630cef0c34ff29631529879a17cbee37d02"
+  integrity sha512-VIveZrKkP7eUlrNQ0w0Lc70CzieGUMmoIn4Jz5T4jLMaSUhofyOL+t055eTwwV1oVxmH2dO4IuSfM97LVbyENQ==
   dependencies:
     "@msgpack/msgpack" "^2.7.1"
     crypto-js "^4.1.1"

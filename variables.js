@@ -44,6 +44,9 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'current_media_time_elapsed', label: 'Time elapsed for currently playing media source' })
 	variables.push({ name: 'current_media_time_remaining', label: 'Time remaining for currently playing media source' })
 
+	//Defaults
+	this.setVariable('current_media_name', 'None')
+
 	for (var s in this.mediaSourceList) {
 		let mediaSourceName = this.mediaSourceList[s].id
 		variables.push({ name: 'media_status_' + mediaSourceName, label: 'Media status for ' + mediaSourceName })

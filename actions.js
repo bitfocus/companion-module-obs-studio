@@ -3,7 +3,6 @@ const hotkeys = require('./hotkeys')
 module.exports = {
 	getActions() {
 		let actions = {}
-		this.log('warn', 'updating actions')
 
 		this.sourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
 		let sourcelistDefault = this.sourceList?.[0] ? this.sourceList[0].id : ''
@@ -15,7 +14,6 @@ module.exports = {
 			{ id: 'Preview Scene', label: 'Preview Scene' },
 		].concat(this.sceneList)
 
-		let outputlist = []
 		let filterlist = []
 
 		let scenelistDefault = []
@@ -402,7 +400,6 @@ module.exports = {
 		}
 		actions['trigger-hotkey'] = {
 			label: 'Trigger Hotkey by ID',
-			description: 'Find the hotkey ID in your profile settings file (see module help for more info)',
 			options: [
 				{
 					type: 'dropdown',
@@ -486,7 +483,7 @@ module.exports = {
 					label: 'Output',
 					id: 'output',
 					default: 'virtualcam_output',
-					choices: outputlist,
+					choices: this.outputList,
 					required: false,
 					minChoicesForSearch: 3,
 				},
@@ -500,8 +497,7 @@ module.exports = {
 					label: 'Output',
 					id: 'output',
 					default: 'virtualcam_output',
-					choices: outputlist,
-					required: false,
+					choices: this.outputList,
 					minChoicesForSearch: 3,
 				},
 			],
@@ -514,8 +510,7 @@ module.exports = {
 					label: 'Output',
 					id: 'output',
 					default: 'virtualcam_output',
-					choices: outputlist,
-					required: false,
+					choices: this.outputList,
 					minChoicesForSearch: 3,
 				},
 			],
@@ -529,7 +524,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					required: false,
 					minChoicesForSearch: 5,
 				},
 			],
@@ -551,6 +545,7 @@ module.exports = {
 					label: 'Monitor',
 					id: 'monitor',
 					default: 'none',
+					//FIX CHOICES TO MATCH NEW NAMES, UPGRADES
 					choices: [
 						{ id: 'none', label: 'None' },
 						{ id: 'monitorOnly', label: 'Monitor Only' },
@@ -568,11 +563,7 @@ module.exports = {
 					label: 'Format',
 					id: 'format',
 					default: 'png',
-					choices: [
-						{ id: 'png', label: 'png' },
-						{ id: 'jpg', label: 'jpg' },
-						{ id: 'bmp', label: 'bmp' },
-					],
+					choices: this.imageFormats,
 					required: true,
 				},
 				{
@@ -598,7 +589,6 @@ module.exports = {
 					type: 'textinput',
 					label: 'Custom File Path (Optional, default is recording path)',
 					id: 'path',
-					required: true,
 				},
 			],
 		}
@@ -768,12 +758,12 @@ module.exports = {
 					],
 				},
 				{
-					type: 'number',
-					label: 'Fullscreen Display (required for fullscreen mode) ',
+					type: 'dropdown',
+					label: 'Display',
 					id: 'display',
-					default: 1,
-					min: 1,
-					range: false,
+					default: 0,
+					choices: this.monitors,
+					isVisible: (action) => action.options.window === 'fullscreen',
 				},
 				{
 					type: 'dropdown',
@@ -781,6 +771,7 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
+					isVisible: (action) => action.options.type === 'Source' || action.options.type === 'Scene',
 				},
 			],
 		}

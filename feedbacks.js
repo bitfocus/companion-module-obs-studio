@@ -252,7 +252,7 @@ exports.initFeedbacks = function () {
 				minChoicesForSearch: 5,
 			},
 		],
-	}
+	} */
 
 	feedbacks['output_active'] = {
 		type: 'boolean',
@@ -268,11 +268,14 @@ exports.initFeedbacks = function () {
 				label: 'Output name',
 				id: 'output',
 				default: 'virtualcam_output',
-				choices: this.outputlist,
+				choices: this.outputList,
 				minChoicesForSearch: 3,
 			},
 		],
-	} */
+		callback: (feedback) => {
+			return this.outputs[feedback.options.output]?.outputActive
+		},
+	}
 
 	feedbacks['transition_active'] = {
 		type: 'boolean',

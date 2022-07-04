@@ -109,6 +109,7 @@ class instance extends instance_skel {
 				{
 					eventSubscriptions:
 						EventSubscription.All |
+						EventSubscription.Ui |
 						EventSubscription.InputActiveStateChanged |
 						EventSubscription.InputShowStateChanged |
 						EventSubscription.SceneItemTransformChanged,
@@ -153,7 +154,10 @@ class instance extends instance_skel {
 				this.mediaSourceList = []
 				this.imageSourceList = []
 				this.hotkeyNames = []
+				this.imageFormats = []
 				this.transitionList = []
+				this.monitors = []
+				this.outputList = []
 			}
 		} catch (error) {
 			this.debug(error)
@@ -178,13 +182,17 @@ class instance extends instance_skel {
 			this.profileList = []
 			this.sceneCollectionList = []
 			this.transitionList = []
+			this.monitors = []
+			this.outputList = []
 		}
 	}
 
 	async obsListeners() {
 		//General
 		obs.once('ExitStarted', () => {
-			this.log('warn', 'OBS closed, disconnecting')
+			this.log('error', 'OBS closed, disconnecting')
+			this.status(this.STATUS_ERROR)
+			this.disconnectOBS()
 		})
 		obs.on('VendorEvent', () => {})
 		//Config
@@ -300,7 +308,10 @@ class instance extends instance_skel {
 			this.checkFeedbacks('recording')
 		})
 		obs.on('ReplayBufferStateChanged', () => {})
-		obs.on('VirtualcamStateChanged', () => {})
+		obs.on('VirtualcamStateChanged', (data) => {
+			this.outputs['virtualcam_output'].outputActive = data.outputActive
+			this.checkFeedbacks('output_active')
+		})
 		obs.on('ReplayBufferSaved', () => {})
 		//Media Inputs
 		obs.on('MediaInputPlaybackStarted', (data) => {
@@ -315,14 +326,16 @@ class instance extends instance_skel {
 			}
 		})
 		obs.on('MediaInputActionTriggered', (data) => {
-			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE' && data.inputName == this.states.currentMedia) {
-				this.setVariable('current_media_name', 'None')
+			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
+				if (data.inputName == this.states.currentMedia) {
+					this.setVariable('current_media_name', 'None')
+				}
 				this.setVariable(`media_status_${data.inputName}`, 'Paused')
 			}
 		})
 		//UI
 		obs.on('StudioModeStateChanged', (data) => {
-			//Not working
+			this.states.studioMode = data.studioModeEnabled ? true : false
 		})
 	}
 
@@ -331,11 +344,11 @@ class instance extends instance_skel {
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
-	initPresets(updates) {
+	initPresets() {
 		this.setPresetDefinitions(this.getPresets())
 	}
 
-	actions(system) {
+	actions() {
 		this.setActions(this.getActions())
 	}
 
@@ -399,6 +412,23 @@ class instance extends instance_skel {
 				requestData = { streamServiceType: streamServiceType, streamServiceSettings: streamServiceSettings }
 				break
 			//Sources
+			case 'take_screenshot':
+				let date = new Date().toISOString()
+				let day = date.slice(0, 10)
+				let time = date.slice(11, 19).replaceAll(':', '.')
+				let fileName = action.options.source ? action.options.source : this.states.programScene
+				let fileLocation = action.options.path ? action.options.path : ''
+				let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
+				let quality = action.options.compression == 0 ? -1 : action.options.compression
+
+				requestType = 'SaveSourceScreenshot'
+				requestData = {
+					sourceName: fileName,
+					imageFormat: action.options.format,
+					imageFilePath: filePath,
+					imageCompressionQuality: quality,
+				}
+				break
 			//Scenes
 			case 'set_scene':
 				requestType = 'SetCurrentProgramScene'
@@ -425,6 +455,38 @@ class instance extends instance_skel {
 				requestType = 'SetInputSettings'
 				requestData = { inputName: action.options.source, inputSettings: { text: newText } }
 				break
+			case 'set_source_mute':
+				requestType = 'SetInputMute'
+				requestData = { inputName: action.options.source, inputMuted: action.options.mute == 'true' ? true : false }
+				break
+			case 'toggle_source_mute':
+				requestType = 'ToggleInputMute'
+				requestData = { inputName: action.options.source }
+				break
+			case 'set_volume':
+				requestType = 'SetInputVolume'
+				requestData = { inputName: action.options.source, inputVolumeDb: action.options.volume }
+				break
+			case 'adjust_volume':
+				let newVolume = '' //FIX self.sourceAudio['volume'][action.options.source] + action.options.volume
+				if (newVolume > 26) {
+					newVolume = 26
+				} else if (newVolume < -100) {
+					newVolume = -100
+				}
+				requestType = 'SetInputVolume'
+				requestData = { inputName: action.options.source, inputVolumeDb: newVolume }
+				break
+			case 'set_audio_monitor':
+				requestType = 'SetInputAudioMonitorType'
+				requestData = { inputName: action.options.source, monitorType: action.options.monitor }
+				break
+			case 'refresh_browser_source':
+				if (this.sources[action.options.source]?.inputKind == 'browser_source') {
+					requestType = 'PressInputPropertiesButton'
+					requestData = { inputName: action.options.source, propertyName: 'refreshnocache' }
+				}
+				break
 			//Transitions
 			case 'set_transition':
 				requestType = 'SetCurrentSceneTransition'
@@ -435,6 +497,29 @@ class instance extends instance_skel {
 				requestData = { transitionDuration: action.options.duration }
 				break
 			//Filters
+			case 'toggle_filter':
+				let filterVisibility
+				if (action.options.visible !== 'toggle') {
+					filterVisibility = action.options.visible === 'true' ? true : false
+				} else if (action.options.visible === 'toggle') {
+					/* if (self.sourceFilters[action.options.source]) {
+						for (s in self.sourceFilters[action.options.source]) {
+							let filter = self.sourceFilters[action.options.source][s]
+							if (filter.name === action.options.filter) {
+								filterVisibility = !filter.enabled
+							}
+						}
+					} */
+					//FIX
+				}
+
+				requestType = 'SetSourceFilterEnabled'
+				requestData = {
+					sourceName: action.options.source,
+					filterName: action.options.filter,
+					filterEnabled: filterVisibility,
+				}
+				break
 			//Scene Items
 			case 'source_properties':
 				let sourceScene
@@ -623,11 +708,60 @@ class instance extends instance_skel {
 				requestType = 'OpenInputInteractDialog'
 				requestData = { inputName: action.options.source } //PREVENT ERROR IF NOT INTERACTIVE
 				break
+			case 'open_projector':
+				let monitor = action.options.window === 'window' ? -1 : action.options.display
 
+				if (action.options.type === 'Multiview') {
+					requestType = 'OpenVideoMixProjector'
+					requestData = {
+						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_MULTIVIEW',
+						monitorIndex: monitor,
+					}
+				} else if (action.options.type === 'Preview') {
+					requestType = 'OpenVideoMixProjector'
+					requestData = {
+						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PREVIEW',
+						monitorIndex: monitor,
+					}
+				} else if (action.options.type === 'StudioProgram') {
+					requestType = 'OpenVideoMixProjector'
+					requestData = {
+						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PROGRAM',
+						monitorIndex: monitor,
+					}
+				} else if (action.options.type === 'Source' || action.options.type === 'Scene') {
+					requestType = 'OpenSourceProjector'
+					requestData = {
+						sourceName: action.options.source,
+						monitorIndex: monitor,
+					}
+				}
+				break
+			case 'start_output':
+				requestType = 'StartOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'stop_output':
+				requestType = 'StopOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'start_stop_output':
+				requestType = 'ToggleOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+
+			/////////////////////////////
 			/////////UNTESTED BELOW//////
+			/////////////////////////////
 
 			case 'do_transition':
-				var options = {}
+				let options = {}
 				if (action.options && action.options.transition) {
 					if (action.options.transition == 'Default') {
 						options['with-transition'] = {}
@@ -649,19 +783,20 @@ class instance extends instance_skel {
 				if (action.options.transition == 'Default') {
 					handle = self.obs.send('TransitionToProgram')
 				} else {
+					let transitionWaitTime
 					let revertTransition = self.states['current_transition']
 					let revertTransitionDuration = self.states['transition_duration']
 					if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-						var transitionWaitTime = action.options.transition_time + 50
+						transitionWaitTime = action.options.transition_time + 50
 					} else if (action.options.transition_time == null) {
-						var transitionWaitTime = self.states['transition_duration'] + 50
+						transitionWaitTime = self.states['transition_duration'] + 50
 					} else {
-						var transitionWaitTime = 100
+						transitionWaitTime = 100
 					}
 					if (action.options.transition_time != null) {
-						var transitionDuration = action.options.transition_time
+						transitionDuration = action.options.transition_time
 					} else {
-						var transitionDuration = self.states['transition_duration']
+						transitionDuration = self.states['transition_duration']
 					}
 					var requests = [
 						{
@@ -687,38 +822,6 @@ class instance extends instance_skel {
 					handle = self.obs.send('ExecuteBatch', { requests })
 				}
 				break
-			case 'set_source_mute':
-				handle = self.obs.send('SetMute', {
-					source: action.options.source,
-					mute: action.options.mute == 'true' ? true : false,
-				})
-				break
-			case 'toggle_source_mute':
-				handle = self.obs.send('ToggleMute', {
-					source: action.options.source,
-				})
-				break
-			case 'set_volume':
-				handle = self.obs.send('SetVolume', {
-					source: action.options.source,
-					volume: action.options.volume,
-					useDecibel: true,
-				})
-				break
-			case 'adjust_volume':
-				var newVolume = self.sourceAudio['volume'][action.options.source] + action.options.volume
-				if (newVolume > 26) {
-					var newVolume = 26
-				} else if (newVolume < -100) {
-					var newVolume = -100
-				}
-				handle = self.obs.send('SetVolume', {
-					source: action.options.source,
-					volume: newVolume,
-					useDecibel: true,
-				})
-				break
-
 			case 'toggle_scene_item':
 				let sceneName = action.options.scene
 				let sourceName = action.options.source
@@ -771,81 +874,6 @@ class instance extends instance_skel {
 					}
 				}
 				break
-			case 'start_output':
-				handle = self.obs.send('StartOutput', {
-					outputName: action.options.output,
-				})
-				break
-			case 'stop_output':
-				handle = self.obs.send('StopOutput', {
-					outputName: action.options.output,
-				})
-				break
-			case 'start_stop_output':
-				if (self.states[action.options.output] === true) {
-					handle = self.obs.send('StopOutput', {
-						outputName: action.options.output,
-					})
-				} else {
-					handle = self.obs.send('StartOutput', {
-						outputName: action.options.output,
-					})
-				}
-				break
-			case 'refresh_browser_source':
-				handle = self.obs.send('RefreshBrowserSource', {
-					sourceName: action.options.source,
-				})
-				break
-			case 'set_audio_monitor':
-				handle = self.obs.send('SetAudioMonitorType', {
-					sourceName: action.options.source,
-					monitorType: action.options.monitor,
-				})
-				break
-			case 'take_screenshot':
-				let date = new Date().toISOString()
-				let day = date.slice(0, 10)
-				let time = date.slice(11, 19).replaceAll(':', '.')
-				let fileName = action.options.source ? action.options.source : self.states['scene_active']
-				let fileLocation = action.options.path ? action.options.path : self.states['rec-folder']
-				let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
-				let quality = action.options.compression == 0 ? -1 : action.options.compression
-				handle = self.obs.send('TakeSourceScreenshot', {
-					sourceName: fileName,
-					embedPictureFormat: action.options.format,
-					saveToFilePath: filePath,
-					fileFormat: action.options.format,
-					compressionQuality: quality,
-				})
-			case 'toggle_filter':
-				if (action.options.visible !== 'toggle') {
-					var filterVisibility = action.options.visible === 'true' ? true : false
-				} else if (action.options.visible === 'toggle') {
-					if (self.sourceFilters[action.options.source]) {
-						for (s in self.sourceFilters[action.options.source]) {
-							let filter = self.sourceFilters[action.options.source][s]
-							if (filter.name === action.options.filter) {
-								var filterVisibility = !filter.enabled
-							}
-						}
-					}
-				}
-				handle = self.obs.send('SetSourceFilterVisibility', {
-					sourceName: action.options.source,
-					filterName: action.options.filter,
-					filterEnabled: filterVisibility,
-				})
-				break
-
-			case 'open_projector':
-				let monitor = action.options.window === 'window' ? -1 : action.options.display - 1
-				handle = self.obs.send('OpenProjector', {
-					type: action.options.type,
-					monitor: monitor,
-					name: action.options.source,
-				})
-				break
 		}
 		if (requestType) {
 			this.sendRequest(requestType, requestData)
@@ -864,6 +892,13 @@ class instance extends instance_skel {
 	getVersionInfo() {
 		obs.call('GetVersion').then((data) => {
 			this.states.version = data
+			data.supportedImageFormats.forEach((format) => {
+				this.imageFormats.push({ id: format, label: format })
+			})
+		})
+		obs.call('GetInputKindList').then((data) => {
+			this.states.inputKindList = data
+			//this.debug(data)
 		})
 		obs.call('GetHotkeyList').then((data) => {
 			data.hotkeys.forEach((hotkey) => {
@@ -880,6 +915,30 @@ class instance extends instance_skel {
 			this.setVariable('base_resolution', this.states.resolution)
 			this.setVariable('output_resolution', this.states.outputResolution)
 			this.setVariable('target_framerate', this.states.framerate)
+		})
+		obs.call('GetMonitorList').then((data) => {
+			this.states.monitors = data
+			data.monitors.forEach((monitor) => {
+				let monitorName = monitor.monitorName
+				if (monitorName.match(/\([0-9]+\)/i)) {
+					monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
+				}
+				this.monitors.push({
+					id: monitor.monitorIndex,
+					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
+				})
+			})
+		})
+		obs.call('GetOutputList').then((data) => {
+			data.outputs.forEach((output) => {
+				let outputKind = output.outputKind
+				if (outputKind === 'virtualcam_output') {
+					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
+				} else if (outputKind != 'ffmpeg_muxer') {
+					this.outputList.push({ id: output.outputName, label: output.outputName })
+				}
+				this.getOutputStatus(output.outputName)
+			})
 		})
 	}
 
@@ -921,17 +980,24 @@ class instance extends instance_skel {
 			this.setVariable('output_total_frames', data.outputTotalFrames)
 			this.setVariable('output_skipped_frames', data.outputSkippedFrames)
 			this.setVariable('average_frame_time', this.roundNumber(data.averageFrameRenderTime, 2))
-			this.setVariable('cpu_usage', this.roundNumber(data.cpuUsage, 2) + '%')
-			this.setVariable('memory_usage', this.roundNumber(data.memoryUsage, 0) + ' MB')
+			this.setVariable('cpu_usage', `${this.roundNumber(data.cpuUsage, 2)}%`)
+			this.setVariable('memory_usage', `${this.roundNumber(data.memoryUsage, 0)} MB`)
 			let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
 			if (freeSpace > 1000) {
-				this.setVariable('free_disk_space', this.roundNumber(freeSpace / 1000, 0) + ' GB')
+				this.setVariable('free_disk_space', `${this.roundNumber(freeSpace / 1000, 0)} GB`)
 			} else {
-				this.setVariable('free_disk_space', this.roundNumber(freeSpace, 0) + ' MB')
+				this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
 			}
 		})
 	}
 
+	getOutputStatus(outputName) {
+		obs.call('GetOutputStatus', { outputName: outputName }).then((data) => {
+			this.outputs[outputName] = data
+			this.debug(this.outputs)
+			this.checkFeedbacks('output_active')
+		})
+	}
 	getStreamStatus() {
 		obs.call('GetStreamStatus').then((data) => {
 			this.states.streaming = data.outputActive
@@ -1054,8 +1120,7 @@ class instance extends instance_skel {
 
 					obs.call('GetSceneItemList', { sceneName: sceneName }).then((data) => {
 						this.sceneItems[sceneName] = data.sceneItems
-						//this.debug	(this.sceneItems[sceneName])
-						//this.debug(this.sceneItems)
+
 						data.sceneItems.forEach((sceneItem) => {
 							let sourceName = sceneItem.sourceName
 							this.sources[sourceName] = sceneItem
@@ -1068,11 +1133,14 @@ class instance extends instance_skel {
 							obs
 								.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: sceneItem.sceneItemId })
 								.then((data) => {})
-							//this.getSourceAudio(sourceName) NEEDS TO CHECK IF SOURCE SUPPORTS AUDIO
 							if (sceneItem.inputKind) {
 								let inputKind = sceneItem.inputKind
+
+								//this.getSourceAudio(sourceName) //NEEDS TO CHECK IF SOURCE SUPPORTS AUDIO
 								obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
 									this.sources[sourceName].settings = settings.inputSettings
+									//this.debug(settings.inputSettings)
+									//this.debug(this.sources[sourceName])
 									if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 										this.textSourceList.push({ id: sourceName, label: sourceName })
 									}
@@ -1089,13 +1157,22 @@ class instance extends instance_skel {
 				})
 			})
 			.then(() => {
-				//this.debug('ITEMS')
-				//this.debug(this.sceneItems)
 				this.actions()
 				this.initVariables()
 				this.initFeedbacks()
 				//this.initPresets()
 			})
+	}
+
+	startMediaPoll() {
+		this.stopMediaPoll()
+		this.mediaPoll = setInterval(() => {}, 1000)
+	}
+	stopMediaPoll() {
+		if (this.mediaPoll) {
+			clearInterval(this.mediaPoll)
+			this.mediaPoll = null
+		}
 	}
 }
 exports = module.exports = instance

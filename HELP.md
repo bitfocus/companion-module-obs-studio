@@ -4,11 +4,9 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 ### Configuration
 
-//FIX URLLLLLLLLL for 5.0
-
-- Download and install version 5.0.0 or above of the [obs-websocket plugin](https://github.com/obsproject/obs-websocket/releases/tag/4.9.1) on a computer running OBS 27.2 or above
-- Configure the plugin as needed in OBS under Tools > obs-websocket Settings menu
-- In Companion, specify the IP address of the computer running OBS, the port you are using for the websocket connection (defaults to 4455), and the password (leave blank if authentication is not enabled)
+- Download and install **version 5.0.0 or above of the [obs-websocket plugin](https://github.com/obsproject/obs-websocket/releases)** on a computer running **OBS 27.2 or above**
+- Configure the plugin as needed in OBS under Tools > obs-websocket Settings
+- In Companion under the OBS module settings, enter the IP address of the computer running OBS, the port you are using for the websocket connection (by default the port is 4455), and the server password (leave blank if authentication is not enabled)
 
 ### Available actions
 
@@ -63,33 +61,33 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Trigger Hotkey by Key
 - Trigger Hotkey by ID _(See help info below for more info)_
 - Reconnect to OBS
-- Custom Command _(Request data must be valid JSON. See [obs-websocket protocol documentation](https://github.com/obsproject/obs-websocket/blob/4.x-current/docs/generated/protocol.md) for request types and required request data)_
+- Custom Command _(Request data must be valid JSON. See [obs-websocket protocol documentation](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests) for request types and required request data)_
 
 ### Available feedbacks
 
 **Recording & Streaming & Outputs**
 
 - Streaming Active
-- Recording Status _(If recording is active or paused, change the style of the button)_
+- Recording Status (If recording is active or paused, change the style of the button)
 - Output Active
 
 **Switching & Transitions**
 
-- Scene in Preview / Program _(Program and Preview, Program Only, or Preview Only)_
+- Scene in Preview / Program (Program and Preview, Program Only, or Preview Only)
 - Transition in Progress
 - Current Transition Type
 - Transition Duration
 
 **Sources**
 
-- Source Visible _(If a source is visible in the program, change the style of the button)_
-- Source Enabled in Scene _(If a source is enabled in a specific scene, change the style of the button)_
+- Source Visible (If a source is visible in the program, change the style of the button)
+- Source Enabled in Scene (If a source is enabled in a specific scene, change the style of the button)
 - Filter Enabled
 - Audio Muted
 - Audio Monitor Type
 - Volume
 - Media Playing
-- Media Source Remaining Time _(If remaining time of a media source is below a threshold, change the style of the button)_
+- Media Source Remaining Time (If remaining time of a media source is below a threshold, change the style of the button)
 
 **General**
 
@@ -108,8 +106,8 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - stream_timecode
 - total_stream_time
 - stream_service
-- bytes*per_sec *(Amount of data per second (in bytes) transmitted by the stream encoder)\_
-- kbits*per_sec *(Amount of data per second (in kilobits) transmitted by the stream encoder)\_
+- bytes_per_sec (Amount of data per second (in bytes) transmitted by the stream encoder)
+- kbits_per_sec (Amount of data per second (in kilobits) transmitted by the stream encoder)
 - render_missed_frames
 - render_total_frames
 - output_skipped_frames
@@ -128,16 +126,16 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Sources**
 
-- current*media_name *(Will only reflect one source if multiple media sources are playing)\_
-- current*media_time_elapsed *(Will only reflect one source if multiple media sources are playing)\_
-- current*media_time_remaining *(Will only reflect one source if multiple media sources are playing)\_
-- media*status*_source_name_ _(Current status of media sources, including: playing, paused, stopped, ended)_
-- media*file_name*source_name\* \*(Current file name of media sources, not including the extension)\_
-- media*time_elapsed*_source_name_
-- media*time_remaining*_source_name_
-- image*file_name*_source_name_
-- current*text*_source_name_ _(Current text value of text sources)_
-- volume\__source_name_ _(Current volume in dB of a source)_
+- current_media_name (Will only reflect one source if multiple media sources are playing)
+- current_media_time_elapsed (Will only reflect one source if multiple media sources are playing)
+- current_media_time_remaining (Will only reflect one source if multiple media sources are playing)
+- media_status_source_name(Current status of media sources, including: playing, paused, stopped, ended)
+- media_file_name (Current file name of media sources, not including the extension)
+- media_time_elapsed
+- media_time_remaining
+- image_file_name
+- current_text (Current text value of text sources)
+- volume (Current volume in dB of a source)
 
 **General**
 
@@ -151,20 +149,3 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - base_resolution
 - output_resolution
 - target_framerate
-
-### Using Trigger Hotkey by ID
-
-To use this feature, make sure you have obs-websocket 4.9.0 or greater installed. See the download link above to install the latest version.
-
-- In OBS > Preferences > Hotkeys, assign a Hotkey to your desired actions and then click "Apply"
-- In the OBS > Profile menu, select "Export" and choose a location. Click "Save"
-- In the folder saved by OBS, open the **basic.ini** file in a text editor
-- This file should have a section labeled **[Hotkeys]**. Under that section, the left most text up until the equals sign is the Hotkey ID. For example, a Hotkey ID might look like: **OBSBasic.StartRecording**
-- Enter this value into the your Trigger hotkey by ID action in Companion
-
-_Note:_ if you have scene-specific hotkeys, those Hotkey IDs are stored in a different file. To access those:
-
-- In the OBS > Scene Collection menu, select "Export" and choose a location. Click "Save"
-- Open the _SceneName_ **.json** file in a text editor
-- This file will have multiple sections labeled **"hotkeys": {}**. It is likely easiest to use the search function to find them. Under each Hotkey section, the text contained within the quotes above the "key" is the Hotkey ID. For example, a Hotkey ID might look like: **OBSBasic.SelectScene**
-- Enter this value into the your Trigger hotkey by ID action in Companion
