@@ -156,7 +156,7 @@ exports.initFeedbacks = function () {
 		},
 	}
 
-	/* feedbacks['scene_item_previewed'] = {
+	feedbacks['scene_item_previewed'] = {
 		type: 'boolean',
 		label: 'Source Active in Preview',
 		description: 'If a source is enabled in the preview scene, change the style of the button',
@@ -170,11 +170,14 @@ exports.initFeedbacks = function () {
 				label: 'Source name',
 				id: 'source',
 				default: this.sourcelistDefault,
-				choices: this.sourcelist,
+				choices: this.sourceList,
 				minChoicesForSearch: 5,
 			},
 		],
-	} */
+		callback: (feedback) => {
+			return this.sources[feedback.options.source]?.videoShowing
+		},
+	}
 
 	feedbacks['profile_active'] = {
 		type: 'boolean',
@@ -277,6 +280,19 @@ exports.initFeedbacks = function () {
 		},
 	}
 
+	feedbacks['replayBufferActive'] = {
+		type: 'boolean',
+		label: 'Replay Buffer Active',
+		description: 'If the replay buffer is currently active, change the style of the button',
+		style: {
+			color: ColorWhite,
+			bgcolor: ColorRed,
+		},
+		callback: () => {
+			return this.states.replayBuffer
+		},
+	}
+
 	feedbacks['transition_active'] = {
 		type: 'boolean',
 		label: 'Transition in Progress',
@@ -365,7 +381,7 @@ exports.initFeedbacks = function () {
 				choices: this.filterlist,
 			},
 		],
-	}
+	} */
 
 	feedbacks['audio_muted'] = {
 		type: 'boolean',
@@ -381,10 +397,12 @@ exports.initFeedbacks = function () {
 				label: 'Source name',
 				id: 'source',
 				default: this.sourcelistDefault,
-				choices: this.sourcelist,
-				minChoicesForSearch: 5,
+				choices: this.sourceList,
 			},
 		],
+		callback: (feedback) => {
+			return this.sources[feedback.options.source]?.inputMuted
+		},
 	}
 
 	feedbacks['audio_monitor_type'] = {
@@ -398,11 +416,10 @@ exports.initFeedbacks = function () {
 		options: [
 			{
 				type: 'dropdown',
-				label: 'Source name',
+				label: 'Source',
 				id: 'source',
 				default: this.sourcelistDefault,
-				choices: this.sourcelist,
-				minChoicesForSearch: 5,
+				choices: this.sourceList,
 			},
 			{
 				type: 'dropdown',
@@ -414,9 +431,19 @@ exports.initFeedbacks = function () {
 					{ id: 'monitorOnly', label: 'Monitor Only' },
 					{ id: 'monitorAndOutput', label: 'Monitor and Output' },
 				],
-				required: true,
 			},
 		],
+		callback: (feedback) => {
+			let monitorType
+			if (feedback.options.monitor === 'monitorAndOutput') {
+				monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
+			} else if (feedback.options.monitor === 'monitorOnly') {
+				monitorType = 'OBS_MONITORING_TYPE_MONITOR_ONLY'
+			} else {
+				monitorType = 'OBS_MONITORING_TYPE_NONE'
+			}
+			return this.sources[feedback.options.source]?.monitorType == monitorType
+		},
 	}
 
 	feedbacks['volume'] = {
@@ -433,8 +460,7 @@ exports.initFeedbacks = function () {
 				label: 'Source name',
 				id: 'source',
 				default: this.sourcelistDefault,
-				choices: this.sourcelist,
-				minChoicesForSearch: 5,
+				choices: this.sourceList,
 			},
 			{
 				type: 'number',
@@ -444,12 +470,14 @@ exports.initFeedbacks = function () {
 				min: -100,
 				max: 26,
 				range: false,
-				required: false,
 			},
 		],
+		callback: (feedback) => {
+			return this.sources[feedback.options.source]?.inputVolume == feedback.options.volume
+		},
 	}
 
-	feedbacks['media_playing'] = {
+	/* feedbacks['media_playing'] = {
 		type: 'boolean',
 		label: 'Media Playing',
 		description: 'If a media source is playing, change the style of the button',

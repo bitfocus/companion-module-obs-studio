@@ -79,6 +79,7 @@ class instance extends instance_skel {
 	destroy() {
 		debug('destroy', this.id)
 		this.disconnectOBS()
+		this.stopReconnectionPoll()
 	}
 
 	init() {
@@ -118,6 +119,7 @@ class instance extends instance_skel {
 			)
 			if (obsWebSocketVersion) {
 				this.status(this.STATUS_OK)
+				this.stopReconnectionPoll()
 				this.log('info', 'Connected to OBS')
 				this.obsListeners()
 				this.getVersionInfo()
@@ -161,11 +163,23 @@ class instance extends instance_skel {
 			}
 		} catch (error) {
 			this.debug(error)
-			this.status(this.STATUS_ERROR)
-			if (error?.message.match(/(Server sent no subprotocol)/i)) {
-				this.log('error', 'Failed to connect to OBS. Please upgrade OBS Websocket to version 5.0.0 or above')
-			} else {
-				this.log('error', `Failed to connect to OBS (${error.code} ${error.message})`)
+			if (!this.reconnectionPoll) {
+				this.startReconnectionPoll()
+			}
+			if (this.currentStatus != 2) {
+				this.status(this.STATUS_ERROR)
+				if (error?.message.match(/(Server sent no subprotocol)/i)) {
+					this.log('error', 'Failed to connect to OBS. Please upgrade OBS Websocket to version 5.0.0 or above')
+				} else if (error?.message.match(/(missing an `authentication` string)/i)) {
+					this.log('error', `Failed to connect to OBS. Please enter your websocket password in the module settings`)
+				} else if (error?.message.match(/(Authentication failed)/i)) {
+					this.log(
+						'error',
+						`Failed to connect to OBS. Please ensure your websocket password is correct in the module settings`
+					)
+				} else {
+					this.log('error', `Failed to connect to OBS (${error.message})`)
+				}
 			}
 		}
 	}
@@ -190,9 +204,12 @@ class instance extends instance_skel {
 	async obsListeners() {
 		//General
 		obs.once('ExitStarted', () => {
-			this.log('error', 'OBS closed, disconnecting')
+			this.log('error', 'OBS closed, connection lost')
 			this.status(this.STATUS_ERROR)
 			this.disconnectOBS()
+			if (!this.reconnectionPoll) {
+				this.startReconnectionPoll()
+			}
 		})
 		obs.on('VendorEvent', () => {})
 		//Config
@@ -237,7 +254,12 @@ class instance extends instance_skel {
 				this.checkFeedbacks('scene_item_active')
 			}
 		})
-		obs.on('InputShowStateChanged', () => {})
+		obs.on('InputShowStateChanged', (data) => {
+			if (this.sources[data.inputName]) {
+				this.sources[data.inputName].videoShowing = data.videoShowing
+				this.checkFeedbacks('scene_item_previewed')
+			}
+		})
 		obs.on('InputMuteStateChanged', () => {})
 		obs.on('InputVolumeChanged', () => {})
 		obs.on('InputAudioBalanceChanged', () => {})
@@ -302,17 +324,26 @@ class instance extends instance_skel {
 					this.states.recording = 'Paused'
 				} else {
 					this.states.recording = 'Stopped'
+					this.setVariable('recording_timecode', '00:00:00')
 				}
+			}
+			if (data.outputPath) {
+				this.setVariable('recording_file_name', data.outputPath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
 			}
 			this.setVariable('recording', this.states.recording)
 			this.checkFeedbacks('recording')
 		})
-		obs.on('ReplayBufferStateChanged', () => {})
+		obs.on('ReplayBufferStateChanged', (data) => {
+			this.states.replayBuffer = data.outputActive
+			this.checkFeedbacks('replayBufferActive')
+		})
 		obs.on('VirtualcamStateChanged', (data) => {
 			this.outputs['virtualcam_output'].outputActive = data.outputActive
 			this.checkFeedbacks('output_active')
 		})
-		obs.on('ReplayBufferSaved', () => {})
+		obs.on('ReplayBufferSaved', (data) => {
+			this.setVariable('replay_buffer_path', data.savedReplayPath)
+		})
 		//Media Inputs
 		obs.on('MediaInputPlaybackStarted', (data) => {
 			this.states.currentMedia = data.inputName
@@ -488,6 +519,9 @@ class instance extends instance_skel {
 				}
 				break
 			//Transitions
+			case 'do_transition':
+				requestType = 'TriggerStudioModeTransition'
+				break
 			case 'set_transition':
 				requestType = 'SetCurrentSceneTransition'
 				requestData = { transitionName: action.options.transitions }
@@ -575,6 +609,24 @@ class instance extends instance_skel {
 
 				break
 			//Outputs
+			case 'start_output':
+				requestType = 'StartOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'stop_output':
+				requestType = 'StopOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'start_stop_output':
+				requestType = 'ToggleOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
 			case 'ToggleReplayBuffer':
 				requestType = 'ToggleReplayBuffer'
 				break
@@ -737,51 +789,14 @@ class instance extends instance_skel {
 					}
 				}
 				break
-			case 'start_output':
-				requestType = 'StartOutput'
-				requestData = {
-					outputName: action.options.output,
-				}
-				break
-			case 'stop_output':
-				requestType = 'StopOutput'
-				requestData = {
-					outputName: action.options.output,
-				}
-				break
-			case 'start_stop_output':
-				requestType = 'ToggleOutput'
-				requestData = {
-					outputName: action.options.output,
-				}
-				break
 
 			/////////////////////////////
 			/////////UNTESTED BELOW//////
 			/////////////////////////////
 
-			case 'do_transition':
-				let options = {}
-				if (action.options && action.options.transition) {
-					if (action.options.transition == 'Default') {
-						options['with-transition'] = {}
-						if (action.options.transition_time > 0) {
-							options['with-transition']['duration'] = action.options.transition_time
-						}
-					} else {
-						options['with-transition'] = {
-							name: action.options.transition,
-						}
-						if (action.options.transition_time > 0) {
-							options['with-transition']['duration'] = action.options.transition_time
-						}
-					}
-				}
-				handle = self.obs.send('TransitionToProgram', options)
-				break
 			case 'quick_transition':
-				if (action.options.transition == 'Default') {
-					handle = self.obs.send('TransitionToProgram')
+				if (action.options.transition == 'Default' && !action.options.transition_time) {
+					requestType = 'TriggerStudioModeTransition'
 				} else {
 					let transitionWaitTime
 					let revertTransition = self.states['current_transition']
@@ -889,6 +904,20 @@ class instance extends instance_skel {
 		}
 	}
 
+	startReconnectionPoll() {
+		this.reconnectionPoll = setInterval(() => {
+			this.debug('reconnect?')
+			this.connectOBS()
+		}, 5000)
+	}
+
+	stopReconnectionPoll() {
+		if (this.reconnectionPoll) {
+			clearInterval(this.reconnectionPoll)
+			delete this.reconnectionPoll
+		}
+	}
+
 	getVersionInfo() {
 		obs.call('GetVersion').then((data) => {
 			this.states.version = data
@@ -934,11 +963,15 @@ class instance extends instance_skel {
 				let outputKind = output.outputKind
 				if (outputKind === 'virtualcam_output') {
 					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-				} else if (outputKind != 'ffmpeg_muxer') {
+				} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer') {
 					this.outputList.push({ id: output.outputName, label: output.outputName })
 				}
 				this.getOutputStatus(output.outputName)
 			})
+		})
+		obs.call('GetReplayBufferStatus').then((data) => {
+			this.states.replayBuffer = data.outputActive
+			this.checkFeedbacks('replayBufferActive')
 		})
 	}
 
@@ -959,6 +992,11 @@ class instance extends instance_skel {
 				}
 				if (this.states.recording === 'Recording') {
 					this.getRecordStatus()
+				}
+				if (this.outputs) {
+					for (let outputName in this.outputs) {
+						this.getOutputStatus(outputName)
+					}
 				}
 			}, 1000)
 		}
@@ -994,10 +1032,10 @@ class instance extends instance_skel {
 	getOutputStatus(outputName) {
 		obs.call('GetOutputStatus', { outputName: outputName }).then((data) => {
 			this.outputs[outputName] = data
-			this.debug(this.outputs)
 			this.checkFeedbacks('output_active')
 		})
 	}
+
 	getStreamStatus() {
 		obs.call('GetStreamStatus').then((data) => {
 			this.states.streaming = data.outputActive
@@ -1098,8 +1136,26 @@ class instance extends instance_skel {
 				//this.initPresets()
 			})
 	}
+
 	getSourceAudio(sourceName) {
-		obs.call('GetInputMute', { inputName: sourceName }).then((data) => {})
+		obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputMuted = data.inputMuted
+		})
+		obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+		})
+		obs.call('GetInputAudioBalance', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputAudioBalance = data.inputAudioBalance
+		})
+		obs.call('GetInputAudioSyncOffset', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
+		})
+		obs.call('GetInputAudioMonitorType', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].monitorType = data.monitorType
+		})
+		obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
+		})
 	}
 
 	getScenesSources() {
@@ -1136,16 +1192,20 @@ class instance extends instance_skel {
 							if (sceneItem.inputKind) {
 								let inputKind = sceneItem.inputKind
 
-								//this.getSourceAudio(sourceName) //NEEDS TO CHECK IF SOURCE SUPPORTS AUDIO
 								obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
 									this.sources[sourceName].settings = settings.inputSettings
-									//this.debug(settings.inputSettings)
-									//this.debug(this.sources[sourceName])
+									this.debug(settings.inputSettings)
+
 									if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 										this.textSourceList.push({ id: sourceName, label: sourceName })
+										this.setVariable(
+											'current_text_' + sourceName,
+											settings.inputSettings.text ? settings.inputSettings.text : ''
+										)
 									}
 									if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 										this.mediaSourceList.push({ id: sourceName, label: sourceName })
+										this.getSourceAudio(sourceName)
 									}
 									if (inputKind === 'image_source') {
 										this.imageSourceList.push({ id: sourceName, label: sourceName })

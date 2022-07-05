@@ -68,7 +68,6 @@ module.exports = {
 					id: 'scene',
 					default: this.sceneList?.[0] ? this.sceneList[0].id : '',
 					choices: this.sceneList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -81,7 +80,6 @@ module.exports = {
 					id: 'scene',
 					default: this.sceneList?.[0] ? this.sceneList[0].id : '',
 					choices: this.sceneList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -95,34 +93,12 @@ module.exports = {
 					id: 'scene',
 					default: scenelistDefault,
 					choices: this.sceneList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
 		actions['do_transition'] = {
-			label: 'Transition Preview to Program',
-			description: 'Performs the selected transition and then makes the transition the new default',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Transition',
-					id: 'transition',
-					default: 'Default',
-					choices: this.transitionList,
-					required: false,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'number',
-					label: 'Duration (optional; in ms)',
-					id: 'transition_time',
-					default: null,
-					min: 0,
-					max: 60 * 1000, //max is required by api
-					range: false,
-					required: false,
-				},
-			],
+			label: 'Transition',
+			description: 'Transition preview to program (in studio mode)',
 		}
 		actions['quick_transition'] = {
 			label: 'Quick Transition',
@@ -132,10 +108,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Transition',
 					id: 'transition',
-					default: 'Default',
+					default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 					choices: this.transitionList,
-					required: false,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -145,7 +119,6 @@ module.exports = {
 					min: 0,
 					max: 60 * 1000, //max is required by api
 					range: false,
-					required: false,
 				},
 			],
 		}
@@ -158,7 +131,6 @@ module.exports = {
 					id: 'transitions',
 					default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 					choices: this.transitionList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -248,7 +220,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -271,7 +242,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -285,7 +255,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -295,7 +264,6 @@ module.exports = {
 					min: -100,
 					max: 26,
 					range: false,
-					required: false,
 				},
 			],
 		}
@@ -309,7 +277,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'number',
@@ -317,7 +284,6 @@ module.exports = {
 					id: 'volume',
 					default: 0,
 					range: false,
-					required: false,
 				},
 			],
 		}
@@ -331,7 +297,6 @@ module.exports = {
 					id: 'scene',
 					default: 'Current Scene',
 					choices: scenelistToggle,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -339,7 +304,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					//choices: [{ id: 'allSources', label: '<ALL SOURCES>' }, ...this.sourceList],
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -366,14 +330,11 @@ module.exports = {
 					id: 'source',
 					default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
 					choices: this.textSourceList,
-					required: true,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'textwithvariables',
 					label: 'Text',
 					id: 'text',
-					required: true,
 				},
 			],
 		}
@@ -387,14 +348,11 @@ module.exports = {
 					id: 'source',
 					default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
 					choices: this.textSourceList,
-					required: true,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'textwithvariables',
 					label: 'Text',
 					id: 'text',
-					required: true,
 				},
 			],
 		}
@@ -407,7 +365,6 @@ module.exports = {
 					id: 'id',
 					default: 'OBSBasic.StartRecording',
 					choices: this.hotkeyNames,
-					required: true,
 				},
 			],
 		}
@@ -420,8 +377,6 @@ module.exports = {
 					id: 'keyId',
 					default: 'OBS_KEY_A',
 					choices: hotkeys,
-					required: true,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'checkbox',
@@ -458,7 +413,6 @@ module.exports = {
 					id: 'profile',
 					default: this.profileList?.[0] ? this.profileList[0].id : '',
 					choices: this.profileList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -471,7 +425,6 @@ module.exports = {
 					id: 'scene_collection',
 					default: this.sceneCollectionList?.[0] ? this.sceneCollectionList[0].id : '',
 					choices: this.sceneCollectionList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -484,8 +437,6 @@ module.exports = {
 					id: 'output',
 					default: 'virtualcam_output',
 					choices: this.outputList,
-					required: false,
-					minChoicesForSearch: 3,
 				},
 			],
 		}
@@ -498,7 +449,6 @@ module.exports = {
 					id: 'output',
 					default: 'virtualcam_output',
 					choices: this.outputList,
-					minChoicesForSearch: 3,
 				},
 			],
 		}
@@ -511,7 +461,6 @@ module.exports = {
 					id: 'output',
 					default: 'virtualcam_output',
 					choices: this.outputList,
-					minChoicesForSearch: 3,
 				},
 			],
 		}
@@ -524,7 +473,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -537,8 +485,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					required: true,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -551,7 +497,6 @@ module.exports = {
 						{ id: 'monitorOnly', label: 'Monitor Only' },
 						{ id: 'monitorAndOutput', label: 'Monitor and Output' },
 					],
-					required: true,
 				},
 			],
 		}
@@ -564,7 +509,6 @@ module.exports = {
 					id: 'format',
 					default: 'png',
 					choices: this.imageFormats,
-					required: true,
 				},
 				{
 					type: 'number',
@@ -574,7 +518,6 @@ module.exports = {
 					min: 0,
 					max: 100,
 					range: false,
-					required: false,
 				},
 				{
 					type: 'dropdown',
@@ -582,8 +525,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					required: false,
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'textinput',
@@ -708,7 +649,6 @@ module.exports = {
 					label: 'Timecode (in seconds)',
 					id: 'mediaTime',
 					default: 1,
-					required: true,
 				},
 			],
 		}
@@ -727,7 +667,6 @@ module.exports = {
 					label: 'Scrub Amount (in seconds, positive or negative)',
 					id: 'scrubAmount',
 					default: 1,
-					required: true,
 				},
 			],
 		}
@@ -785,7 +724,6 @@ module.exports = {
 					id: 'scene',
 					default: 'Current Scene',
 					choices: scenelistToggle, //needs toggle
-					minChoicesForSearch: 5,
 				},
 				{
 					type: 'dropdown',
@@ -835,7 +773,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -848,7 +785,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}
@@ -861,7 +797,6 @@ module.exports = {
 					id: 'source',
 					default: sourcelistDefault,
 					choices: this.sourceList,
-					minChoicesForSearch: 5,
 				},
 			],
 		}

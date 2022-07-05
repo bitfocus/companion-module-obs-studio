@@ -78,9 +78,6 @@ exports.getPresets = function () {
 		actions: [
 			{
 				action: 'do_transition',
-				options: {
-					transition: 'Default',
-				},
 			},
 		],
 		feedbacks: [

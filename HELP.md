@@ -70,6 +70,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Streaming Active
 - Recording Status (If recording is active or paused, change the style of the button)
 - Output Active
+- Replay Buffer Active
 
 **Switching & Transitions**
 
@@ -115,6 +116,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - num_dropped_frames
 - num_total_frames
 - average_frame_time
+- replay_buffer_path
 
 **Switching & Transitions**
 
