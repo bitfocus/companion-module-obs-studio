@@ -33,7 +33,6 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' })
 	variables.push({ name: 'stream_service', label: 'Stream Service' })
 	variables.push({ name: 'streaming', label: 'Streaming State' })
-	variables.push({ name: 'total_stream_time', label: 'Total streaming time' })
 	variables.push({ name: 'scene_active', label: 'Current active scene' })
 	variables.push({ name: 'scene_preview', label: 'Current preview scene' })
 	variables.push({ name: 'profile', label: 'Current profile' })
@@ -49,6 +48,8 @@ exports.updateVariableDefinitions = function () {
 	this.setVariable('current_media_name', 'None')
 	this.setVariable('recording_file_name', 'None')
 	this.setVariable('replay_buffer_path', 'None')
+	this.setVariable('current_media_time_elapsed', '--:--:--')
+	this.setVariable('current_media_time_remaining', '--:--:--')
 
 	for (let s in this.mediaSourceList) {
 		let mediaSourceName = this.mediaSourceList[s].id

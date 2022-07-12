@@ -140,6 +140,7 @@ class instance extends instance_skel {
 				this.profiles = {}
 				this.sceneCollections = {}
 				this.outputs = {}
+				this.sceneItems = {}
 				//Source Types
 				this.mediaSources = {}
 				this.imageSources = {}
@@ -148,7 +149,6 @@ class instance extends instance_skel {
 				this.sourceFilters = {}
 				//Choices
 				this.sceneList = []
-				this.sceneItems = {}
 				this.sourceList = []
 				this.profileList = []
 				this.sceneCollectionList = []
@@ -160,6 +160,7 @@ class instance extends instance_skel {
 				this.transitionList = []
 				this.monitors = []
 				this.outputList = []
+				this.filterList = []
 			}
 		} catch (error) {
 			this.debug(error)
@@ -238,10 +239,12 @@ class instance extends instance_skel {
 		obs.on('CurrentProgramSceneChanged', (data) => {
 			this.states.programScene = data.sceneName
 			this.setVariable('scene_active', this.states.programScene)
+			this.checkFeedbacks('scene_active')
 		})
 		obs.on('CurrentPreviewSceneChanged', (data) => {
 			this.states.previewScene = data.sceneName ? data.sceneName : 'None'
 			this.setVariable('scene_preview', this.states.previewScene)
+			this.checkFeedbacks('scene_active')
 		})
 		obs.on('SceneListChanged', () => {})
 		//Inputs
@@ -297,17 +300,49 @@ class instance extends instance_skel {
 		obs.on('SourceFilterCreated', () => {})
 		obs.on('SourceFilterRemoved', () => {})
 		obs.on('SourceFilterNameChanged', () => {})
-		obs.on('SourceFilterEnableStateChanged', () => {})
+		obs.on('SourceFilterEnableStateChanged', (data) => {
+			if (this.sourceFilters[data.sourceName]) {
+				let filter = this.sourceFilters[data.sourceName].findIndex((item) => item.filterName == data.filterName)
+				if (filter !== undefined) {
+					this.sourceFilters[data.sourceName][filter].filterEnabled = data.filterEnabled
+					this.checkFeedbacks('filter_enabled')
+				}
+			}
+		})
 		//Scene Items
 		obs.on('SceneItemCreated', () => {})
 		obs.on('SceneItemRemoved', () => {})
 		obs.on('SceneItemListReindexed', () => {})
-		obs.on('SceneItemEnableStateChanged', () => {})
+		obs.on('SceneItemEnableStateChanged', (data) => {
+			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+			this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			this.checkFeedbacks('scene_item_active_in_scene')
+		})
 		obs.on('SceneItemLockStateChanged', () => {})
 		obs.on('SceneItemSelected', () => {})
 		obs.on('SceneItemTransformChanged', (data) => {
-			this.debug(data)
+			//this.debug(data)
 			//update text, update image source file names
+			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+			if (sceneItem !== undefined) {
+				let sourceName = this.sceneItems[data.sceneName][sceneItem].sourceName
+				this.debug(sourceName)
+				obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
+					this.sources[sourceName].settings = settings.inputSettings
+					if (settings.inputKind === 'text_ft2_source_v2' || settings.inputKind === 'text_gdiplus_v2') {
+						this.setVariable(
+							'current_text_' + sourceName,
+							settings.inputSettings.text ? settings.inputSettings.text : ''
+						)
+					}
+					if (settings.inputKind === 'image_source') {
+						this.setVariable(
+							'image_file_name_' + sourceName,
+							settings.inputSettings?.file ? settings.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
+						)
+					}
+				})
+			}
 		})
 		//Outputs
 		obs.on('StreamStateChanged', (data) => {
@@ -470,7 +505,7 @@ class instance extends instance_skel {
 				requestData = { sceneName: action.options.scene }
 				break
 			case 'smart_switcher':
-				if (this.states.previewScene == action.options.scene) {
+				if (this.states.previewScene == action.options.scene && this.states.programScene != action.options.scene) {
 					requestType = 'TriggerStudioModeTransition'
 				} else {
 					requestType = 'SetCurrentPreviewScene'
@@ -536,15 +571,14 @@ class instance extends instance_skel {
 				if (action.options.visible !== 'toggle') {
 					filterVisibility = action.options.visible === 'true' ? true : false
 				} else if (action.options.visible === 'toggle') {
-					/* if (self.sourceFilters[action.options.source]) {
-						for (s in self.sourceFilters[action.options.source]) {
-							let filter = self.sourceFilters[action.options.source][s]
-							if (filter.name === action.options.filter) {
-								filterVisibility = !filter.enabled
-							}
+					if (this.sourceFilters[action.options.source]) {
+						let filter = this.sourceFilters[action.options.source].find(
+							(item) => item.filterName === action.options.filter
+						)
+						if (filter) {
+							filterVisibility = !filter.filterEnabled
 						}
-					} */
-					//FIX
+					}
 				}
 
 				requestType = 'SetSourceFilterEnabled'
@@ -843,50 +877,52 @@ class instance extends instance_skel {
 
 				// special scene names
 				if (!sceneName || sceneName === 'Current Scene') {
-					sceneName = self.states['scene_active']
+					sceneName = this.states.programScene
 				} else if (sceneName === 'Preview Scene') {
-					sceneName = self.states['scene_preview']
+					sceneName = this.states.previewScene
 				}
-				let scene = self.scenes[sceneName]
-
-				let setSourceVisibility = function (sourceName, render) {
-					let visible
-					if (action.options.visible === 'toggle') {
-						visible = !render
-					} else {
-						visible = action.options.visible == 'true'
-					}
-					handle = self.obs.send('SetSceneItemProperties', {
-						item: sourceName,
-						visible: visible,
-						'scene-name': sceneName,
-					})
-				}
+				let scene = this.sceneItems[sceneName]
 
 				if (scene) {
-					let finished = false
-					for (let source of scene.sources) {
+					scene.forEach((source) => {
 						// allSources does not include the group, is there any use case for considering groups as well?
-						if (source.type === 'group') {
-							if (sourceName === source.name) {
-								setSourceVisibility(source.name, source.render) // this is the group
-								if (sourceName !== 'allSources') break
+						this.debug(source)
+						if (source.isGroup) {
+							if (sourceName === source.sourceName) {
+								let enabled
+								if (action.options.visible === 'toggle') {
+									enabled = !source.sceneItemEnabled
+								} else {
+									enabled = action.options.visible == 'true' ? true : false
+								}
+								obs.call('SetSceneItemEnabled', {
+									sceneName: sceneName,
+									sceneItemId: source.sceneItemId,
+									sceneItemEnabled: enabled,
+								})
 							}
 							for (let sourceGroupChild of source.groupChildren) {
 								if (sourceName === 'allSources' || sourceGroupChild.name === sourceName) {
 									setSourceVisibility(sourceGroupChild.name, sourceGroupChild.render)
 									if (sourceName !== 'allSources') {
 										finished = true
-										break
 									}
 								}
 							}
-							if (finished) break
-						} else if (sourceName === 'allSources' || source.name === sourceName) {
-							setSourceVisibility(source.name, source.render)
-							if (sourceName !== 'allSources') break
+						} else if (sourceName === 'allSources' || source.sourceName === sourceName) {
+							let enabled
+							if (action.options.visible === 'toggle') {
+								enabled = !source.sceneItemEnabled
+							} else {
+								enabled = action.options.visible == 'true' ? true : false
+							}
+							obs.call('SetSceneItemEnabled', {
+								sceneName: sceneName,
+								sceneItemId: source.sceneItemId,
+								sceneItemEnabled: enabled,
+							})
 						}
-					}
+					})
 				}
 				break
 		}
@@ -905,6 +941,7 @@ class instance extends instance_skel {
 	}
 
 	startReconnectionPoll() {
+		this.stopReconnectionPoll()
 		this.reconnectionPoll = setInterval(() => {
 			this.debug('reconnect?')
 			this.connectOBS()
@@ -963,7 +1000,8 @@ class instance extends instance_skel {
 				let outputKind = output.outputKind
 				if (outputKind === 'virtualcam_output') {
 					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-				} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer') {
+				} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer' && outputKind != 'rtmp_output') {
+					//The above outputKinds are handled specifically by other actions, so they are skipped
 					this.outputList.push({ id: output.outputName, label: output.outputName })
 				}
 				this.getOutputStatus(output.outputName)
@@ -984,6 +1022,7 @@ class instance extends instance_skel {
 	}
 
 	startStatsPoll() {
+		this.stopStatsPoll()
 		if (obs) {
 			this.statsPoll = setInterval(() => {
 				this.getStats()
@@ -1158,6 +1197,19 @@ class instance extends instance_skel {
 		})
 	}
 
+	getSourceFilters(sourceName) {
+		obs.call('GetSourceFilterList', { sourceName: sourceName }).then((data) => {
+			this.sourceFilters[sourceName] = data.filters
+			if (data.filters) {
+				data.filters.forEach((filter) => {
+					if (!this.filterList.find((item) => item.id === filter.filterName)) {
+						this.filterList.push({ id: filter.filterName, label: filter.filterName })
+					}
+				})
+			}
+		})
+	}
+
 	getScenesSources() {
 		obs
 			.call('GetSceneList')
@@ -1174,59 +1226,90 @@ class instance extends instance_skel {
 					let sceneName = scene.sceneName
 					this.sceneList.push({ id: sceneName, label: sceneName })
 
-					obs.call('GetSceneItemList', { sceneName: sceneName }).then((data) => {
-						this.sceneItems[sceneName] = data.sceneItems
+					obs
+						.call('GetSceneItemList', { sceneName: sceneName })
+						.then((data) => {
+							this.sceneItems[sceneName] = data.sceneItems
 
-						data.sceneItems.forEach((sceneItem) => {
-							let sourceName = sceneItem.sourceName
-							this.sources[sourceName] = sceneItem
+							data.sceneItems.forEach((sceneItem) => {
+								let sourceName = sceneItem.sourceName
+								this.sources[sourceName] = sceneItem
 
-							this.sourceList.push({ id: sourceName, label: sourceName })
+								if (!this.sourceList.find((item) => item.id === sourceName)) {
+									this.sourceList.push({ id: sourceName, label: sourceName })
+								}
 
-							obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
-								this.sources[sourceName].active = active.videoActive
-							})
-							obs
-								.call('GetSceneItemTransform', { sceneName: sceneName, sceneItemId: sceneItem.sceneItemId })
-								.then((data) => {})
-							if (sceneItem.inputKind) {
-								let inputKind = sceneItem.inputKind
-
-								obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
-									this.sources[sourceName].settings = settings.inputSettings
-									this.debug(settings.inputSettings)
-
-									if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
-										this.textSourceList.push({ id: sourceName, label: sourceName })
-										this.setVariable(
-											'current_text_' + sourceName,
-											settings.inputSettings.text ? settings.inputSettings.text : ''
-										)
-									}
-									if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
-										this.mediaSourceList.push({ id: sourceName, label: sourceName })
-										this.getSourceAudio(sourceName)
-									}
-									if (inputKind === 'image_source') {
-										this.imageSourceList.push({ id: sourceName, label: sourceName })
-									}
+								obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
+									this.sources[sourceName].active = active.videoActive
 								})
-							}
+								this.getSourceFilters(sourceName)
+
+								if (sceneItem.inputKind) {
+									let inputKind = sceneItem.inputKind
+
+									obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
+										this.sources[sourceName].settings = settings.inputSettings
+
+										if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
+											this.textSourceList.push({ id: sourceName, label: sourceName })
+											this.setVariable(
+												'current_text_' + sourceName,
+												settings.inputSettings.text ? settings.inputSettings.text : ''
+											)
+										}
+										if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+											this.mediaSourceList.push({ id: sourceName, label: sourceName })
+											this.mediaSources[sourceName] = settings.inputSettings
+											this.getSourceAudio(sourceName)
+											this.startMediaPoll()
+											this.initVariables()
+										}
+										if (inputKind === 'image_source') {
+											this.imageSourceList.push({ id: sourceName, label: sourceName })
+										}
+									})
+								}
+							})
 						})
-					})
+						.then(() => {
+							this.actions()
+							this.initVariables()
+							this.initFeedbacks()
+							this.initPresets()
+							this.checkFeedbacks()
+						})
 				})
-			})
-			.then(() => {
-				this.actions()
-				this.initVariables()
-				this.initFeedbacks()
-				//this.initPresets()
 			})
 	}
 
 	startMediaPoll() {
 		this.stopMediaPoll()
-		this.mediaPoll = setInterval(() => {}, 1000)
+		this.mediaPoll = setInterval(() => {
+			this.mediaSourceList.forEach((source) => {
+				obs.call('GetMediaInputStatus', { inputName: source.id }).then((data) => {
+					this.mediaSources[source.id] = data
+
+					let remaining = data.mediaDuration - data.mediaCursor
+					if (remaining > 0) {
+						remaining = new Date(remaining).toISOString().slice(11, 19)
+					} else {
+						remaining = '--:--:--'
+					}
+
+					this.mediaSources[source.id].timeElapsed = new Date(data.mediaCursor).toISOString().slice(11, 19)
+					this.mediaSources[source.id].timeRemaining = remaining
+
+					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+						this.setVariable('current_media_time_elapsed', this.mediaSources[source.id].timeElapsed)
+						this.setVariable('current_media_time_remaining', this.mediaSources[source.id].timeRemaining)
+					}
+					this.setVariable('media_time_elapsed_' + source.id, this.mediaSources[source.id].timeElapsed)
+					this.setVariable('media_time_remaining_' + source.id, remaining)
+					this.checkFeedbacks('media_playing')
+					this.checkFeedbacks('media_source_time_remaining')
+				})
+			})
+		}, 1000)
 	}
 	stopMediaPoll() {
 		if (this.mediaPoll) {

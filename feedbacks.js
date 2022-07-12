@@ -7,6 +7,12 @@ exports.initFeedbacks = function () {
 	const ColorGreen = this.rgb(0, 200, 0)
 	const ColorOrange = this.rgb(255, 102, 0)
 
+	let sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
+	let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
+	let filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
+
+	let sourceListAll = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
+
 	feedbacks['streaming'] = {
 		type: 'boolean',
 		label: 'Streaming Active',
@@ -103,8 +109,8 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
-				default: this.scenelistDefault,
-				choices: this.scenelist,
+				default: sceneListDefault,
+				choices: this.sceneList,
 				minChoicesForSearch: 5,
 			},
 		],
@@ -113,15 +119,12 @@ exports.initFeedbacks = function () {
 			if (!mode) {
 				mode = 'programAndPreview'
 			}
-			if (
-				this.states['scene_active'] === feedback.options.scene &&
-				(mode === 'programAndPreview' || mode === 'program')
-			) {
+			if (this.states.programScene === feedback.options.scene && (mode === 'programAndPreview' || mode === 'program')) {
 				return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 			} else if (
-				this.states['scene_preview'] === feedback.options.scene &&
+				this.states.previewScene === feedback.options.scene &&
 				typeof feedback.options.fg_preview === 'number' &&
-				this.states['studio_mode'] === true &&
+				this.states.studioMode === true &&
 				(mode === 'programAndPreview' || mode === 'preview')
 			) {
 				return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
@@ -144,7 +147,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: this.sourcelistDefault,
+				default: sourceListDefault,
 				choices: this.sourceList,
 				minChoicesForSearch: 5,
 			},
@@ -169,7 +172,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: this.sourcelistDefault,
+				default: sourceListDefault,
 				choices: this.sourceList,
 				minChoicesForSearch: 5,
 			},
@@ -229,7 +232,7 @@ exports.initFeedbacks = function () {
 		},
 	}
 
-	/* feedbacks['scene_item_active_in_scene'] = {
+	feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
 		label: 'Source Enabled in Scene',
 		description: 'If a source is enabled in a specific scene, change the style of the button',
@@ -242,20 +245,34 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene name',
 				id: 'scene',
-				default: this.scenelistDefault,
-				choices: this.scenelist,
+				default: sceneListDefault,
+				choices: this.sceneList,
 				minChoicesForSearch: 5,
 			},
 			{
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: this.sourcelistDefault,
-				choices: [{ id: 'anySource', label: '<ANY SOURCE>' }, ...this.sourcelist],
+				default: sourceListDefault,
+				choices: sourceListAll,
 				minChoicesForSearch: 5,
 			},
 		],
-	} */
+		callback: (feedback) => {
+			if (this.sceneItems[feedback.options.scene]) {
+				if (feedback.options.source !== 'allSources ') {
+					let sceneItem = this.sceneItems[feedback.options.scene].find(
+						(item) => item.sourceName === feedback.options.source
+					)
+					if (sceneItem) {
+						return sceneItem.sceneItemEnabled
+					}
+				} else {
+					//check all sources
+				}
+			}
+		},
+	}
 
 	feedbacks['output_active'] = {
 		type: 'boolean',
@@ -357,7 +374,7 @@ exports.initFeedbacks = function () {
 		},
 	}
 
-	/* feedbacks['filter_enabled'] = {
+	feedbacks['filter_enabled'] = {
 		type: 'boolean',
 		label: 'Filter Enabled',
 		description: 'If a filter is enabled, change the style of the button',
@@ -370,18 +387,28 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: this.sourcelistDefault,
-				choices: this.sourcelist,
+				default: sourceListDefault,
+				choices: this.sourceList,
 			},
 			{
 				type: 'dropdown',
 				label: 'Filter',
 				id: 'filter',
-				default: this.filterlistDefault,
-				choices: this.filterlist,
+				default: filterListDefault,
+				choices: this.filterList,
 			},
 		],
-	} */
+		callback: (feedback) => {
+			if (this.sourceFilters[feedback.options.source]) {
+				let filter = this.sourceFilters[feedback.options.source].find(
+					(item) => item.filterName === feedback.options.filter
+				)
+				if (filter) {
+					return filter.filterEnabled
+				}
+			}
+		},
+	}
 
 	feedbacks['audio_muted'] = {
 		type: 'boolean',
@@ -396,7 +423,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: this.sourcelistDefault,
+				default: sourceListDefault,
 				choices: this.sourceList,
 			},
 		],
@@ -418,7 +445,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: this.sourcelistDefault,
+				default: sourceListDefault,
 				choices: this.sourceList,
 			},
 			{
@@ -459,7 +486,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: this.sourcelistDefault,
+				default: sourceListDefault,
 				choices: this.sourceList,
 			},
 			{
@@ -477,7 +504,7 @@ exports.initFeedbacks = function () {
 		},
 	}
 
-	/* feedbacks['media_playing'] = {
+	feedbacks['media_playing'] = {
 		type: 'boolean',
 		label: 'Media Playing',
 		description: 'If a media source is playing, change the style of the button',
@@ -492,9 +519,11 @@ exports.initFeedbacks = function () {
 				id: 'source',
 				default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
 				choices: this.mediaSourceList,
-				minChoicesForSearch: 5,
 			},
 		],
+		callback: (feedback) => {
+			return this.mediaSources[feedback.options.source]?.mediaState == 'OBS_MEDIA_STATE_PLAYING'
+		},
 	}
 
 	feedbacks['media_source_time_remaining'] = {
@@ -512,7 +541,6 @@ exports.initFeedbacks = function () {
 				id: 'source',
 				default: this.mediaSourceList?.[0] ? this.mediaSourceList[0].id : '',
 				choices: this.mediaSourceList,
-				minChoicesForSearch: 5,
 			},
 			{
 				type: 'number',
@@ -542,7 +570,39 @@ exports.initFeedbacks = function () {
 				default: false,
 			},
 		],
-	} */
+		callback: (feedback) => {
+			let remainingTime // remaining time in seconds
+			let mediaState
+			if (this.mediaSources[feedback.options.source]) {
+				remainingTime = Math.round(
+					(this.mediaSources[feedback.options.source].mediaDuration -
+						this.mediaSources[feedback.options.source].mediaCursor) /
+						1000
+				)
+				mediaState = this.mediaSources[feedback.options.source].mediaState
+			}
+			if (remainingTime === undefined) return false
+
+			if (feedback.options.onlyIfSourceIsOnProgram && !this.sources[feedback.options.source].active) {
+				return false
+			}
+
+			if (feedback.options.onlyIfSourceIsPlaying && mediaState !== 'OBS_MEDIA_STATE_PLAYING') {
+				return false
+			}
+
+			if (remainingTime <= feedback.options.rtThreshold) {
+				if (feedback.options.blinkingEnabled && mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+					// TODO: implement a better button blinking, or wait for https://github.com/bitfocus/companion/issues/674
+					if (remainingTime % 2 != 0) {
+						// flash in seconds interval (checkFeedbacks interval = media poller interval)
+						return false
+					}
+				}
+				return true
+			}
+		},
+	}
 
 	this.setFeedbackDefinitions(feedbacks)
 

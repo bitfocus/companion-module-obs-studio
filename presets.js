@@ -1,7 +1,14 @@
 exports.getPresets = function () {
-	//let presets = []
-	/* for (var s in self.scenelist) {
-		var scene = self.scenelist[s]
+	let presets = []
+
+	const ColorWhite = this.rgb(255, 255, 255)
+	const ColorBlack = this.rgb(0, 0, 0)
+	const ColorRed = this.rgb(200, 0, 0)
+	const ColorGreen = this.rgb(0, 200, 0)
+	const ColorYellow = this.rgb(212, 174, 0)
+
+	for (var s in this.sceneList) {
+		var scene = this.sceneList[s]
 
 		let baseObj = {
 			category: 'Scene to Program',
@@ -10,17 +17,17 @@ exports.getPresets = function () {
 				style: 'text',
 				text: scene.label,
 				size: 'auto',
-				color: self.rgb(255, 255, 255),
+				color: ColorWhite,
 				bgcolor: 0,
 			},
 			feedbacks: [
 				{
 					type: 'scene_active',
 					options: {
-						bg: self.rgb(200, 0, 0),
-						fg: self.rgb(255, 255, 255),
-						bg_preview: self.rgb(0, 200, 0),
-						fg_preview: self.rgb(255, 255, 255),
+						bg: ColorRed,
+						fg: ColorWhite,
+						bg_preview: ColorGreen,
+						fg_preview: ColorWhite,
 						scene: scene.id,
 					},
 				},
@@ -53,10 +60,10 @@ exports.getPresets = function () {
 					{
 						type: 'scene_active',
 						options: {
-							bg: self.rgb(200, 0, 0),
-							fg: self.rgb(255, 255, 255),
-							bg_preview: self.rgb(0, 200, 0),
-							fg_preview: self.rgb(255, 255, 255),
+							bg: ColorRed,
+							fg: ColorWhite,
+							bg_preview: ColorGreen,
+							fg_preview: ColorWhite,
 							scene: scene.id,
 						},
 					},
@@ -72,7 +79,7 @@ exports.getPresets = function () {
 			style: 'text',
 			text: 'AUTO',
 			size: 'auto',
-			color: self.rgb(255, 255, 255),
+			color: ColorWhite,
 			bgcolor: 0,
 		},
 		actions: [
@@ -84,15 +91,15 @@ exports.getPresets = function () {
 			{
 				type: 'transition_active',
 				style: {
-					bgcolor: self.rgb(0, 200, 0),
-					color: self.rgb(255, 255, 255),
+					bgcolor: ColorGreen,
+					color: ColorWhite,
 				},
 			},
 		],
 	})
 
-	for (var s in self.transitionlist) {
-		var transition = self.transitionlist[s]
+	for (var s in this.transitionList) {
+		var transition = this.transitionList[s]
 
 		let baseObj = {
 			category: 'Transitions',
@@ -101,15 +108,15 @@ exports.getPresets = function () {
 				style: 'text',
 				text: transition.label,
 				size: 14,
-				color: self.rgb(255, 255, 255),
+				color: ColorWhite,
 				bgcolor: 0,
 			},
 			feedbacks: [
 				{
 					type: 'transition_active',
 					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
+						bgcolor: ColorGreen,
+						color: ColorWhite,
 					},
 				},
 			],
@@ -133,15 +140,15 @@ exports.getPresets = function () {
 			style: 'text',
 			text: 'OBS STREAM',
 			size: 'auto',
-			color: self.rgb(255, 255, 255),
+			color: ColorWhite,
 			bgcolor: 0,
 		},
 		feedbacks: [
 			{
 				type: 'streaming',
 				style: {
-					bgcolor: self.rgb(0, 200, 0),
-					color: self.rgb(255, 255, 255),
+					bgcolor: ColorGreen,
+					color: ColorWhite,
 				},
 			},
 		],
@@ -159,15 +166,15 @@ exports.getPresets = function () {
 			style: 'text',
 			text: 'Streaming:\\n$(obs:streaming)\\n$(obs:stream_timecode)',
 			size: 14,
-			color: self.rgb(255, 255, 255),
+			color: ColorWhite,
 			bgcolor: 0,
 		},
 		feedbacks: [
 			{
 				type: 'streaming',
 				style: {
-					bgcolor: self.rgb(0, 200, 0),
-					color: self.rgb(255, 255, 255),
+					bgcolor: ColorGreen,
+					color: ColorWhite,
 				},
 			},
 		],
@@ -186,17 +193,17 @@ exports.getPresets = function () {
 			style: 'text',
 			text: 'OBS RECORD',
 			size: 'auto',
-			color: self.rgb(255, 255, 255),
+			color: ColorWhite,
 			bgcolor: 0,
 		},
 		feedbacks: [
 			{
 				type: 'recording',
 				options: {
-					bg: self.rgb(200, 0, 0),
-					fg: self.rgb(255, 255, 255),
-					bg_paused: self.rgb(212, 174, 0),
-					fg_paused: self.rgb(255, 255, 255),
+					bg: ColorRed,
+					fg: ColorWhite,
+					bg_paused: ColorYellow,
+					fg_paused: ColorWhite,
 				},
 			},
 		],
@@ -214,17 +221,17 @@ exports.getPresets = function () {
 			style: 'text',
 			text: 'Recording:\\n$(obs:recording)\\n$(obs:recording_timecode)',
 			size: 'auto',
-			color: self.rgb(255, 255, 255),
+			color: ColorWhite,
 			bgcolor: 0,
 		},
 		feedbacks: [
 			{
 				type: 'recording',
 				options: {
-					bg: self.rgb(200, 0, 0),
-					fg: self.rgb(255, 255, 255),
-					bg_paused: self.rgb(212, 174, 0),
-					fg_paused: self.rgb(255, 255, 255),
+					bg: ColorRed,
+					fg: ColorWhite,
+					bg_paused: ColorYellow,
+					fg_paused: ColorWhite,
 				},
 			},
 		],
@@ -235,8 +242,8 @@ exports.getPresets = function () {
 		],
 	})
 
-	for (var s in self.outputlist) {
-		let output = self.outputlist[s]
+	for (var s in this.outputList) {
+		let output = this.outputList[s]
 
 		let baseObj = {
 			category: 'Outputs',
@@ -245,7 +252,7 @@ exports.getPresets = function () {
 				style: 'text',
 				text: 'OBS ' + output.label,
 				size: 'auto',
-				color: self.rgb(255, 255, 255),
+				color: ColorWhite,
 				bgcolor: 0,
 			},
 			feedbacks: [
@@ -255,8 +262,8 @@ exports.getPresets = function () {
 						output: output.id,
 					},
 					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
+						bgcolor: ColorGreen,
+						color: ColorWhite,
 					},
 				},
 			],
@@ -272,8 +279,8 @@ exports.getPresets = function () {
 		presets.push(baseObj)
 	}
 
-	for (var s in self.sourcelist) {
-		let source = self.sourcelist[s]
+	for (var s in this.sourceList) {
+		let source = this.sourceList[s]
 
 		let baseObj = {
 			category: 'Sources',
@@ -282,7 +289,7 @@ exports.getPresets = function () {
 				style: 'text',
 				text: source.label,
 				size: 'auto',
-				color: self.rgb(255, 255, 255),
+				color: ColorWhite,
 				bgcolor: 0,
 			},
 			feedbacks: [
@@ -292,8 +299,8 @@ exports.getPresets = function () {
 						source: source.id,
 					},
 					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
+						bgcolor: ColorGreen,
+						color: ColorWhite,
 					},
 				},
 				{
@@ -302,8 +309,8 @@ exports.getPresets = function () {
 						source: source.id,
 					},
 					style: {
-						bgcolor: self.rgb(200, 0, 0),
-						color: self.rgb(255, 255, 255),
+						bgcolor: ColorRed,
+						color: ColorWhite,
 					},
 				},
 			],
@@ -318,13 +325,13 @@ exports.getPresets = function () {
 			style: 'text',
 			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
 			size: 'auto',
-			color: self.rgb(255, 255, 255),
+			color: ColorWhite,
 			bgcolor: 0,
 		},
 	})
 
-	for (var s in self.mediaSourceList) {
-		let mediaSource = self.mediaSourceList[s]
+	for (var s in this.mediaSourceList) {
+		let mediaSource = this.mediaSourceList[s]
 
 		let baseObj = {
 			category: 'Media Sources',
@@ -333,7 +340,7 @@ exports.getPresets = function () {
 				style: 'text',
 				text: mediaSource.label + '\\n$(obs:media_status_' + mediaSource.label + ')',
 				size: 'auto',
-				color: self.rgb(255, 255, 255),
+				color: ColorWhite,
 				bgcolor: 0,
 			},
 			feedbacks: [
@@ -343,8 +350,8 @@ exports.getPresets = function () {
 						source: mediaSource.id,
 					},
 					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
+						bgcolor: ColorGreen,
+						color: ColorWhite,
 					},
 				},
 			],
@@ -361,5 +368,5 @@ exports.getPresets = function () {
 		presets.push(baseObj)
 	}
 
-	return presets */
+	return presets
 }
