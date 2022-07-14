@@ -84,7 +84,23 @@ exports.updateVariableDefinitions = function () {
 				source.settings?.file ? source.settings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
 			)
 		}
-		//variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
+
+		if (source.inputAudioTracks) {
+			variables.push({ name: 'volume_' + source.sourceName, label: 'Current volume for ' + source.sourceName })
+			variables.push({ name: 'mute_' + source.sourceName, label: 'Current mute status for ' + source.sourceName })
+			variables.push({
+				name: 'monitor_' + source.sourceName,
+				label: 'Current audio monitor status for ' + source.sourceName,
+			})
+			variables.push({
+				name: 'sync_offset_' + source.sourceName,
+				label: 'Current audio monitor status for ' + source.sourceName,
+			})
+			variables.push({
+				name: 'balance_' + source.sourceName,
+				label: 'Current audio monitor status for ' + source.sourceName,
+			})
+		}
 	}
 
 	this.setVariableDefinitions(variables)

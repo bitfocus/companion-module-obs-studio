@@ -10,6 +10,7 @@ exports.initFeedbacks = function () {
 	let sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
 	let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
 	let filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
+	let audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
 
 	let sourceListAll = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
 
@@ -423,8 +424,8 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: sourceListDefault,
-				choices: this.sourceList,
+				default: audioSourceListDefault,
+				choices: this.audioSourceList,
 			},
 		],
 		callback: (feedback) => {
@@ -445,8 +446,8 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: sourceListDefault,
-				choices: this.sourceList,
+				default: audioSourceListDefault,
+				choices: this.audioSourceList,
 			},
 			{
 				type: 'dropdown',
@@ -486,8 +487,8 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: sourceListDefault,
-				choices: this.sourceList,
+				default: audioSourceListDefault,
+				choices: this.audioSourceList,
 			},
 			{
 				type: 'number',

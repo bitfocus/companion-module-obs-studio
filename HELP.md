@@ -38,6 +38,8 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Set Source Volume
 - Adjust Source Volume
 - Set Audio Monitor
+- Set Audio Sync Offset
+- Set Audio Balance
 - Set Source Text (FreeType 2)
 - Set Source Text (GDI+)
 - Refresh Browser Source
@@ -138,6 +140,10 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - image_file_name
 - current_text (Current text value of text sources)
 - volume (Current volume in dB of a source)
+- mute (Current audio mute state of a source)
+- monitor (Current audio monitoring state of a source)
+- sync_offset (Current audio sync offset of a source)
+- balance (Current audio balance of a source)
 
 **General**
 

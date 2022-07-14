@@ -17,6 +17,7 @@ module.exports = {
 		let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
 		let mediaSourceListDefault = this.mediaSourceList?.[0] ? this.mediaSourceList?.[0]?.id : ''
 		let filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
+		let audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
 
 		actions['enable_studio_mode'] = {
 			label: 'Enable Studio Mode',
@@ -216,8 +217,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
-					choices: this.sourceList,
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
 				},
 				{
 					type: 'dropdown',
@@ -238,8 +239,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
-					choices: this.sourceList,
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
 				},
 			],
 		}
@@ -251,8 +252,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
-					choices: this.sourceList,
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
 				},
 				{
 					type: 'number',
@@ -273,14 +274,58 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
-					choices: this.sourceList,
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
 				},
 				{
 					type: 'number',
 					label: 'Volume adjustment amount in dB',
 					id: 'volume',
 					default: 0,
+					range: false,
+				},
+			],
+		}
+		actions['setSyncOffset'] = {
+			label: 'Set Audio Sync Offset',
+			description: 'Sets the sync offset of an audio source',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Sync Offset in ms (-950 to 20000)',
+					id: 'offset',
+					default: 0,
+					min: -950,
+					max: 20000,
+					range: false,
+				},
+			],
+		}
+		actions['setAudioBalance'] = {
+			label: 'Set Audio Balance',
+			description: 'Sets the balance of an audio source',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Balance (Left 0.0 to 1.0 Right)',
+					id: 'balance',
+					default: 0.5,
+					min: 0.0,
+					max: 1.0,
 					range: false,
 				},
 			],
@@ -321,24 +366,6 @@ module.exports = {
 		}
 		actions['setText'] = {
 			label: 'Set Source Text',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
-					choices: this.textSourceList,
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Text',
-					id: 'text',
-				},
-			],
-		}
-		actions['set-gdi-text'] = {
-			///REMOVE THIS, merge with SET TEXT action, update script
-			label: 'Set Source Text (GDI+)',
 			options: [
 				{
 					type: 'dropdown',

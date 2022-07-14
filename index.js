@@ -3,7 +3,7 @@ const actions = require('./actions')
 const presets = require('./presets')
 const { updateVariableDefinitions } = require('./variables')
 const { initFeedbacks } = require('./feedbacks')
-//const upgradeScripts = require('./upgrades')
+const upgradeScripts = require('./upgrades')
 
 const { EventSubscription } = require('obs-websocket-js')
 
@@ -27,6 +27,7 @@ class instance extends instance_skel {
 
 	static GetUpgradeScripts() {
 		return [
+			upgradeScripts.websocket5upgrades,
 			instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
 				streaming: true,
 				scene_item_active: true,
@@ -88,10 +89,6 @@ class instance extends instance_skel {
 
 		this.status(this.STATUS_WARNING, 'Connecting')
 
-		this.actions()
-		this.initVariables()
-		this.initFeedbacks()
-		//this.initPresets()
 		this.connectOBS()
 	}
 
@@ -161,6 +158,7 @@ class instance extends instance_skel {
 				this.monitors = []
 				this.outputList = []
 				this.filterList = []
+				this.audioSourceList = []
 			}
 		} catch (error) {
 			this.debug(error)
@@ -263,12 +261,38 @@ class instance extends instance_skel {
 				this.checkFeedbacks('scene_item_previewed')
 			}
 		})
-		obs.on('InputMuteStateChanged', () => {})
-		obs.on('InputVolumeChanged', () => {})
-		obs.on('InputAudioBalanceChanged', () => {})
-		obs.on('InputAudioSyncOffsetChanged', () => {})
+		obs.on('InputMuteStateChanged', (data) => {
+			this.sources[data.inputName].inputMuted = data.inputMuted
+			this.setVariable('mute_' + data.inputName, this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted')
+			this.checkFeedbacks('audio_muted')
+		})
+		obs.on('InputVolumeChanged', (data) => {
+			this.sources[data.inputName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+			this.setVariable('volume_' + data.inputName, this.sources[data.inputName].inputVolume + 'db')
+			this.checkFeedbacks('volume')
+		})
+		obs.on('InputAudioBalanceChanged', (data) => {
+			this.sources[data.inputName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+			this.setVariable('balance_' + data.inputName, this.sources[data.inputName].inputAudioBalance)
+		})
+		obs.on('InputAudioSyncOffsetChanged', (data) => {
+			this.sources[data.inputName].inputAudioSyncOffset = data.inputAudioSyncOffset
+			this.setVariable('sync_offset_' + data.inputName, this.sources[data.inputName].inputAudioSyncOffset + 'ms')
+		})
 		obs.on('InputAudioTracksChanged', () => {})
-		obs.on('InputAudioMonitorTypeChanged', () => {})
+		obs.on('InputAudioMonitorTypeChanged', (data) => {
+			this.sources[data.inputName].monitorType = data.monitorType
+			let monitorType
+			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+				monitorType = 'Monitor / Output'
+			} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+				monitorType = 'Monitor Only'
+			} else {
+				monitorType = 'Off'
+			}
+			this.setVariable('monitor_' + data.inputName, monitorType)
+			this.checkFeedbacks('audio_monitor_type')
+		})
 		obs.on('InputVolumeMeters', () => {})
 		//Transitions
 		obs.on('CurrentSceneTransitionChanged', (data) => {
@@ -534,7 +558,7 @@ class instance extends instance_skel {
 				requestData = { inputName: action.options.source, inputVolumeDb: action.options.volume }
 				break
 			case 'adjust_volume':
-				let newVolume = '' //FIX self.sourceAudio['volume'][action.options.source] + action.options.volume
+				let newVolume = this.sources[action.options.source].inputVolume + action.options.volume
 				if (newVolume > 26) {
 					newVolume = 26
 				} else if (newVolume < -100) {
@@ -546,6 +570,14 @@ class instance extends instance_skel {
 			case 'set_audio_monitor':
 				requestType = 'SetInputAudioMonitorType'
 				requestData = { inputName: action.options.source, monitorType: action.options.monitor }
+				break
+			case 'setSyncOffset':
+				requestType = 'SetInputAudioSyncOffset'
+				requestData = { inputName: action.options.source, inputAudioSyncOffset: action.options.offset }
+				break
+			case 'setAudioBalance':
+				requestType = 'SetInputAudioBalance'
+				requestData = { inputName: action.options.source, inputAudioBalance: action.options.balance }
 				break
 			case 'refresh_browser_source':
 				if (this.sources[action.options.source]?.inputKind == 'browser_source') {
@@ -1176,25 +1208,55 @@ class instance extends instance_skel {
 			})
 	}
 
+	async getAudioSources(sourceName) {
+		try {
+			await obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
+				if (!this.audioSourceList.find((item) => item.id === sourceName)) {
+					this.audioSourceList.push({ id: sourceName, label: sourceName })
+					this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
+					this.getSourceAudio(sourceName)
+				}
+			})
+		} catch (error) {}
+	}
+
 	getSourceAudio(sourceName) {
 		obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputMuted = data.inputMuted
+			this.setVariable('muted_' + sourceName, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
+			this.checkFeedbacks('audio_muted')
 		})
 		obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+			this.setVariable('volume_' + sourceName, this.sources[sourceName].inputVolume + 'db')
+			this.checkFeedbacks('volume')
 		})
 		obs.call('GetInputAudioBalance', { inputName: sourceName }).then((data) => {
-			this.sources[sourceName].inputAudioBalance = data.inputAudioBalance
+			this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+			this.setVariable('balance_' + sourceName, this.sources[sourceName].inputAudioBalance)
 		})
 		obs.call('GetInputAudioSyncOffset', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
+			this.setVariable('sync_offset_' + sourceName, this.sources[sourceName].inputAudioSyncOffset + 'ms')
 		})
 		obs.call('GetInputAudioMonitorType', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].monitorType = data.monitorType
+			let monitorType
+			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+				monitorType = 'Monitor / Output'
+			} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+				monitorType = 'Monitor Only'
+			} else {
+				monitorType = 'Off'
+			}
+			this.setVariable('monitor_' + data.inputName, monitorType)
+			this.checkFeedbacks('audio_monitor_type')
 		})
 		obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 		})
+
+		this.initVariables()
 	}
 
 	getSourceFilters(sourceName) {
@@ -1243,7 +1305,7 @@ class instance extends instance_skel {
 									this.sources[sourceName].active = active.videoActive
 								})
 								this.getSourceFilters(sourceName)
-
+								this.getAudioSources(sourceName)
 								if (sceneItem.inputKind) {
 									let inputKind = sceneItem.inputKind
 
@@ -1260,7 +1322,6 @@ class instance extends instance_skel {
 										if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 											this.mediaSourceList.push({ id: sourceName, label: sourceName })
 											this.mediaSources[sourceName] = settings.inputSettings
-											this.getSourceAudio(sourceName)
 											this.startMediaPoll()
 											this.initVariables()
 										}
