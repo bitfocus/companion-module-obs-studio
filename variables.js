@@ -4,27 +4,14 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'base_resolution', label: 'Current base (canvas) resolution' })
 	variables.push({ name: 'output_resolution', label: 'Current  output (scaled) resolution' })
 	variables.push({ name: 'target_framerate', label: 'Current profile framerate' })
-	variables.push({
-		name: 'bytes_per_sec',
-		label: 'Amount of data per second (in bytes) transmitted by the stream encoder',
-	})
 	variables.push({ name: 'fps', label: 'Current actual framerate' })
 	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' })
 	variables.push({ name: 'memory_usage', label: 'Current RAM usage (in megabytes)' })
 	variables.push({ name: 'free_disk_space', label: 'Free recording disk space' })
-	variables.push({
-		name: 'kbits_per_sec',
-		label: 'Amount of data per second (in kilobits) transmitted by the stream encoder',
-	})
 	variables.push({ name: 'render_missed_frames', label: 'Number of frames missed due to rendering lag' })
 	variables.push({ name: 'render_total_frames', label: 'Number of frames rendered' })
 	variables.push({ name: 'output_skipped_frames', label: 'Number of encoder frames skipped' })
 	variables.push({ name: 'output_total_frames', label: 'Number of total encoder frames' })
-	variables.push({
-		name: 'num_dropped_frames',
-		label: 'Number of frames dropped by the encoder since the stream started',
-	})
-	variables.push({ name: 'num_total_frames', label: 'Total number of frames transmitted since the stream started' })
 	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' })
 	variables.push({ name: 'recording', label: 'Recording State' })
 	variables.push({ name: 'recording_file_name', label: 'File name of the last completed recording' })

@@ -6,7 +6,6 @@ const { initFeedbacks } = require('./feedbacks')
 const upgradeScripts = require('./upgrades')
 
 const { EventSubscription } = require('obs-websocket-js')
-
 const OBSWebSocket = require('obs-websocket-js').default
 const obs = new OBSWebSocket()
 
@@ -48,14 +47,14 @@ class instance extends instance_skel {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'IP Address',
+				label: 'Server IP',
 				width: 8,
 				regex: this.REGEX_IP,
 			},
 			{
 				type: 'textinput',
 				id: 'port',
-				label: 'Port',
+				label: 'Server Port',
 				width: 4,
 				default: 4455,
 				regex: this.REGEX_PORT,
@@ -63,7 +62,7 @@ class instance extends instance_skel {
 			{
 				type: 'textinput',
 				id: 'pass',
-				label: 'Password',
+				label: 'Server Password',
 				width: 4,
 			},
 		]
@@ -73,8 +72,11 @@ class instance extends instance_skel {
 		this.config = config
 
 		this.status(this.STATUS_WARNING, 'Connecting')
-
-		this.connectOBS()
+		if (this.config.host && this.config.port) {
+			this.connectOBS()
+		} else {
+			this.log('warn', 'Please ensure your websocket server IP and server port are correct in the module settings')
+		}
 	}
 
 	destroy() {
@@ -88,8 +90,9 @@ class instance extends instance_skel {
 		log = this.log
 
 		this.status(this.STATUS_WARNING, 'Connecting')
-
-		this.connectOBS()
+		if (this.config.host) {
+			this.connectOBS()
+		}
 	}
 
 	initVariables() {
@@ -138,11 +141,11 @@ class instance extends instance_skel {
 				this.sceneCollections = {}
 				this.outputs = {}
 				this.sceneItems = {}
+				this.groups = {}
 				//Source Types
 				this.mediaSources = {}
 				this.imageSources = {}
 				this.textSources = {}
-				this.filters = {}
 				this.sourceFilters = {}
 				//Choices
 				this.sceneList = []
@@ -187,6 +190,7 @@ class instance extends instance_skel {
 		if (obs) {
 			await obs.disconnect()
 			this.stopStatsPoll()
+			this.stopMediaPoll()
 			this.scenes = {}
 			this.sources = {}
 			this.states = {}
@@ -212,11 +216,14 @@ class instance extends instance_skel {
 		})
 		obs.on('VendorEvent', () => {})
 		//Config
-		obs.on('CurrentSceneCollectionChanging', () => {})
+		obs.on('CurrentSceneCollectionChanging', () => {
+			this.stopMediaPoll()
+		})
 		obs.on('CurrentSceneCollectionChanged', (data) => {
 			this.states.currentSceneCollection = data.sceneCollectionName
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariable('scene_collection', this.states.currentSceneCollection)
+			this.getScenesSources()
 		})
 		obs.on('SceneCollectionListChanged', () => {
 			this.getSceneCollectionList()
@@ -345,27 +352,26 @@ class instance extends instance_skel {
 		obs.on('SceneItemLockStateChanged', () => {})
 		obs.on('SceneItemSelected', () => {})
 		obs.on('SceneItemTransformChanged', (data) => {
-			//this.debug(data)
-			//update text, update image source file names
 			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
 			if (sceneItem !== undefined) {
 				let sourceName = this.sceneItems[data.sceneName][sceneItem].sourceName
-				this.debug(sourceName)
-				obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
-					this.sources[sourceName].settings = settings.inputSettings
-					if (settings.inputKind === 'text_ft2_source_v2' || settings.inputKind === 'text_gdiplus_v2') {
-						this.setVariable(
-							'current_text_' + sourceName,
-							settings.inputSettings.text ? settings.inputSettings.text : ''
-						)
-					}
-					if (settings.inputKind === 'image_source') {
-						this.setVariable(
-							'image_file_name_' + sourceName,
-							settings.inputSettings?.file ? settings.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
-						)
-					}
-				})
+				if (this.sceneItems[data.sceneName][sceneItem].inputKind) {
+					obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
+						this.sources[sourceName].settings = settings.inputSettings
+						if (settings.inputKind === 'text_ft2_source_v2' || settings.inputKind === 'text_gdiplus_v2') {
+							this.setVariable(
+								'current_text_' + sourceName,
+								settings.inputSettings.text ? settings.inputSettings.text : ''
+							)
+						}
+						if (settings.inputKind === 'image_source') {
+							this.setVariable(
+								'image_file_name_' + sourceName,
+								settings.inputSettings?.file ? settings.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
+							)
+						}
+					})
+				}
 			}
 		})
 		//Outputs
@@ -568,8 +574,16 @@ class instance extends instance_skel {
 				requestData = { inputName: action.options.source, inputVolumeDb: newVolume }
 				break
 			case 'set_audio_monitor':
+				let monitorType
+				if (action.options.monitor === 'monitorAndOutput') {
+					monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
+				} else if (action.options.monitor === 'monitorOnly') {
+					monitorType = 'OBS_MONITORING_TYPE_MONITOR_ONLY'
+				} else {
+					monitorType = 'OBS_MONITORING_TYPE_NONE'
+				}
 				requestType = 'SetInputAudioMonitorType'
-				requestData = { inputName: action.options.source, monitorType: action.options.monitor }
+				requestData = { inputName: action.options.source, monitorType: monitorType }
 				break
 			case 'setSyncOffset':
 				requestType = 'SetInputAudioSyncOffset'
@@ -587,7 +601,14 @@ class instance extends instance_skel {
 				break
 			//Transitions
 			case 'do_transition':
-				requestType = 'TriggerStudioModeTransition'
+				if (this.states.studioMode) {
+					requestType = 'TriggerStudioModeTransition'
+				} else {
+					this.log(
+						'warn',
+						'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead'
+					)
+				}
 				break
 			case 'set_transition':
 				requestType = 'SetCurrentSceneTransition'
@@ -596,6 +617,45 @@ class instance extends instance_skel {
 			case 'set_transition_duration':
 				requestType = 'SetCurrentSceneTransitionDuration'
 				requestData = { transitionDuration: action.options.duration }
+				break
+			case 'quick_transition':
+				if (action.options.transition == 'Default' && !action.options.transition_time) {
+					requestType = 'TriggerStudioModeTransition'
+				} else {
+					let transitionWaitTime
+					let transitionDuration
+					let revertTransition = this.states.currentTransition
+					let revertTransitionDuration = this.states.transitionDuration
+					if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
+						transitionWaitTime = action.options.transition_time + 50
+					} else if (action.options.transition_time == null) {
+						transitionWaitTime = revertTransitionDuration + 50
+					} else {
+						transitionWaitTime = 100
+					}
+					if (action.options.transition_time != null) {
+						transitionDuration = action.options.transition_time
+					} else {
+						transitionDuration = revertTransitionDuration
+					}
+					//This is a workaround until obs-websocket-js can support Batch Requests
+					//https://github.com/obs-websocket-community-projects/obs-websocket-js/issues/292
+					try {
+						obs.call('SetCurrentSceneTransition', { transitionName: action.options.transition }).then(() => {
+							obs.call('SetCurrentSceneTransitionDuration', { transitionDuration: transitionDuration }).then(() => {
+								obs.call('TriggerStudioModeTransition').then(() => {
+									setTimeout(function () {
+										obs.call('SetCurrentSceneTransition', { transitionName: revertTransition }).then(() => {
+											obs
+												.call('SetCurrentSceneTransitionDuration', { transitionDuration: revertTransitionDuration })
+												.then(() => {})
+										})
+									}, transitionWaitTime)
+								})
+							})
+						})
+					} catch (error) {}
+				}
 				break
 			//Filters
 			case 'toggle_filter':
@@ -674,6 +734,52 @@ class instance extends instance_skel {
 				})
 
 				break
+			case 'toggle_scene_item':
+				let sceneName = action.options.scene
+				let sourceName = action.options.source
+
+				// special scene names
+				if (!sceneName || sceneName === 'Current Scene') {
+					sceneName = this.states.programScene
+				} else if (sceneName === 'Preview Scene') {
+					sceneName = this.states.previewScene
+				}
+				let scene = this.sceneItems[sceneName]
+
+				if (scene) {
+					scene.forEach((source) => {
+						if (sourceName === 'allSources' || source.sourceName === sourceName) {
+							let enabled
+							if (action.options.visible === 'toggle') {
+								enabled = !source.sceneItemEnabled
+							} else {
+								enabled = action.options.visible == 'true' ? true : false
+							}
+							if (source.isGroup) {
+								for (let x in this.groups[source.sourceName]) {
+									let item = this.groups[source.sourceName][x]
+
+									if (action.options.visible === 'toggle') {
+										enabled = !this.sources[item.sourceName].sceneItemEnabled
+									} else {
+										enabled = action.options.visible == 'true' ? true : false
+									}
+									this.sendRequest('SetSceneItemEnabled', {
+										sceneName: source.sourceName,
+										sceneItemId: item.sceneItemId,
+										sceneItemEnabled: enabled,
+									})
+								}
+							}
+							this.sendRequest('SetSceneItemEnabled', {
+								sceneName: sceneName,
+								sceneItemId: source.sceneItemId,
+								sceneItemEnabled: enabled,
+							})
+						}
+					})
+				}
+				break
 			//Outputs
 			case 'start_output':
 				requestType = 'StartOutput'
@@ -746,17 +852,23 @@ class instance extends instance_skel {
 				break
 			//Media Inputs
 			case 'play_pause_media':
+				let playPause
 				if (action.options.playPause === 'toggle') {
-					//FIX TOGGLE//FIX TOGGLE//FIX TOGGLE
-				} else {
-					requestType = 'TriggerMediaInputAction'
-					requestData = {
-						inputName: action.options.source,
-						mediaAction:
-							action.options.playPause == 'true'
-								? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
-								: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY',
+					if (this.mediaSources[action.options.source]?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
+						playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+					} else {
+						playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
 					}
+				} else {
+					playPause =
+						action.options.playPause == 'true'
+							? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+							: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+				}
+				requestType = 'TriggerMediaInputAction'
+				requestData = {
+					inputName: action.options.source,
+					mediaAction: playPause,
 				}
 				break
 			case 'restart_media':
@@ -855,108 +967,6 @@ class instance extends instance_skel {
 					}
 				}
 				break
-
-			/////////////////////////////
-			/////////UNTESTED BELOW//////
-			/////////////////////////////
-
-			case 'quick_transition':
-				if (action.options.transition == 'Default' && !action.options.transition_time) {
-					requestType = 'TriggerStudioModeTransition'
-				} else {
-					let transitionWaitTime
-					let revertTransition = self.states['current_transition']
-					let revertTransitionDuration = self.states['transition_duration']
-					if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-						transitionWaitTime = action.options.transition_time + 50
-					} else if (action.options.transition_time == null) {
-						transitionWaitTime = self.states['transition_duration'] + 50
-					} else {
-						transitionWaitTime = 100
-					}
-					if (action.options.transition_time != null) {
-						transitionDuration = action.options.transition_time
-					} else {
-						transitionDuration = self.states['transition_duration']
-					}
-					var requests = [
-						{
-							'request-type': 'TransitionToProgram',
-							'with-transition': {
-								name: action.options.transition,
-								duration: transitionDuration,
-							},
-						},
-						{
-							'request-type': 'Sleep',
-							sleepMillis: transitionWaitTime,
-						},
-						{
-							'request-type': 'SetCurrentTransition',
-							'transition-name': revertTransition,
-						},
-						{
-							'request-type': 'SetTransitionDuration',
-							duration: revertTransitionDuration,
-						},
-					]
-					handle = self.obs.send('ExecuteBatch', { requests })
-				}
-				break
-			case 'toggle_scene_item':
-				let sceneName = action.options.scene
-				let sourceName = action.options.source
-
-				// special scene names
-				if (!sceneName || sceneName === 'Current Scene') {
-					sceneName = this.states.programScene
-				} else if (sceneName === 'Preview Scene') {
-					sceneName = this.states.previewScene
-				}
-				let scene = this.sceneItems[sceneName]
-
-				if (scene) {
-					scene.forEach((source) => {
-						// allSources does not include the group, is there any use case for considering groups as well?
-						this.debug(source)
-						if (source.isGroup) {
-							if (sourceName === source.sourceName) {
-								let enabled
-								if (action.options.visible === 'toggle') {
-									enabled = !source.sceneItemEnabled
-								} else {
-									enabled = action.options.visible == 'true' ? true : false
-								}
-								obs.call('SetSceneItemEnabled', {
-									sceneName: sceneName,
-									sceneItemId: source.sceneItemId,
-									sceneItemEnabled: enabled,
-								})
-							}
-							for (let sourceGroupChild of source.groupChildren) {
-								if (sourceName === 'allSources' || sourceGroupChild.name === sourceName) {
-									setSourceVisibility(sourceGroupChild.name, sourceGroupChild.render)
-									if (sourceName !== 'allSources') {
-										finished = true
-									}
-								}
-							}
-						} else if (sourceName === 'allSources' || source.sourceName === sourceName) {
-							let enabled
-							if (action.options.visible === 'toggle') {
-								enabled = !source.sceneItemEnabled
-							} else {
-								enabled = action.options.visible == 'true' ? true : false
-							}
-							obs.call('SetSceneItemEnabled', {
-								sceneName: sceneName,
-								sceneItemId: source.sceneItemId,
-								sceneItemEnabled: enabled,
-							})
-						}
-					})
-				}
-				break
 		}
 		if (requestType) {
 			this.sendRequest(requestType, requestData)
@@ -965,7 +975,11 @@ class instance extends instance_skel {
 
 	sendRequest(requestType, requestData) {
 		try {
-			obs.call(requestType, requestData)
+			obs.call(requestType, requestData).then((data) => {
+				if (data) {
+					return data
+				}
+			})
 		} catch (error) {
 			this.debug(error)
 			this.log('warn', `Request ${requestType} failed`)
@@ -975,7 +989,6 @@ class instance extends instance_skel {
 	startReconnectionPoll() {
 		this.stopReconnectionPoll()
 		this.reconnectionPoll = setInterval(() => {
-			this.debug('reconnect?')
 			this.connectOBS()
 		}, 5000)
 	}
@@ -996,7 +1009,6 @@ class instance extends instance_skel {
 		})
 		obs.call('GetInputKindList').then((data) => {
 			this.states.inputKindList = data
-			//this.debug(data)
 		})
 		obs.call('GetHotkeyList').then((data) => {
 			data.hotkeys.forEach((hotkey) => {
@@ -1033,7 +1045,7 @@ class instance extends instance_skel {
 				if (outputKind === 'virtualcam_output') {
 					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
 				} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer' && outputKind != 'rtmp_output') {
-					//The above outputKinds are handled specifically by other actions, so they are skipped
+					//The above outputKinds are handled separately by other actions, so they are omitted
 					this.outputList.push({ id: output.outputName, label: output.outputName })
 				}
 				this.getOutputStatus(output.outputName)
@@ -1114,6 +1126,8 @@ class instance extends instance_skel {
 			this.checkFeedbacks('streaming')
 			this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
 			this.setVariable('stream_timecode', this.states.streamingTimecode)
+			this.setVariable('output_skipped_frames', data.outputSkippedFrames)
+			this.setVariable('output_total_frames', data.outputTotalFrames)
 		})
 		obs.call('GetStreamServiceSettings').then((data) => {
 			this.setVariable(
@@ -1301,6 +1315,20 @@ class instance extends instance_skel {
 									this.sourceList.push({ id: sourceName, label: sourceName })
 								}
 
+								if (sceneItem.isGroup) {
+									obs.call('GetGroupSceneItemList', { sceneName: sourceName }).then((data) => {
+										this.groups[sourceName] = data.sceneItems
+										data.sceneItems.forEach((sceneItem) => {
+											let sourceName = sceneItem.sourceName
+											this.sources[sourceName] = sceneItem
+											this.sources[sourceName].groupedSource = true
+
+											if (!this.sourceList.find((item) => item.id === sourceName)) {
+												this.sourceList.push({ id: sourceName, label: sourceName })
+											}
+										})
+									})
+								}
 								obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
 									this.sources[sourceName].active = active.videoActive
 								})
@@ -1342,33 +1370,48 @@ class instance extends instance_skel {
 				})
 			})
 	}
-
+	formatTimecode(data) {
+		//Converts milliseconds into a readable time format (hh:mm:ss)
+		try {
+			let formattedTime = new Date(data).toISOString().slice(11, 19)
+			return formattedTime
+		} catch (error) {}
+	}
 	startMediaPoll() {
 		this.stopMediaPoll()
 		this.mediaPoll = setInterval(() => {
 			this.mediaSourceList.forEach((source) => {
-				obs.call('GetMediaInputStatus', { inputName: source.id }).then((data) => {
-					this.mediaSources[source.id] = data
+				try {
+					obs.call('GetMediaInputStatus', { inputName: source.id }).then((data) => {
+						this.mediaSources[source.id] = data
 
-					let remaining = data.mediaDuration - data.mediaCursor
-					if (remaining > 0) {
-						remaining = new Date(remaining).toISOString().slice(11, 19)
-					} else {
-						remaining = '--:--:--'
-					}
+						let remaining = data.mediaDuration - data.mediaCursor
+						if (remaining > 0) {
+							remaining = this.formatTimecode(remaining)
+						} else {
+							remaining = '--:--:--'
+						}
 
-					this.mediaSources[source.id].timeElapsed = new Date(data.mediaCursor).toISOString().slice(11, 19)
-					this.mediaSources[source.id].timeRemaining = remaining
+						this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
+						this.mediaSources[source.id].timeRemaining = remaining
 
-					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-						this.setVariable('current_media_time_elapsed', this.mediaSources[source.id].timeElapsed)
-						this.setVariable('current_media_time_remaining', this.mediaSources[source.id].timeRemaining)
-					}
-					this.setVariable('media_time_elapsed_' + source.id, this.mediaSources[source.id].timeElapsed)
-					this.setVariable('media_time_remaining_' + source.id, remaining)
-					this.checkFeedbacks('media_playing')
-					this.checkFeedbacks('media_source_time_remaining')
-				})
+						if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+							this.setVariable('current_media_time_elapsed', this.mediaSources[source.id].timeElapsed)
+							this.setVariable('current_media_time_remaining', this.mediaSources[source.id].timeRemaining)
+							this.setVariable('media_status_' + source.id, 'Playing')
+						} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+							this.setVariable('media_status_' + source.id, 'Paused')
+						} else {
+							this.setVariable('media_status_' + source.id, 'Stopped')
+						}
+						this.setVariable('media_time_elapsed_' + source.id, this.mediaSources[source.id].timeElapsed)
+						this.setVariable('media_time_remaining_' + source.id, remaining)
+						this.checkFeedbacks('media_playing')
+						this.checkFeedbacks('media_source_time_remaining')
+					})
+				} catch (error) {
+					this.debug(error)
+				}
 			})
 		}, 1000)
 	}
@@ -1377,6 +1420,14 @@ class instance extends instance_skel {
 			clearInterval(this.mediaPoll)
 			this.mediaPoll = null
 		}
+	}
+	organizeChoices() {
+		this.sourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.sceneList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
 	}
 }
 exports = module.exports = instance

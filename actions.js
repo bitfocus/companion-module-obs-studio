@@ -4,14 +4,14 @@ module.exports = {
 	getActions() {
 		let actions = {}
 
-		this.sourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
-		this.sceneList?.sort((a, b) => (a.id < b.id ? -1 : 1))
-		this.textSourceList?.sort((a, b) => (a.id < b.id ? -1 : 1))
+		this.organizeChoices()
 
 		let sceneListToggle = [
 			{ id: 'Current Scene', label: 'Current Scene' },
 			{ id: 'Preview Scene', label: 'Preview Scene' },
 		].concat(this.sceneList)
+
+		let sourceListAll = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceList)
 
 		let sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
 		let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
@@ -65,7 +65,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: this.sceneList?.[0] ? this.sceneList[0].id : '',
+					default: sceneListDefault,
 					choices: this.sceneList,
 				},
 			],
@@ -77,7 +77,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: this.sceneList?.[0] ? this.sceneList[0].id : '',
+					default: sceneListDefault,
 					choices: this.sceneList,
 				},
 			],
@@ -97,7 +97,7 @@ module.exports = {
 		}
 		actions['do_transition'] = {
 			label: 'Transition',
-			description: 'Transition preview to program (in studio mode)',
+			description: 'Transitions preview to program in Studio Mode',
 		}
 		actions['quick_transition'] = {
 			label: 'Quick Transition',
@@ -345,8 +345,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
-					choices: this.sourceList, //{ id: 'allSources', label: '<ALL SOURCES>' }
+					default: 'allSources',
+					choices: sourceListAll,
 				},
 				{
 					type: 'dropdown',
@@ -508,17 +508,16 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
-					choices: this.sourceList,
+					default: audioSourceListDefault,
+					choices: this.audioSourceList,
 				},
 				{
 					type: 'dropdown',
 					label: 'Monitor',
 					id: 'monitor',
 					default: 'none',
-					//FIX CHOICES TO MATCH NEW NAMES, UPGRADES
 					choices: [
-						{ id: 'none', label: 'None' },
+						{ id: 'none', label: 'Monitor Off' },
 						{ id: 'monitorOnly', label: 'Monitor Only' },
 						{ id: 'monitorAndOutput', label: 'Monitor and Output' },
 					],
@@ -748,7 +747,7 @@ module.exports = {
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: sceneListToggle, //needs toggle
+					choices: sceneListToggle,
 				},
 				{
 					type: 'dropdown',

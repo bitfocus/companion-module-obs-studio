@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "1.0.32",
+	"version": "2.0.0",
 	"api_version": "1.0.0",
 	"keywords": [
 		"Stream"
@@ -8,7 +8,7 @@
 	"manufacturer": "OBS",
 	"product": "Studio",
 	"shortname": "obs",
-	"description": "OBS Studio plugin for companion",
+	"description": "Control OBS Studio using the obs-websocket plugin",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"

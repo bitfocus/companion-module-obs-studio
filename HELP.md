@@ -24,7 +24,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Change Scene
 - Preview Scene
 - Smart Scene Switcher _(Previews selected scene or, if scene is already in preview, transitions the scene to program)_
-- Transition Preview to Program _(Performs the selected transition and then makes the transition the new default)_
+- Transition _(Requires Studio Mode to be active)_
 - Quick Transition _(Performs the selected transition and then returns to the default transition)_
 - Set Transition Type
 - Set Transition Duration

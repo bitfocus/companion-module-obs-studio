@@ -12,7 +12,7 @@ exports.initFeedbacks = function () {
 	let filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
 	let audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
 
-	let sourceListAll = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
+	let sourceListAny = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
 
 	feedbacks['streaming'] = {
 		type: 'boolean',
@@ -244,7 +244,7 @@ exports.initFeedbacks = function () {
 		options: [
 			{
 				type: 'dropdown',
-				label: 'Scene name',
+				label: 'Scene',
 				id: 'scene',
 				default: sceneListDefault,
 				choices: this.sceneList,
@@ -252,24 +252,31 @@ exports.initFeedbacks = function () {
 			},
 			{
 				type: 'dropdown',
-				label: 'Source name',
+				label: 'Source',
 				id: 'source',
 				default: sourceListDefault,
-				choices: sourceListAll,
+				choices: sourceListAny,
 				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
-			if (this.sceneItems[feedback.options.scene]) {
-				if (feedback.options.source !== 'allSources ') {
+			if (feedback.options.source !== 'anySource') {
+				if (this.sceneItems[feedback.options.scene]) {
 					let sceneItem = this.sceneItems[feedback.options.scene].find(
 						(item) => item.sourceName === feedback.options.source
 					)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
-				} else {
-					//check all sources
+				}
+			} else {
+				let scene = this.sceneItems[feedback.options.scene]
+
+				if (scene) {
+					let enabled = this.sceneItems[feedback.options.scene].find((item) => item.sceneItemEnabled === true)
+					if (enabled) {
+						return true
+					}
 				}
 			}
 		},
