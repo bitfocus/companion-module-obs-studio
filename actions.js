@@ -12,6 +12,7 @@ module.exports = {
 		].concat(this.sceneList)
 
 		let sourceListAll = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceList)
+		let mediaSourceListCurrent = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
 
 		let sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
 		let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
@@ -594,8 +595,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 				{
 					type: 'dropdown',
@@ -617,8 +618,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 			],
 		}
@@ -629,8 +630,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 			],
 		}
@@ -641,8 +642,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 			],
 		}
@@ -653,8 +654,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 			],
 		}
@@ -665,8 +666,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 				{
 					type: 'number',
@@ -683,8 +684,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Media Source',
 					id: 'source',
-					default: mediaSourceListDefault,
-					choices: this.mediaSourceList,
+					default: 'currentMedia',
+					choices: mediaSourceListCurrent,
 				},
 				{
 					type: 'number',

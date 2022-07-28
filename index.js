@@ -173,11 +173,11 @@ class instance extends instance_skel {
 				if (error?.message.match(/(Server sent no subprotocol)/i)) {
 					this.log('error', 'Failed to connect to OBS. Please upgrade OBS Websocket to version 5.0.0 or above')
 				} else if (error?.message.match(/(missing an `authentication` string)/i)) {
-					this.log('error', `Failed to connect to OBS. Please enter your websocket password in the module settings`)
+					this.log('error', `Failed to connect to OBS. Please enter your obs-websocket password in the module settings`)
 				} else if (error?.message.match(/(Authentication failed)/i)) {
 					this.log(
 						'error',
-						`Failed to connect to OBS. Please ensure your websocket password is correct in the module settings`
+						`Failed to connect to OBS. Please ensure your obs-websocket password is correct in the module settings`
 					)
 				} else {
 					this.log('error', `Failed to connect to OBS (${error.message})`)
@@ -223,7 +223,7 @@ class instance extends instance_skel {
 			this.states.currentSceneCollection = data.sceneCollectionName
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariable('scene_collection', this.states.currentSceneCollection)
-			this.getScenesSources()
+			//Re-init needed
 		})
 		obs.on('SceneCollectionListChanged', () => {
 			this.getSceneCollectionList()
@@ -356,21 +356,26 @@ class instance extends instance_skel {
 			if (sceneItem !== undefined) {
 				let sourceName = this.sceneItems[data.sceneName][sceneItem].sourceName
 				if (this.sceneItems[data.sceneName][sceneItem].inputKind) {
-					obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
-						this.sources[sourceName].settings = settings.inputSettings
-						if (settings.inputKind === 'text_ft2_source_v2' || settings.inputKind === 'text_gdiplus_v2') {
-							this.setVariable(
-								'current_text_' + sourceName,
-								settings.inputSettings.text ? settings.inputSettings.text : ''
-							)
-						}
-						if (settings.inputKind === 'image_source') {
-							this.setVariable(
-								'image_file_name_' + sourceName,
-								settings.inputSettings?.file ? settings.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
-							)
-						}
-					})
+					obs
+						.call('GetInputSettings', { inputName: sourceName })
+						.then((settings) => {
+							this.sources[sourceName].settings = settings.inputSettings
+							if (settings.inputKind === 'text_ft2_source_v2' || settings.inputKind === 'text_gdiplus_v2') {
+								this.setVariable(
+									'current_text_' + sourceName,
+									settings.inputSettings.text ? settings.inputSettings.text : ''
+								)
+							}
+							if (settings.inputKind === 'image_source') {
+								this.setVariable(
+									'image_file_name_' + sourceName,
+									settings.inputSettings?.file
+										? settings.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+										: ''
+								)
+							}
+						})
+						.catch((error) => {})
 				}
 			}
 		})
@@ -853,8 +858,9 @@ class instance extends instance_skel {
 			//Media Inputs
 			case 'play_pause_media':
 				let playPause
-				if (action.options.playPause === 'toggle') {
-					if (this.mediaSources[action.options.source]?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
+				let media = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
+				if (action.options.playPause === 'toggle' && media) {
+					if (this.mediaSources[media]?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
 						playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
 					} else {
 						playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
@@ -867,49 +873,49 @@ class instance extends instance_skel {
 				}
 				requestType = 'TriggerMediaInputAction'
 				requestData = {
-					inputName: action.options.source,
+					inputName: media,
 					mediaAction: playPause,
 				}
 				break
 			case 'restart_media':
 				requestType = 'TriggerMediaInputAction'
 				requestData = {
-					inputName: action.options.source,
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART',
 				}
 				break
 			case 'stop_media':
 				requestType = 'TriggerMediaInputAction'
 				requestData = {
-					inputName: action.options.source,
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP',
 				}
 				break
 			case 'next_media':
 				requestType = 'TriggerMediaInputAction'
 				requestData = {
-					inputName: action.options.source,
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT',
 				}
 				break
 			case 'previous_media':
 				requestType = 'TriggerMediaInputAction'
 				requestData = {
-					inputName: action.options.source,
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS',
 				}
 				break
 			case 'set_media_time':
 				requestType = 'SetMediaInputCursor'
 				requestData = {
-					inputName: action.options.source,
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 					mediaCursor: action.options.mediaTime * 1000,
 				}
 				break
 			case 'scrub_media':
 				requestType = 'OffsetMediaInputCursor'
 				requestData = {
-					inputName: action.options.source,
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 					mediaCursorOffset: action.options.scrubAmount * 1000,
 				}
 				break
@@ -936,7 +942,7 @@ class instance extends instance_skel {
 				break
 			case 'openInputInteractDialog':
 				requestType = 'OpenInputInteractDialog'
-				requestData = { inputName: action.options.source } //PREVENT ERROR IF NOT INTERACTIVE
+				requestData = { inputName: action.options.source }
 				break
 			case 'open_projector':
 				let monitor = action.options.window === 'window' ? -1 : action.options.display
@@ -973,16 +979,13 @@ class instance extends instance_skel {
 		}
 	}
 
-	sendRequest(requestType, requestData) {
+	async sendRequest(requestType, requestData) {
 		try {
-			obs.call(requestType, requestData).then((data) => {
-				if (data) {
-					return data
-				}
-			})
+			let data = await obs.call(requestType, requestData)
+			return data
 		} catch (error) {
 			this.debug(error)
-			this.log('warn', `Request ${requestType} failed`)
+			this.log('warn', `Request ${requestType} failed (${error})`)
 		}
 	}
 
@@ -1000,13 +1003,13 @@ class instance extends instance_skel {
 		}
 	}
 
-	getVersionInfo() {
-		obs.call('GetVersion').then((data) => {
-			this.states.version = data
-			data.supportedImageFormats.forEach((format) => {
-				this.imageFormats.push({ id: format, label: format })
-			})
+	async getVersionInfo() {
+		let version = await this.sendRequest('GetVersion')
+		this.states.version = version
+		version.supportedImageFormats.forEach((format) => {
+			this.imageFormats.push({ id: format, label: format })
 		})
+
 		obs.call('GetInputKindList').then((data) => {
 			this.states.inputKindList = data
 		})
@@ -1237,7 +1240,7 @@ class instance extends instance_skel {
 	getSourceAudio(sourceName) {
 		obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputMuted = data.inputMuted
-			this.setVariable('muted_' + sourceName, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
+			this.setVariable('mute_' + sourceName, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
 			this.checkFeedbacks('audio_muted')
 		})
 		obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
@@ -1263,7 +1266,7 @@ class instance extends instance_skel {
 			} else {
 				monitorType = 'Off'
 			}
-			this.setVariable('monitor_' + data.inputName, monitorType)
+			this.setVariable('monitor_' + sourceName, monitorType)
 			this.checkFeedbacks('audio_monitor_type')
 		})
 		obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
@@ -1370,6 +1373,7 @@ class instance extends instance_skel {
 				})
 			})
 	}
+
 	formatTimecode(data) {
 		//Converts milliseconds into a readable time format (hh:mm:ss)
 		try {
@@ -1377,12 +1381,14 @@ class instance extends instance_skel {
 			return formattedTime
 		} catch (error) {}
 	}
+
 	startMediaPoll() {
 		this.stopMediaPoll()
 		this.mediaPoll = setInterval(() => {
 			this.mediaSourceList.forEach((source) => {
-				try {
-					obs.call('GetMediaInputStatus', { inputName: source.id }).then((data) => {
+				obs
+					.call('GetMediaInputStatus', { inputName: source.id })
+					.then((data) => {
 						this.mediaSources[source.id] = data
 
 						let remaining = data.mediaDuration - data.mediaCursor
@@ -1409,18 +1415,20 @@ class instance extends instance_skel {
 						this.checkFeedbacks('media_playing')
 						this.checkFeedbacks('media_source_time_remaining')
 					})
-				} catch (error) {
-					this.debug(error)
-				}
+					.catch((error) => {
+						this.debug(error)
+					})
 			})
 		}, 1000)
 	}
+
 	stopMediaPoll() {
 		if (this.mediaPoll) {
 			clearInterval(this.mediaPoll)
 			this.mediaPoll = null
 		}
 	}
+
 	organizeChoices() {
 		this.sourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.sceneList?.sort((a, b) => a.id.localeCompare(b.id))
