@@ -224,6 +224,7 @@ class instance extends instance_skel {
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariable('scene_collection', this.states.currentSceneCollection)
 			this.getScenesSources()
+			this.getSceneTransitionList()
 		})
 		obs.on('SceneCollectionListChanged', () => {
 			this.getSceneCollectionList()
@@ -1322,6 +1323,8 @@ class instance extends instance_skel {
 		this.sourceList = []
 		this.mediaSources = []
 		this.mediaSourceList = []
+		this.textSourceList = []
+		this.imageSourceList = []
 		obs
 			.call('GetSceneList')
 			.then((data) => {

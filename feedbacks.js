@@ -13,6 +13,7 @@ exports.initFeedbacks = function () {
 	let audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
 
 	let sourceListAny = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
+	let sceneListAny = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneList)
 
 	feedbacks['streaming'] = {
 		type: 'boolean',
@@ -146,15 +147,22 @@ exports.initFeedbacks = function () {
 		options: [
 			{
 				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				choices: sceneListAny,
+			},
+			{
+				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
 				default: sourceListDefault,
 				choices: this.sourceList,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
-			if (this.sources[feedback.options.source]?.active) {
+			if (this.sources[feedback.options.source]?.active && feedback.options.scene === 'anyScene') {
+				return true
+			} else if (this.sources[feedback.options.source]?.active && feedback.options.scene === this.states.programScene) {
 				return true
 			}
 		},
