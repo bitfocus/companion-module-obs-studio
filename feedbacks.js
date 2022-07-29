@@ -149,6 +149,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
+				default: 'anyScene',
 				choices: sceneListAny,
 			},
 			{
