@@ -780,27 +780,27 @@ class instance extends instance_skel {
 							} else {
 								enabled = action.options.visible == 'true' ? true : false
 							}
-							if (source.isGroup) {
-								for (let x in this.groups[source.sourceName]) {
-									let item = this.groups[source.sourceName][x]
-
-									if (action.options.visible === 'toggle') {
-										enabled = !this.sources[item.sourceName].sceneItemEnabled
-									} else {
-										enabled = action.options.visible == 'true' ? true : false
-									}
-									this.sendRequest('SetSceneItemEnabled', {
-										sceneName: source.sourceName,
-										sceneItemId: item.sceneItemId,
-										sceneItemEnabled: enabled,
-									})
-								}
-							}
 							this.sendRequest('SetSceneItemEnabled', {
 								sceneName: sceneName,
 								sceneItemId: source.sceneItemId,
 								sceneItemEnabled: enabled,
 							})
+							if (source.isGroup) {
+								for (let x in this.groups[source.sourceName]) {
+									let item = this.groups[source.sourceName][x]
+									let groupEnabled
+									if (action.options.visible === 'toggle') {
+										groupEnabled = !this.sources[item.sourceName].sceneItemEnabled
+									} else {
+										groupEnabled = action.options.visible == 'true' ? true : false
+									}
+									this.sendRequest('SetSceneItemEnabled', {
+										sceneName: source.sourceName,
+										sceneItemId: item.sceneItemId,
+										sceneItemEnabled: groupEnabled,
+									})
+								}
+							}
 						}
 					})
 				}
@@ -1340,72 +1340,70 @@ class instance extends instance_skel {
 					let sceneName = scene.sceneName
 					this.sceneList.push({ id: sceneName, label: sceneName })
 
-					obs
-						.call('GetSceneItemList', { sceneName: sceneName })
-						.then((data) => {
-							this.sceneItems[sceneName] = data.sceneItems
+					obs.call('GetSceneItemList', { sceneName: sceneName }).then((data) => {
+						this.sceneItems[sceneName] = data.sceneItems
 
-							data.sceneItems.forEach((sceneItem) => {
-								let sourceName = sceneItem.sourceName
-								this.sources[sourceName] = sceneItem
+						data.sceneItems.forEach((sceneItem) => {
+							let sourceName = sceneItem.sourceName
+							this.sources[sourceName] = sceneItem
 
-								if (!this.sourceList.find((item) => item.id === sourceName)) {
-									this.sourceList.push({ id: sourceName, label: sourceName })
-								}
+							if (!this.sourceList.find((item) => item.id === sourceName)) {
+								this.sourceList.push({ id: sourceName, label: sourceName })
+							}
 
-								if (sceneItem.isGroup) {
-									obs.call('GetGroupSceneItemList', { sceneName: sourceName }).then((data) => {
-										this.groups[sourceName] = data.sceneItems
-										data.sceneItems.forEach((sceneItem) => {
-											let sourceName = sceneItem.sourceName
-											this.sources[sourceName] = sceneItem
-											this.sources[sourceName].groupedSource = true
+							if (sceneItem.isGroup) {
+								obs.call('GetGroupSceneItemList', { sceneName: sourceName }).then((data) => {
+									this.groups[sourceName] = data.sceneItems
+									data.sceneItems.forEach((sceneItem) => {
+										let sourceName = sceneItem.sourceName
+										this.sources[sourceName] = sceneItem
+										this.sources[sourceName].groupedSource = true
 
-											if (!this.sourceList.find((item) => item.id === sourceName)) {
-												this.sourceList.push({ id: sourceName, label: sourceName })
-											}
-										})
+										if (!this.sourceList.find((item) => item.id === sourceName)) {
+											this.sourceList.push({ id: sourceName, label: sourceName })
+										}
 									})
-								}
-								obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
-									this.sources[sourceName].active = active.videoActive
 								})
-								this.getSourceFilters(sourceName)
-								this.getAudioSources(sourceName)
-								if (sceneItem.inputKind) {
-									let inputKind = sceneItem.inputKind
-
-									obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
-										this.sources[sourceName].settings = settings.inputSettings
-
-										if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
-											this.textSourceList.push({ id: sourceName, label: sourceName })
-											this.setVariable(
-												'current_text_' + sourceName,
-												settings.inputSettings.text ? settings.inputSettings.text : ''
-											)
-										}
-										if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
-											this.mediaSourceList.push({ id: sourceName, label: sourceName })
-											this.mediaSources[sourceName] = settings.inputSettings
-											this.startMediaPoll()
-											this.initVariables()
-											this.initPresets()
-										}
-										if (inputKind === 'image_source') {
-											this.imageSourceList.push({ id: sourceName, label: sourceName })
-										}
-									})
-								}
+							}
+							obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
+								this.sources[sourceName].active = active.videoActive
 							})
-						})
-						.then(() => {
+							this.getSourceFilters(sourceName)
+							this.getAudioSources(sourceName)
+
+							if (sceneItem.inputKind) {
+								let inputKind = sceneItem.inputKind
+
+								obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
+									this.sources[sourceName].settings = settings.inputSettings
+
+									if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
+										this.textSourceList.push({ id: sourceName, label: sourceName })
+										this.setVariable(
+											'current_text_' + sourceName,
+											settings.inputSettings.text ? settings.inputSettings.text : ''
+										)
+									}
+									if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+										this.mediaSourceList.push({ id: sourceName, label: sourceName })
+										this.mediaSources[sourceName] = settings.inputSettings
+										this.startMediaPoll()
+										this.initVariables()
+										this.initPresets()
+									}
+									if (inputKind === 'image_source') {
+										this.imageSourceList.push({ id: sourceName, label: sourceName })
+									}
+								})
+							}
+
 							this.actions()
 							this.initVariables()
 							this.initFeedbacks()
 							this.initPresets()
 							this.checkFeedbacks()
 						})
+					})
 				})
 			})
 	}
