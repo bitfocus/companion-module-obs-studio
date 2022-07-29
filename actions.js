@@ -11,6 +11,8 @@ module.exports = {
 			{ id: 'Preview Scene', label: 'Preview Scene' },
 		].concat(this.sceneList)
 
+		let sceneListCustom = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneList)
+
 		let sourceListAll = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceList)
 		let mediaSourceListCurrent = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
 
@@ -67,7 +69,14 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: sceneListDefault,
-					choices: this.sceneList,
+					choices: sceneListCustom,
+				},
+				{
+					type: 'textwithvariables',
+					label: 'Custom Scene Name',
+					id: 'customSceneName',
+					default: '',
+					isVisible: (action) => action.options.scene === 'customSceneName',
 				},
 			],
 		}
@@ -79,7 +88,14 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: sceneListDefault,
-					choices: this.sceneList,
+					choices: sceneListCustom,
+				},
+				{
+					type: 'textwithvariables',
+					label: 'Custom Scene Name',
+					id: 'customSceneName',
+					default: '',
+					isVisible: (action) => action.options.scene === 'customSceneName',
 				},
 			],
 		}
@@ -92,7 +108,14 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: sceneListDefault,
-					choices: this.sceneList,
+					choices: sceneListCustom,
+				},
+				{
+					type: 'textwithvariables',
+					label: 'Custom Scene Name',
+					id: 'customSceneName',
+					default: '',
+					isVisible: (action) => action.options.scene === 'customSceneName',
 				},
 			],
 		}

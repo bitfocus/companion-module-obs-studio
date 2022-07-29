@@ -83,6 +83,14 @@ exports.initFeedbacks = function () {
 				],
 			},
 			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: sceneListDefault,
+				choices: this.sceneList,
+				minChoicesForSearch: 5,
+			},
+			{
 				type: 'colorpicker',
 				label: 'Foreground color (Program)',
 				id: 'fg',
@@ -105,14 +113,6 @@ exports.initFeedbacks = function () {
 				label: 'Background color (Preview)',
 				id: 'bg_preview',
 				default: ColorGreen,
-			},
-			{
-				type: 'dropdown',
-				label: 'Scene',
-				id: 'scene',
-				default: sceneListDefault,
-				choices: this.sceneList,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
@@ -288,7 +288,7 @@ exports.initFeedbacks = function () {
 		description: 'If an output is currently active, change the style of the button',
 		style: {
 			color: ColorWhite,
-			bgcolor: ColorRed,
+			bgcolor: ColorGreen,
 		},
 		options: [
 			{

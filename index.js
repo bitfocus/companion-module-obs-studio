@@ -223,7 +223,7 @@ class instance extends instance_skel {
 			this.states.currentSceneCollection = data.sceneCollectionName
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariable('scene_collection', this.states.currentSceneCollection)
-			//Re-init needed
+			this.getScenesSources()
 		})
 		obs.on('SceneCollectionListChanged', () => {
 			this.getSceneCollectionList()
@@ -233,6 +233,7 @@ class instance extends instance_skel {
 			this.states.currentProfile = data.profileName
 			this.checkFeedbacks('profile_active')
 			this.setVariable('profile', this.states.currentProfile)
+			this.getVersionInfo()
 		})
 		obs.on('ProfileListChanged', () => {
 			this.getProfileList()
@@ -428,9 +429,6 @@ class instance extends instance_skel {
 		})
 		obs.on('MediaInputActionTriggered', (data) => {
 			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				if (data.inputName == this.states.currentMedia) {
-					this.setVariable('current_media_name', 'None')
-				}
 				this.setVariable(`media_status_${data.inputName}`, 'Paused')
 			}
 		})
@@ -532,19 +530,40 @@ class instance extends instance_skel {
 				break
 			//Scenes
 			case 'set_scene':
+				if (action.options.scene === 'customSceneName') {
+					this.parseVariables(action.options.customSceneName, (value) => {
+						this.debug(value)
+						requestData = { sceneName: value }
+					})
+				} else {
+					requestData = { sceneName: action.options.scene }
+				}
 				requestType = 'SetCurrentProgramScene'
-				requestData = { sceneName: action.options.scene }
 				break
 			case 'preview_scene':
+				if (action.options.scene === 'customSceneName') {
+					this.parseVariables(action.options.customSceneName, (value) => {
+						this.debug(value)
+						requestData = { sceneName: value }
+					})
+				} else {
+					requestData = { sceneName: action.options.scene }
+				}
 				requestType = 'SetCurrentPreviewScene'
-				requestData = { sceneName: action.options.scene }
 				break
 			case 'smart_switcher':
-				if (this.states.previewScene == action.options.scene && this.states.programScene != action.options.scene) {
+				let scene = action.options.scene
+				if (action.options.scene === 'customSceneName') {
+					this.parseVariables(action.options.customSceneName, (value) => {
+						scene = value
+					})
+				}
+
+				if (this.states.previewScene == scene && this.states.programScene != scene) {
 					requestType = 'TriggerStudioModeTransition'
 				} else {
 					requestType = 'SetCurrentPreviewScene'
-					requestData = { sceneName: action.options.scene }
+					requestData = { sceneName: scene }
 				}
 				break
 			//Inputs
@@ -749,10 +768,10 @@ class instance extends instance_skel {
 				} else if (sceneName === 'Preview Scene') {
 					sceneName = this.states.previewScene
 				}
-				let scene = this.sceneItems[sceneName]
+				let targetScene = this.sceneItems[sceneName]
 
-				if (scene) {
-					scene.forEach((source) => {
+				if (targetScene) {
+					targetScene.forEach((source) => {
 						if (sourceName === 'allSources' || source.sourceName === sourceName) {
 							let enabled
 							if (action.options.visible === 'toggle') {
@@ -1025,9 +1044,11 @@ class instance extends instance_skel {
 			this.states.resolution = `${data.baseWidth}x${data.baseHeight}`
 			this.states.outputResolution = `${data.outputWidth}x${data.outputHeight}`
 			this.states.framerate = `${this.roundNumber(data.fpsNumerator / data.fpsDenominator, 2)} fps`
-			this.setVariable('base_resolution', this.states.resolution)
-			this.setVariable('output_resolution', this.states.outputResolution)
-			this.setVariable('target_framerate', this.states.framerate)
+			this.setVariables({
+				base_resolution: this.states.resolution,
+				output_resolution: this.states.outputResolution,
+				target_framerate: this.states.framerate,
+			})
 		})
 		obs.call('GetMonitorList').then((data) => {
 			this.states.monitors = data
@@ -1043,6 +1064,8 @@ class instance extends instance_skel {
 			})
 		})
 		obs.call('GetOutputList').then((data) => {
+			this.outputs = {}
+			this.outputList = []
 			data.outputs.forEach((output) => {
 				let outputKind = output.outputKind
 				if (outputKind === 'virtualcam_output') {
@@ -1054,10 +1077,13 @@ class instance extends instance_skel {
 				this.getOutputStatus(output.outputName)
 			})
 		})
-		obs.call('GetReplayBufferStatus').then((data) => {
-			this.states.replayBuffer = data.outputActive
-			this.checkFeedbacks('replayBufferActive')
-		})
+		obs
+			.call('GetReplayBufferStatus')
+			.then((data) => {
+				this.states.replayBuffer = data.outputActive
+				this.checkFeedbacks('replayBufferActive')
+			})
+			.catch((error) => {})
 	}
 
 	roundNumber(number, decimalPlaces) {
@@ -1115,11 +1141,11 @@ class instance extends instance_skel {
 		})
 	}
 
-	getOutputStatus(outputName) {
-		obs.call('GetOutputStatus', { outputName: outputName }).then((data) => {
-			this.outputs[outputName] = data
-			this.checkFeedbacks('output_active')
-		})
+	async getOutputStatus(outputName) {
+		let data = await this.sendRequest('GetOutputStatus', { outputName: outputName })
+
+		this.outputs[outputName] = data
+		this.checkFeedbacks('output_active')
 	}
 
 	getStreamStatus() {
@@ -1290,6 +1316,12 @@ class instance extends instance_skel {
 	}
 
 	getScenesSources() {
+		this.scenes = {}
+		this.sources = {}
+		this.sceneList = []
+		this.sourceList = []
+		this.mediaSources = []
+		this.mediaSourceList = []
 		obs
 			.call('GetSceneList')
 			.then((data) => {
@@ -1355,6 +1387,7 @@ class instance extends instance_skel {
 											this.mediaSources[sourceName] = settings.inputSettings
 											this.startMediaPoll()
 											this.initVariables()
+											this.initPresets()
 										}
 										if (inputKind === 'image_source') {
 											this.imageSourceList.push({ id: sourceName, label: sourceName })

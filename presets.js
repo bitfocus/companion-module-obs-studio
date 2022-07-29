@@ -7,8 +7,8 @@ exports.getPresets = function () {
 	const ColorGreen = this.rgb(0, 200, 0)
 	const ColorYellow = this.rgb(212, 174, 0)
 
-	for (var s in this.sceneList) {
-		var scene = this.sceneList[s]
+	for (let s in this.sceneList) {
+		let scene = this.sceneList[s]
 
 		let baseObj = {
 			category: 'Scene to Program',
@@ -98,8 +98,8 @@ exports.getPresets = function () {
 		],
 	})
 
-	for (var s in this.transitionList) {
-		var transition = this.transitionList[s]
+	for (let s in this.transitionList) {
+		let transition = this.transitionList[s]
 
 		let baseObj = {
 			category: 'Transitions',
@@ -185,6 +185,32 @@ exports.getPresets = function () {
 		],
 	})
 
+	presets.push({
+		category: 'Streaming',
+		label: 'Streaming Service Info',
+		bank: {
+			style: 'text',
+			text: '$(obs:stream_service)\\n$(obs:streaming)',
+			size: 'auto',
+			color: ColorWhite,
+			bgcolor: 0,
+		},
+		feedbacks: [
+			{
+				type: 'streaming',
+				style: {
+					bgcolor: ColorGreen,
+					color: ColorWhite,
+				},
+			},
+		],
+		actions: [
+			{
+				action: 'StartStopStreaming',
+			},
+		],
+	})
+
 	// Preset for Start Recording button with colors indicating recording status
 	presets.push({
 		category: 'Recording',
@@ -242,7 +268,7 @@ exports.getPresets = function () {
 		],
 	})
 
-	for (var s in this.outputList) {
+	for (let s in this.outputList) {
 		let output = this.outputList[s]
 
 		let baseObj = {
@@ -279,7 +305,7 @@ exports.getPresets = function () {
 		presets.push(baseObj)
 	}
 
-	for (var s in this.sourceList) {
+	for (let s in this.sourceList) {
 		let source = this.sourceList[s]
 
 		let baseObj = {
@@ -330,7 +356,45 @@ exports.getPresets = function () {
 		},
 	})
 
-	for (var s in this.mediaSourceList) {
+	presets.push({
+		category: 'General',
+		label: 'Toggle Studio Mode',
+		bank: {
+			style: 'text',
+			text: 'Toggle Studio Mode',
+			size: 'auto',
+			color: ColorWhite,
+			bgcolor: 0,
+		},
+		actions: [
+			{
+				action: 'toggle_studio_mode',
+			},
+		],
+	})
+
+	presets.push({
+		category: 'Media Sources',
+		label: 'Computer Stats',
+		bank: {
+			style: 'text',
+			text: 'Play/\\nPause:\\n$(obs:current_media_name)',
+			size: 'auto',
+			color: ColorWhite,
+			bgcolor: 0,
+		},
+		actions: [
+			{
+				action: 'play_pause_media',
+				options: {
+					source: 'currentMedia',
+					playPause: 'toggle',
+				},
+			},
+		],
+	})
+
+	for (let s in this.mediaSourceList) {
 		let mediaSource = this.mediaSourceList[s]
 
 		let baseObj = {
