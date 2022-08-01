@@ -62,7 +62,7 @@ module.exports = {
 			label: 'Save Replay Buffer',
 		}
 		actions['set_scene'] = {
-			label: 'Change Scene',
+			label: 'Set Program Scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -81,7 +81,7 @@ module.exports = {
 			],
 		}
 		actions['preview_scene'] = {
-			label: 'Preview Scene',
+			label: 'Set Preview Scene',
 			options: [
 				{
 					type: 'dropdown',
@@ -385,9 +385,6 @@ module.exports = {
 				},
 			],
 		}
-		actions['reconnect'] = {
-			label: 'Reconnect to OBS',
-		}
 		actions['setText'] = {
 			label: 'Set Source Text',
 			options: [
@@ -582,7 +579,7 @@ module.exports = {
 			],
 		}
 		actions['toggle_filter'] = {
-			label: 'Set Filter Visibility',
+			label: 'Set Source Filter Visibility',
 			options: [
 				{
 					type: 'dropdown',

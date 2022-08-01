@@ -1030,54 +1030,72 @@ class instance extends instance_skel {
 			this.imageFormats.push({ id: format, label: format })
 		})
 
-		obs.call('GetInputKindList').then((data) => {
-			this.states.inputKindList = data
-		})
-		obs.call('GetHotkeyList').then((data) => {
-			data.hotkeys.forEach((hotkey) => {
-				this.hotkeyNames.push({ id: hotkey, label: hotkey })
+		obs
+			.call('GetInputKindList')
+			.then((data) => {
+				this.states.inputKindList = data
 			})
-		})
-		obs.call('GetStudioModeEnabled').then((data) => {
-			this.states.studioMode = data.studioModeEnabled ? true : false
-		})
-		obs.call('GetVideoSettings').then((data) => {
-			this.states.resolution = `${data.baseWidth}x${data.baseHeight}`
-			this.states.outputResolution = `${data.outputWidth}x${data.outputHeight}`
-			this.states.framerate = `${this.roundNumber(data.fpsNumerator / data.fpsDenominator, 2)} fps`
-			this.setVariables({
-				base_resolution: this.states.resolution,
-				output_resolution: this.states.outputResolution,
-				target_framerate: this.states.framerate,
-			})
-		})
-		obs.call('GetMonitorList').then((data) => {
-			this.states.monitors = data
-			data.monitors.forEach((monitor) => {
-				let monitorName = monitor.monitorName
-				if (monitorName.match(/\([0-9]+\)/i)) {
-					monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
-				}
-				this.monitors.push({
-					id: monitor.monitorIndex,
-					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
+			.catch((error) => {})
+		obs
+			.call('GetHotkeyList')
+			.then((data) => {
+				data.hotkeys.forEach((hotkey) => {
+					this.hotkeyNames.push({ id: hotkey, label: hotkey })
 				})
 			})
-		})
-		obs.call('GetOutputList').then((data) => {
-			this.outputs = {}
-			this.outputList = []
-			data.outputs.forEach((output) => {
-				let outputKind = output.outputKind
-				if (outputKind === 'virtualcam_output') {
-					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-				} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer' && outputKind != 'rtmp_output') {
-					//The above outputKinds are handled separately by other actions, so they are omitted
-					this.outputList.push({ id: output.outputName, label: output.outputName })
-				}
-				this.getOutputStatus(output.outputName)
+			.catch((error) => {})
+		obs
+			.call('GetStudioModeEnabled')
+			.then((data) => {
+				this.states.studioMode = data.studioModeEnabled ? true : false
 			})
-		})
+			.catch((error) => {})
+		obs
+			.call('GetVideoSettings')
+			.then((data) => {
+				this.states.resolution = `${data.baseWidth}x${data.baseHeight}`
+				this.states.outputResolution = `${data.outputWidth}x${data.outputHeight}`
+				this.states.framerate = `${this.roundNumber(data.fpsNumerator / data.fpsDenominator, 2)} fps`
+				this.setVariables({
+					base_resolution: this.states.resolution,
+					output_resolution: this.states.outputResolution,
+					target_framerate: this.states.framerate,
+				})
+			})
+			.catch((error) => {})
+		obs
+			.call('GetMonitorList')
+			.then((data) => {
+				this.states.monitors = data
+				data.monitors.forEach((monitor) => {
+					let monitorName = monitor.monitorName
+					if (monitorName.match(/\([0-9]+\)/i)) {
+						monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
+					}
+					this.monitors.push({
+						id: monitor.monitorIndex,
+						label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
+					})
+				})
+			})
+			.catch((error) => {})
+		obs
+			.call('GetOutputList')
+			.then((data) => {
+				this.outputs = {}
+				this.outputList = []
+				data.outputs.forEach((output) => {
+					let outputKind = output.outputKind
+					if (outputKind === 'virtualcam_output') {
+						this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
+					} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer' && outputKind != 'rtmp_output') {
+						//The above outputKinds are handled separately by other actions, so they are omitted
+						this.outputList.push({ id: output.outputName, label: output.outputName })
+					}
+					this.getOutputStatus(output.outputName)
+				})
+			})
+			.catch((error) => {})
 		obs
 			.call('GetReplayBufferStatus')
 			.then((data) => {
@@ -1123,23 +1141,26 @@ class instance extends instance_skel {
 	}
 
 	getStats() {
-		obs.call('GetStats').then((data) => {
-			this.states.stats = data
-			this.setVariable('fps', this.roundNumber(data.activeFps, 2))
-			this.setVariable('render_total_frames', data.renderTotalFrames)
-			this.setVariable('render_missed_frames', data.renderSkippedFrames)
-			this.setVariable('output_total_frames', data.outputTotalFrames)
-			this.setVariable('output_skipped_frames', data.outputSkippedFrames)
-			this.setVariable('average_frame_time', this.roundNumber(data.averageFrameRenderTime, 2))
-			this.setVariable('cpu_usage', `${this.roundNumber(data.cpuUsage, 2)}%`)
-			this.setVariable('memory_usage', `${this.roundNumber(data.memoryUsage, 0)} MB`)
-			let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
-			if (freeSpace > 1000) {
-				this.setVariable('free_disk_space', `${this.roundNumber(freeSpace / 1000, 0)} GB`)
-			} else {
-				this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
-			}
-		})
+		obs
+			.call('GetStats')
+			.then((data) => {
+				this.states.stats = data
+				this.setVariable('fps', this.roundNumber(data.activeFps, 2))
+				this.setVariable('render_total_frames', data.renderTotalFrames)
+				this.setVariable('render_missed_frames', data.renderSkippedFrames)
+				this.setVariable('output_total_frames', data.outputTotalFrames)
+				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
+				this.setVariable('average_frame_time', this.roundNumber(data.averageFrameRenderTime, 2))
+				this.setVariable('cpu_usage', `${this.roundNumber(data.cpuUsage, 2)}%`)
+				this.setVariable('memory_usage', `${this.roundNumber(data.memoryUsage, 0)} MB`)
+				let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
+				if (freeSpace > 1000) {
+					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace / 1000, 0)} GB`)
+				} else {
+					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
+				}
+			})
+			.catch((error) => {})
 	}
 
 	async getOutputStatus(outputName) {
@@ -1150,21 +1171,27 @@ class instance extends instance_skel {
 	}
 
 	getStreamStatus() {
-		obs.call('GetStreamStatus').then((data) => {
-			this.states.streaming = data.outputActive
-			this.setVariable('streaming', data.outputActive ? 'Live' : 'Off-Air')
-			this.checkFeedbacks('streaming')
-			this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-			this.setVariable('stream_timecode', this.states.streamingTimecode)
-			this.setVariable('output_skipped_frames', data.outputSkippedFrames)
-			this.setVariable('output_total_frames', data.outputTotalFrames)
-		})
-		obs.call('GetStreamServiceSettings').then((data) => {
-			this.setVariable(
-				'stream_service',
-				data.streamServiceSettings?.service ? data.streamServiceSettings.service : 'Custom'
-			)
-		})
+		obs
+			.call('GetStreamStatus')
+			.then((data) => {
+				this.states.streaming = data.outputActive
+				this.setVariable('streaming', data.outputActive ? 'Live' : 'Off-Air')
+				this.checkFeedbacks('streaming')
+				this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				this.setVariable('stream_timecode', this.states.streamingTimecode)
+				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
+				this.setVariable('output_total_frames', data.outputTotalFrames)
+			})
+			.catch((error) => {})
+		obs
+			.call('GetStreamServiceSettings')
+			.then((data) => {
+				this.setVariable(
+					'stream_service',
+					data.streamServiceSettings?.service ? data.streamServiceSettings.service : 'Custom'
+				)
+			})
+			.catch((error) => {})
 	}
 
 	getSceneTransitionList() {
@@ -1183,33 +1210,43 @@ class instance extends instance_skel {
 				this.initFeedbacks()
 				//this.initPresets()
 			})
-		obs.call('GetCurrentSceneTransition').then((data) => {
-			this.states.currentTransition = data.transitionName
-			this.checkFeedbacks('current_transition')
-			this.setVariable('current_transition', this.states.currentTransition)
+			.catch((error) => {})
+		obs
+			.call('GetCurrentSceneTransition')
+			.then((data) => {
+				this.states.currentTransition = data.transitionName
+				this.checkFeedbacks('current_transition')
+				this.setVariable('current_transition', this.states.currentTransition)
 
-			this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
-			this.checkFeedbacks('transition_duration')
-			this.setVariable('transition_duration', this.states.transitionDuration)
-		})
+				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+				this.checkFeedbacks('transition_duration')
+				this.setVariable('transition_duration', this.states.transitionDuration)
+			})
+			.catch((error) => {})
 	}
 
 	getRecordStatus() {
-		obs.call('GetRecordStatus').then((data) => {
-			if (data.outputActive === true) {
-				this.states.recording = 'Recording'
-			} else {
-				this.states.recording = data.outputPaused ? 'Paused' : 'Stopped'
-			}
-			this.setVariable('recording', this.states.recording)
-			this.checkFeedbacks('recording')
-			this.states.recordingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-			this.setVariable('recording_timecode', this.states.recordingTimecode)
-		})
-		obs.call('GetRecordDirectory').then((data) => {
-			this.states.recordDirectory = data.recordDirectory
-			this.setVariable('recording_path', this.states.recordDirectory)
-		})
+		obs
+			.call('GetRecordStatus')
+			.then((data) => {
+				if (data.outputActive === true) {
+					this.states.recording = 'Recording'
+				} else {
+					this.states.recording = data.outputPaused ? 'Paused' : 'Stopped'
+				}
+				this.setVariable('recording', this.states.recording)
+				this.checkFeedbacks('recording')
+				this.states.recordingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				this.setVariable('recording_timecode', this.states.recordingTimecode)
+			})
+			.catch((error) => {})
+		obs
+			.call('GetRecordDirectory')
+			.then((data) => {
+				this.states.recordDirectory = data.recordDirectory
+				this.setVariable('recording_path', this.states.recordDirectory)
+			})
+			.catch((error) => {})
 	}
 
 	getProfileList() {
@@ -1230,6 +1267,7 @@ class instance extends instance_skel {
 				this.initFeedbacks()
 				//this.initPresets()
 			})
+			.catch((error) => {})
 	}
 
 	getSceneCollectionList() {
@@ -1250,6 +1288,7 @@ class instance extends instance_skel {
 				this.initFeedbacks()
 				//this.initPresets()
 			})
+			.catch((error) => {})
 	}
 
 	async getAudioSources(sourceName) {
@@ -1304,16 +1343,19 @@ class instance extends instance_skel {
 	}
 
 	getSourceFilters(sourceName) {
-		obs.call('GetSourceFilterList', { sourceName: sourceName }).then((data) => {
-			this.sourceFilters[sourceName] = data.filters
-			if (data.filters) {
-				data.filters.forEach((filter) => {
-					if (!this.filterList.find((item) => item.id === filter.filterName)) {
-						this.filterList.push({ id: filter.filterName, label: filter.filterName })
-					}
-				})
-			}
-		})
+		obs
+			.call('GetSourceFilterList', { sourceName: sourceName })
+			.then((data) => {
+				this.sourceFilters[sourceName] = data.filters
+				if (data.filters) {
+					data.filters.forEach((filter) => {
+						if (!this.filterList.find((item) => item.id === filter.filterName)) {
+							this.filterList.push({ id: filter.filterName, label: filter.filterName })
+						}
+					})
+				}
+			})
+			.catch((error) => {})
 	}
 
 	getScenesSources() {

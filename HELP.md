@@ -21,18 +21,18 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Switching & Transitions**
 
-- Change Scene
-- Preview Scene
+- Set Program Scene
+- Set Preview Scene
 - Smart Scene Switcher _(Previews selected scene or, if scene is already in preview, transitions the scene to program)_
 - Transition _(Requires Studio Mode to be active)_
-- Quick Transition _(Performs the selected transition and then returns to the default transition)_
+- Quick Transition _(Performs the selected transition and then returns to the previous transition)_
 - Set Transition Type
 - Set Transition Duration
 
 **Sources**
 
 - Set Source Visibility _(Individual sources, or All Sources within a scene)_
-- Set Filter Visibility
+- Set Source Filter Visibility
 - Set Source Transform (Position / Scale / Rotation)
 - Source Mute (Set / Toggle)
 - Set Source Volume
@@ -62,7 +62,6 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Set Scene Collection
 - Trigger Hotkey by Key
 - Trigger Hotkey by ID _(See help info below for more info)_
-- Reconnect to OBS
 - Custom Command _(Request data must be valid JSON. See [obs-websocket protocol documentation](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests) for request types and required request data)_
 
 ### Available feedbacks
