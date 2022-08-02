@@ -7,14 +7,6 @@ exports.initFeedbacks = function () {
 	const ColorGreen = this.rgb(0, 200, 0)
 	const ColorOrange = this.rgb(255, 102, 0)
 
-	let sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
-	let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
-	let filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
-	let audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
-
-	let sourceListAny = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
-	let sceneListAny = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneList)
-
 	feedbacks['streaming'] = {
 		type: 'boolean',
 		label: 'Streaming Active',
@@ -87,7 +79,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
-				default: sceneListDefault,
+				default: this.sceneListDefault,
 				choices: this.sceneList,
 				minChoicesForSearch: 5,
 			},
@@ -150,13 +142,13 @@ exports.initFeedbacks = function () {
 				label: 'Scene',
 				id: 'scene',
 				default: 'anyScene',
-				choices: sceneListAny,
+				choices: this.sceneListAnyScene,
 			},
 			{
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: sourceListDefault,
+				default: this.sourceListDefault,
 				choices: this.sourceList,
 			},
 		],
@@ -182,7 +174,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: sourceListDefault,
+				default: this.sourceListDefault,
 				choices: this.sourceList,
 				minChoicesForSearch: 5,
 			},
@@ -255,7 +247,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
-				default: sceneListDefault,
+				default: this.sceneListDefault,
 				choices: this.sceneList,
 				minChoicesForSearch: 5,
 			},
@@ -263,8 +255,8 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: sourceListDefault,
-				choices: sourceListAny,
+				default: this.sourceListDefault,
+				choices: this.sourceListAnySource,
 				minChoicesForSearch: 5,
 			},
 		],
@@ -404,14 +396,14 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: sourceListDefault,
+				default: this.sourceListDefault,
 				choices: this.sourceList,
 			},
 			{
 				type: 'dropdown',
 				label: 'Filter',
 				id: 'filter',
-				default: filterListDefault,
+				default: this.filterListDefault,
 				choices: this.filterList,
 			},
 		],
@@ -440,7 +432,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: audioSourceListDefault,
+				default: this.audioSourceListDefault,
 				choices: this.audioSourceList,
 			},
 		],
@@ -462,7 +454,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: audioSourceListDefault,
+				default: this.audioSourceListDefault,
 				choices: this.audioSourceList,
 			},
 			{
@@ -503,7 +495,7 @@ exports.initFeedbacks = function () {
 				type: 'dropdown',
 				label: 'Source name',
 				id: 'source',
-				default: audioSourceListDefault,
+				default: this.audioSourceListDefault,
 				choices: this.audioSourceList,
 			},
 			{

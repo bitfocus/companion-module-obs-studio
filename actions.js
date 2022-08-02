@@ -4,24 +4,6 @@ module.exports = {
 	getActions() {
 		let actions = {}
 
-		this.organizeChoices()
-
-		let sceneListToggle = [
-			{ id: 'Current Scene', label: 'Current Scene' },
-			{ id: 'Preview Scene', label: 'Preview Scene' },
-		].concat(this.sceneList)
-
-		let sceneListCustom = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneList)
-
-		let sourceListAll = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceList)
-		let mediaSourceListCurrent = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
-
-		let sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
-		let sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
-		let mediaSourceListDefault = this.mediaSourceList?.[0] ? this.mediaSourceList?.[0]?.id : ''
-		let filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
-		let audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
-
 		actions['enable_studio_mode'] = {
 			label: 'Enable Studio Mode',
 		}
@@ -68,8 +50,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: sceneListDefault,
-					choices: sceneListCustom,
+					default: this.sceneListDefault,
+					choices: this.sceneListCustomScene,
 				},
 				{
 					type: 'textwithvariables',
@@ -87,8 +69,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: sceneListDefault,
-					choices: sceneListCustom,
+					default: this.sceneListDefault,
+					choices: this.sceneListCustomScene,
 				},
 				{
 					type: 'textwithvariables',
@@ -107,8 +89,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Scene',
 					id: 'scene',
-					default: sceneListDefault,
-					choices: sceneListCustom,
+					default: this.sceneListDefault,
+					choices: this.sceneListCustomScene,
 				},
 				{
 					type: 'textwithvariables',
@@ -241,7 +223,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 				{
@@ -263,7 +245,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 			],
@@ -276,7 +258,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 				{
@@ -298,7 +280,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 				{
@@ -318,7 +300,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 				{
@@ -340,7 +322,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 				{
@@ -363,14 +345,14 @@ module.exports = {
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: sceneListToggle,
+					choices: this.sceneListProgramPreview,
 				},
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
 					default: 'allSources',
-					choices: sourceListAll,
+					choices: this.sourceListAllSources,
 				},
 				{
 					type: 'dropdown',
@@ -517,7 +499,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 			],
@@ -529,7 +511,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: audioSourceListDefault,
+					default: this.audioSourceListDefault,
 					choices: this.audioSourceList,
 				},
 				{
@@ -568,7 +550,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source (Optional, default is current scene)',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 				{
@@ -585,14 +567,14 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 				{
 					type: 'dropdown',
 					label: 'Filter',
 					id: 'filter',
-					default: filterListDefault,
+					default: this.filterListDefault,
 					choices: this.filterList,
 				},
 				{
@@ -616,7 +598,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 				{
 					type: 'dropdown',
@@ -639,7 +621,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 			],
 		}
@@ -651,7 +633,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 			],
 		}
@@ -663,7 +645,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 			],
 		}
@@ -675,7 +657,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 			],
 		}
@@ -687,7 +669,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 				{
 					type: 'number',
@@ -705,7 +687,7 @@ module.exports = {
 					label: 'Media Source',
 					id: 'source',
 					default: 'currentMedia',
-					choices: mediaSourceListCurrent,
+					choices: this.mediaSourceListCurrentMedia,
 				},
 				{
 					type: 'number',
@@ -753,7 +735,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source / Scene (required if selected as projector type)',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 					isVisible: (action) => action.options.type === 'Source' || action.options.type === 'Scene',
 				},
@@ -768,13 +750,13 @@ module.exports = {
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: sceneListToggle,
+					choices: this.sceneListProgramPreview,
 				},
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 				{
@@ -816,7 +798,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 			],
@@ -828,7 +810,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 			],
@@ -840,7 +822,7 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
-					default: sourceListDefault,
+					default: this.sourceListDefault,
 					choices: this.sourceList,
 				},
 			],

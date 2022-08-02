@@ -1205,10 +1205,7 @@ class instance extends instance_skel {
 			})
 
 			.then(() => {
-				this.actions()
-				this.initVariables()
-				this.initFeedbacks()
-				//this.initPresets()
+				this.updateActionsFeedbacksVariables()
 			})
 			.catch((error) => {})
 		obs
@@ -1262,10 +1259,7 @@ class instance extends instance_skel {
 				})
 			})
 			.then(() => {
-				this.actions()
-				this.initVariables()
-				this.initFeedbacks()
-				//this.initPresets()
+				this.updateActionsFeedbacksVariables()
 			})
 			.catch((error) => {})
 	}
@@ -1283,10 +1277,7 @@ class instance extends instance_skel {
 				})
 			})
 			.then(() => {
-				this.actions()
-				this.initVariables()
-				this.initFeedbacks()
-				//this.initPresets()
+				this.updateActionsFeedbacksVariables()
 			})
 			.catch((error) => {})
 	}
@@ -1438,12 +1429,7 @@ class instance extends instance_skel {
 									}
 								})
 							}
-
-							this.actions()
-							this.initVariables()
-							this.initFeedbacks()
-							this.initPresets()
-							this.checkFeedbacks()
+							this.updateActionsFeedbacksVariables()
 						})
 					})
 				})
@@ -1506,12 +1492,39 @@ class instance extends instance_skel {
 	}
 
 	organizeChoices() {
+		//Sort choices alphabetically
 		this.sourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.sceneList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		//Special Choices - Scenes
+		this.sceneListProgramPreview = [
+			{ id: 'Current Scene', label: 'Current Scene' },
+			{ id: 'Preview Scene', label: 'Preview Scene' },
+		].concat(this.sceneList)
+		this.sceneListAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneList)
+		this.sceneListCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneList)
+		//Special Choices - Sources
+		this.sourceListAllSources = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceList)
+		this.sourceListAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
+		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
+		//Default Choices
+		this.sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
+		this.sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
+		this.filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
+		this.audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
+	}
+
+	updateActionsFeedbacksVariables() {
+		this.organizeChoices()
+
+		this.actions()
+		this.initVariables()
+		this.initFeedbacks()
+		this.initPresets()
+		this.checkFeedbacks()
 	}
 }
 exports = module.exports = instance

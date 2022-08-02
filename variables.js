@@ -38,6 +38,7 @@ exports.updateVariableDefinitions = function () {
 	this.setVariable('current_media_time_elapsed', '--:--:--')
 	this.setVariable('current_media_time_remaining', '--:--:--')
 
+	//Source Specific Variables
 	for (let s in this.mediaSourceList) {
 		let mediaSourceName = this.mediaSourceList[s].id
 		variables.push({ name: 'media_status_' + mediaSourceName, label: 'Media status for ' + mediaSourceName })
