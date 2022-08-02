@@ -515,9 +515,10 @@ class instance extends instance_skel {
 			case 'take_screenshot':
 				let date = new Date().toISOString()
 				let day = date.slice(0, 10)
-				let time = date.slice(11, 19).replaceAll(':', '.')
-				let fileName = action.options.source ? action.options.source : this.states.programScene
-				let fileLocation = action.options.path ? action.options.path : ''
+				let time = date.slice(11, 19).replace(/:/g, '-')
+
+				let fileName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
+				let fileLocation = action.options.path ? action.options.path : this.states.recordDirectory
 				let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
 				let quality = action.options.compression == 0 ? -1 : action.options.compression
 

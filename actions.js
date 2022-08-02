@@ -550,8 +550,19 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Source (Optional, default is current scene)',
 					id: 'source',
+					default: 'programScene',
+					choices: [
+						{ id: 'programScene', label: 'Current Scene' },
+						{ id: 'custom', label: 'Custom' },
+					],
+				},
+				{
+					type: 'dropdown',
+					label: 'Custom Source / Scene',
+					id: 'custom',
 					default: this.sourceListDefault,
 					choices: this.sourceList,
+					isVisible: (action) => action.options.source === 'custom',
 				},
 				{
 					type: 'textinput',

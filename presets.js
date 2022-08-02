@@ -374,6 +374,29 @@ exports.getPresets = function () {
 	})
 
 	presets.push({
+		category: 'General',
+		label: 'Take Screenshot',
+		bank: {
+			style: 'text',
+			text: 'Take Screenshot',
+			size: 7,
+			color: ColorWhite,
+			bgcolor: 0,
+		},
+		actions: [
+			{
+				action: 'take_screenshot',
+				options: {
+					format: 'png',
+					compression: 0,
+					source: 'programScene',
+					path: '',
+				},
+			},
+		],
+	})
+
+	presets.push({
 		category: 'Media Sources',
 		label: 'Computer Stats',
 		bank: {

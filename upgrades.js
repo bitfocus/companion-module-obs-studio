@@ -12,6 +12,11 @@ module.exports = {
 				action.action = 'setText'
 				changed = true
 			}
+			if (action.action === 'take_screenshot') {
+				action.options.source == 'programScene'
+				action.options.custom == ''
+				changed = true
+			}
 		})
 
 		return changed
