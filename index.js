@@ -477,7 +477,7 @@ instance.prototype.getVersionInfo = async function () {
 	let self = this
 
 	self.obs.send('GetVersion').then((data) => {
-		var websocketVersion = parseInt(data['obs-websocket-version'].replaceAll('.', ''))
+		var websocketVersion = parseInt(data['obs-websocket-version'].replace(/./g, ''))
 		if (websocketVersion < 491) {
 			self.log(
 				'warn',
@@ -2415,7 +2415,7 @@ instance.prototype.action = function (action) {
 		case 'take_screenshot':
 			let date = new Date().toISOString()
 			let day = date.slice(0, 10)
-			let time = date.slice(11, 19).replaceAll(':', '.')
+			let time = date.slice(11, 19).replace(/:/g, '.')
 			let fileName = action.options.source ? action.options.source : self.states['scene_active']
 			let fileLocation = action.options.path ? action.options.path : self.states['rec-folder']
 			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
