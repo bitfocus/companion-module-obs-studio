@@ -51,7 +51,7 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: this.sceneListDefault,
-					choices: this.sceneListCustomScene,
+					choices: this.sceneChoicesCustomScene,
 				},
 				{
 					type: 'textwithvariables',
@@ -70,7 +70,7 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: this.sceneListDefault,
-					choices: this.sceneListCustomScene,
+					choices: this.sceneChoicesCustomScene,
 				},
 				{
 					type: 'textwithvariables',
@@ -90,7 +90,7 @@ module.exports = {
 					label: 'Scene',
 					id: 'scene',
 					default: this.sceneListDefault,
-					choices: this.sceneListCustomScene,
+					choices: this.sceneChoicesCustomScene,
 				},
 				{
 					type: 'textwithvariables',
@@ -345,14 +345,14 @@ module.exports = {
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: this.sceneListProgramPreview,
+					choices: this.sceneChoicesProgramPreview,
 				},
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
 					default: 'allSources',
-					choices: this.sourceListAllSources,
+					choices: this.sourceChoicesAllSources,
 				},
 				{
 					type: 'dropdown',
@@ -439,8 +439,8 @@ module.exports = {
 					type: 'dropdown',
 					label: 'Profile',
 					id: 'profile',
-					default: this.profileList?.[0] ? this.profileList[0].id : '',
-					choices: this.profileList,
+					default: this.profileChoicesDefault,
+					choices: this.profileChoices,
 				},
 			],
 		}
@@ -500,7 +500,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 				},
 			],
 		}
@@ -561,7 +561,7 @@ module.exports = {
 					label: 'Custom Source / Scene',
 					id: 'custom',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 					isVisible: (action) => action.options.source === 'custom',
 				},
 				{
@@ -579,7 +579,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 				},
 				{
 					type: 'dropdown',
@@ -747,7 +747,7 @@ module.exports = {
 					label: 'Source / Scene (required if selected as projector type)',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 					isVisible: (action) => action.options.type === 'Source' || action.options.type === 'Scene',
 				},
 			],
@@ -761,14 +761,14 @@ module.exports = {
 					label: 'Scene (optional, defaults to current scene)',
 					id: 'scene',
 					default: 'Current Scene',
-					choices: this.sceneListProgramPreview,
+					choices: this.sceneChoicesProgramPreview,
 				},
 				{
 					type: 'dropdown',
 					label: 'Source',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 				},
 				{
 					type: 'textwithvariables',
@@ -810,7 +810,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 				},
 			],
 		}
@@ -822,7 +822,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 				},
 			],
 		}
@@ -834,7 +834,7 @@ module.exports = {
 					label: 'Source',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceList,
+					choices: this.sourceChoices,
 				},
 			],
 		}

@@ -26,7 +26,7 @@ class instance extends instance_skel {
 
 	static GetUpgradeScripts() {
 		return [
-			upgradeScripts.websocket5upgrades,
+			upgradeScripts.v2_0_0,
 			instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
 				streaming: true,
 				scene_item_active: true,
@@ -41,7 +41,8 @@ class instance extends instance_skel {
 			}),
 		]
 	}
-
+	//COMMENT THIS OUT
+	//static DEVELOPER_forceStartupUpgradeScript = 0
 	config_fields() {
 		return [
 			{
@@ -122,15 +123,6 @@ class instance extends instance_skel {
 				this.stopReconnectionPoll()
 				this.log('info', 'Connected to OBS')
 				this.obsListeners()
-				this.getVersionInfo()
-				this.getStats()
-				this.getStreamStatus()
-				this.getProfileList()
-				this.getSceneTransitionList()
-				this.getSceneCollectionList()
-				this.getRecordStatus()
-				this.getScenesSources()
-				this.startStatsPoll()
 
 				//Basic Info
 				this.scenes = {}
@@ -148,9 +140,9 @@ class instance extends instance_skel {
 				this.textSources = {}
 				this.sourceFilters = {}
 				//Choices
-				this.sceneList = []
-				this.sourceList = []
-				this.profileList = []
+				this.sceneChoices = []
+				this.sourceChoices = []
+				this.profileChoices = []
 				this.sceneCollectionList = []
 				this.textSourceList = []
 				this.mediaSourceList = []
@@ -162,6 +154,18 @@ class instance extends instance_skel {
 				this.outputList = []
 				this.filterList = []
 				this.audioSourceList = []
+				//Set Initial States
+				this.states.sceneCollectionChanging = false
+				//Get Initial Info
+				this.obsInfo()
+				this.getStats()
+				this.getRecordStatus()
+				this.getStreamStatus()
+				this.getProfileList()
+				this.getSceneTransitionList()
+				this.getSceneCollectionList()
+				this.getScenesSources()
+				this.startStatsPoll()
 			}
 		} catch (error) {
 			this.debug(error)
@@ -194,9 +198,9 @@ class instance extends instance_skel {
 			this.scenes = {}
 			this.sources = {}
 			this.states = {}
-			this.sceneList = []
-			this.sourceList = []
-			this.profileList = []
+			this.sceneChoices = []
+			this.sourceChoices = []
+			this.profileChoices = []
 			this.sceneCollectionList = []
 			this.transitionList = []
 			this.monitors = []
@@ -218,11 +222,13 @@ class instance extends instance_skel {
 		//Config
 		obs.on('CurrentSceneCollectionChanging', () => {
 			this.stopMediaPoll()
+			this.states.sceneCollectionChanging = true
 		})
 		obs.on('CurrentSceneCollectionChanged', (data) => {
 			this.states.currentSceneCollection = data.sceneCollectionName
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariable('scene_collection', this.states.currentSceneCollection)
+			this.states.sceneCollectionChanging = false
 			this.getScenesSources()
 			this.getSceneTransitionList()
 		})
@@ -234,15 +240,33 @@ class instance extends instance_skel {
 			this.states.currentProfile = data.profileName
 			this.checkFeedbacks('profile_active')
 			this.setVariable('profile', this.states.currentProfile)
-			this.getVersionInfo()
+			this.obsInfo()
 		})
 		obs.on('ProfileListChanged', () => {
 			this.getProfileList()
 		})
 		//Scenes
-		obs.on('SceneCreated', () => {})
-		obs.on('SceneRemoved', () => {})
-		obs.on('SceneNameChanged', () => {})
+		obs.on('SceneCreated', (data) => {
+			if (data?.isGroup === false && this.states.sceneCollectionChanging === false) {
+				this.addScene(data.sceneName)
+			}
+		})
+		obs.on('SceneRemoved', (data) => {
+			if (data?.isGroup === false && this.states.sceneCollectionChanging === false) {
+				this.removeScene(data.sceneName)
+			}
+		})
+		obs.on('SceneNameChanged', (data) => {
+			if (this.sceneItems[data.oldSceneName]) {
+				this.sceneItems[data.sceneName] = this.sceneItems[data.oldSceneName]
+				delete this.sceneItems[data.oldSceneName]
+			}
+			let scene = this.sceneChoices.findIndex((item) => item.id === data.oldSceneName)
+			this.sceneChoices.splice(scene, 1)
+			this.sceneChoices.push({ id: data.sceneName, label: data.sceneName })
+
+			this.updateActionsFeedbacksVariables()
+		})
 		obs.on('CurrentProgramSceneChanged', (data) => {
 			this.states.programScene = data.sceneName
 			this.setVariable('scene_active', this.states.programScene)
@@ -343,8 +367,20 @@ class instance extends instance_skel {
 			}
 		})
 		//Scene Items
-		obs.on('SceneItemCreated', () => {})
-		obs.on('SceneItemRemoved', () => {})
+		obs.on('SceneItemCreated', (data) => {
+			if (this.states.sceneCollectionChanging === false) {
+				this.getSceneItems(data.sceneName)
+			}
+		})
+		obs.on('SceneItemRemoved', (data) => {
+			if (this.states.sceneCollectionChanging === false) {
+				let source = this.sourceChoices.findIndex((item) => item.id === data.sourceName)
+				this.sourceChoices.splice(source, 1)
+				this.updateActionsFeedbacksVariables()
+
+				this.getSceneItems(data.sceneName)
+			}
+		})
 		obs.on('SceneItemListReindexed', () => {})
 		obs.on('SceneItemEnableStateChanged', (data) => {
 			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
@@ -534,7 +570,6 @@ class instance extends instance_skel {
 			case 'set_scene':
 				if (action.options.scene === 'customSceneName') {
 					this.parseVariables(action.options.customSceneName, (value) => {
-						this.debug(value)
 						requestData = { sceneName: value }
 					})
 				} else {
@@ -545,7 +580,6 @@ class instance extends instance_skel {
 			case 'preview_scene':
 				if (action.options.scene === 'customSceneName') {
 					this.parseVariables(action.options.customSceneName, (value) => {
-						this.debug(value)
 						requestData = { sceneName: value }
 					})
 				} else {
@@ -1024,7 +1058,7 @@ class instance extends instance_skel {
 		}
 	}
 
-	async getVersionInfo() {
+	async obsInfo() {
 		let version = await this.sendRequest('GetVersion')
 		this.states.version = version
 		version.supportedImageFormats.forEach((format) => {
@@ -1248,7 +1282,7 @@ class instance extends instance_skel {
 	}
 
 	getProfileList() {
-		this.profileList = []
+		this.profileChoices = []
 		obs
 			.call('GetProfileList')
 			.then((data) => {
@@ -1256,7 +1290,7 @@ class instance extends instance_skel {
 				this.checkFeedbacks('profile_active')
 				this.setVariable('profile', this.states.currentProfile)
 				data.profiles.forEach((profile) => {
-					this.profileList.push({ id: profile, label: profile })
+					this.profileChoices.push({ id: profile, label: profile })
 				})
 			})
 			.then(() => {
@@ -1350,15 +1384,125 @@ class instance extends instance_skel {
 			.catch((error) => {})
 	}
 
+	getGroupInfo(sourceName) {
+		obs
+			.call('GetGroupSceneItemList', { sceneName: sourceName })
+			.then((data) => {
+				this.groups[sourceName] = data.sceneItems
+				data.sceneItems.forEach((sceneItem) => {
+					let sourceName = sceneItem.sourceName
+					this.sources[sourceName] = sceneItem
+					this.sources[sourceName].groupedSource = true
+
+					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+						this.sourceChoices.push({ id: sourceName, label: sourceName })
+						this.updateActionsFeedbacksVariables()
+					}
+				})
+			})
+			.catch((error) => {})
+	}
+
+	getInputSettings(sourceName, inputKind) {
+		obs
+			.call('GetInputSettings', { inputName: sourceName })
+			.then((settings) => {
+				this.sources[sourceName].settings = settings.inputSettings
+
+				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
+					this.textSourceList.push({ id: sourceName, label: sourceName })
+					this.setVariable('current_text_' + sourceName, settings.inputSettings.text ? settings.inputSettings.text : '')
+				}
+				if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+					this.mediaSourceList.push({ id: sourceName, label: sourceName })
+					this.mediaSources[sourceName] = settings.inputSettings
+					this.startMediaPoll()
+					this.updateActionsFeedbacksVariables()
+				}
+				if (inputKind === 'image_source') {
+					this.imageSourceList.push({ id: sourceName, label: sourceName })
+				}
+			})
+			.catch((error) => {})
+	}
+
+	getSceneItems(sceneName) {
+		obs
+			.call('GetSceneItemList', { sceneName: sceneName })
+			.then((data) => {
+				this.sceneItems[sceneName] = data.sceneItems
+
+				data.sceneItems.forEach((sceneItem) => {
+					let sourceName = sceneItem.sourceName
+					this.sources[sourceName] = sceneItem
+
+					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+						this.sourceChoices.push({ id: sourceName, label: sourceName })
+					}
+
+					if (sceneItem.isGroup) {
+						this.getGroupInfo(sourceName)
+					}
+					obs
+						.call('GetSourceActive', { sourceName: sourceName })
+						.then((active) => {
+							if (this.sources[sourceName]) {
+								this.sources[sourceName].active = active.videoActive
+							}
+						})
+						.catch((error) => {})
+
+					this.getSourceFilters(sourceName)
+					this.getAudioSources(sourceName)
+
+					if (sceneItem.inputKind) {
+						let inputKind = sceneItem.inputKind
+						this.getInputSettings(sourceName, inputKind)
+					}
+
+					this.updateActionsFeedbacksVariables()
+				})
+			})
+			.catch((error) => {})
+	}
+
+	addScene(sceneName) {
+		this.sceneChoices.push({ id: sceneName, label: sceneName })
+		this.updateActionsFeedbacksVariables()
+		this.getSceneItems(sceneName)
+	}
+
+	removeScene(sceneName) {
+		for (let x in this.sceneItems[sceneName]) {
+			let sourceName = this.sceneItems[sceneName][x].sourceName
+			delete this.sources[sourceName]
+
+			let source = this.sourceChoices.findIndex((item) => item.id === sourceName)
+			this.sourceChoices.splice(source, 1)
+		}
+		delete this.sceneItems[sceneName]
+
+		let scene = this.sceneChoices.findIndex((item) => item.id === sceneName)
+		this.sceneChoices.splice(scene, 1)
+
+		this.updateActionsFeedbacksVariables()
+	}
+
 	getScenesSources() {
 		this.scenes = {}
 		this.sources = {}
-		this.sceneList = []
-		this.sourceList = []
-		this.mediaSources = []
+		this.mediaSources = {}
+		this.imageSources = {}
+		this.textSources = {}
+		this.sourceFilters = {}
+		this.groups = {}
+
+		this.sceneChoices = []
+		this.sourceChoices = []
 		this.mediaSourceList = []
 		this.textSourceList = []
 		this.imageSourceList = []
+
 		obs
 			.call('GetSceneList')
 			.then((data) => {
@@ -1372,69 +1516,10 @@ class instance extends instance_skel {
 			.then((data) => {
 				data.scenes.forEach((scene) => {
 					let sceneName = scene.sceneName
-					this.sceneList.push({ id: sceneName, label: sceneName })
-
-					obs.call('GetSceneItemList', { sceneName: sceneName }).then((data) => {
-						this.sceneItems[sceneName] = data.sceneItems
-
-						data.sceneItems.forEach((sceneItem) => {
-							let sourceName = sceneItem.sourceName
-							this.sources[sourceName] = sceneItem
-
-							if (!this.sourceList.find((item) => item.id === sourceName)) {
-								this.sourceList.push({ id: sourceName, label: sourceName })
-							}
-
-							if (sceneItem.isGroup) {
-								obs.call('GetGroupSceneItemList', { sceneName: sourceName }).then((data) => {
-									this.groups[sourceName] = data.sceneItems
-									data.sceneItems.forEach((sceneItem) => {
-										let sourceName = sceneItem.sourceName
-										this.sources[sourceName] = sceneItem
-										this.sources[sourceName].groupedSource = true
-
-										if (!this.sourceList.find((item) => item.id === sourceName)) {
-											this.sourceList.push({ id: sourceName, label: sourceName })
-										}
-									})
-								})
-							}
-							obs.call('GetSourceActive', { sourceName: sourceName }).then((active) => {
-								this.sources[sourceName].active = active.videoActive
-							})
-							this.getSourceFilters(sourceName)
-							this.getAudioSources(sourceName)
-
-							if (sceneItem.inputKind) {
-								let inputKind = sceneItem.inputKind
-
-								obs.call('GetInputSettings', { inputName: sourceName }).then((settings) => {
-									this.sources[sourceName].settings = settings.inputSettings
-
-									if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
-										this.textSourceList.push({ id: sourceName, label: sourceName })
-										this.setVariable(
-											'current_text_' + sourceName,
-											settings.inputSettings.text ? settings.inputSettings.text : ''
-										)
-									}
-									if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
-										this.mediaSourceList.push({ id: sourceName, label: sourceName })
-										this.mediaSources[sourceName] = settings.inputSettings
-										this.startMediaPoll()
-										this.initVariables()
-										this.initPresets()
-									}
-									if (inputKind === 'image_source') {
-										this.imageSourceList.push({ id: sourceName, label: sourceName })
-									}
-								})
-							}
-							this.updateActionsFeedbacksVariables()
-						})
-					})
+					this.addScene(sceneName)
 				})
 			})
+			.catch((error) => {})
 	}
 
 	formatTimecode(data) {
@@ -1494,28 +1579,29 @@ class instance extends instance_skel {
 
 	organizeChoices() {
 		//Sort choices alphabetically
-		this.sourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.sceneList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
+		this.sceneChoices?.sort((a, b) => a.id.localeCompare(b.id))
 		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
 		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
 		//Special Choices - Scenes
-		this.sceneListProgramPreview = [
+		this.sceneChoicesProgramPreview = [
 			{ id: 'Current Scene', label: 'Current Scene' },
 			{ id: 'Preview Scene', label: 'Preview Scene' },
-		].concat(this.sceneList)
-		this.sceneListAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneList)
-		this.sceneListCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneList)
+		].concat(this.sceneChoices)
+		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
+		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
 		//Special Choices - Sources
-		this.sourceListAllSources = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceList)
-		this.sourceListAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceList)
+		this.sourceChoicesAllSources = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceChoices)
+		this.sourceChoicesAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceChoices)
 		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
 		//Default Choices
-		this.sourceListDefault = this.sourceList?.[0] ? this.sourceList?.[0]?.id : ''
-		this.sceneListDefault = this.sceneList?.[0] ? this.sceneList?.[0]?.id : ''
+		this.sourceListDefault = this.sourceChoices?.[0] ? this.sourceChoices?.[0]?.id : ''
+		this.sceneListDefault = this.sceneChoices?.[0] ? this.sceneChoices?.[0]?.id : ''
 		this.filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
 		this.audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
+		this.profileChoicesDefault = this.profileChoices?.[0] ? this.profileChoices[0].id : ''
 	}
 
 	updateActionsFeedbacksVariables() {

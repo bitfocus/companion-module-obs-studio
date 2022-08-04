@@ -7,8 +7,8 @@ exports.getPresets = function () {
 	const ColorGreen = this.rgb(0, 200, 0)
 	const ColorYellow = this.rgb(212, 174, 0)
 
-	for (let s in this.sceneList) {
-		let scene = this.sceneList[s]
+	for (let s in this.sceneChoices) {
+		let scene = this.sceneChoices[s]
 
 		let baseObj = {
 			category: 'Scene to Program',
@@ -305,8 +305,8 @@ exports.getPresets = function () {
 		presets.push(baseObj)
 	}
 
-	for (let s in this.sourceList) {
-		let source = this.sourceList[s]
+	for (let s in this.sourceChoices) {
+		let source = this.sourceChoices[s]
 
 		let baseObj = {
 			category: 'Sources',

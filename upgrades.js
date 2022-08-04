@@ -1,5 +1,5 @@
 module.exports = {
-	websocket5upgrades: function (context, config, actions, feedbacks) {
+	v2_0_0: function (context, config, actions, feedbacks) {
 		let changed = false
 
 		if (config.port == undefined || config.port == '' || config.port == 4444) {
