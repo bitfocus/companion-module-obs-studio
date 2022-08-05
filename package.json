@@ -19,7 +19,7 @@
 	],
 	"license": "MIT",
 	"dependencies": {
-		"obs-websocket-js": "5.0.0"
+		"obs-websocket-js": "5.0.1"
 	},
 	"homepage": "https://github.com/bitfocus/companion-module-obs-studio#readme",
 	"bugs": {

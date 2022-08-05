@@ -25,6 +25,9 @@ module.exports = {
 		actions['resume_recording'] = {
 			label: 'Resume Recording',
 		}
+		actions['ToggleRecordPause'] = {
+			label: 'Toggle Recording Pause',
+		}
 		actions['start_streaming'] = {
 			label: 'Start Streaming',
 		}

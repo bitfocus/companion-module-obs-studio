@@ -124,38 +124,9 @@ class instance extends instance_skel {
 				this.log('info', 'Connected to OBS')
 				this.obsListeners()
 
-				//Basic Info
-				this.scenes = {}
-				this.sources = {}
-				this.states = {}
-				this.transitions = {}
-				this.profiles = {}
-				this.sceneCollections = {}
-				this.outputs = {}
-				this.sceneItems = {}
-				this.groups = {}
-				//Source Types
-				this.mediaSources = {}
-				this.imageSources = {}
-				this.textSources = {}
-				this.sourceFilters = {}
-				//Choices
-				this.sceneChoices = []
-				this.sourceChoices = []
-				this.profileChoices = []
-				this.sceneCollectionList = []
-				this.textSourceList = []
-				this.mediaSourceList = []
-				this.imageSourceList = []
-				this.hotkeyNames = []
-				this.imageFormats = []
-				this.transitionList = []
-				this.monitors = []
-				this.outputList = []
-				this.filterList = []
-				this.audioSourceList = []
-				//Set Initial States
-				this.states.sceneCollectionChanging = false
+				//Setup Initial State Objects
+				this.initializeStates()
+
 				//Get Initial Info
 				this.obsInfo()
 				this.getStats()
@@ -193,18 +164,9 @@ class instance extends instance_skel {
 	async disconnectOBS() {
 		if (obs) {
 			await obs.disconnect()
+			//Clear all active polls
 			this.stopStatsPoll()
 			this.stopMediaPoll()
-			this.scenes = {}
-			this.sources = {}
-			this.states = {}
-			this.sceneChoices = []
-			this.sourceChoices = []
-			this.profileChoices = []
-			this.sceneCollectionList = []
-			this.transitionList = []
-			this.monitors = []
-			this.outputList = []
 		}
 	}
 
@@ -907,7 +869,7 @@ class instance extends instance_skel {
 			case 'resume_recording':
 				requestType = 'ResumeRecord'
 				break
-			case 'ToggleRecordPause': //NEW, add to actions help
+			case 'ToggleRecordPause':
 				requestType = 'ToggleRecordPause'
 				break
 			//Media Inputs
@@ -1317,16 +1279,18 @@ class instance extends instance_skel {
 			.catch((error) => {})
 	}
 
-	async getAudioSources(sourceName) {
-		try {
-			await obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
+	getAudioSources(sourceName) {
+		obs
+			.call('GetInputAudioTracks', { inputName: sourceName })
+			.then((data) => {
 				if (!this.audioSourceList.find((item) => item.id === sourceName)) {
 					this.audioSourceList.push({ id: sourceName, label: sourceName })
 					this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 					this.getSourceAudio(sourceName)
+					//this.updateActionsFeedbacksVariables()
 				}
 			})
-		} catch (error) {}
+			.catch((error) => {})
 	}
 
 	getSourceAudio(sourceName) {
@@ -1364,8 +1328,7 @@ class instance extends instance_skel {
 		obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 		})
-
-		this.initVariables()
+		this.updateActionsFeedbacksVariables()
 	}
 
 	getSourceFilters(sourceName) {
@@ -1397,6 +1360,14 @@ class instance extends instance_skel {
 					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
 						this.sourceChoices.push({ id: sourceName, label: sourceName })
 						this.updateActionsFeedbacksVariables()
+					}
+
+					this.getSourceFilters(sourceName)
+					this.getAudioSources(sourceName)
+
+					if (sceneItem.inputKind) {
+						let inputKind = sceneItem.inputKind
+						this.getInputSettings(sourceName, inputKind)
 					}
 				})
 			})
@@ -1499,6 +1470,7 @@ class instance extends instance_skel {
 
 		this.sceneChoices = []
 		this.sourceChoices = []
+		this.audioSourceList = []
 		this.mediaSourceList = []
 		this.textSourceList = []
 		this.imageSourceList = []
@@ -1612,6 +1584,41 @@ class instance extends instance_skel {
 		this.initFeedbacks()
 		this.initPresets()
 		this.checkFeedbacks()
+	}
+
+	initializeStates() {
+		//Basic Info
+		this.scenes = {}
+		this.sources = {}
+		this.states = {}
+		this.transitions = {}
+		this.profiles = {}
+		this.sceneCollections = {}
+		this.outputs = {}
+		this.sceneItems = {}
+		this.groups = {}
+		//Source Types
+		this.mediaSources = {}
+		this.imageSources = {}
+		this.textSources = {}
+		this.sourceFilters = {}
+		//Choices
+		this.sceneChoices = []
+		this.sourceChoices = []
+		this.profileChoices = []
+		this.sceneCollectionList = []
+		this.textSourceList = []
+		this.mediaSourceList = []
+		this.imageSourceList = []
+		this.hotkeyNames = []
+		this.imageFormats = []
+		this.transitionList = []
+		this.monitors = []
+		this.outputList = []
+		this.filterList = []
+		this.audioSourceList = []
+		//Set Initial States
+		this.states.sceneCollectionChanging = false
 	}
 }
 exports = module.exports = instance
