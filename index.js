@@ -1,3706 +1,1624 @@
-var instance_skel = require('../../instance_skel')
-var tcp = require('../../tcp')
-var hotkeys = require('./hotkeys')
-const OBSWebSocket = require('obs-websocket-js')
+const instance_skel = require('../../instance_skel')
+const actions = require('./actions')
+const presets = require('./presets')
+const { updateVariableDefinitions } = require('./variables')
+const { initFeedbacks } = require('./feedbacks')
+const upgradeScripts = require('./upgrades')
 
-var debug
-var log
+const { EventSubscription } = require('obs-websocket-js')
+const OBSWebSocket = require('obs-websocket-js').default
+const obs = new OBSWebSocket()
 
-function instance(system, id, config) {
-	var self = this
+let debug
+let log
 
-	// super-constructor
-	instance_skel.apply(this, arguments)
+class instance extends instance_skel {
+	constructor(system, id, config) {
+		super(system, id, config)
 
-	self.actions()
+		Object.assign(this, {
+			...actions,
+			...presets,
+		})
 
-	return self
-}
-
-instance.GetUpgradeScripts = function () {
-	return [
-		instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
-			streaming: true,
-			scene_item_active: true,
-			profile_active: true,
-			scene_collection_active: true,
-			scene_item_active_in_scene: true,
-			output_active: true,
-			transition_active: true,
-			current_transition: true,
-			transition_duration: true,
-			filter_enabled: true,
-		}),
-	]
-}
-
-instance.prototype.updateConfig = function (config) {
-	var self = this
-	self.config = config
-	self.log('debug', 'Updating configuration.')
-	if (self.obs !== undefined) {
-		self.obs.disconnect()
-	}
-	if (self.tcp !== undefined) {
-		self.tcp.destroy()
-		delete self.tcp
-	}
-	self.init()
-}
-
-instance.prototype.init = function () {
-	var self = this
-	self.stopStatsPoller()
-	self.stopMediaPoller()
-	self.init_presets()
-	self.init_variables()
-	self.init_feedbacks()
-	self.disable = false
-	var rateLimiter = true
-	self.status(self.STATUS_WARN, 'Connecting')
-	if (self.obs !== undefined) {
-		self.obs.disconnect()
-		self.obs = undefined
+		this.updateVariableDefinitions = updateVariableDefinitions
 	}
 
-	// Connecting on init not necessary for OBSWebSocket. But during init try to tcp connect
-	// to get the status of the module right and automatically try reconnecting. Which is
-	// implemented in ../../tcp by Companion core developers.
-	self.tcp = new tcp(
-		self.config.host !== '' ? self.config.host : '127.0.0.1',
-		self.config.port !== '' ? self.config.port : '4444'
-	)
-
-	self.tcp.on('status_change', function (status, message) {
-		self.status(status, message)
-	})
-
-	self.tcp.on('error', function () {
-		// Ignore
-	})
-	self.tcp.on('connect', function () {
-		// disconnect immediately because further comm takes place via OBSWebSocket and not
-		// via this tcp sockets.
-		if (!self.tcp) {
-			return
-		}
-
-		self.tcp.destroy()
-		delete self.tcp
-
-		// original init procedure continuing. Use OBSWebSocket to make the real connection.
-		self.obs = new OBSWebSocket()
-		self.states = {}
-		self.scenes = {}
-		self.transitions = {}
-		self.outputs = {}
-		self.mediaSources = {}
-
-		self.obs
-			.connect({
-				address:
-					(self.config.host !== '' ? self.config.host : '127.0.0.1') +
-					':' +
-					(self.config.port !== '' ? self.config.port : '4444'),
-				password: self.config.pass,
-			})
-			.then(() => {
-				self.status(self.STATUS_OK)
-				self.log('info', 'Connected to OBS.')
-				self.getVersionInfo()
-				self.getStats()
-				self.startStatsPoller()
-				self.getStreamStatus()
-				self.updateTransitionList()
-				self.updateScenesAndSources()
-				self.updateInfo()
-				self.updateProfiles()
-				self.updateSceneCollections()
-				self.updateOutputList()
-				self.getRecordingStatus()
-				self.updateFilterList()
-				self.updateSourceAudio()
-				self.updateMediaSources()
-				self.startMediaPoller()
-			})
-			.catch((err) => {
-				self.status(self.STATUS_ERROR, err)
-			})
-
-		self.obs.on('error', (err) => {
-			self.log('error', 'OBS Error: ' + err)
-			self.status(self.STATUS_ERROR, err)
-		})
-
-		self.obs.on('ConnectionClosed', function () {
-			if (self.disable != true && self.authenticated != false) {
-				self.log('error', 'Connection lost to OBS.')
-				self.status(self.STATUS_ERROR)
-				if (self.tcp !== undefined) {
-					self.tcp.destroy()
-				}
-				self.init()
-			} else {
-			}
-		})
-
-		self.obs.on('AuthenticationFailure', function () {
-			self.log('error', 'Incorrect password configured for OBS websocket.')
-			self.status(self.STATUS_ERROR)
-			self.authenticated = false
-			if (self.tcp !== undefined) {
-				self.tcp.destroy()
-			}
-		})
-
-		self.obs.on('SceneCollectionChanged', function (data) {
-			//self.states['current_scene_collection'] = data.sceneCollection
-			//self.setVariable('scene_collection', data.sceneCollection)
-			//self.checkFeedbacks('scene_collection_active')
-			self.obs.disconnect()
-			self.log('warn', 'Briefly disconnecting from OBS while Scene Collection is changed')
-		})
-
-		self.obs.on('SceneCollectionListChanged', function () {
-			self.updateSceneCollectionList()
-		})
-
-		self.obs.on('SwitchScenes', function (data) {
-			self.states['scene_active'] = data['scene-name']
-			self.setVariable('scene_active', data['scene-name'])
-			self.checkFeedbacks('scene_active')
-			self.updateScenesAndSources()
-			self.updateSourceAudio()
-		})
-
-		self.obs.on('PreviewSceneChanged', function (data) {
-			self.states['scene_preview'] = data['scene-name']
-			self.setVariable('scene_preview', data['scene-name'])
-			self.checkFeedbacks('scene_active')
-			self.checkFeedbacks('scene_item_previewed')
-		})
-
-		self.obs.on('ScenesChanged', function () {
-			self.updateScenesAndSources()
-		})
-
-		self.obs.on('SceneItemAdded', function () {
-			self.updateScenesAndSources()
-			self.updateMediaSources()
-		})
-
-		self.obs.on('SourceDestroyed', function () {
-			self.updateScenesAndSources()
-			self.updateFilterList()
-			self.updateMediaSources()
-		})
-
-		self.obs.on('StreamStarted', function () {
-			self.states['streaming'] = true
-			self.checkFeedbacks('streaming')
-		})
-
-		self.obs.on('StreamStopped', function () {
-			self.setVariable('streaming', 'Off-Air')
-			self.states['streaming'] = false
-			self.checkFeedbacks('streaming')
-			self.states['stream_timecode'] = '00:00:00'
-			self.setVariable('stream_timecode', self.states['stream_timecode'])
-			self.states['total_stream_time'] = '00:00:00'
-			self.setVariable('total_stream_time', self.states['total_stream_time'])
-		})
-
-		self.obs.on('StreamStatus', function (data) {
-			self.process_stream_vars(data)
-		})
-
-		self.obs.on('RecordingStarted', function (data) {
-			self.getRecordingStatus()
-			self.states['recordingFilename'] = data['recordingFilename'].substring(
-				data['recordingFilename'].lastIndexOf('/') + 1
-			)
-			self.setVariable('recording_file_name', self.states['recordingFilename'])
-		})
-
-		self.obs.on('RecordingStopped', function () {
-			self.getRecordingStatus()
-		})
-
-		self.obs.on('RecordingPaused', function () {
-			self.getRecordingStatus()
-		})
-
-		self.obs.on('RecordingResumed', function () {
-			self.getRecordingStatus()
-		})
-
-		self.obs.on('StudioModeSwitched', function (data) {
-			if (data['new-state'] == true) {
-				self.states['studio_mode'] = true
-			} else {
-				self.states['studio_mode'] = false
-			}
-			self.updateScenesAndSources()
-		})
-
-		self.obs.on('SceneItemVisibilityChanged', function () {
-			self.updateScenesAndSources()
-		})
-
-		self.obs.on('SceneItemTransformChanged', function (data) {
-			if (!rateLimiter) return
-			if (self.mediaSources[data.itemName]) {
-				self.updateMediaSourcesInfo()
-			}
-			if (self.imageSources[data.itemName]) {
-				self.updateImageSources(data.itemName)
-			}
-			if (self.textSources[data.itemName]) {
-				let type = self.textSources[data.itemName]?.typeId
-				self.updateTextSources(data.itemName, type)
-			}
-			rateLimiter = false
-			setTimeout(function () {
-				rateLimiter = true
-			}, 1000)
-		})
-
-		self.obs.on('TransitionListChanged', function () {
-			self.updateTransitionList()
-		})
-
-		self.obs.on('TransitionDurationChanged', function (data) {
-			self.states['transition_duration'] = data['new-duration'] === undefined ? 0 : data['new-duration']
-			self.setVariable('transition_duration', self.states['transition_duration'])
-			self.checkFeedbacks('transition_duration')
-		})
-
-		self.obs.on('SwitchTransition', function (data) {
-			self.states['current_transition'] = data['transition-name']
-			self.setVariable('current_transition', self.states['current_transition'])
-			self.checkFeedbacks('current_transition')
-		})
-
-		self.obs.on('TransitionBegin', function () {
-			self.states['transition_active'] = true
-			self.checkFeedbacks('transition_active')
-		})
-
-		self.obs.on('TransitionEnd', function () {
-			self.states['transition_active'] = false
-			self.checkFeedbacks('transition_active')
-		})
-
-		self.obs.on('ProfileChanged', (data) => {
-			self.states['current_profile'] = data.profile
-			self.setVariable('profile', data.profile)
-			self.checkFeedbacks('profile_active')
-		})
-
-		self.obs.on('ProfileListChanged', () => {
-			self.updateProfileList()
-		})
-
-		self.obs.on('SourceFilterVisibilityChanged', (data) => {
-			self.updateFilters(data.sourceName)
-		})
-
-		self.obs.on('SourceFilterAdded', () => {
-			self.updateFilterList()
-		})
-
-		self.obs.on('SourceFilterRemoved', () => {
-			self.updateFilterList()
-		})
-
-		self.obs.on('SourceMuteStateChanged', (data) => {
-			self.sourceAudio['muted'][data.sourceName] = data.muted
-			self.checkFeedbacks('audio_muted')
-		})
-
-		self.obs.on('SourceAudioActivated', () => {
-			self.updateSourceAudio()
-		})
-
-		self.obs.on('SourceAudioDeactivated', () => {
-			self.updateSourceAudio()
-		})
-
-		self.obs.on('SourceVolumeChanged', (data) => {
-			self.sourceAudio['volume'][data.sourceName] = self.roundIfDefined(data.volumeDb, 1)
-			self.checkFeedbacks('volume')
-			self.setVariable('volume_' + data.sourceName, self.sourceAudio['volume'][data.sourceName] + ' dB')
-		})
-
-		self.obs.on('MediaPlaying', (data) => {
-			if (self.mediaSources[data.sourceName]) {
-				self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
-				self.checkFeedbacks('media_playing')
-				self.setVariable('media_status_' + data.sourceName, 'Playing')
-			}
-		})
-
-		self.obs.on('MediaStarted', (data) => {
-			if (self.mediaSources[data.sourceName]) {
-				self.mediaSources[data.sourceName]['mediaState'] = 'Playing'
-				self.checkFeedbacks('media_playing')
-				self.setVariable('media_status_' + data.sourceName, 'Playing')
-				self.updateMediaSources()
-			}
-		})
-
-		self.obs.on('MediaPaused', (data) => {
-			if (self.mediaSources[data.sourceName]) {
-				self.mediaSources[data.sourceName]['mediaState'] = 'Paused'
-				self.checkFeedbacks('media_playing')
-				self.setVariable('media_status_' + data.sourceName, 'Paused')
-			}
-		})
-
-		self.obs.on('MediaStopped', (data) => {
-			if (self.mediaSources[data.sourceName]) {
-				self.mediaSources[data.sourceName]['mediaState'] = 'Stopped'
-				self.checkFeedbacks('media_playing')
-				self.setVariable('media_status_' + data.sourceName, 'Stopped')
-			}
-		})
-
-		self.obs.on('MediaEnded', (data) => {
-			if (self.mediaSources[data.sourceName]) {
-				self.mediaSources[data.sourceName]['mediaState'] = 'Ended'
-				self.checkFeedbacks('media_playing')
-				self.setVariable('media_status_' + data.sourceName, 'Ended')
-			}
-		})
-	})
-
-	debug = self.debug
-	log = self.log
-}
-
-instance.prototype.roundIfDefined = (number, decimalPlaces) => {
-	if (number) {
-		return Number(Math.round(number + 'e' + decimalPlaces) + 'e-' + decimalPlaces)
-	} else {
-		return number
+	static GetUpgradeScripts() {
+		return [
+			upgradeScripts.v2_0_0,
+			instance_skel.CreateConvertToBooleanFeedbackUpgradeScript({
+				streaming: true,
+				scene_item_active: true,
+				profile_active: true,
+				scene_collection_active: true,
+				scene_item_active_in_scene: true,
+				output_active: true,
+				transition_active: true,
+				current_transition: true,
+				transition_duration: true,
+				filter_enabled: true,
+			}),
+		]
 	}
-}
-
-instance.prototype.process_stream_vars = function (data) {
-	var self = this
-
-	for (var s in data) {
-		self.states[s] = data[s]
+	//COMMENT THIS OUT
+	//static DEVELOPER_forceStartupUpgradeScript = 0
+	config_fields() {
+		return [
+			{
+				type: 'textinput',
+				id: 'host',
+				label: 'Server IP',
+				width: 8,
+				regex: this.REGEX_IP,
+			},
+			{
+				type: 'textinput',
+				id: 'port',
+				label: 'Server Port',
+				width: 4,
+				default: 4455,
+				regex: this.REGEX_PORT,
+			},
+			{
+				type: 'textinput',
+				id: 'pass',
+				label: 'Server Password',
+				width: 4,
+			},
+		]
 	}
 
-	self.setVariable('bytes_per_sec', data['bytes-per-sec'])
-	self.setVariable('num_dropped_frames', data['num-dropped-frames'])
-	self.setVariable('num_total_frames', data['num-total-frames'])
+	updateConfig(config) {
+		this.config = config
 
-	if (data['kbits-per-sec']) {
-		self.setVariable('kbits_per_sec', data['kbits-per-sec'].toLocaleString())
-	}
-
-	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
-	self.setVariable('strain', data['strain'])
-	self.setVariable('stream_timecode', data['stream-timecode'] ? data['stream-timecode'].slice(0, 8) : '00:00:00')
-	self.setVariable('streaming', data['streaming'] ? 'Live' : 'Off-Air')
-
-	const toTimecode = (value) => {
-		let valueNum = parseInt(value, 10)
-		let hours = Math.floor(valueNum / 3600)
-		let minutes = Math.floor(valueNum / 60) % 60
-		let seconds = valueNum % 60
-
-		return [hours, minutes, seconds].map((v) => (v < 10 ? '0' + v : v)).join(':')
-	}
-
-	self.setVariable('total_stream_time', toTimecode(data['total-stream-time']))
-
-	self.process_obs_stats(data)
-
-	self.checkFeedbacks('streaming')
-}
-
-instance.prototype.process_obs_stats = function (data) {
-	var self = this
-
-	for (var s in data) {
-		self.states[s] = data[s]
-	}
-
-	self.setVariable('fps', self.roundIfDefined(data['fps'], 2))
-	self.setVariable('render_total_frames', data['render-total-frames'])
-	self.setVariable('render_missed_frames', data['render-missed-frames'])
-	self.setVariable('output_total_frames', data['output-total-frames'])
-	self.setVariable('output_skipped_frames', data['output-skipped-frames'])
-	self.setVariable('average_frame_time', self.roundIfDefined(data['average-frame-time'], 2))
-	self.setVariable('cpu_usage', self.roundIfDefined(data['cpu-usage'], 2) + '%')
-	self.setVariable('memory_usage', self.roundIfDefined(data['memory-usage'], 0) + ' MB')
-	let freeSpace = self.roundIfDefined(data['free-disk-space'], 0)
-	if (freeSpace > 1000) {
-		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace / 1000, 0) + ' GB')
-	} else {
-		self.setVariable('free_disk_space', self.roundIfDefined(freeSpace, 0) + ' MB')
-	}
-}
-
-// Return config fields for web config
-instance.prototype.config_fields = function () {
-	var self = this
-	return [
-		{
-			type: 'textinput',
-			id: 'host',
-			label: 'Target IP',
-			width: 8,
-			regex: self.REGEX_IP,
-		},
-		{
-			type: 'textinput',
-			id: 'port',
-			label: 'Target Port',
-			width: 4,
-			default: 4449,
-			regex: self.REGEX_PORT,
-		},
-		{
-			type: 'textinput',
-			id: 'pass',
-			label: 'Password',
-			width: 4,
-		},
-	]
-}
-
-instance.prototype.getVersionInfo = async function () {
-	let self = this
-
-	self.obs.send('GetVersion').then((data) => {
-		var websocketVersion = parseInt(data['obs-websocket-version'].replaceAll('.', ''))
-		if (websocketVersion < 491) {
-			self.log(
-				'warn',
-				'Update to the latest version of the OBS Websocket plugin to ensure full feature compatibility. A download link is available in the help menu for the OBS module.'
-			)
-		} else if (websocketVersion >= 500) {
-			self.log('error', 'Version 5.0.0 of OBS Websocket is not yet supported. Please use the 4.9.1 release.')
-		}
-	})
-}
-
-instance.prototype.getStats = async function () {
-	let { stats } = await this.obs.send('GetStats')
-	this.process_obs_stats(stats)
-}
-
-instance.prototype.startStatsPoller = function () {
-	this.stopStatsPoller()
-
-	let self = this
-	this.statsPoller = setInterval(() => {
-		if (self.obs && !self.states['streaming']) {
-			self.getStats()
-		}
-		if (self.obs && self.states['recording'] === true) {
-			self.getRecordingStatus()
-		}
-		if (self.obs) {
-			self.updateOutputs()
-		}
-	}, 1000)
-}
-
-instance.prototype.stopStatsPoller = function () {
-	if (this.statsPoller) {
-		clearInterval(this.statsPoller)
-		this.statsPoller = null
-	}
-}
-
-instance.prototype.getStreamStatus = function () {
-	var self = this
-
-	self.obs.send('GetStreamingStatus').then((data) => {
-		self.setVariable('streaming', data['streaming'] ? 'Live' : 'Off-Air')
-		self.setVariable('stream_timecode', data['stream-timecode'] ? data['stream-timecode'].slice(0, 8) : '00:00:00')
-		self.states['streaming'] = data['streaming']
-		self.checkFeedbacks('streaming')
-		if (data['streaming'] === false) {
-			self.setVariable('bytes_per_sec', 0)
-			self.setVariable('kbits_per_sec', 0)
-			self.setVariable('num_dropped_frames', 0)
-			self.setVariable('num_total_frames', 0)
-			self.setVariable('strain', 0)
-			self.setVariable('total_stream_time', '00:00:00')
-		}
-		self.init_feedbacks()
-	})
-}
-
-instance.prototype.getRecordingStatus = async function () {
-	var self = this
-
-	self.obs.send('GetRecordingStatus').then((data) => {
-		if (data['isRecordingPaused']) {
-			self.setVariable('recording', 'Paused')
-			self.states['recording'] = 'paused'
+		this.status(this.STATUS_WARNING, 'Connecting')
+		if (this.config.host && this.config.port) {
+			this.connectOBS()
 		} else {
-			self.setVariable('recording', data['isRecording'] == true ? 'Recording' : 'Stopped')
-			self.states['recording'] = data['isRecording']
+			this.log('warn', 'Please ensure your websocket server IP and server port are correct in the module settings')
 		}
-		self.checkFeedbacks('recording')
-		self.states['recording_timecode'] = data['recordTimecode'] ? data['recordTimecode'].slice(0, 8) : '00:00:00'
-		self.setVariable('recording_timecode', self.states['recording_timecode'])
-		if (self.states['recordingFilename'] === undefined) {
-			self.states['recordingFilename'] = 'No current recording'
-			self.setVariable('recording_file_name', self.states['recordingFilename'])
-		}
-	})
-}
-
-instance.prototype.updateTransitionList = async function () {
-	var self = this
-
-	let data = await self.obs.send('GetTransitionList')
-	self.transitions = {}
-	self.states['current_transition'] = data['current-transition']
-	self.setVariable('current_transition', self.states['current_transition'])
-	self.checkFeedbacks('current_transition')
-	self.states['transition_active'] = false
-	for (var s in data.transitions) {
-		var transition = data.transitions[s]
-		self.transitions[transition.name] = transition
-	}
-	self.obs.send('GetTransitionDuration').then((data) => {
-		self.states['transition_duration'] = data['transition-duration'] === undefined ? 0 : data['transition-duration']
-		self.setVariable('transition_duration', self.states['transition_duration'])
-		self.checkFeedbacks('transition_duration')
-	})
-	self.actions()
-	self.init_presets()
-	self.init_feedbacks()
-}
-
-instance.prototype.updateScenesAndSources = async function () {
-	var self = this
-
-	await self.obs.send('GetSourcesList').then((data) => {
-		self.sources = {}
-		self.imageSources = {}
-		self.textSources = {}
-		for (var s in data.sources) {
-			var source = data.sources[s]
-			self.sources[source.name] = source
-			if (source.typeId === 'text_ft2_source_v2' || source.typeId === 'text_gdiplus_v2') {
-				self.textSources[source.name] = source
-				self.updateTextSources(source.name, source.typeId)
-			}
-			if (source.typeId === 'image_source') {
-				self.imageSources[source.name] = source
-				self.updateImageSources(source.name, source)
-			}
-		}
-	})
-
-	let sceneList = await self.obs.send('GetSceneList')
-	self.scenes = {}
-	self.states['scene_active'] = sceneList.currentScene
-	self.setVariable('scene_active', sceneList.currentScene)
-	for (let scene of sceneList.scenes) {
-		self.scenes[scene.name] = scene
 	}
 
-	if (self.states['studio_mode'] == true) {
-		let previewScene = await self.obs.send('GetPreviewScene')
-		self.states['scene_preview'] = previewScene.name
-		self.setVariable('scene_preview', previewScene.name)
-	} else {
-		self.states['scene_preview'] = 'None'
-		self.setVariable('scene_preview', 'None')
+	destroy() {
+		debug('destroy', this.id)
+		this.disconnectOBS()
+		this.stopReconnectionPoll()
 	}
 
-	let updateSceneSources = (source, scene) => {
-		if (self.sources[source.name] && self.sources[source.name]['visible']) {
-			self.sources[source.name]['visible'] = true
-		} else {
-			self.sources[source.name] = source
-			if (source.name == sceneList.currentScene) {
-				self.sources[source.name]['visible'] = true
-			}
-			if (source.render === true && scene.name == sceneList.currentScene) {
-				self.sources[source.name]['visible'] = true
-				for (let nestedSource of self.scenes[source.name].sources) {
-					self.sources[nestedSource.name] = nestedSource
-					if (nestedSource.render === true && nestedSource.type == 'scene') {
-						self.sources[nestedSource.name]['visible'] = true
-						for (let nestedSceneSource of self.scenes[nestedSource.name].sources) {
-							self.sources[nestedSceneSource.name] = nestedSceneSource
-							if (nestedSceneSource.render === true) {
-								self.sources[nestedSceneSource.name]['visible'] = true
-							}
-							if (nestedSceneSource.render === true && nestedSceneSource.type === 'group') {
-								updateGroupedSources(nestedSceneSource, scene)
-							}
-						}
-					} else if (nestedSource.render === true && nestedSource.type == 'group') {
-						self.sources[nestedSource.name]['visible'] = true
-						updateGroupedSources(nestedSource, scene)
-					} else if (nestedSource.render === true) {
-						self.sources[nestedSource.name]['visible'] = true
-					}
+	init() {
+		debug = this.debug
+		log = this.log
+
+		this.status(this.STATUS_WARNING, 'Connecting')
+		if (this.config.host) {
+			this.connectOBS()
+		}
+	}
+
+	initVariables() {
+		this.updateVariableDefinitions()
+	}
+
+	async connectOBS() {
+		if (obs) {
+			await obs.disconnect()
+		}
+		try {
+			const { obsWebSocketVersion, negotiatedRpcVersion } = await obs.connect(
+				`ws:///${this.config.host}:${this.config.port}`,
+				this.config.pass,
+				{
+					eventSubscriptions:
+						EventSubscription.All |
+						EventSubscription.Ui |
+						EventSubscription.InputActiveStateChanged |
+						EventSubscription.InputShowStateChanged |
+						EventSubscription.SceneItemTransformChanged,
+					rpcVersion: 1,
 				}
-			}
-		}
-	}
-
-	let updateGroupedSources = (source, scene) => {
-		if (source.render === true && self.sources[source.name] && scene.name == sceneList.currentScene) {
-			self.sources[source.name]['visible'] = true
-		}
-		if (source.render === true) {
-			for (let s in source.groupChildren) {
-				let groupedSource = source.groupChildren[s]
-				if (groupedSource.type == 'scene') {
-					updateSceneSources(groupedSource, scene)
-				} else if (groupedSource.render === true && source.render === true && scene.name == sceneList.currentScene) {
-					self.sources[groupedSource.name]['visible'] = true
-				}
-			}
-		}
-	}
-
-	let updateRegularSources = (source, scene) => {
-		if (self.sources[source.name] && self.sources[source.name]['visible'] === true) {
-			self.sources[source.name]['visible'] = true
-		} else if (source.render === true && scene.name && scene.name == sceneList.currentScene) {
-			self.sources[source.name]['visible'] = true
-		}
-	}
-
-	sceneList.scenes.forEach((scene) => {
-		for (let source of scene.sources) {
-			if (source.type == 'scene') {
-				updateSceneSources(source, scene)
-			} else if (source.type == 'group') {
-				updateGroupedSources(source, scene)
-			} else {
-				updateRegularSources(source, scene)
-			}
-		}
-	})
-
-	self.actions()
-	self.init_presets()
-	self.init_feedbacks()
-	self.checkFeedbacks('scene_item_active')
-	self.checkFeedbacks('scene_item_active_in_scene')
-	self.checkFeedbacks('scene_item_previewed')
-	self.checkFeedbacks('scene_active')
-}
-
-instance.prototype.updateInfo = function () {
-	var self = this
-	self.obs.send('GetStudioModeStatus').then((data) => {
-		if (data['studio-mode'] == true) {
-			self.states['studio_mode'] = true
-		} else {
-			self.states['studio_mode'] = false
-		}
-	})
-	self.obs.send('GetRecordingFolder').then((data) => {
-		self.states['rec-folder'] = data['rec-folder']
-	})
-}
-
-instance.prototype.updateProfiles = function () {
-	this.updateProfileList()
-	this.updateCurrentProfile()
-}
-
-instance.prototype.updateProfileList = async function () {
-	let data = await this.obs.send('ListProfiles')
-	this.profiles = data.profiles.map((p) => p['profile-name'])
-	this.actions()
-	this.init_feedbacks()
-}
-
-instance.prototype.updateCurrentProfile = async function () {
-	let { profileName } = await this.obs.send('GetCurrentProfile')
-
-	this.states['current_profile'] = profileName
-	this.setVariable('profile', profileName)
-	this.checkFeedbacks('profile_active')
-}
-
-instance.prototype.updateSceneCollections = function () {
-	this.updateSceneCollectionList()
-	this.updateCurrentSceneCollection()
-}
-
-instance.prototype.updateSceneCollectionList = async function () {
-	let data = await this.obs.send('ListSceneCollections')
-	this.sceneCollections = data.sceneCollections.map((s) => s['sc-name'])
-	this.actions()
-	this.init_feedbacks()
-}
-
-instance.prototype.updateCurrentSceneCollection = async function () {
-	let { scName } = await this.obs.send('GetCurrentSceneCollection')
-
-	this.states['current_scene_collection'] = scName
-	this.setVariable('scene_collection', scName)
-	this.checkFeedbacks('scene_collection_active')
-}
-
-instance.prototype.updateOutputList = async function () {
-	var self = this
-
-	await self.obs.send('ListOutputs').then((data) => {
-		self.outputs = {}
-		for (var s in data.outputs) {
-			var output = data.outputs[s]
-			self.outputs[output.name] = output
-			self.states[output.name] = output.active
-		}
-		self.actions()
-		self.checkFeedbacks('output_active')
-	})
-}
-
-instance.prototype.updateOutputs = async function () {
-	var self = this
-
-	await self.obs.send('ListOutputs').then((data) => {
-		self.outputs = {}
-		for (var s in data.outputs) {
-			var output = data.outputs[s]
-			self.outputs[output.name] = output
-			self.states[output.name] = output.active
-		}
-		self.checkFeedbacks('output_active')
-	})
-}
-
-instance.prototype.updateFilterList = function () {
-	var self = this
-	self.filters = {}
-	self.sourceFilters = {}
-	self.obs.send('GetSourcesList').then((data) => {
-		for (var s in data.sources) {
-			let source = data.sources[s]
-			getSourceFilters(source.name)
-		}
-	})
-	self.obs.send('GetSceneList').then((data) => {
-		for (var s in data.scenes) {
-			let source = data.scenes[s]
-			getSourceFilters(source.name)
-		}
-	})
-	let getSourceFilters = (source) => {
-		self.obs
-			.send('GetSourceFilters', {
-				sourceName: source,
-			})
-			.then((data) => {
-				if (data.filters.length !== 0) {
-					for (var s in data.filters) {
-						var filter = data.filters[s]
-						self.filters[filter.name] = filter
-					}
-					self.sourceFilters[source] = data.filters
-					self.actions()
-					self.init_feedbacks()
-					self.checkFeedbacks('filter_enabled')
-				}
-			})
-	}
-}
-
-instance.prototype.updateFilters = function (source) {
-	var self = this
-	self.obs
-		.send('GetSourceFilters', {
-			sourceName: source,
-		})
-		.then((data) => {
-			self.sourceFilters[source] = data.filters
-			self.checkFeedbacks('filter_enabled')
-		})
-}
-
-instance.prototype.updateSourceAudio = function () {
-	var self = this
-	self.sourceAudio = {
-		volume: [],
-		muted: [],
-		audio_monitor_type: [],
-	}
-	self.obs.send('GetSourcesList').then((data) => {
-		for (var s in data.sources) {
-			let source = data.sources[s]
-			getSourceAudio(source.name)
-		}
-	})
-	let getSourceAudio = (source) => {
-		self.obs
-			.send('GetVolume', {
-				source: source,
-				useDecibel: true,
-			})
-			.then((data) => {
-				self.sourceAudio['volume'][source] = self.roundIfDefined(data.volume, 1)
-				self.sourceAudio['muted'][source] = data.muted
-				self.checkFeedbacks('audio_muted')
-				self.checkFeedbacks('volume')
-				self.setVariable('volume_' + source, self.sourceAudio['volume'][source] + ' dB')
-			})
-		self.obs
-			.send('GetAudioMonitorType', {
-				sourceName: source,
-			})
-			.then((data) => {
-				self.sourceAudio['audio_monitor_type'][source] = data.monitorType
-				self.checkFeedbacks('audio_monitor_type')
-			})
-	}
-}
-
-instance.prototype.updateMediaSources = function () {
-	var self = this
-	self.obs.send('GetMediaSourcesList').then((data) => {
-		for (var s in data.mediaSources) {
-			let mediaSource = data.mediaSources[s]
-			if (!self.mediaSources[mediaSource.sourceName]) self.mediaSources[mediaSource.sourceName] = {}
-			self.mediaSources[mediaSource.sourceName] = Object.assign(self.mediaSources[mediaSource.sourceName], mediaSource)
-			self.mediaSources[mediaSource.sourceName]['mediaState'] =
-				mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
-			if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
-				self.mediaSources[mediaSource.sourceName]['mediaState'] = 'Playing'
-			}
-			self.setVariable(
-				'media_status_' + mediaSource.sourceName,
-				self.mediaSources[mediaSource.sourceName]['mediaState']
 			)
-			self.obs
-				.send('GetMediaDuration', {
-					sourceName: mediaSource.sourceName,
-				})
-				.then((data) => {
-					self.mediaSources[mediaSource.sourceName]['mediaDuration'] = data.mediaDuration
-				})
-			self.obs
-				.send('GetMediaTime', {
-					sourceName: mediaSource.sourceName,
-				})
-				.then((data) => {
-					self.mediaSources[mediaSource.sourceName]['mediaTime'] = data.timestamp
-					self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining'] =
-						self.mediaSources[mediaSource.sourceName]['mediaDuration'] - data.timestamp
-					if (self.mediaSources[mediaSource.sourceName]['mediaTime'] > 0) {
-						self.setVariable(
-							'media_time_elapsed_' + mediaSource.sourceName,
-							new Date(data.timestamp).toISOString().slice(11, 19)
-						)
-					} else {
-						self.setVariable('media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
-					}
-					if (self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining'] > 0) {
-						self.setVariable(
-							'media_time_remaining_' + mediaSource.sourceName,
-							'-' +
-								new Date(self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining']).toISOString().slice(11, 19)
-						)
-					} else {
-						self.setVariable('media_time_remaining_' + mediaSource.sourceName, '--:--:--')
-					}
-				})
-			self.obs
-				.send('GetSourceSettings', {
-					sourceName: mediaSource.sourceName,
-				})
-				.then((data) => {
-					if (data.sourceSettings.is_local_file && data.sourceSettings.local_file) {
-						let filePath = data.sourceSettings.local_file
-						self.mediaSources[mediaSource.sourceName]['fileName'] = filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-						self.setVariable(
-							'media_file_name_' + mediaSource.sourceName,
-							self.mediaSources[mediaSource.sourceName]['fileName']
-						)
-					} else if (data.sourceSettings.playlist) {
-						let vlcFiles = []
-						for (var s in data.sourceSettings.playlist) {
-							let filePath = data.sourceSettings.playlist[s].value
-							vlcFiles.push(filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
-						}
-						self.mediaSources[mediaSource.sourceName]['fileName'] = vlcFiles.length ? vlcFiles.join('\\n') : 'None'
-					} else {
-						self.mediaSources[mediaSource.sourceName]['fileName'] = 'None'
-					}
-					self.setVariable(
-						'media_file_name_' + mediaSource.sourceName,
-						self.mediaSources[mediaSource.sourceName]['fileName']
+			if (obsWebSocketVersion) {
+				this.status(this.STATUS_OK)
+				this.stopReconnectionPoll()
+				this.log('info', 'Connected to OBS')
+				this.obsListeners()
+
+				//Setup Initial State Objects
+				this.initializeStates()
+
+				//Get Initial Info
+				this.obsInfo()
+				this.getStats()
+				this.getRecordStatus()
+				this.getStreamStatus()
+				this.getProfileList()
+				this.getSceneTransitionList()
+				this.getSceneCollectionList()
+				this.getScenesSources()
+				this.startStatsPoll()
+			}
+		} catch (error) {
+			this.debug(error)
+			if (!this.reconnectionPoll) {
+				this.startReconnectionPoll()
+			}
+			if (this.currentStatus != 2) {
+				this.status(this.STATUS_ERROR)
+				if (error?.message.match(/(Server sent no subprotocol)/i)) {
+					this.log('error', 'Failed to connect to OBS. Please upgrade OBS Websocket to version 5.0.0 or above')
+				} else if (error?.message.match(/(missing an `authentication` string)/i)) {
+					this.log('error', `Failed to connect to OBS. Please enter your obs-websocket password in the module settings`)
+				} else if (error?.message.match(/(Authentication failed)/i)) {
+					this.log(
+						'error',
+						`Failed to connect to OBS. Please ensure your obs-websocket password is correct in the module settings`
 					)
-				})
-		}
-		self.init_variables()
-		self.actions()
-		self.checkFeedbacks('media_playing')
-	})
-}
-
-instance.prototype.updateMediaSourcesInfo = function () {
-	var self = this
-	for (var s in self.mediaSources) {
-		let mediaSource = self.mediaSources[s]
-		self.mediaSources[mediaSource.sourceName] = mediaSource
-		self.mediaSources[mediaSource.sourceName]['mediaState'] =
-			mediaSource.mediaState.charAt(0).toUpperCase() + mediaSource.mediaState.slice(1)
-		if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Opening') {
-			self.mediaSources[mediaSource.sourceName]['mediaState'] = 'Playing'
-		}
-		self.setVariable('media_status_' + mediaSource.sourceName, self.mediaSources[mediaSource.sourceName]['mediaState'])
-		self.obs
-			.send('GetSourceSettings', {
-				sourceName: mediaSource.sourceName,
-			})
-			.then((data) => {
-				if (data.sourceSettings.is_local_file && data.sourceSettings.local_file) {
-					let filePath = data.sourceSettings.local_file
-					self.mediaSources[mediaSource.sourceName]['fileName'] = filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-					self.setVariable(
-						'media_file_name_' + mediaSource.sourceName,
-						self.mediaSources[mediaSource.sourceName]['fileName']
-					)
-				} else if (data.sourceSettings.playlist) {
-					let vlcFiles = []
-					for (var s in data.sourceSettings.playlist) {
-						let filePath = data.sourceSettings.playlist[s].value
-						vlcFiles.push(filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
-					}
-					self.mediaSources[mediaSource.sourceName]['fileName'] = vlcFiles.length ? vlcFiles.join('\\n') : 'None'
 				} else {
-					self.mediaSources[mediaSource.sourceName]['fileName'] = 'None'
+					this.log('error', `Failed to connect to OBS (${error.message})`)
 				}
-				self.setVariable(
-					'media_file_name_' + mediaSource.sourceName,
-					self.mediaSources[mediaSource.sourceName]['fileName']
+			}
+		}
+	}
+
+	async disconnectOBS() {
+		if (obs) {
+			await obs.disconnect()
+			//Clear all active polls
+			this.stopStatsPoll()
+			this.stopMediaPoll()
+		}
+	}
+
+	async obsListeners() {
+		//General
+		obs.once('ExitStarted', () => {
+			this.log('error', 'OBS closed, connection lost')
+			this.status(this.STATUS_ERROR)
+			this.disconnectOBS()
+			if (!this.reconnectionPoll) {
+				this.startReconnectionPoll()
+			}
+		})
+		obs.on('VendorEvent', () => {})
+		//Config
+		obs.on('CurrentSceneCollectionChanging', () => {
+			this.stopMediaPoll()
+			this.states.sceneCollectionChanging = true
+		})
+		obs.on('CurrentSceneCollectionChanged', (data) => {
+			this.states.currentSceneCollection = data.sceneCollectionName
+			this.checkFeedbacks('scene_collection_active')
+			this.setVariable('scene_collection', this.states.currentSceneCollection)
+			this.states.sceneCollectionChanging = false
+			this.getScenesSources()
+			this.getSceneTransitionList()
+		})
+		obs.on('SceneCollectionListChanged', () => {
+			this.getSceneCollectionList()
+		})
+		obs.on('CurrentProfileChanging', () => {})
+		obs.on('CurrentProfileChanged', (data) => {
+			this.states.currentProfile = data.profileName
+			this.checkFeedbacks('profile_active')
+			this.setVariable('profile', this.states.currentProfile)
+			this.obsInfo()
+		})
+		obs.on('ProfileListChanged', () => {
+			this.getProfileList()
+		})
+		//Scenes
+		obs.on('SceneCreated', (data) => {
+			if (data?.isGroup === false && this.states.sceneCollectionChanging === false) {
+				this.addScene(data.sceneName)
+			}
+		})
+		obs.on('SceneRemoved', (data) => {
+			if (data?.isGroup === false && this.states.sceneCollectionChanging === false) {
+				this.removeScene(data.sceneName)
+			}
+		})
+		obs.on('SceneNameChanged', (data) => {
+			if (this.sceneItems[data.oldSceneName]) {
+				this.sceneItems[data.sceneName] = this.sceneItems[data.oldSceneName]
+				delete this.sceneItems[data.oldSceneName]
+			}
+			let scene = this.sceneChoices.findIndex((item) => item.id === data.oldSceneName)
+			this.sceneChoices.splice(scene, 1)
+			this.sceneChoices.push({ id: data.sceneName, label: data.sceneName })
+
+			this.updateActionsFeedbacksVariables()
+		})
+		obs.on('CurrentProgramSceneChanged', (data) => {
+			this.states.programScene = data.sceneName
+			this.setVariable('scene_active', this.states.programScene)
+			this.checkFeedbacks('scene_active')
+		})
+		obs.on('CurrentPreviewSceneChanged', (data) => {
+			this.states.previewScene = data.sceneName ? data.sceneName : 'None'
+			this.setVariable('scene_preview', this.states.previewScene)
+			this.checkFeedbacks('scene_active')
+		})
+		obs.on('SceneListChanged', () => {})
+		//Inputs
+		obs.on('InputCreated', () => {})
+		obs.on('InputRemoved', () => {})
+		obs.on('InputNameChanged', () => {})
+		obs.on('InputActiveStateChanged', (data) => {
+			if (this.sources[data.inputName]) {
+				this.sources[data.inputName].active = data.videoActive
+				this.checkFeedbacks('scene_item_active')
+			}
+		})
+		obs.on('InputShowStateChanged', (data) => {
+			if (this.sources[data.inputName]) {
+				this.sources[data.inputName].videoShowing = data.videoShowing
+				this.checkFeedbacks('scene_item_previewed')
+			}
+		})
+		obs.on('InputMuteStateChanged', (data) => {
+			this.sources[data.inputName].inputMuted = data.inputMuted
+			this.setVariable('mute_' + data.inputName, this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted')
+			this.checkFeedbacks('audio_muted')
+		})
+		obs.on('InputVolumeChanged', (data) => {
+			this.sources[data.inputName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+			this.setVariable('volume_' + data.inputName, this.sources[data.inputName].inputVolume + 'db')
+			this.checkFeedbacks('volume')
+		})
+		obs.on('InputAudioBalanceChanged', (data) => {
+			this.sources[data.inputName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+			this.setVariable('balance_' + data.inputName, this.sources[data.inputName].inputAudioBalance)
+		})
+		obs.on('InputAudioSyncOffsetChanged', (data) => {
+			this.sources[data.inputName].inputAudioSyncOffset = data.inputAudioSyncOffset
+			this.setVariable('sync_offset_' + data.inputName, this.sources[data.inputName].inputAudioSyncOffset + 'ms')
+		})
+		obs.on('InputAudioTracksChanged', () => {})
+		obs.on('InputAudioMonitorTypeChanged', (data) => {
+			this.sources[data.inputName].monitorType = data.monitorType
+			let monitorType
+			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+				monitorType = 'Monitor / Output'
+			} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+				monitorType = 'Monitor Only'
+			} else {
+				monitorType = 'Off'
+			}
+			this.setVariable('monitor_' + data.inputName, monitorType)
+			this.checkFeedbacks('audio_monitor_type')
+		})
+		obs.on('InputVolumeMeters', () => {})
+		//Transitions
+		obs.on('CurrentSceneTransitionChanged', (data) => {
+			this.states.currentTransition = data.transitionName
+			this.checkFeedbacks('current_transition')
+			this.setVariable('current_transition', this.states.currentTransition)
+			obs.call('GetCurrentSceneTransition').then((data) => {
+				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+				this.checkFeedbacks('transition_duration')
+				this.setVariable('transition_duration', this.states.transitionDuration)
+			})
+		})
+		obs.on('CurrentSceneTransitionDurationChanged', (data) => {
+			this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+			this.checkFeedbacks('transition_duration')
+			this.setVariable('transition_duration', this.states.transitionDuration)
+		})
+		obs.on('SceneTransitionStarted', () => {
+			this.states.transitionActive = true
+			this.checkFeedbacks('transition_active')
+		})
+		obs.on('SceneTransitionEnded', () => {
+			this.states.transitionActive = false
+			this.checkFeedbacks('transition_active')
+		})
+		obs.on('SceneTransitionVideoEnded', () => {})
+		//Filters
+		obs.on('SourceFilterListReindexed', () => {})
+		obs.on('SourceFilterCreated', () => {})
+		obs.on('SourceFilterRemoved', () => {})
+		obs.on('SourceFilterNameChanged', () => {})
+		obs.on('SourceFilterEnableStateChanged', (data) => {
+			if (this.sourceFilters[data.sourceName]) {
+				let filter = this.sourceFilters[data.sourceName].findIndex((item) => item.filterName == data.filterName)
+				if (filter !== undefined) {
+					this.sourceFilters[data.sourceName][filter].filterEnabled = data.filterEnabled
+					this.checkFeedbacks('filter_enabled')
+				}
+			}
+		})
+		//Scene Items
+		obs.on('SceneItemCreated', (data) => {
+			if (this.states.sceneCollectionChanging === false) {
+				this.getSceneItems(data.sceneName)
+			}
+		})
+		obs.on('SceneItemRemoved', (data) => {
+			if (this.states.sceneCollectionChanging === false) {
+				let source = this.sourceChoices.findIndex((item) => item.id === data.sourceName)
+				this.sourceChoices.splice(source, 1)
+				this.updateActionsFeedbacksVariables()
+
+				this.getSceneItems(data.sceneName)
+			}
+		})
+		obs.on('SceneItemListReindexed', () => {})
+		obs.on('SceneItemEnableStateChanged', (data) => {
+			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+			this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			this.checkFeedbacks('scene_item_active_in_scene')
+		})
+		obs.on('SceneItemLockStateChanged', () => {})
+		obs.on('SceneItemSelected', () => {})
+		obs.on('SceneItemTransformChanged', (data) => {
+			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+			if (sceneItem !== undefined) {
+				let sourceName = this.sceneItems[data.sceneName][sceneItem].sourceName
+				if (this.sceneItems[data.sceneName][sceneItem].inputKind) {
+					obs
+						.call('GetInputSettings', { inputName: sourceName })
+						.then((settings) => {
+							this.sources[sourceName].settings = settings.inputSettings
+							if (settings.inputKind === 'text_ft2_source_v2' || settings.inputKind === 'text_gdiplus_v2') {
+								this.setVariable(
+									'current_text_' + sourceName,
+									settings.inputSettings.text ? settings.inputSettings.text : ''
+								)
+							}
+							if (settings.inputKind === 'image_source') {
+								this.setVariable(
+									'image_file_name_' + sourceName,
+									settings.inputSettings?.file
+										? settings.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+										: ''
+								)
+							}
+						})
+						.catch((error) => {})
+				}
+			}
+		})
+		//Outputs
+		obs.on('StreamStateChanged', (data) => {
+			this.states.streaming = data.outputActive
+
+			this.setVariable('streaming', this.states.streaming ? 'Live' : 'Off-Air')
+			this.checkFeedbacks('streaming')
+		})
+		obs.on('RecordStateChanged', (data) => {
+			if (data.outputActive === true) {
+				this.states.recording = 'Recording'
+			} else {
+				if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
+					this.states.recording = 'Paused'
+				} else {
+					this.states.recording = 'Stopped'
+					this.setVariable('recording_timecode', '00:00:00')
+				}
+			}
+			if (data.outputPath) {
+				this.setVariable('recording_file_name', data.outputPath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
+			}
+			this.setVariable('recording', this.states.recording)
+			this.checkFeedbacks('recording')
+		})
+		obs.on('ReplayBufferStateChanged', (data) => {
+			this.states.replayBuffer = data.outputActive
+			this.checkFeedbacks('replayBufferActive')
+		})
+		obs.on('VirtualcamStateChanged', (data) => {
+			this.outputs['virtualcam_output'].outputActive = data.outputActive
+			this.checkFeedbacks('output_active')
+		})
+		obs.on('ReplayBufferSaved', (data) => {
+			this.setVariable('replay_buffer_path', data.savedReplayPath)
+		})
+		//Media Inputs
+		obs.on('MediaInputPlaybackStarted', (data) => {
+			this.states.currentMedia = data.inputName
+			this.setVariable('current_media_name', this.states.currentMedia)
+			this.setVariable(`media_status_${data.inputName}`, 'Playing')
+		})
+		obs.on('MediaInputPlaybackEnded', (data) => {
+			if (this.states.currentMedia == data.inputName) {
+				this.setVariable('current_media_name', 'None')
+				this.setVariable(`media_status_${data.inputName}`, 'Stopped')
+			}
+		})
+		obs.on('MediaInputActionTriggered', (data) => {
+			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
+				this.setVariable(`media_status_${data.inputName}`, 'Paused')
+			}
+		})
+		//UI
+		obs.on('StudioModeStateChanged', (data) => {
+			this.states.studioMode = data.studioModeEnabled ? true : false
+		})
+	}
+
+	initFeedbacks() {
+		const feedbacks = initFeedbacks.bind(this)()
+		this.setFeedbackDefinitions(feedbacks)
+	}
+
+	initPresets() {
+		this.setPresetDefinitions(this.getPresets())
+	}
+
+	actions() {
+		this.setActions(this.getActions())
+	}
+
+	action(action) {
+		let requestType
+		let requestData
+
+		switch (action.action) {
+			//General
+			case 'trigger-hotkey':
+				requestType = 'TriggerHotkeyByName'
+				requestData = { hotkeyName: action.options.id }
+				break
+			case 'trigger-hotkey-sequence':
+				let keyModifiers = {
+					shift: action.options.keyShift,
+					alt: action.options.keyAlt,
+					control: action.options.keyControl,
+					command: action.options.keyCommand,
+				}
+
+				requestType = 'TriggerHotkeyByKeySequence'
+				requestData = {
+					keyId: action.options.keyId,
+					keyModifiers: keyModifiers,
+				}
+				break
+			case 'custom_command':
+				let arg
+				if (action.options.arg) {
+					try {
+						arg = JSON.parse(action.options.arg)
+					} catch (e) {
+						this.log('warn', 'Request data must be formatted as valid JSON.')
+						return
+					}
+				}
+
+				requestType = action.options.command
+				requestData = arg
+				break
+			//Config
+			case 'set_profile':
+				requestType = 'SetCurrentProfile'
+				requestData = { profileName: action.options.profile }
+				break
+			case 'set_scene_collection':
+				requestType = 'SetCurrentSceneCollection'
+				requestData = { sceneCollectionName: action.options.scene_collection }
+				break
+			case 'set_stream_settings':
+				let streamServiceSettings = {
+					key: action.options.streamKey,
+					server: action.options.streamURL,
+					use_auth: action.options.streamAuth,
+					username: action.options.streamUserName,
+					password: action.options.streamPassword,
+				}
+				let streamServiceType = action.options.streamType
+				requestType = 'SetStreamServiceSettings'
+				requestData = { streamServiceType: streamServiceType, streamServiceSettings: streamServiceSettings }
+				break
+			//Sources
+			case 'take_screenshot':
+				let date = new Date().toISOString()
+				let day = date.slice(0, 10)
+				let time = date.slice(11, 19).replace(/:/g, '-')
+
+				let fileName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
+				let fileLocation = action.options.path ? action.options.path : this.states.recordDirectory
+				let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
+				let quality = action.options.compression == 0 ? -1 : action.options.compression
+
+				requestType = 'SaveSourceScreenshot'
+				requestData = {
+					sourceName: fileName,
+					imageFormat: action.options.format,
+					imageFilePath: filePath,
+					imageCompressionQuality: quality,
+				}
+				break
+			//Scenes
+			case 'set_scene':
+				if (action.options.scene === 'customSceneName') {
+					this.parseVariables(action.options.customSceneName, (value) => {
+						requestData = { sceneName: value }
+					})
+				} else {
+					requestData = { sceneName: action.options.scene }
+				}
+				requestType = 'SetCurrentProgramScene'
+				break
+			case 'preview_scene':
+				if (action.options.scene === 'customSceneName') {
+					this.parseVariables(action.options.customSceneName, (value) => {
+						requestData = { sceneName: value }
+					})
+				} else {
+					requestData = { sceneName: action.options.scene }
+				}
+				requestType = 'SetCurrentPreviewScene'
+				break
+			case 'smart_switcher':
+				let scene = action.options.scene
+				if (action.options.scene === 'customSceneName') {
+					this.parseVariables(action.options.customSceneName, (value) => {
+						scene = value
+					})
+				}
+
+				if (this.states.previewScene == scene && this.states.programScene != scene) {
+					requestType = 'TriggerStudioModeTransition'
+				} else {
+					requestType = 'SetCurrentPreviewScene'
+					requestData = { sceneName: scene }
+				}
+				break
+			//Inputs
+			case 'setText':
+				let newText
+				this.parseVariables(action.options.text, (value) => {
+					newText = value
+				})
+				requestType = 'SetInputSettings'
+				requestData = { inputName: action.options.source, inputSettings: { text: newText } }
+				break
+			case 'set_source_mute':
+				requestType = 'SetInputMute'
+				requestData = { inputName: action.options.source, inputMuted: action.options.mute == 'true' ? true : false }
+				break
+			case 'toggle_source_mute':
+				requestType = 'ToggleInputMute'
+				requestData = { inputName: action.options.source }
+				break
+			case 'set_volume':
+				requestType = 'SetInputVolume'
+				requestData = { inputName: action.options.source, inputVolumeDb: action.options.volume }
+				break
+			case 'adjust_volume':
+				let newVolume = this.sources[action.options.source].inputVolume + action.options.volume
+				if (newVolume > 26) {
+					newVolume = 26
+				} else if (newVolume < -100) {
+					newVolume = -100
+				}
+				requestType = 'SetInputVolume'
+				requestData = { inputName: action.options.source, inputVolumeDb: newVolume }
+				break
+			case 'set_audio_monitor':
+				let monitorType
+				if (action.options.monitor === 'monitorAndOutput') {
+					monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
+				} else if (action.options.monitor === 'monitorOnly') {
+					monitorType = 'OBS_MONITORING_TYPE_MONITOR_ONLY'
+				} else {
+					monitorType = 'OBS_MONITORING_TYPE_NONE'
+				}
+				requestType = 'SetInputAudioMonitorType'
+				requestData = { inputName: action.options.source, monitorType: monitorType }
+				break
+			case 'setSyncOffset':
+				requestType = 'SetInputAudioSyncOffset'
+				requestData = { inputName: action.options.source, inputAudioSyncOffset: action.options.offset }
+				break
+			case 'setAudioBalance':
+				requestType = 'SetInputAudioBalance'
+				requestData = { inputName: action.options.source, inputAudioBalance: action.options.balance }
+				break
+			case 'refresh_browser_source':
+				if (this.sources[action.options.source]?.inputKind == 'browser_source') {
+					requestType = 'PressInputPropertiesButton'
+					requestData = { inputName: action.options.source, propertyName: 'refreshnocache' }
+				}
+				break
+			//Transitions
+			case 'do_transition':
+				if (this.states.studioMode) {
+					requestType = 'TriggerStudioModeTransition'
+				} else {
+					this.log(
+						'warn',
+						'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead'
+					)
+				}
+				break
+			case 'set_transition':
+				requestType = 'SetCurrentSceneTransition'
+				requestData = { transitionName: action.options.transitions }
+				break
+			case 'set_transition_duration':
+				requestType = 'SetCurrentSceneTransitionDuration'
+				requestData = { transitionDuration: action.options.duration }
+				break
+			case 'quick_transition':
+				if (action.options.transition == 'Default' && !action.options.transition_time) {
+					requestType = 'TriggerStudioModeTransition'
+				} else {
+					let transitionWaitTime
+					let transitionDuration
+					let revertTransition = this.states.currentTransition
+					let revertTransitionDuration = this.states.transitionDuration
+					if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
+						transitionWaitTime = action.options.transition_time + 50
+					} else if (action.options.transition_time == null) {
+						transitionWaitTime = revertTransitionDuration + 50
+					} else {
+						transitionWaitTime = 100
+					}
+					if (action.options.transition_time != null) {
+						transitionDuration = action.options.transition_time
+					} else {
+						transitionDuration = revertTransitionDuration
+					}
+					//This is a workaround until obs-websocket-js can support Batch Requests
+					//https://github.com/obs-websocket-community-projects/obs-websocket-js/issues/292
+					try {
+						obs.call('SetCurrentSceneTransition', { transitionName: action.options.transition }).then(() => {
+							obs.call('SetCurrentSceneTransitionDuration', { transitionDuration: transitionDuration }).then(() => {
+								obs.call('TriggerStudioModeTransition').then(() => {
+									setTimeout(function () {
+										obs.call('SetCurrentSceneTransition', { transitionName: revertTransition }).then(() => {
+											obs
+												.call('SetCurrentSceneTransitionDuration', { transitionDuration: revertTransitionDuration })
+												.then(() => {})
+										})
+									}, transitionWaitTime)
+								})
+							})
+						})
+					} catch (error) {}
+				}
+				break
+			//Filters
+			case 'toggle_filter':
+				let filterVisibility
+				if (action.options.visible !== 'toggle') {
+					filterVisibility = action.options.visible === 'true' ? true : false
+				} else if (action.options.visible === 'toggle') {
+					if (this.sourceFilters[action.options.source]) {
+						let filter = this.sourceFilters[action.options.source].find(
+							(item) => item.filterName === action.options.filter
+						)
+						if (filter) {
+							filterVisibility = !filter.filterEnabled
+						}
+					}
+				}
+
+				requestType = 'SetSourceFilterEnabled'
+				requestData = {
+					sourceName: action.options.source,
+					filterName: action.options.filter,
+					filterEnabled: filterVisibility,
+				}
+				break
+			//Scene Items
+			case 'source_properties':
+				let sourceScene
+				if (action.options.scene == 'Current Scene') {
+					sourceScene = this.states.programScene
+				} else if (action.options.scene == 'Preview Scene') {
+					sourceScene = this.states.previewScene
+				} else {
+					sourceScene = action.options.scene
+				}
+
+				let positionX
+				let positionY
+				let scaleX
+				let scaleY
+				let rotation
+
+				this.parseVariables(action.options.positionX, function (value) {
+					positionX = parseFloat(value)
+				})
+				this.parseVariables(action.options.positionY, function (value) {
+					positionY = parseFloat(value)
+				})
+				this.parseVariables(action.options.scaleX, function (value) {
+					scaleX = parseFloat(value)
+				})
+				this.parseVariables(action.options.scaleY, function (value) {
+					scaleY = parseFloat(value)
+				})
+				this.parseVariables(action.options.rotation, function (value) {
+					rotation = parseFloat(value)
+				})
+
+				let transform = {
+					positionX: positionX,
+					positionY: positionY,
+					rotation: rotation,
+					scaleX: scaleX,
+					scaleY: scaleY,
+				}
+
+				obs.call('GetSceneItemId', { sceneName: sourceScene, sourceName: action.options.source }).then((data) => {
+					if (data.sceneItemId) {
+						requestType = 'SetSceneItemTransform'
+						requestData = {
+							sceneName: sourceScene,
+							sceneItemId: data.sceneItemId,
+							sceneItemTransform: transform,
+						}
+						this.sendRequest(requestType, requestData)
+					}
+				})
+
+				break
+			case 'toggle_scene_item':
+				let sceneName = action.options.scene
+				let sourceName = action.options.source
+
+				// special scene names
+				if (!sceneName || sceneName === 'Current Scene') {
+					sceneName = this.states.programScene
+				} else if (sceneName === 'Preview Scene') {
+					sceneName = this.states.previewScene
+				}
+				let targetScene = this.sceneItems[sceneName]
+
+				if (targetScene) {
+					targetScene.forEach((source) => {
+						if (sourceName === 'allSources' || source.sourceName === sourceName) {
+							let enabled
+							if (action.options.visible === 'toggle') {
+								enabled = !source.sceneItemEnabled
+							} else {
+								enabled = action.options.visible == 'true' ? true : false
+							}
+							this.sendRequest('SetSceneItemEnabled', {
+								sceneName: sceneName,
+								sceneItemId: source.sceneItemId,
+								sceneItemEnabled: enabled,
+							})
+							if (source.isGroup) {
+								for (let x in this.groups[source.sourceName]) {
+									let item = this.groups[source.sourceName][x]
+									let groupEnabled
+									if (action.options.visible === 'toggle') {
+										groupEnabled = !this.sources[item.sourceName].sceneItemEnabled
+									} else {
+										groupEnabled = action.options.visible == 'true' ? true : false
+									}
+									this.sendRequest('SetSceneItemEnabled', {
+										sceneName: source.sourceName,
+										sceneItemId: item.sceneItemId,
+										sceneItemEnabled: groupEnabled,
+									})
+								}
+							}
+						}
+					})
+				}
+				break
+			//Outputs
+			case 'start_output':
+				requestType = 'StartOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'stop_output':
+				requestType = 'StopOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'start_stop_output':
+				requestType = 'ToggleOutput'
+				requestData = {
+					outputName: action.options.output,
+				}
+				break
+			case 'ToggleReplayBuffer':
+				requestType = 'ToggleReplayBuffer'
+				break
+			case 'start_replay_buffer':
+				requestType = 'StartReplayBuffer'
+				break
+			case 'stop_replay_buffer':
+				requestType = 'StopReplayBuffer'
+				break
+			case 'save_replay_buffer':
+				requestType = 'SaveReplayBuffer'
+				break
+			//Stream
+			case 'StartStopStreaming':
+				requestType = 'ToggleStream'
+				break
+			case 'start_streaming':
+				requestType = 'StartStream'
+				break
+			case 'stop_streaming':
+				requestType = 'StopStream'
+				break
+			case 'SendStreamCaption':
+				if (this.states.streaming) {
+					let captionText
+					this.parseVariables(action.options.text, (value) => {
+						captionText = value
+					})
+					requestType = 'SendStreamCaption'
+					requestData = { captionText: captionText }
+				}
+				break
+			//Record
+			case 'StartStopRecording':
+				requestType = 'ToggleRecord'
+				break
+			case 'start_recording':
+				requestType = 'StartRecord'
+				break
+			case 'stop_recording':
+				requestType = 'StopRecord'
+				break
+			case 'pause_recording':
+				requestType = 'PauseRecord'
+				break
+			case 'resume_recording':
+				requestType = 'ResumeRecord'
+				break
+			case 'ToggleRecordPause':
+				requestType = 'ToggleRecordPause'
+				break
+			//Media Inputs
+			case 'play_pause_media':
+				let playPause
+				let media = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
+				if (action.options.playPause === 'toggle' && media) {
+					if (this.mediaSources[media]?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
+						playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+					} else {
+						playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+					}
+				} else {
+					playPause =
+						action.options.playPause == 'true'
+							? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+							: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+				}
+				requestType = 'TriggerMediaInputAction'
+				requestData = {
+					inputName: media,
+					mediaAction: playPause,
+				}
+				break
+			case 'restart_media':
+				requestType = 'TriggerMediaInputAction'
+				requestData = {
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
+					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART',
+				}
+				break
+			case 'stop_media':
+				requestType = 'TriggerMediaInputAction'
+				requestData = {
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
+					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP',
+				}
+				break
+			case 'next_media':
+				requestType = 'TriggerMediaInputAction'
+				requestData = {
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
+					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT',
+				}
+				break
+			case 'previous_media':
+				requestType = 'TriggerMediaInputAction'
+				requestData = {
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
+					mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS',
+				}
+				break
+			case 'set_media_time':
+				requestType = 'SetMediaInputCursor'
+				requestData = {
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
+					mediaCursor: action.options.mediaTime * 1000,
+				}
+				break
+			case 'scrub_media':
+				requestType = 'OffsetMediaInputCursor'
+				requestData = {
+					inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
+					mediaCursorOffset: action.options.scrubAmount * 1000,
+				}
+				break
+			//UI
+			case 'enable_studio_mode':
+				requestType = 'SetStudioModeEnabled'
+				requestData = { studioModeEnabled: true }
+				break
+			case 'disable_studio_mode':
+				requestType = 'SetStudioModeEnabled'
+				requestData = { studioModeEnabled: false }
+				break
+			case 'toggle_studio_mode':
+				requestType = 'SetStudioModeEnabled'
+				requestData = { studioModeEnabled: this.states.studioMode ? false : true }
+				break
+			case 'openInputPropertiesDialog':
+				requestType = 'OpenInputPropertiesDialog'
+				requestData = { inputName: action.options.source }
+				break
+			case 'openInputFiltersDialog':
+				requestType = 'OpenInputFiltersDialog'
+				requestData = { inputName: action.options.source }
+				break
+			case 'openInputInteractDialog':
+				requestType = 'OpenInputInteractDialog'
+				requestData = { inputName: action.options.source }
+				break
+			case 'open_projector':
+				let monitor = action.options.window === 'window' ? -1 : action.options.display
+
+				if (action.options.type === 'Multiview') {
+					requestType = 'OpenVideoMixProjector'
+					requestData = {
+						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_MULTIVIEW',
+						monitorIndex: monitor,
+					}
+				} else if (action.options.type === 'Preview') {
+					requestType = 'OpenVideoMixProjector'
+					requestData = {
+						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PREVIEW',
+						monitorIndex: monitor,
+					}
+				} else if (action.options.type === 'StudioProgram') {
+					requestType = 'OpenVideoMixProjector'
+					requestData = {
+						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PROGRAM',
+						monitorIndex: monitor,
+					}
+				} else if (action.options.type === 'Source' || action.options.type === 'Scene') {
+					requestType = 'OpenSourceProjector'
+					requestData = {
+						sourceName: action.options.source,
+						monitorIndex: monitor,
+					}
+				}
+				break
+		}
+		if (requestType) {
+			this.sendRequest(requestType, requestData)
+		}
+	}
+
+	async sendRequest(requestType, requestData) {
+		try {
+			let data = await obs.call(requestType, requestData)
+			return data
+		} catch (error) {
+			this.debug(error)
+			this.log('warn', `Request ${requestType} failed (${error})`)
+		}
+	}
+
+	startReconnectionPoll() {
+		this.stopReconnectionPoll()
+		this.reconnectionPoll = setInterval(() => {
+			this.connectOBS()
+		}, 5000)
+	}
+
+	stopReconnectionPoll() {
+		if (this.reconnectionPoll) {
+			clearInterval(this.reconnectionPoll)
+			delete this.reconnectionPoll
+		}
+	}
+
+	async obsInfo() {
+		let version = await this.sendRequest('GetVersion')
+		this.states.version = version
+		version.supportedImageFormats.forEach((format) => {
+			this.imageFormats.push({ id: format, label: format })
+		})
+
+		obs
+			.call('GetInputKindList')
+			.then((data) => {
+				this.states.inputKindList = data
+			})
+			.catch((error) => {})
+		obs
+			.call('GetHotkeyList')
+			.then((data) => {
+				data.hotkeys.forEach((hotkey) => {
+					this.hotkeyNames.push({ id: hotkey, label: hotkey })
+				})
+			})
+			.catch((error) => {})
+		obs
+			.call('GetStudioModeEnabled')
+			.then((data) => {
+				this.states.studioMode = data.studioModeEnabled ? true : false
+			})
+			.catch((error) => {})
+		obs
+			.call('GetVideoSettings')
+			.then((data) => {
+				this.states.resolution = `${data.baseWidth}x${data.baseHeight}`
+				this.states.outputResolution = `${data.outputWidth}x${data.outputHeight}`
+				this.states.framerate = `${this.roundNumber(data.fpsNumerator / data.fpsDenominator, 2)} fps`
+				this.setVariables({
+					base_resolution: this.states.resolution,
+					output_resolution: this.states.outputResolution,
+					target_framerate: this.states.framerate,
+				})
+			})
+			.catch((error) => {})
+		obs
+			.call('GetMonitorList')
+			.then((data) => {
+				this.states.monitors = data
+				data.monitors.forEach((monitor) => {
+					let monitorName = monitor.monitorName
+					if (monitorName.match(/\([0-9]+\)/i)) {
+						monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
+					}
+					this.monitors.push({
+						id: monitor.monitorIndex,
+						label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
+					})
+				})
+			})
+			.catch((error) => {})
+		obs
+			.call('GetOutputList')
+			.then((data) => {
+				this.outputs = {}
+				this.outputList = []
+				data.outputs.forEach((output) => {
+					let outputKind = output.outputKind
+					if (outputKind === 'virtualcam_output') {
+						this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
+					} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer' && outputKind != 'rtmp_output') {
+						//The above outputKinds are handled separately by other actions, so they are omitted
+						this.outputList.push({ id: output.outputName, label: output.outputName })
+					}
+					this.getOutputStatus(output.outputName)
+				})
+			})
+			.catch((error) => {})
+		obs
+			.call('GetReplayBufferStatus')
+			.then((data) => {
+				this.states.replayBuffer = data.outputActive
+				this.checkFeedbacks('replayBufferActive')
+			})
+			.catch((error) => {})
+	}
+
+	roundNumber(number, decimalPlaces) {
+		if (number) {
+			return Number(Math.round(number + 'e' + decimalPlaces) + 'e-' + decimalPlaces)
+		} else {
+			return number
+		}
+	}
+
+	startStatsPoll() {
+		this.stopStatsPoll()
+		if (obs) {
+			this.statsPoll = setInterval(() => {
+				this.getStats()
+				if (this.states.streaming) {
+					this.getStreamStatus()
+				}
+				if (this.states.recording === 'Recording') {
+					this.getRecordStatus()
+				}
+				if (this.outputs) {
+					for (let outputName in this.outputs) {
+						this.getOutputStatus(outputName)
+					}
+				}
+			}, 1000)
+		}
+	}
+
+	stopStatsPoll() {
+		if (this.statsPoll) {
+			clearInterval(this.statsPoll)
+			delete this.statsPoll
+		}
+	}
+
+	getStats() {
+		obs
+			.call('GetStats')
+			.then((data) => {
+				this.states.stats = data
+				this.setVariable('fps', this.roundNumber(data.activeFps, 2))
+				this.setVariable('render_total_frames', data.renderTotalFrames)
+				this.setVariable('render_missed_frames', data.renderSkippedFrames)
+				this.setVariable('output_total_frames', data.outputTotalFrames)
+				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
+				this.setVariable('average_frame_time', this.roundNumber(data.averageFrameRenderTime, 2))
+				this.setVariable('cpu_usage', `${this.roundNumber(data.cpuUsage, 2)}%`)
+				this.setVariable('memory_usage', `${this.roundNumber(data.memoryUsage, 0)} MB`)
+				let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
+				if (freeSpace > 1000) {
+					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace / 1000, 0)} GB`)
+				} else {
+					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
+				}
+			})
+			.catch((error) => {})
+	}
+
+	async getOutputStatus(outputName) {
+		let data = await this.sendRequest('GetOutputStatus', { outputName: outputName })
+
+		this.outputs[outputName] = data
+		this.checkFeedbacks('output_active')
+	}
+
+	getStreamStatus() {
+		obs
+			.call('GetStreamStatus')
+			.then((data) => {
+				this.states.streaming = data.outputActive
+				this.setVariable('streaming', data.outputActive ? 'Live' : 'Off-Air')
+				this.checkFeedbacks('streaming')
+				this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				this.setVariable('stream_timecode', this.states.streamingTimecode)
+				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
+				this.setVariable('output_total_frames', data.outputTotalFrames)
+			})
+			.catch((error) => {})
+		obs
+			.call('GetStreamServiceSettings')
+			.then((data) => {
+				this.setVariable(
+					'stream_service',
+					data.streamServiceSettings?.service ? data.streamServiceSettings.service : 'Custom'
 				)
 			})
+			.catch((error) => {})
 	}
-	self.init_variables()
-	self.actions()
-	self.checkFeedbacks('media_playing')
-}
 
-instance.prototype.startMediaPoller = function () {
-	this.stopMediaPoller()
-	let self = this
-	this.mediaPoller = setInterval(() => {
-		let mediaSourcesPlaying = []
-		if (self.mediaSources) {
-			for (var s in self.mediaSources) {
-				let mediaSource = self.mediaSources[s]
-				if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Playing') {
-					mediaSourcesPlaying.push(self.mediaSources[mediaSource.sourceName])
-					self.obs
-						.send('GetMediaTime', {
-							sourceName: mediaSource.sourceName,
-						})
-						.then((data) => {
-							self.mediaSources[mediaSource.sourceName]['mediaTime'] = data.timestamp
-							let timeRemaining = self.mediaSources[mediaSource.sourceName]['mediaDuration'] - data.timestamp
-							self.mediaSources[mediaSource.sourceName]['mediaTimeRemaining'] = timeRemaining
-							try {
-								self.setVariable(
-									'media_time_elapsed_' + mediaSource.sourceName,
-									new Date(data.timestamp).toISOString().slice(11, 19)
-								)
-							} catch (e) {
-								self.debug(`Media time elapsed parse error: ${e}`)
-							}
-							try {
-								self.setVariable(
-									'media_time_remaining_' + mediaSource.sourceName,
-									'-' + new Date(timeRemaining).toISOString().slice(11, 19)
-								)
-							} catch (e) {
-								self.debug(`Media time remaining parse error: ${e}`)
-							}
-							self.setVariable('current_media_time_elapsed', new Date(data.timestamp).toISOString().slice(11, 19))
-							try {
-								self.setVariable(
-									'current_media_time_remaining',
-									'-' + new Date(timeRemaining).toISOString().slice(11, 19)
-								)
-							} catch (e) {
-								self.log('error', `Media time remaining parse error: ${e}`)
-							}
-							self.setVariable('current_media_name', mediaSource.sourceName)
-						})
-				} else if (self.mediaSources[mediaSource.sourceName]['mediaState'] === 'Stopped' || 'Ended') {
-					self.setVariable('current_media_time_elapsed_' + mediaSource.sourceName, '--:--:--')
-					self.setVariable('current_media_time_remaining_' + mediaSource.sourceName, '--:--:--')
+	getSceneTransitionList() {
+		this.transitionList = []
+		obs
+			.call('GetSceneTransitionList')
+			.then((data) => {
+				data.transitions.forEach((transition) => {
+					this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
+				})
+			})
+
+			.then(() => {
+				this.updateActionsFeedbacksVariables()
+			})
+			.catch((error) => {})
+		obs
+			.call('GetCurrentSceneTransition')
+			.then((data) => {
+				this.states.currentTransition = data.transitionName
+				this.checkFeedbacks('current_transition')
+				this.setVariable('current_transition', this.states.currentTransition)
+
+				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+				this.checkFeedbacks('transition_duration')
+				this.setVariable('transition_duration', this.states.transitionDuration)
+			})
+			.catch((error) => {})
+	}
+
+	getRecordStatus() {
+		obs
+			.call('GetRecordStatus')
+			.then((data) => {
+				if (data.outputActive === true) {
+					this.states.recording = 'Recording'
+				} else {
+					this.states.recording = data.outputPaused ? 'Paused' : 'Stopped'
 				}
-			}
-			if (mediaSourcesPlaying.length == 0) {
-				self.setVariable('current_media_time_elapsed', '--:--:--')
-				self.setVariable('current_media_time_remaining', '--:--:--')
-				self.setVariable('current_media_name', 'None')
-			}
-			self.checkFeedbacks('media_source_time_remaining')
-		}
-	}, 1000)
-}
-
-instance.prototype.stopMediaPoller = function () {
-	if (this.mediaPoller) {
-		clearInterval(this.mediaPoller)
-		this.mediaPoller = null
+				this.setVariable('recording', this.states.recording)
+				this.checkFeedbacks('recording')
+				this.states.recordingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				this.setVariable('recording_timecode', this.states.recordingTimecode)
+			})
+			.catch((error) => {})
+		obs
+			.call('GetRecordDirectory')
+			.then((data) => {
+				this.states.recordDirectory = data.recordDirectory
+				this.setVariable('recording_path', this.states.recordDirectory)
+			})
+			.catch((error) => {})
 	}
-}
 
-instance.prototype.updateTextSources = function (source, typeId) {
-	var self = this
-	if (typeId === 'text_ft2_source_v2') {
-		self.obs
-			.send('GetTextFreetype2Properties', {
-				source: source,
+	getProfileList() {
+		this.profileChoices = []
+		obs
+			.call('GetProfileList')
+			.then((data) => {
+				this.states.currentProfile = data.currentProfileName
+				this.checkFeedbacks('profile_active')
+				this.setVariable('profile', this.states.currentProfile)
+				data.profiles.forEach((profile) => {
+					this.profileChoices.push({ id: profile, label: profile })
+				})
+			})
+			.then(() => {
+				this.updateActionsFeedbacksVariables()
+			})
+			.catch((error) => {})
+	}
+
+	getSceneCollectionList() {
+		this.sceneCollectionList = []
+		obs
+			.call('GetSceneCollectionList')
+			.then((data) => {
+				this.states.currentSceneCollection = data.currentSceneCollectionName
+				this.checkFeedbacks('scene_collection_active')
+				this.setVariable('scene_collection', this.states.currentSceneCollection)
+				data.sceneCollections.forEach((sceneCollection) => {
+					this.sceneCollectionList.push({ id: sceneCollection, label: sceneCollection })
+				})
+			})
+			.then(() => {
+				this.updateActionsFeedbacksVariables()
+			})
+			.catch((error) => {})
+	}
+
+	getAudioSources(sourceName) {
+		obs
+			.call('GetInputAudioTracks', { inputName: sourceName })
+			.then((data) => {
+				if (!this.audioSourceList.find((item) => item.id === sourceName)) {
+					this.audioSourceList.push({ id: sourceName, label: sourceName })
+					this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
+					this.getSourceAudio(sourceName)
+					//this.updateActionsFeedbacksVariables()
+				}
+			})
+			.catch((error) => {})
+	}
+
+	getSourceAudio(sourceName) {
+		obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputMuted = data.inputMuted
+			this.setVariable('mute_' + sourceName, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
+			this.checkFeedbacks('audio_muted')
+		})
+		obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+			this.setVariable('volume_' + sourceName, this.sources[sourceName].inputVolume + 'db')
+			this.checkFeedbacks('volume')
+		})
+		obs.call('GetInputAudioBalance', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+			this.setVariable('balance_' + sourceName, this.sources[sourceName].inputAudioBalance)
+		})
+		obs.call('GetInputAudioSyncOffset', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
+			this.setVariable('sync_offset_' + sourceName, this.sources[sourceName].inputAudioSyncOffset + 'ms')
+		})
+		obs.call('GetInputAudioMonitorType', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].monitorType = data.monitorType
+			let monitorType
+			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+				monitorType = 'Monitor / Output'
+			} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+				monitorType = 'Monitor Only'
+			} else {
+				monitorType = 'Off'
+			}
+			this.setVariable('monitor_' + sourceName, monitorType)
+			this.checkFeedbacks('audio_monitor_type')
+		})
+		obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
+			this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
+		})
+		this.updateActionsFeedbacksVariables()
+	}
+
+	getSourceFilters(sourceName) {
+		obs
+			.call('GetSourceFilterList', { sourceName: sourceName })
+			.then((data) => {
+				this.sourceFilters[sourceName] = data.filters
+				if (data.filters) {
+					data.filters.forEach((filter) => {
+						if (!this.filterList.find((item) => item.id === filter.filterName)) {
+							this.filterList.push({ id: filter.filterName, label: filter.filterName })
+						}
+					})
+				}
+			})
+			.catch((error) => {})
+	}
+
+	getGroupInfo(sourceName) {
+		obs
+			.call('GetGroupSceneItemList', { sceneName: sourceName })
+			.then((data) => {
+				this.groups[sourceName] = data.sceneItems
+				data.sceneItems.forEach((sceneItem) => {
+					let sourceName = sceneItem.sourceName
+					this.sources[sourceName] = sceneItem
+					this.sources[sourceName].groupedSource = true
+
+					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+						this.sourceChoices.push({ id: sourceName, label: sourceName })
+						this.updateActionsFeedbacksVariables()
+					}
+
+					this.getSourceFilters(sourceName)
+					this.getAudioSources(sourceName)
+
+					if (sceneItem.inputKind) {
+						let inputKind = sceneItem.inputKind
+						this.getInputSettings(sourceName, inputKind)
+					}
+				})
+			})
+			.catch((error) => {})
+	}
+
+	getInputSettings(sourceName, inputKind) {
+		obs
+			.call('GetInputSettings', { inputName: sourceName })
+			.then((settings) => {
+				this.sources[sourceName].settings = settings.inputSettings
+
+				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
+					this.textSourceList.push({ id: sourceName, label: sourceName })
+					this.setVariable('current_text_' + sourceName, settings.inputSettings.text ? settings.inputSettings.text : '')
+				}
+				if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+					this.mediaSourceList.push({ id: sourceName, label: sourceName })
+					this.mediaSources[sourceName] = settings.inputSettings
+					this.startMediaPoll()
+					this.updateActionsFeedbacksVariables()
+				}
+				if (inputKind === 'image_source') {
+					this.imageSourceList.push({ id: sourceName, label: sourceName })
+				}
+			})
+			.catch((error) => {})
+	}
+
+	getSceneItems(sceneName) {
+		obs
+			.call('GetSceneItemList', { sceneName: sceneName })
+			.then((data) => {
+				this.sceneItems[sceneName] = data.sceneItems
+
+				data.sceneItems.forEach((sceneItem) => {
+					let sourceName = sceneItem.sourceName
+					this.sources[sourceName] = sceneItem
+
+					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+						this.sourceChoices.push({ id: sourceName, label: sourceName })
+					}
+
+					if (sceneItem.isGroup) {
+						this.getGroupInfo(sourceName)
+					}
+					obs
+						.call('GetSourceActive', { sourceName: sourceName })
+						.then((active) => {
+							if (this.sources[sourceName]) {
+								this.sources[sourceName].active = active.videoActive
+							}
+						})
+						.catch((error) => {})
+
+					this.getSourceFilters(sourceName)
+					this.getAudioSources(sourceName)
+
+					if (sceneItem.inputKind) {
+						let inputKind = sceneItem.inputKind
+						this.getInputSettings(sourceName, inputKind)
+					}
+
+					this.updateActionsFeedbacksVariables()
+				})
+			})
+			.catch((error) => {})
+	}
+
+	addScene(sceneName) {
+		this.sceneChoices.push({ id: sceneName, label: sceneName })
+		this.updateActionsFeedbacksVariables()
+		this.getSceneItems(sceneName)
+	}
+
+	removeScene(sceneName) {
+		for (let x in this.sceneItems[sceneName]) {
+			let sourceName = this.sceneItems[sceneName][x].sourceName
+			delete this.sources[sourceName]
+
+			let source = this.sourceChoices.findIndex((item) => item.id === sourceName)
+			this.sourceChoices.splice(source, 1)
+		}
+		delete this.sceneItems[sceneName]
+
+		let scene = this.sceneChoices.findIndex((item) => item.id === sceneName)
+		this.sceneChoices.splice(scene, 1)
+
+		this.updateActionsFeedbacksVariables()
+	}
+
+	getScenesSources() {
+		this.scenes = {}
+		this.sources = {}
+		this.mediaSources = {}
+		this.imageSources = {}
+		this.textSources = {}
+		this.sourceFilters = {}
+		this.groups = {}
+
+		this.sceneChoices = []
+		this.sourceChoices = []
+		this.audioSourceList = []
+		this.mediaSourceList = []
+		this.textSourceList = []
+		this.imageSourceList = []
+
+		obs
+			.call('GetSceneList')
+			.then((data) => {
+				this.scenes = data.scenes
+				this.states.previewScene = data.currentPreviewSceneName ? data.currentPreviewSceneName : 'None'
+				this.setVariable('scene_preview', this.states.previewScene)
+				this.states.programScene = data.currentProgramSceneName
+				this.setVariable('scene_active', this.states.programScene)
+				return data
 			})
 			.then((data) => {
-				self.setVariable('current_text_' + source, data.text)
-			})
-	}
-	if (typeId === 'text_gdiplus_v2') {
-		self.obs
-			.send('GetTextGDIPlusProperties', {
-				source: source,
-			})
-			.then((data) => {
-				self.setVariable('current_text_' + source, data.text)
-			})
-	}
-}
-
-instance.prototype.updateImageSources = function (sourceName) {
-	var self = this
-	self.obs
-		.send('GetSourceSettings', {
-			sourceName: sourceName,
-		})
-		.then((data) => {
-			if (data.sourceSettings.file) {
-				let filePath = data.sourceSettings.file
-				self.setVariable('image_file_name_' + sourceName, filePath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/))
-			} else {
-				self.setVariable('image_file_name_' + sourceName, 'None')
-			}
-		})
-}
-
-// When module gets deleted
-instance.prototype.destroy = function () {
-	var self = this
-	self.scenes = []
-	self.transitions = []
-	self.states = {}
-	self.scenelist = []
-	self.sourcelist = []
-	self.profiles = []
-	self.sceneCollections = []
-	self.outputs = []
-	self.filterlist = []
-	self.filters = {}
-	self.sourceFilters = {}
-	self.sourceAudio = {}
-	self.mediaSources = {}
-	self.mediaSourceList = []
-	self.feedbacks = {}
-	if (self.obs !== undefined) {
-		self.obs.disconnect()
-	}
-	if (self.tcp !== undefined) {
-		self.tcp.destroy()
-	}
-	self.disable = true
-	self.authenticated = null
-	self.stopStatsPoller()
-	self.stopMediaPoller()
-}
-
-// Returns true if a given scene name is in the active (on program) source, else false
-instance.prototype.isSourceOnProgram = function (sourceName) {
-	var self = this
-	let scene = self.scenes[self.states['scene_active']]
-	if (scene && scene.sources) {
-		for (let source of scene.sources) {
-			if (source.type == 'group') {
-				for (let sourceGroupChild of source.groupChildren) {
-					if (sourceGroupChild.name === sourceName) {
-						//console.log('source ' + sourceGroupChild.name + ' is on program')
-						return true
-					}
-				}
-			} else if (source.name === sourceName) {
-				//console.log('source ' + source.name + ' is on program')
-				return true
-			}
-		}
-	}
-	return false
-}
-
-instance.prototype.actions = function () {
-	var self = this
-	self.scenelist = []
-	self.scenelistToggle = []
-	self.sourcelist = []
-	self.transitionlist = []
-	self.profilelist = []
-	self.scenecollectionlist = []
-	self.outputlist = []
-	self.filterlist = []
-	self.mediaSourceList = []
-
-	var s
-	if (self.sources !== undefined) {
-		for (s in self.sources) {
-			self.sourcelist.push({ id: s, label: s })
-		}
-		for (s in self.scenes) {
-			if (self.sourcelist.some((sourcelist) => sourcelist.id === s) === false) {
-				self.sourcelist.push({ id: s, label: s })
-			}
-		}
-		if (self.sourcelist[0]) {
-			self.sourcelist.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.sourcelistDefault = self.sourcelist[0].id
-		} else {
-			self.sourcelistDefault = ''
-		}
-	}
-
-	if (self.scenes !== undefined) {
-		self.scenelistToggle.push({ id: 'Current Scene', label: 'Current Scene' })
-		self.scenelistToggle.push({ id: 'Preview Scene', label: 'Preview Scene' })
-		for (s in self.scenes) {
-			self.scenelist.push({ id: s, label: s })
-			self.scenelistToggle.push({ id: s, label: s })
-		}
-		if (self.scenelist[0]) {
-			self.scenelist.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.scenelistDefault = self.scenelist[0].id
-		} else {
-			self.scenelistDefault = ''
-		}
-		if (self.scenelistToggle[0]) {
-			self.scenelistToggle.sort((a, b) => (a.id < b.id ? -1 : 1))
-		}
-	}
-
-	if (self.transitions !== undefined) {
-		self.transitionlist.push({ id: 'Default', label: 'Default' })
-		for (s in self.transitions) {
-			self.transitionlist.push({ id: s, label: s })
-		}
-		if (self.transitionlist[0]) {
-			self.transitionlist.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.transitionlistDefault = self.transitionlist[0].id
-		} else {
-			self.transitionlistDefault = ''
-		}
-	}
-
-	if (self.profiles !== undefined) {
-		for (let s of self.profiles) {
-			self.profilelist.push({ id: s, label: s })
-		}
-		if (self.profilelist[0]) {
-			self.profilelist.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.profilelistDefault = self.profilelist[0].id
-		} else {
-			self.profilelistDefault = ''
-		}
-	}
-
-	if (self.sceneCollections !== undefined) {
-		for (let s of self.sceneCollections) {
-			self.scenecollectionlist.push({ id: s, label: s })
-		}
-		if (self.scenecollectionlist[0]) {
-			self.scenecollectionlist.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.scenecollectionlistDefault = self.scenecollectionlist[0].id
-		} else {
-			self.scenecollectionlistDefault = ''
-		}
-	}
-
-	if (self.outputs !== undefined) {
-		for (s in self.outputs) {
-			if (s == 'adv_file_output') {
-				//do nothing, this option doesn't work
-			} else if (s == 'simple_file_output') {
-				//do nothing, this option doesn't work
-			} else if (s == 'simple_stream') {
-				//do nothing, this option is covered with other streaming actions
-			} else if (s == 'virtualcam_output') {
-				self.outputlist.push({ id: s, label: 'Virtual Camera' })
-			} else {
-				self.outputlist.push({ id: s, label: s })
-			}
-		}
-	}
-
-	if (self.filters !== undefined) {
-		for (s in self.filters) {
-			self.filterlist.push({ id: s, label: s })
-		}
-		if (self.filterlist[0]) {
-			self.filterlist.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.filterlistDefault = self.filterlist[0].id
-		} else {
-			self.filterlistDefault = ''
-		}
-	}
-
-	if (self.mediaSources !== undefined) {
-		for (s in self.mediaSources) {
-			self.mediaSourceList.push({ id: s, label: s })
-		}
-		if (self.mediaSourceList[0]) {
-			self.mediaSourceList.sort((a, b) => (a.id < b.id ? -1 : 1))
-			self.mediaSourceListDefault = self.mediaSourceList[0].id
-		} else {
-			self.mediaSourceListDefault = ''
-		}
-	}
-
-	self.setActions({
-		enable_studio_mode: {
-			label: 'Enable Studio Mode',
-		},
-		disable_studio_mode: {
-			label: 'Disable Studio Mode',
-		},
-		toggle_studio_mode: {
-			label: 'Toggle Studio Mode',
-		},
-		start_recording: {
-			label: 'Start Recording',
-		},
-		stop_recording: {
-			label: 'Stop Recording',
-		},
-		pause_recording: {
-			label: 'Pause Recording',
-		},
-		resume_recording: {
-			label: 'Resume Recording',
-		},
-		start_streaming: {
-			label: 'Start Streaming',
-		},
-		stop_streaming: {
-			label: 'Stop Streaming',
-		},
-		start_replay_buffer: {
-			label: 'Start Replay Buffer',
-		},
-		stop_replay_buffer: {
-			label: 'Stop Replay Buffer',
-		},
-		save_replay_buffer: {
-			label: 'Save Replay Buffer',
-		},
-		set_scene: {
-			label: 'Change Scene',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.scenelistDefault,
-					choices: self.scenelist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		preview_scene: {
-			label: 'Preview Scene',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.scenelistDefault,
-					choices: self.scenelist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		smart_switcher: {
-			label: 'Smart Scene Switcher',
-			description: 'Previews selected scene or, if scene is already in preview, transitions the scene to program',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.scenelistDefault,
-					choices: self.scenelist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		do_transition: {
-			label: 'Transition Preview to Program',
-			description: 'Performs the selected transition and then makes the transition the new default',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Transition',
-					id: 'transition',
-					default: 'Default',
-					choices: self.transitionlist,
-					required: false,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'number',
-					label: 'Duration (optional; in ms)',
-					id: 'transition_time',
-					default: null,
-					min: 0,
-					max: 60 * 1000, //max is required by api
-					range: false,
-					required: false,
-				},
-			],
-		},
-		quick_transition: {
-			label: 'Quick Transition',
-			description: 'Performs the selected transition and then returns to the default transition',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Transition',
-					id: 'transition',
-					default: 'Default',
-					choices: self.transitionlist,
-					required: false,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'number',
-					label: 'Duration (optional; in ms)',
-					id: 'transition_time',
-					default: null,
-					min: 0,
-					max: 60 * 1000, //max is required by api
-					range: false,
-					required: false,
-				},
-			],
-		},
-		set_transition: {
-			label: 'Set Transition Type',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Transitions',
-					id: 'transitions',
-					default: self.transitionlistDefault,
-					choices: self.transitionlist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		set_transition_duration: {
-			label: 'Set Transition Duration',
-			options: [
-				{
-					type: 'number',
-					label: 'Transition time (in ms)',
-					id: 'duration',
-					default: null,
-					min: 0,
-					max: 60 * 1000, //max is required by api
-					range: false,
-				},
-			],
-		},
-		StartStopStreaming: {
-			label: 'Toggle Streaming',
-		},
-		set_stream_settings: {
-			label: 'Set Stream Settings',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Stream URL',
-					id: 'streamURL',
-					default: '',
-				},
-				{
-					type: 'textinput',
-					label: 'Stream Key',
-					id: 'streamKey',
-					default: '',
-				},
-				{
-					type: 'checkbox',
-					label: 'Use Authentication',
-					id: 'streamAuth',
-					default: false,
-				},
-				{
-					type: 'textinput',
-					label: 'User Name (Optional)',
-					id: 'streamUserName',
-					default: '',
-				},
-				{
-					type: 'textinput',
-					label: 'Password (Optional)',
-					id: 'streamPassword',
-					default: '',
-				},
-			],
-		},
-		StartStopRecording: {
-			label: 'Toggle Recording',
-		},
-		set_source_mute: {
-			label: 'Set Source Mute',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'dropdown',
-					label: 'Mute',
-					id: 'mute',
-					default: 'true',
-					choices: [
-						{ id: 'false', label: 'False' },
-						{ id: 'true', label: 'True' },
-					],
-				},
-			],
-		},
-		toggle_source_mute: {
-			label: 'Toggle Source Mute',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		set_volume: {
-			label: 'Set Source Volume',
-			description: 'Sets the volume of a source to a specific value',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'number',
-					label: 'Volume in dB (-100 to 26) ',
-					id: 'volume',
-					default: 0,
-					min: -100,
-					max: 26,
-					range: false,
-					required: false,
-				},
-			],
-		},
-		adjust_volume: {
-			label: 'Adjust Source Volume',
-			description: 'Adjusts the volume of a source by a specific increment',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'number',
-					label: 'Volume adjustment amount in dB',
-					id: 'volume',
-					default: 0,
-					range: false,
-					required: false,
-				},
-			],
-		},
-		toggle_scene_item: {
-			label: 'Set Source Visibility',
-			description: 'Set or toggle the visibility of a source within a scene',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene (optional, defaults to current scene)',
-					id: 'scene',
-					default: 'Current Scene',
-					choices: self.scenelistToggle,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: [{ id: 'allSources', label: '<ALL SOURCES>' }, ...self.sourcelist],
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'dropdown',
-					label: 'Visible',
-					id: 'visible',
-					default: 'toggle',
-					choices: [
-						{ id: 'false', label: 'False' },
-						{ id: 'true', label: 'True' },
-						{ id: 'toggle', label: 'Toggle' },
-					],
-				},
-			],
-		},
-		reconnect: {
-			label: 'Reconnect to OBS',
-		},
-		'set-freetype-text': {
-			label: 'Set Source Text (FreeType 2)',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					required: true,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Text',
-					id: 'text',
-					required: true,
-				},
-			],
-		},
-		'set-gdi-text': {
-			label: 'Set Source Text (GDI+)',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					required: true,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Text',
-					id: 'text',
-					required: true,
-				},
-			],
-		},
-		'trigger-hotkey': {
-			label: 'Trigger Hotkey by ID',
-			description: 'Find the hotkey ID in your profile settings file (see module help for more info)',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Hotkey ID',
-					id: 'id',
-					default: 'OBSBasic.StartRecording',
-					required: true,
-				},
-			],
-		},
-		'trigger-hotkey-sequence': {
-			label: 'Trigger Hotkey by Key',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Key',
-					id: 'keyId',
-					default: 'OBS_KEY_A',
-					choices: hotkeys.hotkeyList,
-					required: true,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'checkbox',
-					label: 'Shift',
-					id: 'keyShift',
-					default: false,
-				},
-				{
-					type: 'checkbox',
-					label: 'Alt / Option',
-					id: 'keyAlt',
-					default: false,
-				},
-				{
-					type: 'checkbox',
-					label: 'Control',
-					id: 'keyControl',
-					default: false,
-				},
-				{
-					type: 'checkbox',
-					label: 'Command (Mac)',
-					id: 'keyCommand',
-					default: false,
-				},
-			],
-		},
-		set_profile: {
-			label: 'Set Profile',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Profile',
-					id: 'profile',
-					default: self.profilelistDefault,
-					choices: self.profilelist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		set_scene_collection: {
-			label: 'Set Scene Collection',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene Collection',
-					id: 'scene_collection',
-					default: self.scenecollectionlistDefault,
-					choices: self.scenecollectionlist,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		start_output: {
-			label: 'Start Output',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Output',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.outputlist,
-					required: false,
-					minChoicesForSearch: 3,
-				},
-			],
-		},
-		stop_output: {
-			label: 'Stop Output',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Output',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.outputlist,
-					required: false,
-					minChoicesForSearch: 3,
-				},
-			],
-		},
-		start_stop_output: {
-			label: 'Toggle Output',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Output',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.outputlist,
-					required: false,
-					minChoicesForSearch: 3,
-				},
-			],
-		},
-		refresh_browser_source: {
-			label: 'Refresh Browser Source',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					required: false,
-					minChoicesForSearch: 5,
-				},
-			],
-		},
-		set_audio_monitor: {
-			label: 'Set Audio Monitor',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					required: true,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'dropdown',
-					label: 'Monitor',
-					id: 'monitor',
-					default: 'none',
-					choices: [
-						{ id: 'none', label: 'None' },
-						{ id: 'monitorOnly', label: 'Monitor Only' },
-						{ id: 'monitorAndOutput', label: 'Monitor and Output' },
-					],
-					required: true,
-				},
-			],
-		},
-		take_screenshot: {
-			label: 'Take Screenshot',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Format',
-					id: 'format',
-					default: 'png',
-					choices: [
-						{ id: 'png', label: 'png' },
-						{ id: 'jpg', label: 'jpg' },
-						{ id: 'bmp', label: 'bmp' },
-					],
-					required: true,
-				},
-				{
-					type: 'number',
-					label: 'Compression Quality (1-100, 0 is automatic)',
-					id: 'compression',
-					default: 0,
-					min: 0,
-					max: 100,
-					range: false,
-					required: false,
-				},
-				{
-					type: 'dropdown',
-					label: 'Source (Optional, default is current scene)',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-					required: false,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'textinput',
-					label: 'Custom File Path (Optional, default is recording path)',
-					id: 'path',
-					required: true,
-				},
-			],
-		},
-		toggle_filter: {
-			label: 'Set Filter Visibility',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-				},
-				{
-					type: 'dropdown',
-					label: 'Filter',
-					id: 'filter',
-					default: self.filterlistDefault,
-					choices: self.filterlist,
-				},
-				{
-					type: 'dropdown',
-					label: 'Visibility',
-					id: 'visible',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'true', label: 'On' },
-						{ id: 'false', label: 'Off' },
-					],
-				},
-			],
-		},
-		play_pause_media: {
-			label: 'Play / Pause Media',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-				{
-					type: 'dropdown',
-					label: 'Action',
-					id: 'playPause',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'false', label: 'Play' },
-						{ id: 'true', label: 'Pause' },
-					],
-				},
-			],
-		},
-		restart_media: {
-			label: 'Restart Media',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-			],
-		},
-		stop_media: {
-			label: 'Stop Media',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-			],
-		},
-		next_media: {
-			label: 'Next Media',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-			],
-		},
-		previous_media: {
-			label: 'Previous Media',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-			],
-		},
-		set_media_time: {
-			label: 'Set Media Time',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-				{
-					type: 'number',
-					label: 'Timecode (in seconds)',
-					id: 'mediaTime',
-					default: 1,
-					required: true,
-				},
-			],
-		},
-		scrub_media: {
-			label: 'Scrub Media',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Media Source',
-					id: 'source',
-					default: self.mediaSourceListDefault,
-					choices: self.mediaSourceList,
-				},
-				{
-					type: 'number',
-					label: 'Scrub Amount (in seconds, positive or negative)',
-					id: 'scrubAmount',
-					default: 1,
-					required: true,
-				},
-			],
-		},
-		open_projector: {
-			label: 'Open Projector',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Projector Type',
-					id: 'type',
-					default: 'Multiview',
-					choices: [
-						{ id: 'Multiview', label: 'Multiview' },
-						{ id: 'Preview', label: 'Preview' },
-						{ id: 'StudioProgram', label: 'Program' },
-						{ id: 'Source', label: 'Source' },
-						{ id: 'Scene', label: 'Scene' },
-					],
-				},
-				{
-					type: 'dropdown',
-					label: 'Window Type',
-					id: 'window',
-					default: 'window',
-					choices: [
-						{ id: 'window', label: 'Window' },
-						{ id: 'fullscreen', label: 'Fullscreen' },
-					],
-				},
-				{
-					type: 'number',
-					label: 'Fullscreen Display (required for fullscreen mode) ',
-					id: 'display',
-					default: 1,
-					min: 1,
-					range: false,
-				},
-				{
-					type: 'dropdown',
-					label: 'Source / Scene (required if selected as projector type)',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-				},
-			],
-		},
-		source_properties: {
-			label: 'Set Source Properties',
-			description: 'All values optional, any parameter left blank is ignored',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene (optional, defaults to current scene)',
-					id: 'scene',
-					default: 'Current Scene',
-					choices: self.scenelistToggle,
-					minChoicesForSearch: 5,
-				},
-				{
-					type: 'dropdown',
-					label: 'Source',
-					id: 'source',
-					default: self.sourcelistDefault,
-					choices: self.sourcelist,
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Position - X (pixels)',
-					id: 'positionX',
-					default: '',
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Position - Y (pixels)',
-					id: 'positionY',
-					default: '',
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Scale - X (multiplier, 1 is 100%)',
-					id: 'scaleX',
-					default: '',
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Scale - Y (multiplier, 1 is 100%)',
-					id: 'scaleY',
-					default: '',
-				},
-				{
-					type: 'textwithvariables',
-					label: 'Rotation (degrees clockwise)',
-					id: 'rotation',
-					default: '',
-				},
-			],
-		},
-		custom_command: {
-			label: 'Custom Command',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Request Type',
-					id: 'command',
-					default: 'SetCurrentScene',
-				},
-				{
-					type: 'textinput',
-					label: 'Request Data (optional, JSON formatted)',
-					id: 'arg',
-					default: '{"scene-name": "Scene 1"}',
-				},
-			],
-		},
-	})
-}
-
-instance.prototype.action = function (action) {
-	var self = this
-	var handle
-
-	if (action.action == 'reconnect') {
-		self.log('warn', 'Reconnecting to OBS.')
-		self.obs.disconnect()
-		self.init()
-		return
-	}
-
-	if (self.obs == null || self.obs.OBSWebSocket) {
-		self.log('warn', 'Unable to perform action, connection lost to OBS')
-		return
-	}
-
-	switch (action.action) {
-		case 'enable_studio_mode':
-			handle = self.obs.send('EnableStudioMode')
-			break
-		case 'disable_studio_mode':
-			handle = self.obs.send('DisableStudioMode')
-			break
-		case 'toggle_studio_mode':
-			handle = self.obs.send('ToggleStudioMode')
-			break
-		case 'start_recording':
-			handle = self.obs.send('StartRecording')
-			break
-		case 'stop_recording':
-			handle = self.obs.send('StopRecording')
-			break
-		case 'pause_recording':
-			handle = self.obs.send('PauseRecording')
-			break
-		case 'resume_recording':
-			handle = self.obs.send('ResumeRecording')
-			break
-		case 'start_streaming':
-			handle = self.obs.send('StartStreaming')
-			break
-		case 'stop_streaming':
-			handle = self.obs.send('StopStreaming')
-			break
-		case 'start_replay_buffer':
-			handle = self.obs.send('StartReplayBuffer')
-			break
-		case 'stop_replay_buffer':
-			handle = self.obs.send('StopReplayBuffer')
-			break
-		case 'save_replay_buffer':
-			handle = self.obs.send('SaveReplayBuffer')
-			break
-		case 'set_scene':
-			handle = self.obs.send('SetCurrentScene', {
-				'scene-name': action.options.scene,
-			})
-			break
-		case 'preview_scene':
-			handle = self.obs.send('SetPreviewScene', {
-				'scene-name': action.options.scene,
-			})
-			break
-		case 'smart_switcher':
-			if (self.states['scene_preview'] == action.options.scene) {
-				handle = self.obs.send('TransitionToProgram')
-			} else {
-				handle = self.obs.send('SetPreviewScene', {
-					'scene-name': action.options.scene,
+				data.scenes.forEach((scene) => {
+					let sceneName = scene.sceneName
+					this.addScene(sceneName)
 				})
-			}
-			break
-		case 'do_transition':
-			var options = {}
-			if (action.options && action.options.transition) {
-				if (action.options.transition == 'Default') {
-					options['with-transition'] = {}
-					if (action.options.transition_time > 0) {
-						options['with-transition']['duration'] = action.options.transition_time
-					}
-				} else {
-					options['with-transition'] = {
-						name: action.options.transition,
-					}
-					if (action.options.transition_time > 0) {
-						options['with-transition']['duration'] = action.options.transition_time
-					}
-				}
-			}
-			handle = self.obs.send('TransitionToProgram', options)
-			break
-		case 'quick_transition':
-			if (action.options.transition == 'Default') {
-				handle = self.obs.send('TransitionToProgram')
-			} else {
-				let revertTransition = self.states['current_transition']
-				let revertTransitionDuration = self.states['transition_duration']
-				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-					var transitionWaitTime = action.options.transition_time + 50
-				} else if (action.options.transition_time == null) {
-					var transitionWaitTime = self.states['transition_duration'] + 50
-				} else {
-					var transitionWaitTime = 100
-				}
-				if (action.options.transition_time != null) {
-					var transitionDuration = action.options.transition_time
-				} else {
-					var transitionDuration = self.states['transition_duration']
-				}
-				var requests = [
-					{
-						'request-type': 'TransitionToProgram',
-						'with-transition': {
-							name: action.options.transition,
-							duration: transitionDuration,
-						},
-					},
-					{
-						'request-type': 'Sleep',
-						sleepMillis: transitionWaitTime,
-					},
-					{
-						'request-type': 'SetCurrentTransition',
-						'transition-name': revertTransition,
-					},
-					{
-						'request-type': 'SetTransitionDuration',
-						duration: revertTransitionDuration,
-					},
-				]
-				handle = self.obs.send('ExecuteBatch', { requests })
-			}
-			break
-		case 'set_source_mute':
-			handle = self.obs.send('SetMute', {
-				source: action.options.source,
-				mute: action.options.mute == 'true' ? true : false,
 			})
-			break
-		case 'toggle_source_mute':
-			handle = self.obs.send('ToggleMute', {
-				source: action.options.source,
-			})
-			break
-		case 'set_volume':
-			handle = self.obs.send('SetVolume', {
-				source: action.options.source,
-				volume: action.options.volume,
-				useDecibel: true,
-			})
-			break
-		case 'adjust_volume':
-			var newVolume = self.sourceAudio['volume'][action.options.source] + action.options.volume
-			if (newVolume > 26) {
-				var newVolume = 26
-			} else if (newVolume < -100) {
-				var newVolume = -100
-			}
-			handle = self.obs.send('SetVolume', {
-				source: action.options.source,
-				volume: newVolume,
-				useDecibel: true,
-			})
-			break
-		case 'set_transition':
-			handle = self.obs.send('SetCurrentTransition', {
-				'transition-name': action.options.transitions,
-			})
-			break
-		case 'set_transition_duration':
-			handle = self.obs.send('SetTransitionDuration', {
-				duration: action.options.duration,
-			})
-			break
-		case 'StartStopStreaming':
-			handle = self.obs.send('StartStopStreaming')
-			break
-		case 'set_stream_settings':
-			var streamSettings = {}
-
-			streamSettings['settings'] = {
-				server: action.options.streamURL,
-				key: action.options.streamKey,
-				use_auth: action.options.streamAuth,
-				username: action.options.streamUserName,
-				password: action.options.streamPassword,
-			}
-
-			handle = self.obs.send('SetStreamSettings', streamSettings)
-			break
-		case 'StartStopRecording':
-			handle = self.obs.send('StartStopRecording')
-			break
-		case 'toggle_scene_item':
-			let sceneName = action.options.scene
-			let sourceName = action.options.source
-
-			// special scene names
-			if (!sceneName || sceneName === 'Current Scene') {
-				sceneName = self.states['scene_active']
-			} else if (sceneName === 'Preview Scene') {
-				sceneName = self.states['scene_preview']
-			}
-			let scene = self.scenes[sceneName]
-
-			let setSourceVisibility = function (sourceName, render) {
-				let visible
-				if (action.options.visible === 'toggle') {
-					visible = !render
-				} else {
-					visible = action.options.visible == 'true'
-				}
-				handle = self.obs.send('SetSceneItemProperties', {
-					item: sourceName,
-					visible: visible,
-					'scene-name': sceneName,
-				})
-			}
-
-			if (scene) {
-				let finished = false
-				for (let source of scene.sources) {
-					// allSources does not include the group, is there any use case for considering groups as well?
-					if (source.type === 'group') {
-						if (sourceName === source.name) {
-							setSourceVisibility(source.name, source.render) // this is the group
-							if (sourceName !== 'allSources') break
-						}
-						for (let sourceGroupChild of source.groupChildren) {
-							if (sourceName === 'allSources' || sourceGroupChild.name === sourceName) {
-								setSourceVisibility(sourceGroupChild.name, sourceGroupChild.render)
-								if (sourceName !== 'allSources') {
-									finished = true
-									break
-								}
-							}
-						}
-						if (finished) break
-					} else if (sourceName === 'allSources' || source.name === sourceName) {
-						setSourceVisibility(source.name, source.render)
-						if (sourceName !== 'allSources') break
-					}
-				}
-			}
-			break
-		case 'set-freetype-text':
-			var text
-			self.system.emit('variable_parse', action.options.text, function (value) {
-				text = value
-			})
-			handle = self.obs.send('SetTextFreetype2Properties', {
-				source: action.options.source,
-				text: text,
-			})
-			self.updateTextSources(action.options.source, 'text_ft2_source_v2')
-			break
-		case 'set-gdi-text':
-			var text
-			self.system.emit('variable_parse', action.options.text, function (value) {
-				text = value
-			})
-			handle = self.obs.send('SetTextGDIPlusProperties', {
-				source: action.options.source,
-				text: text,
-			})
-			self.updateTextSources(action.options.source, 'text_gdiplus_v2')
-			break
-		case 'trigger-hotkey':
-			handle = self.obs.send('TriggerHotkeyByName', {
-				hotkeyName: action.options.id,
-			})
-			break
-		case 'trigger-hotkey-sequence':
-			var keyModifiers = {}
-
-			keyModifiers = {
-				shift: action.options.keyShift,
-				alt: action.options.keyAlt,
-				control: action.options.keyControl,
-				command: action.options.keyCommand,
-			}
-
-			handle = self.obs.send('TriggerHotkeyBySequence', {
-				keyId: action.options.keyId,
-				keyModifiers: keyModifiers,
-			})
-			break
-		case 'set_profile':
-			handle = self.obs.send('SetCurrentProfile', {
-				'profile-name': action.options.profile,
-			})
-			break
-		case 'set_scene_collection':
-			handle = self.obs.send('SetCurrentSceneCollection', {
-				'sc-name': action.options.scene_collection,
-			})
-			break
-		case 'start_output':
-			handle = self.obs.send('StartOutput', {
-				outputName: action.options.output,
-			})
-			break
-		case 'stop_output':
-			handle = self.obs.send('StopOutput', {
-				outputName: action.options.output,
-			})
-			break
-		case 'start_stop_output':
-			if (self.states[action.options.output] === true) {
-				handle = self.obs.send('StopOutput', {
-					outputName: action.options.output,
-				})
-			} else {
-				handle = self.obs.send('StartOutput', {
-					outputName: action.options.output,
-				})
-			}
-			break
-		case 'refresh_browser_source':
-			handle = self.obs.send('RefreshBrowserSource', {
-				sourceName: action.options.source,
-			})
-			break
-		case 'set_audio_monitor':
-			handle = self.obs.send('SetAudioMonitorType', {
-				sourceName: action.options.source,
-				monitorType: action.options.monitor,
-			})
-			break
-		case 'take_screenshot':
-			let date = new Date().toISOString()
-			let day = date.slice(0, 10)
-			let time = date.slice(11, 19).replaceAll(':', '.')
-			let fileName = action.options.source ? action.options.source : self.states['scene_active']
-			let fileLocation = action.options.path ? action.options.path : self.states['rec-folder']
-			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
-			let quality = action.options.compression == 0 ? -1 : action.options.compression
-			handle = self.obs.send('TakeSourceScreenshot', {
-				sourceName: fileName,
-				embedPictureFormat: action.options.format,
-				saveToFilePath: filePath,
-				fileFormat: action.options.format,
-				compressionQuality: quality,
-			})
-		case 'toggle_filter':
-			if (action.options.visible !== 'toggle') {
-				var filterVisibility = action.options.visible === 'true' ? true : false
-			} else if (action.options.visible === 'toggle') {
-				if (self.sourceFilters[action.options.source]) {
-					for (s in self.sourceFilters[action.options.source]) {
-						let filter = self.sourceFilters[action.options.source][s]
-						if (filter.name === action.options.filter) {
-							var filterVisibility = !filter.enabled
-						}
-					}
-				}
-			}
-			handle = self.obs.send('SetSourceFilterVisibility', {
-				sourceName: action.options.source,
-				filterName: action.options.filter,
-				filterEnabled: filterVisibility,
-			})
-			break
-		case 'play_pause_media':
-			if (action.options.playPause === 'toggle') {
-				handle = self.obs.send('PlayPauseMedia', {
-					sourceName: action.options.source,
-				})
-			} else {
-				handle = self.obs.send('PlayPauseMedia', {
-					sourceName: action.options.source,
-					playPause: action.options.playPause == 'true' ? true : false,
-				})
-			}
-			break
-		case 'restart_media':
-			handle = self.obs.send('RestartMedia', {
-				sourceName: action.options.source,
-			})
-			break
-		case 'stop_media':
-			handle = self.obs.send('StopMedia', {
-				sourceName: action.options.source,
-			})
-			break
-		case 'next_media':
-			handle = self.obs.send('NextMedia', {
-				sourceName: action.options.source,
-			})
-			break
-		case 'previous_media':
-			handle = self.obs.send('PreviousMedia', {
-				sourceName: action.options.source,
-			})
-			break
-		case 'set_media_time':
-			handle = self.obs.send('SetMediaTime', {
-				sourceName: action.options.source,
-				timestamp: action.options.mediaTime * 1000,
-			})
-			break
-		case 'scrub_media':
-			handle = self.obs.send('ScrubMedia', {
-				sourceName: action.options.source,
-				timeOffset: action.options.scrubAmount * 1000,
-			})
-			break
-		case 'open_projector':
-			let monitor = action.options.window === 'window' ? -1 : action.options.display - 1
-			handle = self.obs.send('OpenProjector', {
-				type: action.options.type,
-				monitor: monitor,
-				name: action.options.source,
-			})
-			break
-		case 'source_properties':
-			let sourceScene = action.options.scene
-			if (action.options.scene == 'Current Scene') {
-				sourceScene = self.states['scene_active']
-			} else if (action.options.scene == 'Preview Scene') {
-				sourceScene = self.states['scene_preview']
-			} else {
-				sourceScene = action.options.scene
-			}
-			let positionX
-			let positionY
-			let scaleX
-			let scaleY
-			let rotation
-
-			this.parseVariables(action.options.positionX, function (value) {
-				positionX = parseFloat(value)
-			})
-			this.parseVariables(action.options.positionY, function (value) {
-				positionY = parseFloat(value)
-			})
-			this.parseVariables(action.options.scaleX, function (value) {
-				scaleX = parseFloat(value)
-			})
-			this.parseVariables(action.options.scaleY, function (value) {
-				scaleY = parseFloat(value)
-			})
-			this.parseVariables(action.options.rotation, function (value) {
-				rotation = parseFloat(value)
-			})
-
-			handle = self.obs.send('SetSceneItemProperties', {
-				'scene-name': sourceScene,
-				item: action.options.source,
-				position: {
-					x: positionX,
-					y: positionY,
-				},
-				scale: {
-					x: scaleX,
-					y: scaleY,
-				},
-				rotation: rotation,
-			})
-			break
-		case 'custom_command':
-			let arg
-			if (action.options.arg) {
-				try {
-					arg = JSON.parse(action.options.arg)
-				} catch (e) {
-					self.log('warn', 'Request data must be formatted as valid JSON.')
-					return
-				}
-			}
-			handle = self.obs.send(action.options.command, arg)
-			break
+			.catch((error) => {})
 	}
-	if (handle) {
-		handle.catch((error) => {
-			if (error.code == 'NOT_CONNECTED') {
-				self.log('error', 'Unable to connect to OBS. Please re-start OBS manually.')
-				self.obs.disconnect()
-				self.init()
-			} else {
-				self.log('warn', error.error)
-			}
-		})
+
+	formatTimecode(data) {
+		//Converts milliseconds into a readable time format (hh:mm:ss)
+		try {
+			let formattedTime = new Date(data).toISOString().slice(11, 19)
+			return formattedTime
+		} catch (error) {}
+	}
+
+	startMediaPoll() {
+		this.stopMediaPoll()
+		this.mediaPoll = setInterval(() => {
+			this.mediaSourceList.forEach((source) => {
+				obs
+					.call('GetMediaInputStatus', { inputName: source.id })
+					.then((data) => {
+						this.mediaSources[source.id] = data
+
+						let remaining = data.mediaDuration - data.mediaCursor
+						if (remaining > 0) {
+							remaining = this.formatTimecode(remaining)
+						} else {
+							remaining = '--:--:--'
+						}
+
+						this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
+						this.mediaSources[source.id].timeRemaining = remaining
+
+						if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+							this.setVariable('current_media_time_elapsed', this.mediaSources[source.id].timeElapsed)
+							this.setVariable('current_media_time_remaining', this.mediaSources[source.id].timeRemaining)
+							this.setVariable('media_status_' + source.id, 'Playing')
+						} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+							this.setVariable('media_status_' + source.id, 'Paused')
+						} else {
+							this.setVariable('media_status_' + source.id, 'Stopped')
+						}
+						this.setVariable('media_time_elapsed_' + source.id, this.mediaSources[source.id].timeElapsed)
+						this.setVariable('media_time_remaining_' + source.id, remaining)
+						this.checkFeedbacks('media_playing')
+						this.checkFeedbacks('media_source_time_remaining')
+					})
+					.catch((error) => {
+						this.debug(error)
+					})
+			})
+		}, 1000)
+	}
+
+	stopMediaPoll() {
+		if (this.mediaPoll) {
+			clearInterval(this.mediaPoll)
+			this.mediaPoll = null
+		}
+	}
+
+	organizeChoices() {
+		//Sort choices alphabetically
+		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
+		this.sceneChoices?.sort((a, b) => a.id.localeCompare(b.id))
+		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		//Special Choices - Scenes
+		this.sceneChoicesProgramPreview = [
+			{ id: 'Current Scene', label: 'Current Scene' },
+			{ id: 'Preview Scene', label: 'Preview Scene' },
+		].concat(this.sceneChoices)
+		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
+		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
+		//Special Choices - Sources
+		this.sourceChoicesAllSources = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceChoices)
+		this.sourceChoicesAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceChoices)
+		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
+		//Default Choices
+		this.sourceListDefault = this.sourceChoices?.[0] ? this.sourceChoices?.[0]?.id : ''
+		this.sceneListDefault = this.sceneChoices?.[0] ? this.sceneChoices?.[0]?.id : ''
+		this.filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
+		this.audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
+		this.profileChoicesDefault = this.profileChoices?.[0] ? this.profileChoices[0].id : ''
+	}
+
+	updateActionsFeedbacksVariables() {
+		this.organizeChoices()
+
+		this.actions()
+		this.initVariables()
+		this.initFeedbacks()
+		this.initPresets()
+		this.checkFeedbacks()
+	}
+
+	initializeStates() {
+		//Basic Info
+		this.scenes = {}
+		this.sources = {}
+		this.states = {}
+		this.transitions = {}
+		this.profiles = {}
+		this.sceneCollections = {}
+		this.outputs = {}
+		this.sceneItems = {}
+		this.groups = {}
+		//Source Types
+		this.mediaSources = {}
+		this.imageSources = {}
+		this.textSources = {}
+		this.sourceFilters = {}
+		//Choices
+		this.sceneChoices = []
+		this.sourceChoices = []
+		this.profileChoices = []
+		this.sceneCollectionList = []
+		this.textSourceList = []
+		this.mediaSourceList = []
+		this.imageSourceList = []
+		this.hotkeyNames = []
+		this.imageFormats = []
+		this.transitionList = []
+		this.monitors = []
+		this.outputList = []
+		this.filterList = []
+		this.audioSourceList = []
+		//Set Initial States
+		this.states.sceneCollectionChanging = false
 	}
 }
-
-instance.prototype.init_feedbacks = function () {
-	var self = this
-
-	var feedbacks = {}
-	feedbacks['streaming'] = {
-		type: 'boolean',
-		label: 'Streaming Active',
-		description: 'If streaming is active, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-	}
-
-	feedbacks['recording'] = {
-		label: 'Recording Status',
-		description: 'If recording is active or paused, change the style of the button',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color (Recording)',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color (Recording)',
-				id: 'bg',
-				default: self.rgb(200, 0, 0),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Foreground color (Paused)',
-				id: 'fg_paused',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color (Paused)',
-				id: 'bg_paused',
-				default: self.rgb(212, 174, 0),
-			},
-		],
-	}
-
-	feedbacks['scene_active'] = {
-		label: 'Scene in Preview / Program',
-		description: 'If a scene is in preview or program, change colors of the button',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Mode',
-				id: 'mode',
-				default: 'programAndPreview',
-				choices: [
-					{ id: 'programAndPreview', label: 'Program and Preview' },
-					{ id: 'program', label: 'Program Only' },
-					{ id: 'preview', label: 'Preview Only' },
-				],
-			},
-			{
-				type: 'colorpicker',
-				label: 'Foreground color (Program)',
-				id: 'fg',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color (Program)',
-				id: 'bg',
-				default: self.rgb(200, 0, 0),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Foreground color (Preview)',
-				id: 'fg_preview',
-				default: self.rgb(255, 255, 255),
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color (Preview)',
-				id: 'bg_preview',
-				default: self.rgb(0, 200, 0),
-			},
-			{
-				type: 'dropdown',
-				label: 'Scene',
-				id: 'scene',
-				default: self.scenelistDefault,
-				choices: self.scenelist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['scene_item_active'] = {
-		type: 'boolean',
-		label: 'Source Visible in Program',
-		description: 'If a source is visible in the program, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['scene_item_previewed'] = {
-		type: 'boolean',
-		label: 'Source Active in Preview',
-		description: 'If a source is enabled in the preview scene, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['profile_active'] = {
-		type: 'boolean',
-		label: 'Profile Active',
-		description: 'If a profile is active, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Profile name',
-				id: 'profile',
-				default: self.profilelistDefault,
-				choices: self.profilelist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['scene_collection_active'] = {
-		type: 'boolean',
-		label: 'Scene Collection Active',
-		description: 'If a scene collection is active, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Scene collection name',
-				id: 'scene_collection',
-				default: self.scenecollectionlistDefault,
-				choices: self.scenecollectionlist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['scene_item_active_in_scene'] = {
-		type: 'boolean',
-		label: 'Source Enabled in Scene',
-		description: 'If a source is enabled in a specific scene, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Scene name',
-				id: 'scene',
-				default: self.scenelistDefault,
-				choices: self.scenelist,
-				minChoicesForSearch: 5,
-			},
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: [{ id: 'anySource', label: '<ANY SOURCE>' }, ...self.sourcelist],
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['output_active'] = {
-		type: 'boolean',
-		label: 'Output Active',
-		description: 'If an output is currently active, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Output name',
-				id: 'output',
-				default: 'virtualcam_output',
-				choices: self.outputlist,
-				minChoicesForSearch: 3,
-			},
-		],
-	}
-
-	feedbacks['transition_active'] = {
-		type: 'boolean',
-		label: 'Transition in Progress',
-		description: 'If a transition is in progress, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-	}
-
-	feedbacks['current_transition'] = {
-		type: 'boolean',
-		label: 'Current Transition Type',
-		description: 'If a transition type is selected, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Transition',
-				id: 'transition',
-				default: self.transitionlistDefault,
-				choices: self.transitionlist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['transition_duration'] = {
-		type: 'boolean',
-		label: 'Transition Duration',
-		description: 'If the transition duration is matched, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'number',
-				label: 'Transition time (in ms)',
-				id: 'duration',
-				default: null,
-				min: 0,
-				max: 60 * 1000, //max is required by api
-				range: false,
-			},
-		],
-	}
-
-	feedbacks['filter_enabled'] = {
-		type: 'boolean',
-		label: 'Filter Enabled',
-		description: 'If a filter is enabled, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-			},
-			{
-				type: 'dropdown',
-				label: 'Filter',
-				id: 'filter',
-				default: self.filterlistDefault,
-				choices: self.filterlist,
-			},
-		],
-	}
-
-	feedbacks['audio_muted'] = {
-		type: 'boolean',
-		label: 'Audio Muted',
-		description: 'If an audio source is muted, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['audio_monitor_type'] = {
-		type: 'boolean',
-		label: 'Audio Monitor Type',
-		description: 'If the audio monitor type is matched, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(200, 0, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-				minChoicesForSearch: 5,
-			},
-			{
-				type: 'dropdown',
-				label: 'Monitor',
-				id: 'monitor',
-				default: 'none',
-				choices: [
-					{ id: 'none', label: 'None' },
-					{ id: 'monitorOnly', label: 'Monitor Only' },
-					{ id: 'monitorAndOutput', label: 'Monitor and Output' },
-				],
-				required: true,
-			},
-		],
-	}
-
-	feedbacks['volume'] = {
-		type: 'boolean',
-		label: 'Volume',
-		description: 'If an audio source volume is matched, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.sourcelistDefault,
-				choices: self.sourcelist,
-				minChoicesForSearch: 5,
-			},
-			{
-				type: 'number',
-				label: 'Volume in dB (-100 to 26) ',
-				id: 'volume',
-				default: 0,
-				min: -100,
-				max: 26,
-				range: false,
-				required: false,
-			},
-		],
-	}
-
-	feedbacks['media_playing'] = {
-		type: 'boolean',
-		label: 'Media Playing',
-		description: 'If a media source is playing, change the style of the button',
-		style: {
-			color: self.rgb(255, 255, 255),
-			bgcolor: self.rgb(0, 200, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Media Source',
-				id: 'source',
-				default: self.mediaSourceListDefault,
-				choices: self.mediaSourceList,
-				minChoicesForSearch: 5,
-			},
-		],
-	}
-
-	feedbacks['media_source_time_remaining'] = {
-		type: 'boolean',
-		label: 'Media Source Remaining Time',
-		description: 'If remaining time of a media source is below a threshold, change the style of the button',
-		style: {
-			color: self.rgb(0, 0, 0),
-			bgcolor: self.rgb(255, 0, 0),
-		},
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source name',
-				id: 'source',
-				default: self.mediaSourceListDefault,
-				choices: self.mediaSourceList,
-				minChoicesForSearch: 5,
-			},
-			{
-				type: 'number',
-				label: 'Remaining time threshold (in seconds)',
-				id: 'rtThreshold',
-				default: 20,
-				min: 0,
-				max: 3600, //max is required by api
-				range: false,
-			},
-			{
-				type: 'checkbox',
-				label: 'Feedback only if source is on program',
-				id: 'onlyIfSourceIsOnProgram',
-				default: false,
-			},
-			{
-				type: 'checkbox',
-				label: 'Feedback only if source is playing',
-				id: 'onlyIfSourceIsPlaying',
-				default: false,
-			},
-			{
-				type: 'checkbox',
-				label: 'Blinking',
-				id: 'blinkingEnabled',
-				default: false,
-			},
-		],
-	}
-
-	self.setFeedbackDefinitions(feedbacks)
-}
-
-instance.prototype.feedback = function (feedback) {
-	var self = this
-
-	if (self.states === undefined) {
-		return
-	}
-
-	if (feedback.type === 'scene_active') {
-		let mode = feedback.options.mode
-		if (!mode) {
-			mode = 'programAndPreview'
-		}
-		if (
-			self.states['scene_active'] === feedback.options.scene &&
-			(mode === 'programAndPreview' || mode === 'program')
-		) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		} else if (
-			self.states['scene_preview'] === feedback.options.scene &&
-			typeof feedback.options.fg_preview === 'number' &&
-			self.states['studio_mode'] === true &&
-			(mode === 'programAndPreview' || mode === 'preview')
-		) {
-			return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
-		} else {
-			return {}
-		}
-	}
-
-	if (feedback.type === 'streaming') {
-		if (self.states['streaming'] === true) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'recording') {
-		if (self.states['recording'] === true) {
-			return { color: feedback.options.fg, bgcolor: feedback.options.bg }
-		} else if (self.states['recording'] === 'paused') {
-			return { color: feedback.options.fg_paused, bgcolor: feedback.options.bg_paused }
-		} else {
-			return {}
-		}
-	}
-
-	if (feedback.type === 'scene_item_active') {
-		if (self.sources[feedback.options.source] && self.sources[feedback.options.source]['visible'] === true) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'profile_active') {
-		if (self.states['current_profile'] === feedback.options.profile) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'scene_collection_active') {
-		if (self.states['current_scene_collection'] === feedback.options.scene_collection) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'scene_item_active_in_scene') {
-		let scene = self.scenes[feedback.options.scene]
-		if (scene && scene.sources) {
-			for (let source of scene.sources) {
-				if (source.name == feedback.options.source && source.render === true) {
-					return true
-				} else if (source.type != 'group' && feedback.options.source === 'anySource' && source.render === true) {
-					return true
-				}
-				if (source.type == 'group') {
-					for (let s in source.groupChildren) {
-						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
-							return true
-						} else if (source.render === true) {
-							// consider group members only if the parent group is active
-							if (feedback.options.source === 'anySource' && source.groupChildren[s].render) {
-								return true
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (feedback.type === 'scene_item_previewed') {
-		let scene = self.scenes[self.states['scene_preview']]
-		if (scene && scene.sources) {
-			for (let source of scene.sources) {
-				if (source.name == feedback.options.source && source.render === true) {
-					return true
-				}
-				if (source.type == 'group' && source.render === true) {
-					for (let s in source.groupChildren) {
-						if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
-							return true
-						}
-						if (source.groupChildren[s].type == 'scene' && source.groupChildren[s].render === true) {
-							let scene = self.scenes[source.groupChildren[s].name]
-							for (let source of scene.sources) {
-								if (source.name == feedback.options.source && source.render === true) {
-									return true
-								}
-								if (source.type == 'group' && source.render === true) {
-									for (let s in source.groupChildren) {
-										if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
-											return true
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				if (source.type == 'scene' && source.render === true) {
-					let scene = self.scenes[source.name]
-					for (let source of scene.sources) {
-						if (source.name == feedback.options.source && source.render === true) {
-							return true
-						}
-						if (source.type == 'group' && source.render === true) {
-							for (let s in source.groupChildren) {
-								if (source.groupChildren[s].name == feedback.options.source && source.groupChildren[s].render) {
-									return true
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (feedback.type === 'output_active') {
-		if (self.states[feedback.options.output] === true) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'transition_active') {
-		if (self.states['transition_active'] === true) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'current_transition') {
-		if (feedback.options.transition === self.states['current_transition']) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'transition_duration') {
-		if (feedback.options.duration === self.states['transition_duration']) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'filter_enabled') {
-		let filters = self.sourceFilters[feedback.options.source]
-		if (filters) {
-			for (let filter of filters) {
-				if (filter.name === feedback.options.filter && filter.enabled === true) {
-					return true
-				}
-			}
-		}
-	}
-
-	if (feedback.type === 'audio_muted') {
-		if (self.sourceAudio['muted'][feedback.options.source] === true) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'audio_monitor_type') {
-		if (self.sourceAudio['audio_monitor_type'][feedback.options.source] === feedback.options.monitor) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'volume') {
-		if (self.sourceAudio['volume'][feedback.options.source] === feedback.options.volume) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'media_playing') {
-		if (
-			self.mediaSources[feedback.options.source] &&
-			self.mediaSources[feedback.options.source]['mediaState'] === 'Playing'
-		) {
-			return true
-		}
-	}
-
-	if (feedback.type === 'media_source_time_remaining') {
-		const {
-			source: sourceName,
-			rtThreshold,
-			onlyIfSourceIsOnProgram,
-			onlyIfSourceIsPlaying,
-			blinkingEnabled,
-		} = feedback.options
-
-		let remainingTime // remaining time in seconds
-		let mediaState
-		if (self.mediaSources && self.mediaSources[sourceName]) {
-			remainingTime = Math.round(self.mediaSources[sourceName].mediaTimeRemaining / 1000)
-			mediaState = self.mediaSources[sourceName].mediaState
-		}
-		if (remainingTime === undefined) return false
-
-		if (onlyIfSourceIsOnProgram && !self.isSourceOnProgram(sourceName)) {
-			return false
-		}
-
-		if (onlyIfSourceIsPlaying && mediaState !== 'Playing') {
-			return false
-		}
-
-		if (remainingTime <= rtThreshold) {
-			if (blinkingEnabled && mediaState === 'Playing') {
-				// TODO: implement a better button blinking, or wait for https://github.com/bitfocus/companion/issues/674
-				if (remainingTime % 2 != 0) {
-					// flash in seconds interval (checkFeedbacks interval = media poller interval)
-					return false
-				}
-			}
-			return true
-		}
-	}
-
-	return false
-}
-
-instance.prototype.init_presets = function () {
-	var self = this
-	var presets = []
-
-	for (var s in self.scenelist) {
-		var scene = self.scenelist[s]
-
-		let baseObj = {
-			category: 'Scene to Program',
-			label: scene.label,
-			bank: {
-				style: 'text',
-				text: scene.label,
-				size: 'auto',
-				color: self.rgb(255, 255, 255),
-				bgcolor: 0,
-			},
-			feedbacks: [
-				{
-					type: 'scene_active',
-					options: {
-						bg: self.rgb(200, 0, 0),
-						fg: self.rgb(255, 255, 255),
-						bg_preview: self.rgb(0, 200, 0),
-						fg_preview: self.rgb(255, 255, 255),
-						scene: scene.id,
-					},
-				},
-			],
-			actions: [
-				{
-					action: 'set_scene',
-					options: {
-						scene: scene.id,
-					},
-				},
-			],
-		}
-
-		presets.push(baseObj)
-
-		let toPreview = {}
-		presets.push(
-			Object.assign(toPreview, baseObj, {
-				category: 'Scene to Preview',
-				actions: [
-					{
-						action: 'preview_scene',
-						options: {
-							scene: scene.id,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'scene_active',
-						options: {
-							bg: self.rgb(200, 0, 0),
-							fg: self.rgb(255, 255, 255),
-							bg_preview: self.rgb(0, 200, 0),
-							fg_preview: self.rgb(255, 255, 255),
-							scene: scene.id,
-						},
-					},
-				],
-			})
-		)
-	}
-
-	presets.push({
-		category: 'Transitions',
-		label: 'Send previewed scene to program',
-		bank: {
-			style: 'text',
-			text: 'AUTO',
-			size: 'auto',
-			color: self.rgb(255, 255, 255),
-			bgcolor: 0,
-		},
-		actions: [
-			{
-				action: 'do_transition',
-				options: {
-					transition: 'Default',
-				},
-			},
-		],
-		feedbacks: [
-			{
-				type: 'transition_active',
-				style: {
-					bgcolor: self.rgb(0, 200, 0),
-					color: self.rgb(255, 255, 255),
-				},
-			},
-		],
-	})
-
-	for (var s in self.transitionlist) {
-		var transition = self.transitionlist[s]
-
-		let baseObj = {
-			category: 'Transitions',
-			label: transition.label,
-			bank: {
-				style: 'text',
-				text: transition.label,
-				size: 14,
-				color: self.rgb(255, 255, 255),
-				bgcolor: 0,
-			},
-			feedbacks: [
-				{
-					type: 'transition_active',
-					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},
-			],
-			actions: [
-				{
-					action: 'quick_transition',
-					options: {
-						transition: transition.id,
-					},
-				},
-			],
-		}
-		presets.push(baseObj)
-	}
-
-	// Preset for Start Streaming button with colors indicating streaming status
-	presets.push({
-		category: 'Streaming',
-		label: 'OBS Streaming',
-		bank: {
-			style: 'text',
-			text: 'OBS STREAM',
-			size: 'auto',
-			color: self.rgb(255, 255, 255),
-			bgcolor: 0,
-		},
-		feedbacks: [
-			{
-				type: 'streaming',
-				style: {
-					bgcolor: self.rgb(0, 200, 0),
-					color: self.rgb(255, 255, 255),
-				},
-			},
-		],
-		actions: [
-			{
-				action: 'StartStopStreaming',
-			},
-		],
-	})
-
-	presets.push({
-		category: 'Streaming',
-		label: 'Streaming Status / Timecode',
-		bank: {
-			style: 'text',
-			text: 'Streaming:\\n$(obs:streaming)\\n$(obs:stream_timecode)',
-			size: 14,
-			color: self.rgb(255, 255, 255),
-			bgcolor: 0,
-		},
-		feedbacks: [
-			{
-				type: 'streaming',
-				style: {
-					bgcolor: self.rgb(0, 200, 0),
-					color: self.rgb(255, 255, 255),
-				},
-			},
-		],
-		actions: [
-			{
-				action: 'StartStopStreaming',
-			},
-		],
-	})
-
-	// Preset for Start Recording button with colors indicating recording status
-	presets.push({
-		category: 'Recording',
-		label: 'OBS Recording',
-		bank: {
-			style: 'text',
-			text: 'OBS RECORD',
-			size: 'auto',
-			color: self.rgb(255, 255, 255),
-			bgcolor: 0,
-		},
-		feedbacks: [
-			{
-				type: 'recording',
-				options: {
-					bg: self.rgb(200, 0, 0),
-					fg: self.rgb(255, 255, 255),
-					bg_paused: self.rgb(212, 174, 0),
-					fg_paused: self.rgb(255, 255, 255),
-				},
-			},
-		],
-		actions: [
-			{
-				action: 'StartStopRecording',
-			},
-		],
-	})
-
-	presets.push({
-		category: 'Recording',
-		label: 'Recording Status / Timecode',
-		bank: {
-			style: 'text',
-			text: 'Recording:\\n$(obs:recording)\\n$(obs:recording_timecode)',
-			size: 'auto',
-			color: self.rgb(255, 255, 255),
-			bgcolor: 0,
-		},
-		feedbacks: [
-			{
-				type: 'recording',
-				options: {
-					bg: self.rgb(200, 0, 0),
-					fg: self.rgb(255, 255, 255),
-					bg_paused: self.rgb(212, 174, 0),
-					fg_paused: self.rgb(255, 255, 255),
-				},
-			},
-		],
-		actions: [
-			{
-				action: 'StartStopRecording',
-			},
-		],
-	})
-
-	for (var s in self.outputlist) {
-		let output = self.outputlist[s]
-
-		let baseObj = {
-			category: 'Outputs',
-			label: 'Toggle ' + output.label,
-			bank: {
-				style: 'text',
-				text: 'OBS ' + output.label,
-				size: 'auto',
-				color: self.rgb(255, 255, 255),
-				bgcolor: 0,
-			},
-			feedbacks: [
-				{
-					type: 'output_active',
-					options: {
-						output: output.id,
-					},
-					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},
-			],
-			actions: [
-				{
-					action: 'start_stop_output',
-					options: {
-						output: output.id,
-					},
-				},
-			],
-		}
-		presets.push(baseObj)
-	}
-
-	for (var s in self.sourcelist) {
-		let source = self.sourcelist[s]
-
-		let baseObj = {
-			category: 'Sources',
-			label: source.label + 'Status',
-			bank: {
-				style: 'text',
-				text: source.label,
-				size: 'auto',
-				color: self.rgb(255, 255, 255),
-				bgcolor: 0,
-			},
-			feedbacks: [
-				{
-					type: 'scene_item_previewed',
-					options: {
-						source: source.id,
-					},
-					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},
-				{
-					type: 'scene_item_active',
-					options: {
-						source: source.id,
-					},
-					style: {
-						bgcolor: self.rgb(200, 0, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},
-			],
-		}
-		presets.push(baseObj)
-	}
-
-	presets.push({
-		category: 'General',
-		label: 'Computer Stats',
-		bank: {
-			style: 'text',
-			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
-			size: 'auto',
-			color: self.rgb(255, 255, 255),
-			bgcolor: 0,
-		},
-	})
-
-	for (var s in self.mediaSourceList) {
-		let mediaSource = self.mediaSourceList[s]
-
-		let baseObj = {
-			category: 'Media Sources',
-			label: 'Play Pause' + mediaSource.label,
-			bank: {
-				style: 'text',
-				text: mediaSource.label + '\\n$(obs:media_status_' + mediaSource.label + ')',
-				size: 'auto',
-				color: self.rgb(255, 255, 255),
-				bgcolor: 0,
-			},
-			feedbacks: [
-				{
-					type: 'media_playing',
-					options: {
-						source: mediaSource.id,
-					},
-					style: {
-						bgcolor: self.rgb(0, 200, 0),
-						color: self.rgb(255, 255, 255),
-					},
-				},
-			],
-			actions: [
-				{
-					action: 'play_pause_media',
-					options: {
-						source: mediaSource.id,
-						playPause: 'toggle',
-					},
-				},
-			],
-		}
-		presets.push(baseObj)
-	}
-
-	self.setPresetDefinitions(presets)
-}
-
-instance.prototype.init_variables = function () {
-	var self = this
-
-	var variables = []
-
-	variables.push({
-		name: 'bytes_per_sec',
-		label: 'Amount of data per second (in bytes) transmitted by the stream encoder',
-	})
-	variables.push({ name: 'fps', label: 'Current framerate' })
-	variables.push({ name: 'cpu_usage', label: 'Current CPU usage (percentage)' })
-	variables.push({ name: 'memory_usage', label: 'Current RAM usage (in megabytes)' })
-	variables.push({ name: 'free_disk_space', label: 'Free recording disk space' })
-	variables.push({
-		name: 'kbits_per_sec',
-		label: 'Amount of data per second (in kilobits) transmitted by the stream encoder',
-	})
-	variables.push({ name: 'render_missed_frames', label: 'Number of frames missed due to rendering lag' })
-	variables.push({ name: 'render_total_frames', label: 'Number of frames rendered' })
-	variables.push({ name: 'output_skipped_frames', label: 'Number of encoder frames skipped' })
-	variables.push({ name: 'output_total_frames', label: 'Number of total encoder frames' })
-	variables.push({
-		name: 'num_dropped_frames',
-		label: 'Number of frames dropped by the encoder since the stream started',
-	})
-	variables.push({ name: 'num_total_frames', label: 'Total number of frames transmitted since the stream started' })
-	variables.push({ name: 'average_frame_time', label: 'Average frame time (in milliseconds)' })
-	variables.push({ name: 'recording', label: 'Recording State' })
-	variables.push({ name: 'recording_file_name', label: 'File name of current recording' })
-	variables.push({ name: 'recording_timecode', label: 'Recording timecode' })
-	variables.push({ name: 'strain', label: 'Strain' })
-	variables.push({ name: 'stream_timecode', label: 'Stream Timecode' })
-	variables.push({ name: 'streaming', label: 'Streaming State' })
-	variables.push({ name: 'total_stream_time', label: 'Total streaming time' })
-	variables.push({ name: 'scene_active', label: 'Current active scene' })
-	variables.push({ name: 'scene_preview', label: 'Current preview scene' })
-	variables.push({ name: 'profile', label: 'Current profile' })
-	variables.push({ name: 'scene_collection', label: 'Current scene collection' })
-	variables.push({ name: 'current_transition', label: 'Current transition' })
-	variables.push({ name: 'transition_duration', label: 'Current transition duration' })
-	variables.push({ name: 'current_media_name', label: 'Source name for currently playing media source' })
-	variables.push({ name: 'current_media_time_elapsed', label: 'Time elapsed for currently playing media source' })
-	variables.push({ name: 'current_media_time_remaining', label: 'Time remaining for currently playing media source' })
-
-	for (var s in self.mediaSources) {
-		let media = self.mediaSources[s]
-		variables.push({ name: 'media_status_' + media.sourceName, label: 'Media status for ' + media.sourceName })
-		variables.push({ name: 'media_file_name_' + media.sourceName, label: 'Media file name for ' + media.sourceName })
-		variables.push({ name: 'media_time_elapsed_' + media.sourceName, label: 'Time elapsed for ' + media.sourceName })
-		variables.push({
-			name: 'media_time_remaining_' + media.sourceName,
-			label: 'Time remaining for ' + media.sourceName,
-		})
-	}
-
-	for (var s in self.sources) {
-		let source = self.sources[s]
-		if (source.typeId === 'text_ft2_source_v2') {
-			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
-		}
-		if (source.typeId === 'text_gdiplus_v2') {
-			variables.push({ name: 'current_text_' + source.name, label: 'Current text for ' + source.name })
-		}
-		if (source.typeId === 'image_source') {
-			variables.push({ name: 'image_file_name_' + source.name, label: 'Image file name for ' + source.name })
-		}
-		variables.push({ name: 'volume_' + source.name, label: 'Current volume for ' + source.name })
-	}
-
-	self.setVariableDefinitions(variables)
-}
-
-instance_skel.extendedBy(instance)
 exports = module.exports = instance
