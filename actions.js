@@ -845,13 +845,13 @@ module.exports = {
 			label: 'Custom Command',
 			options: [
 				{
-					type: 'textinput',
+					type: 'textwithvariables',
 					label: 'Request Type',
 					id: 'command',
 					default: 'SetCurrentProgramScene',
 				},
 				{
-					type: 'textinput',
+					type: 'textwithvariables',
 					label: 'Request Data (optional, JSON formatted)',
 					id: 'arg',
 					default: '{"sceneName": "Scene 1"}',

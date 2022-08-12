@@ -475,17 +475,26 @@ class instance extends instance_skel {
 				}
 				break
 			case 'custom_command':
+				let command
 				let arg
+
+				this.parseVariables(action.options.command, (value) => {
+					command = value.replace(/ /g, '')
+				})
+
 				if (action.options.arg) {
+					this.parseVariables(action.options.arg, (value) => {
+						arg = value
+					})
 					try {
-						arg = JSON.parse(action.options.arg)
+						arg = JSON.parse(arg)
 					} catch (e) {
 						this.log('warn', 'Request data must be formatted as valid JSON.')
 						return
 					}
 				}
 
-				requestType = action.options.command
+				requestType = command
 				requestData = arg
 				break
 			//Config
