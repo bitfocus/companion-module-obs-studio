@@ -14,7 +14,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
   - Support for obs-websocket version 5.0.0
   - New "Current Media" option on all media control actions
-  - Custom variables for "Set Program Scene" or "Set Preview Scene" actions
+  - Custom variables for "Set Program Scene", "Set Preview Scene", and "Custom Command" actions
   - Ability to specify a specific scene for a source in the the "Source Visible in Program" feedback
 
   - New Actions:
