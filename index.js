@@ -7,7 +7,6 @@ const upgradeScripts = require('./upgrades')
 
 const { EventSubscription } = require('obs-websocket-js')
 const OBSWebSocket = require('obs-websocket-js').default
-const obs = new OBSWebSocket()
 
 let debug
 let log
@@ -101,11 +100,13 @@ class instance extends instance_skel {
 	}
 
 	async connectOBS() {
-		if (obs) {
-			await obs.disconnect()
+		if (this.obs) {
+			await this.obs.disconnect()
+		} else {
+			this.obs = new OBSWebSocket()
 		}
 		try {
-			const { obsWebSocketVersion, negotiatedRpcVersion } = await obs.connect(
+			const { obsWebSocketVersion, negotiatedRpcVersion } = await this.obs.connect(
 				`ws:///${this.config.host}:${this.config.port}`,
 				this.config.pass,
 				{
@@ -162,8 +163,8 @@ class instance extends instance_skel {
 	}
 
 	async disconnectOBS() {
-		if (obs) {
-			await obs.disconnect()
+		if (this.obs) {
+			await this.obs.disconnect()
 			//Clear all active polls
 			this.stopStatsPoll()
 			this.stopMediaPoll()
@@ -172,7 +173,7 @@ class instance extends instance_skel {
 
 	async obsListeners() {
 		//General
-		obs.once('ExitStarted', () => {
+		this.obs.once('ExitStarted', () => {
 			this.log('error', 'OBS closed, connection lost')
 			this.status(this.STATUS_ERROR)
 			this.disconnectOBS()
@@ -180,13 +181,13 @@ class instance extends instance_skel {
 				this.startReconnectionPoll()
 			}
 		})
-		obs.on('VendorEvent', () => {})
+		this.obs.on('VendorEvent', () => {})
 		//Config
-		obs.on('CurrentSceneCollectionChanging', () => {
+		this.obs.on('CurrentSceneCollectionChanging', () => {
 			this.stopMediaPoll()
 			this.states.sceneCollectionChanging = true
 		})
-		obs.on('CurrentSceneCollectionChanged', (data) => {
+		this.obs.on('CurrentSceneCollectionChanged', (data) => {
 			this.states.currentSceneCollection = data.sceneCollectionName
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariable('scene_collection', this.states.currentSceneCollection)
@@ -194,31 +195,31 @@ class instance extends instance_skel {
 			this.getScenesSources()
 			this.getSceneTransitionList()
 		})
-		obs.on('SceneCollectionListChanged', () => {
+		this.obs.on('SceneCollectionListChanged', () => {
 			this.getSceneCollectionList()
 		})
-		obs.on('CurrentProfileChanging', () => {})
-		obs.on('CurrentProfileChanged', (data) => {
+		this.obs.on('CurrentProfileChanging', () => {})
+		this.obs.on('CurrentProfileChanged', (data) => {
 			this.states.currentProfile = data.profileName
 			this.checkFeedbacks('profile_active')
 			this.setVariable('profile', this.states.currentProfile)
-			this.obsInfo()
+			this.this.obsInfo()
 		})
-		obs.on('ProfileListChanged', () => {
+		this.obs.on('ProfileListChanged', () => {
 			this.getProfileList()
 		})
 		//Scenes
-		obs.on('SceneCreated', (data) => {
+		this.obs.on('SceneCreated', (data) => {
 			if (data?.isGroup === false && this.states.sceneCollectionChanging === false) {
 				this.addScene(data.sceneName)
 			}
 		})
-		obs.on('SceneRemoved', (data) => {
+		this.obs.on('SceneRemoved', (data) => {
 			if (data?.isGroup === false && this.states.sceneCollectionChanging === false) {
 				this.removeScene(data.sceneName)
 			}
 		})
-		obs.on('SceneNameChanged', (data) => {
+		this.obs.on('SceneNameChanged', (data) => {
 			if (this.sceneItems[data.oldSceneName]) {
 				this.sceneItems[data.sceneName] = this.sceneItems[data.oldSceneName]
 				delete this.sceneItems[data.oldSceneName]
@@ -229,53 +230,53 @@ class instance extends instance_skel {
 
 			this.updateActionsFeedbacksVariables()
 		})
-		obs.on('CurrentProgramSceneChanged', (data) => {
+		this.obs.on('CurrentProgramSceneChanged', (data) => {
 			this.states.programScene = data.sceneName
 			this.setVariable('scene_active', this.states.programScene)
 			this.checkFeedbacks('scene_active')
 		})
-		obs.on('CurrentPreviewSceneChanged', (data) => {
+		this.obs.on('CurrentPreviewSceneChanged', (data) => {
 			this.states.previewScene = data.sceneName ? data.sceneName : 'None'
 			this.setVariable('scene_preview', this.states.previewScene)
 			this.checkFeedbacks('scene_active')
 		})
-		obs.on('SceneListChanged', () => {})
+		this.obs.on('SceneListChanged', () => {})
 		//Inputs
-		obs.on('InputCreated', () => {})
-		obs.on('InputRemoved', () => {})
-		obs.on('InputNameChanged', () => {})
-		obs.on('InputActiveStateChanged', (data) => {
+		this.obs.on('InputCreated', () => {})
+		this.obs.on('InputRemoved', () => {})
+		this.obs.on('InputNameChanged', () => {})
+		this.obs.on('InputActiveStateChanged', (data) => {
 			if (this.sources[data.inputName]) {
 				this.sources[data.inputName].active = data.videoActive
 				this.checkFeedbacks('scene_item_active')
 			}
 		})
-		obs.on('InputShowStateChanged', (data) => {
+		this.obs.on('InputShowStateChanged', (data) => {
 			if (this.sources[data.inputName]) {
 				this.sources[data.inputName].videoShowing = data.videoShowing
 				this.checkFeedbacks('scene_item_previewed')
 			}
 		})
-		obs.on('InputMuteStateChanged', (data) => {
+		this.obs.on('InputMuteStateChanged', (data) => {
 			this.sources[data.inputName].inputMuted = data.inputMuted
 			this.setVariable('mute_' + data.inputName, this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted')
 			this.checkFeedbacks('audio_muted')
 		})
-		obs.on('InputVolumeChanged', (data) => {
+		this.obs.on('InputVolumeChanged', (data) => {
 			this.sources[data.inputName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
 			this.setVariable('volume_' + data.inputName, this.sources[data.inputName].inputVolume + 'db')
 			this.checkFeedbacks('volume')
 		})
-		obs.on('InputAudioBalanceChanged', (data) => {
+		this.obs.on('InputAudioBalanceChanged', (data) => {
 			this.sources[data.inputName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
 			this.setVariable('balance_' + data.inputName, this.sources[data.inputName].inputAudioBalance)
 		})
-		obs.on('InputAudioSyncOffsetChanged', (data) => {
+		this.obs.on('InputAudioSyncOffsetChanged', (data) => {
 			this.sources[data.inputName].inputAudioSyncOffset = data.inputAudioSyncOffset
 			this.setVariable('sync_offset_' + data.inputName, this.sources[data.inputName].inputAudioSyncOffset + 'ms')
 		})
-		obs.on('InputAudioTracksChanged', () => {})
-		obs.on('InputAudioMonitorTypeChanged', (data) => {
+		this.obs.on('InputAudioTracksChanged', () => {})
+		this.obs.on('InputAudioMonitorTypeChanged', (data) => {
 			this.sources[data.inputName].monitorType = data.monitorType
 			let monitorType
 			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
@@ -288,38 +289,38 @@ class instance extends instance_skel {
 			this.setVariable('monitor_' + data.inputName, monitorType)
 			this.checkFeedbacks('audio_monitor_type')
 		})
-		obs.on('InputVolumeMeters', () => {})
+		this.obs.on('InputVolumeMeters', () => {})
 		//Transitions
-		obs.on('CurrentSceneTransitionChanged', (data) => {
+		this.obs.on('CurrentSceneTransitionChanged', (data) => {
 			this.states.currentTransition = data.transitionName
 			this.checkFeedbacks('current_transition')
 			this.setVariable('current_transition', this.states.currentTransition)
-			obs.call('GetCurrentSceneTransition').then((data) => {
+			this.obs.call('GetCurrentSceneTransition').then((data) => {
 				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
 				this.checkFeedbacks('transition_duration')
 				this.setVariable('transition_duration', this.states.transitionDuration)
 			})
 		})
-		obs.on('CurrentSceneTransitionDurationChanged', (data) => {
+		this.obs.on('CurrentSceneTransitionDurationChanged', (data) => {
 			this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
 			this.checkFeedbacks('transition_duration')
 			this.setVariable('transition_duration', this.states.transitionDuration)
 		})
-		obs.on('SceneTransitionStarted', () => {
+		this.obs.on('SceneTransitionStarted', () => {
 			this.states.transitionActive = true
 			this.checkFeedbacks('transition_active')
 		})
-		obs.on('SceneTransitionEnded', () => {
+		this.obs.on('SceneTransitionEnded', () => {
 			this.states.transitionActive = false
 			this.checkFeedbacks('transition_active')
 		})
-		obs.on('SceneTransitionVideoEnded', () => {})
+		this.obs.on('SceneTransitionVideoEnded', () => {})
 		//Filters
-		obs.on('SourceFilterListReindexed', () => {})
-		obs.on('SourceFilterCreated', () => {})
-		obs.on('SourceFilterRemoved', () => {})
-		obs.on('SourceFilterNameChanged', () => {})
-		obs.on('SourceFilterEnableStateChanged', (data) => {
+		this.obs.on('SourceFilterListReindexed', () => {})
+		this.obs.on('SourceFilterCreated', () => {})
+		this.obs.on('SourceFilterRemoved', () => {})
+		this.obs.on('SourceFilterNameChanged', () => {})
+		this.obs.on('SourceFilterEnableStateChanged', (data) => {
 			if (this.sourceFilters[data.sourceName]) {
 				let filter = this.sourceFilters[data.sourceName].findIndex((item) => item.filterName == data.filterName)
 				if (filter !== undefined) {
@@ -329,12 +330,12 @@ class instance extends instance_skel {
 			}
 		})
 		//Scene Items
-		obs.on('SceneItemCreated', (data) => {
+		this.obs.on('SceneItemCreated', (data) => {
 			if (this.states.sceneCollectionChanging === false) {
 				this.getSceneItems(data.sceneName)
 			}
 		})
-		obs.on('SceneItemRemoved', (data) => {
+		this.obs.on('SceneItemRemoved', (data) => {
 			if (this.states.sceneCollectionChanging === false) {
 				let source = this.sourceChoices.findIndex((item) => item.id === data.sourceName)
 				this.sourceChoices.splice(source, 1)
@@ -343,20 +344,20 @@ class instance extends instance_skel {
 				this.getSceneItems(data.sceneName)
 			}
 		})
-		obs.on('SceneItemListReindexed', () => {})
-		obs.on('SceneItemEnableStateChanged', (data) => {
+		this.obs.on('SceneItemListReindexed', () => {})
+		this.obs.on('SceneItemEnableStateChanged', (data) => {
 			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
 			this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
 			this.checkFeedbacks('scene_item_active_in_scene')
 		})
-		obs.on('SceneItemLockStateChanged', () => {})
-		obs.on('SceneItemSelected', () => {})
-		obs.on('SceneItemTransformChanged', (data) => {
+		this.obs.on('SceneItemLockStateChanged', () => {})
+		this.obs.on('SceneItemSelected', () => {})
+		this.obs.on('SceneItemTransformChanged', (data) => {
 			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
 			if (sceneItem !== undefined) {
 				let sourceName = this.sceneItems[data.sceneName][sceneItem].sourceName
 				if (this.sceneItems[data.sceneName][sceneItem].inputKind) {
-					obs
+					this.obs
 						.call('GetInputSettings', { inputName: sourceName })
 						.then((settings) => {
 							this.sources[sourceName].settings = settings.inputSettings
@@ -380,13 +381,13 @@ class instance extends instance_skel {
 			}
 		})
 		//Outputs
-		obs.on('StreamStateChanged', (data) => {
+		this.obs.on('StreamStateChanged', (data) => {
 			this.states.streaming = data.outputActive
 
 			this.setVariable('streaming', this.states.streaming ? 'Live' : 'Off-Air')
 			this.checkFeedbacks('streaming')
 		})
-		obs.on('RecordStateChanged', (data) => {
+		this.obs.on('RecordStateChanged', (data) => {
 			if (data.outputActive === true) {
 				this.states.recording = 'Recording'
 			} else {
@@ -403,36 +404,36 @@ class instance extends instance_skel {
 			this.setVariable('recording', this.states.recording)
 			this.checkFeedbacks('recording')
 		})
-		obs.on('ReplayBufferStateChanged', (data) => {
+		this.obs.on('ReplayBufferStateChanged', (data) => {
 			this.states.replayBuffer = data.outputActive
 			this.checkFeedbacks('replayBufferActive')
 		})
-		obs.on('VirtualcamStateChanged', (data) => {
+		this.obs.on('VirtualcamStateChanged', (data) => {
 			this.outputs['virtualcam_output'].outputActive = data.outputActive
 			this.checkFeedbacks('output_active')
 		})
-		obs.on('ReplayBufferSaved', (data) => {
+		this.obs.on('ReplayBufferSaved', (data) => {
 			this.setVariable('replay_buffer_path', data.savedReplayPath)
 		})
 		//Media Inputs
-		obs.on('MediaInputPlaybackStarted', (data) => {
+		this.obs.on('MediaInputPlaybackStarted', (data) => {
 			this.states.currentMedia = data.inputName
 			this.setVariable('current_media_name', this.states.currentMedia)
 			this.setVariable(`media_status_${data.inputName}`, 'Playing')
 		})
-		obs.on('MediaInputPlaybackEnded', (data) => {
+		this.obs.on('MediaInputPlaybackEnded', (data) => {
 			if (this.states.currentMedia == data.inputName) {
 				this.setVariable('current_media_name', 'None')
 				this.setVariable(`media_status_${data.inputName}`, 'Stopped')
 			}
 		})
-		obs.on('MediaInputActionTriggered', (data) => {
+		this.obs.on('MediaInputActionTriggered', (data) => {
 			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
 				this.setVariable(`media_status_${data.inputName}`, 'Paused')
 			}
 		})
 		//UI
-		obs.on('StudioModeStateChanged', (data) => {
+		this.obs.on('StudioModeStateChanged', (data) => {
 			this.states.studioMode = data.studioModeEnabled ? true : false
 		})
 	}
@@ -672,18 +673,20 @@ class instance extends instance_skel {
 					//This is a workaround until obs-websocket-js can support Batch Requests
 					//https://github.com/obs-websocket-community-projects/obs-websocket-js/issues/292
 					try {
-						obs.call('SetCurrentSceneTransition', { transitionName: action.options.transition }).then(() => {
-							obs.call('SetCurrentSceneTransitionDuration', { transitionDuration: transitionDuration }).then(() => {
-								obs.call('TriggerStudioModeTransition').then(() => {
-									setTimeout(function () {
-										obs.call('SetCurrentSceneTransition', { transitionName: revertTransition }).then(() => {
-											obs
-												.call('SetCurrentSceneTransitionDuration', { transitionDuration: revertTransitionDuration })
-												.then(() => {})
-										})
-									}, transitionWaitTime)
+						this.obs.call('SetCurrentSceneTransition', { transitionName: action.options.transition }).then(() => {
+							this.obs
+								.call('SetCurrentSceneTransitionDuration', { transitionDuration: transitionDuration })
+								.then(() => {
+									this.obs.call('TriggerStudioModeTransition').then(() => {
+										setTimeout(function () {
+											this.obs.call('SetCurrentSceneTransition', { transitionName: revertTransition }).then(() => {
+												this.obs
+													.call('SetCurrentSceneTransitionDuration', { transitionDuration: revertTransitionDuration })
+													.then(() => {})
+											})
+										}, transitionWaitTime)
+									})
 								})
-							})
 						})
 					} catch (error) {}
 				}
@@ -752,7 +755,7 @@ class instance extends instance_skel {
 					scaleY: scaleY,
 				}
 
-				obs.call('GetSceneItemId', { sceneName: sourceScene, sourceName: action.options.source }).then((data) => {
+				this.obs.call('GetSceneItemId', { sceneName: sourceScene, sourceName: action.options.source }).then((data) => {
 					if (data.sceneItemId) {
 						requestType = 'SetSceneItemTransform'
 						requestData = {
@@ -1007,7 +1010,7 @@ class instance extends instance_skel {
 
 	async sendRequest(requestType, requestData) {
 		try {
-			let data = await obs.call(requestType, requestData)
+			let data = await this.obs.call(requestType, requestData)
 			return data
 		} catch (error) {
 			this.debug(error)
@@ -1036,13 +1039,13 @@ class instance extends instance_skel {
 			this.imageFormats.push({ id: format, label: format })
 		})
 
-		obs
+		this.obs
 			.call('GetInputKindList')
 			.then((data) => {
 				this.states.inputKindList = data
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetHotkeyList')
 			.then((data) => {
 				data.hotkeys.forEach((hotkey) => {
@@ -1050,13 +1053,13 @@ class instance extends instance_skel {
 				})
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetStudioModeEnabled')
 			.then((data) => {
 				this.states.studioMode = data.studioModeEnabled ? true : false
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetVideoSettings')
 			.then((data) => {
 				this.states.resolution = `${data.baseWidth}x${data.baseHeight}`
@@ -1069,7 +1072,7 @@ class instance extends instance_skel {
 				})
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetMonitorList')
 			.then((data) => {
 				this.states.monitors = data
@@ -1085,7 +1088,7 @@ class instance extends instance_skel {
 				})
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetOutputList')
 			.then((data) => {
 				this.outputs = {}
@@ -1102,7 +1105,7 @@ class instance extends instance_skel {
 				})
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetReplayBufferStatus')
 			.then((data) => {
 				this.states.replayBuffer = data.outputActive
@@ -1121,7 +1124,7 @@ class instance extends instance_skel {
 
 	startStatsPoll() {
 		this.stopStatsPoll()
-		if (obs) {
+		if (this.obs) {
 			this.statsPoll = setInterval(() => {
 				this.getStats()
 				if (this.states.streaming) {
@@ -1147,7 +1150,7 @@ class instance extends instance_skel {
 	}
 
 	getStats() {
-		obs
+		this.obs
 			.call('GetStats')
 			.then((data) => {
 				this.states.stats = data
@@ -1169,15 +1172,18 @@ class instance extends instance_skel {
 			.catch((error) => {})
 	}
 
-	async getOutputStatus(outputName) {
-		let data = await this.sendRequest('GetOutputStatus', { outputName: outputName })
-
-		this.outputs[outputName] = data
-		this.checkFeedbacks('output_active')
+	getOutputStatus(outputName) {
+		this.obs
+			.call('GetOutputStatus', { outputName: outputName })
+			.then((data) => {
+				this.outputs[outputName] = data
+				this.checkFeedbacks('output_active')
+			})
+			.catch((error) => {})
 	}
 
 	getStreamStatus() {
-		obs
+		this.obs
 			.call('GetStreamStatus')
 			.then((data) => {
 				this.states.streaming = data.outputActive
@@ -1189,7 +1195,7 @@ class instance extends instance_skel {
 				this.setVariable('output_total_frames', data.outputTotalFrames)
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetStreamServiceSettings')
 			.then((data) => {
 				this.setVariable(
@@ -1202,7 +1208,7 @@ class instance extends instance_skel {
 
 	getSceneTransitionList() {
 		this.transitionList = []
-		obs
+		this.obs
 			.call('GetSceneTransitionList')
 			.then((data) => {
 				data.transitions.forEach((transition) => {
@@ -1214,7 +1220,7 @@ class instance extends instance_skel {
 				this.updateActionsFeedbacksVariables()
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetCurrentSceneTransition')
 			.then((data) => {
 				this.states.currentTransition = data.transitionName
@@ -1229,7 +1235,7 @@ class instance extends instance_skel {
 	}
 
 	getRecordStatus() {
-		obs
+		this.obs
 			.call('GetRecordStatus')
 			.then((data) => {
 				if (data.outputActive === true) {
@@ -1243,7 +1249,7 @@ class instance extends instance_skel {
 				this.setVariable('recording_timecode', this.states.recordingTimecode)
 			})
 			.catch((error) => {})
-		obs
+		this.obs
 			.call('GetRecordDirectory')
 			.then((data) => {
 				this.states.recordDirectory = data.recordDirectory
@@ -1254,7 +1260,7 @@ class instance extends instance_skel {
 
 	getProfileList() {
 		this.profileChoices = []
-		obs
+		this.obs
 			.call('GetProfileList')
 			.then((data) => {
 				this.states.currentProfile = data.currentProfileName
@@ -1272,7 +1278,7 @@ class instance extends instance_skel {
 
 	getSceneCollectionList() {
 		this.sceneCollectionList = []
-		obs
+		this.obs
 			.call('GetSceneCollectionList')
 			.then((data) => {
 				this.states.currentSceneCollection = data.currentSceneCollectionName
@@ -1289,7 +1295,7 @@ class instance extends instance_skel {
 	}
 
 	getAudioSources(sourceName) {
-		obs
+		this.obs
 			.call('GetInputAudioTracks', { inputName: sourceName })
 			.then((data) => {
 				if (!this.audioSourceList.find((item) => item.id === sourceName)) {
@@ -1303,25 +1309,25 @@ class instance extends instance_skel {
 	}
 
 	getSourceAudio(sourceName) {
-		obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
+		this.obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputMuted = data.inputMuted
 			this.setVariable('mute_' + sourceName, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
 			this.checkFeedbacks('audio_muted')
 		})
-		obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
+		this.obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
 			this.setVariable('volume_' + sourceName, this.sources[sourceName].inputVolume + 'db')
 			this.checkFeedbacks('volume')
 		})
-		obs.call('GetInputAudioBalance', { inputName: sourceName }).then((data) => {
+		this.obs.call('GetInputAudioBalance', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
 			this.setVariable('balance_' + sourceName, this.sources[sourceName].inputAudioBalance)
 		})
-		obs.call('GetInputAudioSyncOffset', { inputName: sourceName }).then((data) => {
+		this.obs.call('GetInputAudioSyncOffset', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
 			this.setVariable('sync_offset_' + sourceName, this.sources[sourceName].inputAudioSyncOffset + 'ms')
 		})
-		obs.call('GetInputAudioMonitorType', { inputName: sourceName }).then((data) => {
+		this.obs.call('GetInputAudioMonitorType', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].monitorType = data.monitorType
 			let monitorType
 			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
@@ -1334,14 +1340,14 @@ class instance extends instance_skel {
 			this.setVariable('monitor_' + sourceName, monitorType)
 			this.checkFeedbacks('audio_monitor_type')
 		})
-		obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
+		this.obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 		})
 		this.updateActionsFeedbacksVariables()
 	}
 
 	getSourceFilters(sourceName) {
-		obs
+		this.obs
 			.call('GetSourceFilterList', { sourceName: sourceName })
 			.then((data) => {
 				this.sourceFilters[sourceName] = data.filters
@@ -1357,7 +1363,7 @@ class instance extends instance_skel {
 	}
 
 	getGroupInfo(sourceName) {
-		obs
+		this.obs
 			.call('GetGroupSceneItemList', { sceneName: sourceName })
 			.then((data) => {
 				this.groups[sourceName] = data.sceneItems
@@ -1384,7 +1390,7 @@ class instance extends instance_skel {
 	}
 
 	getInputSettings(sourceName, inputKind) {
-		obs
+		this.obs
 			.call('GetInputSettings', { inputName: sourceName })
 			.then((settings) => {
 				this.sources[sourceName].settings = settings.inputSettings
@@ -1407,7 +1413,7 @@ class instance extends instance_skel {
 	}
 
 	getSceneItems(sceneName) {
-		obs
+		this.obs
 			.call('GetSceneItemList', { sceneName: sceneName })
 			.then((data) => {
 				this.sceneItems[sceneName] = data.sceneItems
@@ -1423,7 +1429,7 @@ class instance extends instance_skel {
 					if (sceneItem.isGroup) {
 						this.getGroupInfo(sourceName)
 					}
-					obs
+					this.obs
 						.call('GetSourceActive', { sourceName: sourceName })
 						.then((active) => {
 							if (this.sources[sourceName]) {
@@ -1479,12 +1485,13 @@ class instance extends instance_skel {
 
 		this.sceneChoices = []
 		this.sourceChoices = []
+		this.filterList = []
 		this.audioSourceList = []
 		this.mediaSourceList = []
 		this.textSourceList = []
 		this.imageSourceList = []
 
-		obs
+		this.obs
 			.call('GetSceneList')
 			.then((data) => {
 				this.scenes = data.scenes
@@ -1498,6 +1505,7 @@ class instance extends instance_skel {
 				data.scenes.forEach((scene) => {
 					let sceneName = scene.sceneName
 					this.addScene(sceneName)
+					this.getSourceFilters(sceneName)
 				})
 			})
 			.catch((error) => {})
@@ -1515,7 +1523,7 @@ class instance extends instance_skel {
 		this.stopMediaPoll()
 		this.mediaPoll = setInterval(() => {
 			this.mediaSourceList.forEach((source) => {
-				obs
+				this.obs
 					.call('GetMediaInputStatus', { inputName: source.id })
 					.then((data) => {
 						this.mediaSources[source.id] = data
@@ -1576,6 +1584,7 @@ class instance extends instance_skel {
 		//Special Choices - Sources
 		this.sourceChoicesAllSources = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceChoices)
 		this.sourceChoicesAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceChoices)
+		this.sourceChoicesWithScenes = this.sourceChoices.concat(this.sceneChoices)
 		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
 		//Default Choices
 		this.sourceListDefault = this.sourceChoices?.[0] ? this.sourceChoices?.[0]?.id : ''
