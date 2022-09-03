@@ -317,11 +317,15 @@ class instance extends instance_skel {
 		this.obs.on('SceneTransitionVideoEnded', () => {})
 		//Filters
 		this.obs.on('SourceFilterListReindexed', () => {})
-		this.obs.on('SourceFilterCreated', () => {})
-		this.obs.on('SourceFilterRemoved', () => {})
+		this.obs.on('SourceFilterCreated', (data) => {
+			this.getSourceFilters(data.sourceName)
+		})
+		this.obs.on('SourceFilterRemoved', (data) => {
+			this.getSourceFilters(data.sourceName)
+		})
 		this.obs.on('SourceFilterNameChanged', () => {})
 		this.obs.on('SourceFilterEnableStateChanged', (data) => {
-			if (this.sourceFilters[data.sourceName]) {
+			if ('this.sourceFilters[data.sourceName]') {
 				let filter = this.sourceFilters[data.sourceName].findIndex((item) => item.filterName == data.filterName)
 				if (filter !== undefined) {
 					this.sourceFilters[data.sourceName][filter].filterEnabled = data.filterEnabled
@@ -1360,6 +1364,7 @@ class instance extends instance_skel {
 				}
 			})
 			.catch((error) => {})
+		this.updateActionsFeedbacksVariables()
 	}
 
 	getGroupInfo(sourceName) {
