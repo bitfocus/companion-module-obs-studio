@@ -4,8 +4,8 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 ### Configuration
 
-- Download and install **version 5.0.0 or above of the [obs-websocket plugin](https://github.com/obsproject/obs-websocket/releases)** on a computer running **OBS 27.2 or above**. Alternatively, you can download OBS 28, which includes obs-websocket by default.
-- Configure the plugin as needed in OBS under Tools > obs-websocket Settings
+- Download and install **version 5.0.0 or above of the [obs-websocket plugin](https://github.com/obsproject/obs-websocket/releases)** on a computer running **OBS 28 or above**. Alternatively, you can [download OBS 28](https://obsproject.com), which includes obs-websocket by default.
+- Enable and configure the plugin as needed in OBS under Tools > obs-websocket Settings
 - In Companion under the OBS module settings, enter the IP address of the computer running OBS, the port you are using for the websocket connection (by default the port is 4455), and the server password (leave blank if authentication is not enabled)
 
 ### Available actions
