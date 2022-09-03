@@ -8,6 +8,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Change Log
 
+### v2.0.1
+
+- Fixes
+  - Prevent issue when using more than one instance of the OBS module
+  - Add filters from scenes, not just sources
+
 ### v2.0.0
 
 - New

@@ -397,7 +397,7 @@ exports.initFeedbacks = function () {
 				label: 'Source',
 				id: 'source',
 				default: this.sourceListDefault,
-				choices: this.sourceChoices,
+				choices: this.sourceChoicesWithScenes,
 			},
 			{
 				type: 'dropdown',
