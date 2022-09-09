@@ -8,6 +8,13 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Change Log
 
+### v2.0.2
+
+- New
+  - Allow Global Audio Devices to be choices for actions, feedback, and variables
+- Fix
+  - Show Scenes in the Open Projector action choices
+
 ### v2.0.1
 
 - Fixes
