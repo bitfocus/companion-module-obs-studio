@@ -750,7 +750,7 @@ module.exports = {
 					label: 'Source / Scene (required if selected as projector type)',
 					id: 'source',
 					default: this.sourceListDefault,
-					choices: this.sourceChoices,
+					choices: this.sourceChoicesWithScenes,
 					isVisible: (action) => action.options.type === 'Source' || action.options.type === 'Scene',
 				},
 			],
