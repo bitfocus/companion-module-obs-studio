@@ -1306,7 +1306,7 @@ class instance extends instance_skel {
 					this.audioSourceList.push({ id: sourceName, label: sourceName })
 					this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 					this.getSourceAudio(sourceName)
-					//this.updateActionsFeedbacksVariables()
+					this.updateActionsFeedbacksVariables()
 				}
 			})
 			.catch((error) => {})
@@ -1512,6 +1512,24 @@ class instance extends instance_skel {
 					this.addScene(sceneName)
 					this.getSourceFilters(sceneName)
 				})
+			})
+			.catch((error) => {})
+
+		this.obs
+			.call('GetSpecialInputs')
+			.then((data) => {
+				for (let x in data) {
+					let input = data[x]
+					if (input) {
+						this.sources[input] = {
+							sourceName: input,
+						}
+						if (!this.sourceChoices.find((item) => item.id === input)) {
+							this.sourceChoices.push({ id: input, label: input })
+						}
+						this.getAudioSources(input)
+					}
+				}
 			})
 			.catch((error) => {})
 	}

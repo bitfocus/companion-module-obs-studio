@@ -82,11 +82,11 @@ exports.updateVariableDefinitions = function () {
 			})
 			variables.push({
 				name: 'sync_offset_' + source.sourceName,
-				label: 'Current audio monitor status for ' + source.sourceName,
+				label: 'Current sync offset for ' + source.sourceName,
 			})
 			variables.push({
 				name: 'balance_' + source.sourceName,
-				label: 'Current audio monitor status for ' + source.sourceName,
+				label: 'Current audio balance for ' + source.sourceName,
 			})
 		}
 	}
