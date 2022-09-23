@@ -171,15 +171,21 @@ class instance extends instance_skel {
 		}
 	}
 
+	connectionLost() {
+		if (this.currentStatus != 2) {
+			this.log('error', 'Connection lost to OBS')
+		}
+		this.status(this.STATUS_ERROR)
+		this.disconnectOBS()
+		if (!this.reconnectionPoll) {
+			this.startReconnectionPoll()
+		}
+	}
+
 	async obsListeners() {
 		//General
 		this.obs.once('ExitStarted', () => {
-			this.log('error', 'OBS closed, connection lost')
-			this.status(this.STATUS_ERROR)
-			this.disconnectOBS()
-			if (!this.reconnectionPoll) {
-				this.startReconnectionPoll()
-			}
+			this.connectionLost()
 		})
 		this.obs.on('VendorEvent', () => {})
 		//Config
@@ -1173,7 +1179,11 @@ class instance extends instance_skel {
 					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
 				}
 			})
-			.catch((error) => {})
+			.catch((error) => {
+				if (error?.message.match(/(Not connected)/i)) {
+					this.connectionLost()
+				}
+			})
 	}
 
 	getOutputStatus(outputName) {
@@ -1575,9 +1585,7 @@ class instance extends instance_skel {
 						this.checkFeedbacks('media_playing')
 						this.checkFeedbacks('media_source_time_remaining')
 					})
-					.catch((error) => {
-						this.debug(error)
-					})
+					.catch((error) => {})
 			})
 		}, 1000)
 	}
