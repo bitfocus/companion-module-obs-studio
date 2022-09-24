@@ -6,7 +6,11 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/master/HELP.md)
 
-## Change Log
+## Changelog
+
+### v2.0.3
+- Fix
+  - Properly detect more types of disconnections and properly update module status
 
 ### v2.0.2
 
