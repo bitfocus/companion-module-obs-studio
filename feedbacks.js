@@ -262,7 +262,13 @@ exports.initFeedbacks = function () {
 		],
 		callback: (feedback) => {
 			if (feedback.options.source !== 'anySource') {
-				if (this.sceneItems[feedback.options.scene]) {
+				if (this.sources[feedback.options.source]?.groupedSource) {
+					let group = this.sources[feedback.options.source].groupName
+					let sceneItem = this.groups[group].find((item) => item.sourceName === feedback.options.source)
+					if (sceneItem) {
+						return sceneItem.sceneItemEnabled
+					}
+				} else if (this.sceneItems[feedback.options.scene]) {
 					let sceneItem = this.sceneItems[feedback.options.scene].find(
 						(item) => item.sourceName === feedback.options.source
 					)
