@@ -9,8 +9,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 ## Changelog
 
 ### v2.0.3
+
 - Fix
   - Properly detect more types of disconnections and properly update module status
+  - Grouped sources can now be enabled / disabled via "Set Source Visibility" action
+  - Grouped sources feedback is now accurate
 
 ### v2.0.2
 

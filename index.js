@@ -356,8 +356,13 @@ class instance extends instance_skel {
 		})
 		this.obs.on('SceneItemListReindexed', () => {})
 		this.obs.on('SceneItemEnableStateChanged', (data) => {
-			let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-			this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			if (this.groups[data.sceneName]) {
+				let sceneItem = this.groups[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+				this.groups[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			} else {
+				let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+				this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			}
 			this.checkFeedbacks('scene_item_active_in_scene')
 		})
 		this.obs.on('SceneItemLockStateChanged', () => {})
@@ -781,6 +786,7 @@ class instance extends instance_skel {
 			case 'toggle_scene_item':
 				let sceneName = action.options.scene
 				let sourceName = action.options.source
+				let enabled = true
 
 				// special scene names
 				if (!sceneName || sceneName === 'Current Scene') {
@@ -788,12 +794,24 @@ class instance extends instance_skel {
 				} else if (sceneName === 'Preview Scene') {
 					sceneName = this.states.previewScene
 				}
+				if (this.sources[sourceName]?.groupedSource) {
+					let group = this.sources[sourceName].groupName
+					let source = this.groups[group].find((item) => item.sourceName === sourceName)
+					if (action.options.visible === 'toggle') {
+						enabled = !source.sceneItemEnabled
+					} else {
+						enabled = action.options.visible == 'true' ? true : false
+					}
+					this.sendRequest('SetSceneItemEnabled', {
+						sceneName: source.groupName,
+						sceneItemId: source.sceneItemId,
+						sceneItemEnabled: enabled,
+					})
+				}
 				let targetScene = this.sceneItems[sceneName]
-
 				if (targetScene) {
 					targetScene.forEach((source) => {
 						if (sourceName === 'allSources' || source.sourceName === sourceName) {
-							let enabled
 							if (action.options.visible === 'toggle') {
 								enabled = !source.sceneItemEnabled
 							} else {
@@ -1377,15 +1395,16 @@ class instance extends instance_skel {
 		this.updateActionsFeedbacksVariables()
 	}
 
-	getGroupInfo(sourceName) {
+	getGroupInfo(groupName) {
 		this.obs
-			.call('GetGroupSceneItemList', { sceneName: sourceName })
+			.call('GetGroupSceneItemList', { sceneName: groupName })
 			.then((data) => {
-				this.groups[sourceName] = data.sceneItems
+				this.groups[groupName] = data.sceneItems
 				data.sceneItems.forEach((sceneItem) => {
 					let sourceName = sceneItem.sourceName
 					this.sources[sourceName] = sceneItem
 					this.sources[sourceName].groupedSource = true
+					this.sources[sourceName].groupName = groupName
 
 					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
 						this.sourceChoices.push({ id: sourceName, label: sourceName })
