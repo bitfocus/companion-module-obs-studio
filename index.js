@@ -685,24 +685,32 @@ class instance extends instance_skel {
 					} else {
 						transitionDuration = revertTransitionDuration
 					}
-					//This is a workaround until obs-websocket-js can support Batch Requests
-					//https://github.com/obs-websocket-community-projects/obs-websocket-js/issues/292
 					try {
-						this.obs.call('SetCurrentSceneTransition', { transitionName: action.options.transition }).then(() => {
-							this.obs
-								.call('SetCurrentSceneTransitionDuration', { transitionDuration: transitionDuration })
-								.then(() => {
-									this.obs.call('TriggerStudioModeTransition').then(() => {
-										setTimeout(function () {
-											this.obs.call('SetCurrentSceneTransition', { transitionName: revertTransition }).then(() => {
-												this.obs
-													.call('SetCurrentSceneTransitionDuration', { transitionDuration: revertTransitionDuration })
-													.then(() => {})
-											})
-										}, transitionWaitTime)
-									})
-								})
-						})
+						this.obs.callBatch([
+							{
+								requestType: 'SetCurrentSceneTransition',
+								requestData: { transitionName: action.options.transition },
+							},
+							{
+								requestType: 'SetCurrentSceneTransitionDuration',
+								requestData: { transitionDuration: transitionDuration },
+							},
+							{
+								requestType: 'TriggerStudioModeTransition',
+							},
+							{
+								requestType: 'Sleep',
+								requestData: { sleepMillis: transitionWaitTime },
+							},
+							{
+								requestType: 'SetCurrentSceneTransition',
+								requestData: { transitionName: revertTransition },
+							},
+							{
+								requestType: 'SetCurrentSceneTransitionDuration',
+								requestData: { transitionDuration: revertTransitionDuration },
+							},
+						])
 					} catch (error) {}
 				}
 				break
