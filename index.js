@@ -1190,20 +1190,24 @@ class instance extends instance_skel {
 			.call('GetStats')
 			.then((data) => {
 				this.states.stats = data
-				this.setVariable('fps', this.roundNumber(data.activeFps, 2))
-				this.setVariable('render_total_frames', data.renderTotalFrames)
-				this.setVariable('render_missed_frames', data.renderSkippedFrames)
-				this.setVariable('output_total_frames', data.outputTotalFrames)
-				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
-				this.setVariable('average_frame_time', this.roundNumber(data.averageFrameRenderTime, 2))
-				this.setVariable('cpu_usage', `${this.roundNumber(data.cpuUsage, 2)}%`)
-				this.setVariable('memory_usage', `${this.roundNumber(data.memoryUsage, 0)} MB`)
 				let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
 				if (freeSpace > 1000) {
-					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace / 1000, 0)} GB`)
+					freeSpace = `${this.roundNumber(freeSpace / 1000, 0)} GB`
 				} else {
-					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
+					freeSpace = `${this.roundNumber(freeSpace, 0)} MB`
 				}
+
+				this.setVariables({
+					fps: this.roundNumber(data.activeFps, 2),
+					render_total_frames: data.renderTotalFrames,
+					render_missed_frames: data.renderSkippedFrames,
+					output_total_frames: data.outputTotalFrames,
+					output_skipped_frames: data.outputSkippedFrames,
+					average_frame_time: this.roundNumber(data.averageFrameRenderTime, 2),
+					cpu_usage: `${this.roundNumber(data.cpuUsage, 2)}%`,
+					memory_usage: `${this.roundNumber(data.memoryUsage, 0)} MB`,
+					free_disk_space: freeSpace,
+				})
 			})
 			.catch((error) => {
 				if (error?.message.match(/(Not connected)/i)) {
@@ -1227,12 +1231,16 @@ class instance extends instance_skel {
 			.call('GetStreamStatus')
 			.then((data) => {
 				this.states.streaming = data.outputActive
-				this.setVariable('streaming', data.outputActive ? 'Live' : 'Off-Air')
+
 				this.checkFeedbacks('streaming')
 				this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-				this.setVariable('stream_timecode', this.states.streamingTimecode)
-				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
-				this.setVariable('output_total_frames', data.outputTotalFrames)
+
+				this.setVariables({
+					streaming: data.outputActive ? 'Live' : 'Off-Air',
+					stream_timecode: this.states.streamingTimecode,
+					output_skipped_frames: data.outputSkippedFrames,
+					output_total_frames: data.outputTotalFrames,
+				})
 			})
 			.catch((error) => {})
 		this.obs
@@ -1265,11 +1273,14 @@ class instance extends instance_skel {
 			.then((data) => {
 				this.states.currentTransition = data.transitionName
 				this.checkFeedbacks('current_transition')
-				this.setVariable('current_transition', this.states.currentTransition)
 
 				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
 				this.checkFeedbacks('transition_duration')
-				this.setVariable('transition_duration', this.states.transitionDuration)
+
+				this.setVariables({
+					current_transition: this.states.currentTransition,
+					transition_duration: this.states.transitionDuration,
+				})
 			})
 			.catch((error) => {})
 	}
@@ -1283,10 +1294,13 @@ class instance extends instance_skel {
 				} else {
 					this.states.recording = data.outputPaused ? 'Paused' : 'Stopped'
 				}
-				this.setVariable('recording', this.states.recording)
 				this.checkFeedbacks('recording')
 				this.states.recordingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-				this.setVariable('recording_timecode', this.states.recordingTimecode)
+
+				this.setVariables({
+					recording: this.states.recording,
+					recording_timecode: this.states.recordingTimecode,
+				})
 			})
 			.catch((error) => {})
 		this.obs
@@ -1538,9 +1552,11 @@ class instance extends instance_skel {
 			.then((data) => {
 				this.scenes = data.scenes
 				this.states.previewScene = data.currentPreviewSceneName ? data.currentPreviewSceneName : 'None'
-				this.setVariable('scene_preview', this.states.previewScene)
 				this.states.programScene = data.currentProgramSceneName
-				this.setVariable('scene_active', this.states.programScene)
+				this.setVariables({
+					scene_preview: this.states.previewScene,
+					scene_active: this.states.programScene,
+				})
 				return data
 			})
 			.then((data) => {
@@ -1599,8 +1615,10 @@ class instance extends instance_skel {
 						this.mediaSources[source.id].timeRemaining = remaining
 
 						if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-							this.setVariable('current_media_time_elapsed', this.mediaSources[source.id].timeElapsed)
-							this.setVariable('current_media_time_remaining', this.mediaSources[source.id].timeRemaining)
+							this.setVariables({
+								current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
+								current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
+							})
 							this.setVariable('media_status_' + source.id, 'Playing')
 						} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
 							this.setVariable('media_status_' + source.id, 'Paused')
