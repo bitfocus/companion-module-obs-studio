@@ -32,62 +32,52 @@ exports.updateVariableDefinitions = function () {
 	variables.push({ name: 'replay_buffer_path', label: 'File path of the last replay buffer saved' })
 
 	//Defaults
-	this.setVariable('current_media_name', 'None')
-	this.setVariable('recording_file_name', 'None')
-	this.setVariable('replay_buffer_path', 'None')
-	this.setVariable('current_media_time_elapsed', '--:--:--')
-	this.setVariable('current_media_time_remaining', '--:--:--')
-
+	this.setVariables({
+		current_media_name: 'None',
+		recording_file_name: 'None',
+		replay_buffer_path: 'None',
+		current_media_time_elapsed: '--:--:--',
+		current_media_time_remaining: '--:--:--',
+	})
 	//Source Specific Variables
 	for (let s in this.mediaSourceList) {
 		let mediaSourceName = this.mediaSourceList[s].id
-		variables.push({ name: 'media_status_' + mediaSourceName, label: 'Media status for ' + mediaSourceName })
-		variables.push({ name: 'media_file_name_' + mediaSourceName, label: 'Media file name for ' + mediaSourceName })
-		variables.push({ name: 'media_time_elapsed_' + mediaSourceName, label: 'Time elapsed for ' + mediaSourceName })
-		variables.push({
-			name: 'media_time_remaining_' + mediaSourceName,
-			label: 'Time remaining for ' + mediaSourceName,
-		})
-		this.setVariable(
-			'media_file_name_' + mediaSourceName,
-			this.sources[mediaSourceName]?.settings?.local_file
-				? this.sources[mediaSourceName].settings.local_file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-				: ''
-		)
+		variables.push({ name: `media_status_${mediaSourceName}`, label: `${mediaSourceName} - Media status` })
+		variables.push({ name: `media_file_name_${mediaSourceName}`, label: `${mediaSourceName} - Media file name` })
+		variables.push({ name: `media_time_elapsed_${mediaSourceName}`, label: `${mediaSourceName} - Time elapsed` })
+		variables.push({ name: `media_time_remaining_${mediaSourceName}`, label: `${mediaSourceName} - Time remaining` })
+
+		let settings = this.sources[mediaSourceName]?.settings
+		let file = ''
+		if (settings.playlist) {
+			file = settings.playlist[0].value.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+			//Use first value in playlist until support for determining currently playing cue
+		} else {
+			file = settings?.local_file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+		}
+		this.setVariable(`media_file_name_${mediaSourceName}`, file)
 	}
 
 	for (let s in this.sources) {
 		let source = this.sources[s]
 		if (source.inputKind === 'text_ft2_source_v2' || source.inputKind === 'text_gdiplus_v2') {
-			variables.push({ name: 'current_text_' + source.sourceName, label: 'Current text for ' + source.sourceName })
-			this.setVariable('current_text_' + source.sourceName, source.settings?.text ? source.settings.text : '')
+			variables.push({ name: `current_text_${source.sourceName}`, label: `${source.sourceName} - Current text` })
+			this.setVariable(`current_text_${source.sourceName}`, source.settings?.text ? source.settings.text : '')
 		}
 		if (source.inputKind === 'image_source') {
-			variables.push({
-				name: 'image_file_name_' + source.sourceName,
-				label: 'Image file name for ' + source.sourceName,
-			})
+			variables.push({ name: `image_file_name_${source.sourceName}`, label: `${source.sourceName} - Image file name` })
 			this.setVariable(
-				'image_file_name_' + source.sourceName,
+				`image_file_name_${source.sourceName}`,
 				source.settings?.file ? source.settings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) : ''
 			)
 		}
 
 		if (source.inputAudioTracks) {
-			variables.push({ name: 'volume_' + source.sourceName, label: 'Current volume for ' + source.sourceName })
-			variables.push({ name: 'mute_' + source.sourceName, label: 'Current mute status for ' + source.sourceName })
-			variables.push({
-				name: 'monitor_' + source.sourceName,
-				label: 'Current audio monitor status for ' + source.sourceName,
-			})
-			variables.push({
-				name: 'sync_offset_' + source.sourceName,
-				label: 'Current sync offset for ' + source.sourceName,
-			})
-			variables.push({
-				name: 'balance_' + source.sourceName,
-				label: 'Current audio balance for ' + source.sourceName,
-			})
+			variables.push({ name: `volume_${source.sourceName}`, label: `${source.sourceName} - Volume` })
+			variables.push({ name: `mute_${source.sourceName}`, label: `${source.sourceName} - Mute status` })
+			variables.push({ name: `monitor_${source.sourceName}`, label: `${source.sourceName} - Audio monitor` })
+			variables.push({ name: `sync_offset_${source.sourceName}`, label: `${source.sourceName} - Sync offset` })
+			variables.push({ name: `balance_${source.sourceName}`, label: `${source.sourceName} - Audio balance` })
 		}
 	}
 

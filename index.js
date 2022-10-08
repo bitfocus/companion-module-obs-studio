@@ -435,11 +435,18 @@ class instance extends instance_skel {
 			this.states.currentMedia = data.inputName
 			this.setVariable('current_media_name', this.states.currentMedia)
 			this.setVariable(`media_status_${data.inputName}`, 'Playing')
+
+			this.setVariables({
+				current_media_name: this.states.currentMedia,
+				[`media_status_${data.inputName}`]: 'Playing',
+			})
 		})
 		this.obs.on('MediaInputPlaybackEnded', (data) => {
 			if (this.states.currentMedia == data.inputName) {
-				this.setVariable('current_media_name', 'None')
-				this.setVariable(`media_status_${data.inputName}`, 'Stopped')
+				this.setVariables({
+					current_media_name: 'None',
+					[`media_status_${data.inputName}`]: 'Stopped',
+				})
 			}
 		})
 		this.obs.on('MediaInputActionTriggered', (data) => {
@@ -1457,7 +1464,6 @@ class instance extends instance_skel {
 				}
 				if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 					this.mediaSourceList.push({ id: sourceName, label: sourceName })
-					this.mediaSources[sourceName] = settings.inputSettings
 					this.startMediaPoll()
 					this.updateActionsFeedbacksVariables()
 				}
@@ -1616,21 +1622,32 @@ class instance extends instance_skel {
 
 						if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
 							this.setVariables({
+								current_media_name: source.id,
 								current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
 								current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
+								[`media_status_${source.id}`]: 'Playing',
 							})
-							this.setVariable('media_status_' + source.id, 'Playing')
 						} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
 							this.setVariable('media_status_' + source.id, 'Paused')
 						} else {
 							this.setVariable('media_status_' + source.id, 'Stopped')
 						}
-						this.setVariable('media_time_elapsed_' + source.id, this.mediaSources[source.id].timeElapsed)
-						this.setVariable('media_time_remaining_' + source.id, remaining)
-						this.checkFeedbacks('media_playing')
-						this.checkFeedbacks('media_source_time_remaining')
+						this.setVariables({
+							[`media_time_elapsed_${source.id}`]: this.mediaSources[source.id].timeElapsed,
+							[`media_time_remaining_${source.id}`]: remaining,
+						})
+						this.checkFeedbacks('media_playing', 'media_source_time_remaining')
 					})
 					.catch((error) => {})
+
+				/* this.obs
+					.call('GetInputSettings', { inputName: source.id })
+					.then((settings) => {
+						if (settings.inputKind === 'vlc_source') {
+							this.debug(settings.inputSettings)
+						}
+					})
+					.catch((error) => {}) */
 			})
 		}, 1000)
 	}
