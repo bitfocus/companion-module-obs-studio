@@ -8,6 +8,15 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v2.0.4
+
+- Fix
+  - When using Set Scene Visibility on a group source, the sources within groups are now not affected
+  - Toggle/Start/Stop Output now works properly with Virtual Camera
+- Minor
+  - Update obs-websocket-js to latest version
+  - Use obs-websocket's Batch command for certain actions
+
 ### v2.0.3
 
 - Fix
