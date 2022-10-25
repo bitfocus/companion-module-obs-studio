@@ -424,7 +424,6 @@ class instance extends instance_skel {
 			this.checkFeedbacks('replayBufferActive')
 		})
 		this.obs.on('VirtualcamStateChanged', (data) => {
-			this.debug('VIRTUAL' + data.outputActive)
 			this.outputs['virtualcam_output'].outputActive = data.outputActive
 			this.checkFeedbacks('output_active')
 		})
