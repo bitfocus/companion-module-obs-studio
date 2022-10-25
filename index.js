@@ -830,7 +830,7 @@ class instance extends instance_skel {
 								sceneItemId: source.sceneItemId,
 								sceneItemEnabled: enabled,
 							})
-							if (source.isGroup) {
+							if (source.isGroup && sourceName === 'allSources') {
 								for (let x in this.groups[source.sourceName]) {
 									let item = this.groups[source.sourceName][x]
 									let groupEnabled
