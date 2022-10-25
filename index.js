@@ -265,21 +265,21 @@ class instance extends instance_skel {
 		})
 		this.obs.on('InputMuteStateChanged', (data) => {
 			this.sources[data.inputName].inputMuted = data.inputMuted
-			this.setVariable('mute_' + data.inputName, this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted')
+			this.setVariable(`mute_${data.inputName}`, this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted')
 			this.checkFeedbacks('audio_muted')
 		})
 		this.obs.on('InputVolumeChanged', (data) => {
 			this.sources[data.inputName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
-			this.setVariable('volume_' + data.inputName, this.sources[data.inputName].inputVolume + 'db')
+			this.setVariable(`volume_${data.inputName}`, this.sources[data.inputName].inputVolume + 'db')
 			this.checkFeedbacks('volume')
 		})
 		this.obs.on('InputAudioBalanceChanged', (data) => {
 			this.sources[data.inputName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
-			this.setVariable('balance_' + data.inputName, this.sources[data.inputName].inputAudioBalance)
+			this.setVariable(`balance_${data.inputName}`, this.sources[data.inputName].inputAudioBalance)
 		})
 		this.obs.on('InputAudioSyncOffsetChanged', (data) => {
 			this.sources[data.inputName].inputAudioSyncOffset = data.inputAudioSyncOffset
-			this.setVariable('sync_offset_' + data.inputName, this.sources[data.inputName].inputAudioSyncOffset + 'ms')
+			this.setVariable(`sync_offset_${data.inputName}`, this.sources[data.inputName].inputAudioSyncOffset + 'ms')
 		})
 		this.obs.on('InputAudioTracksChanged', () => {})
 		this.obs.on('InputAudioMonitorTypeChanged', (data) => {
@@ -292,7 +292,7 @@ class instance extends instance_skel {
 			} else {
 				monitorType = 'Off'
 			}
-			this.setVariable('monitor_' + data.inputName, monitorType)
+			this.setVariable(`monitor_${data.inputName}`, monitorType)
 			this.checkFeedbacks('audio_monitor_type')
 		})
 		this.obs.on('InputVolumeMeters', () => {})
@@ -435,11 +435,18 @@ class instance extends instance_skel {
 			this.states.currentMedia = data.inputName
 			this.setVariable('current_media_name', this.states.currentMedia)
 			this.setVariable(`media_status_${data.inputName}`, 'Playing')
+
+			this.setVariables({
+				current_media_name: this.states.currentMedia,
+				[`media_status_${data.inputName}`]: 'Playing',
+			})
 		})
 		this.obs.on('MediaInputPlaybackEnded', (data) => {
 			if (this.states.currentMedia == data.inputName) {
-				this.setVariable('current_media_name', 'None')
-				this.setVariable(`media_status_${data.inputName}`, 'Stopped')
+				this.setVariables({
+					current_media_name: 'None',
+					[`media_status_${data.inputName}`]: 'Stopped',
+				})
 			}
 		})
 		this.obs.on('MediaInputActionTriggered', (data) => {
@@ -1207,20 +1214,24 @@ class instance extends instance_skel {
 			.call('GetStats')
 			.then((data) => {
 				this.states.stats = data
-				this.setVariable('fps', this.roundNumber(data.activeFps, 2))
-				this.setVariable('render_total_frames', data.renderTotalFrames)
-				this.setVariable('render_missed_frames', data.renderSkippedFrames)
-				this.setVariable('output_total_frames', data.outputTotalFrames)
-				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
-				this.setVariable('average_frame_time', this.roundNumber(data.averageFrameRenderTime, 2))
-				this.setVariable('cpu_usage', `${this.roundNumber(data.cpuUsage, 2)}%`)
-				this.setVariable('memory_usage', `${this.roundNumber(data.memoryUsage, 0)} MB`)
 				let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
 				if (freeSpace > 1000) {
-					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace / 1000, 0)} GB`)
+					freeSpace = `${this.roundNumber(freeSpace / 1000, 0)} GB`
 				} else {
-					this.setVariable('free_disk_space', `${this.roundNumber(freeSpace, 0)} MB`)
+					freeSpace = `${this.roundNumber(freeSpace, 0)} MB`
 				}
+
+				this.setVariables({
+					fps: this.roundNumber(data.activeFps, 2),
+					render_total_frames: data.renderTotalFrames,
+					render_missed_frames: data.renderSkippedFrames,
+					output_total_frames: data.outputTotalFrames,
+					output_skipped_frames: data.outputSkippedFrames,
+					average_frame_time: this.roundNumber(data.averageFrameRenderTime, 2),
+					cpu_usage: `${this.roundNumber(data.cpuUsage, 2)}%`,
+					memory_usage: `${this.roundNumber(data.memoryUsage, 0)} MB`,
+					free_disk_space: freeSpace,
+				})
 			})
 			.catch((error) => {
 				if (error?.message.match(/(Not connected)/i)) {
@@ -1244,12 +1255,16 @@ class instance extends instance_skel {
 			.call('GetStreamStatus')
 			.then((data) => {
 				this.states.streaming = data.outputActive
-				this.setVariable('streaming', data.outputActive ? 'Live' : 'Off-Air')
+
 				this.checkFeedbacks('streaming')
 				this.states.streamingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-				this.setVariable('stream_timecode', this.states.streamingTimecode)
-				this.setVariable('output_skipped_frames', data.outputSkippedFrames)
-				this.setVariable('output_total_frames', data.outputTotalFrames)
+
+				this.setVariables({
+					streaming: data.outputActive ? 'Live' : 'Off-Air',
+					stream_timecode: this.states.streamingTimecode,
+					output_skipped_frames: data.outputSkippedFrames,
+					output_total_frames: data.outputTotalFrames,
+				})
 			})
 			.catch((error) => {})
 		this.obs
@@ -1281,12 +1296,13 @@ class instance extends instance_skel {
 			.call('GetCurrentSceneTransition')
 			.then((data) => {
 				this.states.currentTransition = data.transitionName
-				this.checkFeedbacks('current_transition')
-				this.setVariable('current_transition', this.states.currentTransition)
-
 				this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
-				this.checkFeedbacks('transition_duration')
-				this.setVariable('transition_duration', this.states.transitionDuration)
+				this.checkFeedbacks('transition_duration', 'current_transition')
+
+				this.setVariables({
+					current_transition: this.states.currentTransition,
+					transition_duration: this.states.transitionDuration,
+				})
 			})
 			.catch((error) => {})
 	}
@@ -1300,10 +1316,13 @@ class instance extends instance_skel {
 				} else {
 					this.states.recording = data.outputPaused ? 'Paused' : 'Stopped'
 				}
-				this.setVariable('recording', this.states.recording)
 				this.checkFeedbacks('recording')
 				this.states.recordingTimecode = data.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-				this.setVariable('recording_timecode', this.states.recordingTimecode)
+
+				this.setVariables({
+					recording: this.states.recording,
+					recording_timecode: this.states.recordingTimecode,
+				})
 			})
 			.catch((error) => {})
 		this.obs
@@ -1368,21 +1387,21 @@ class instance extends instance_skel {
 	getSourceAudio(sourceName) {
 		this.obs.call('GetInputMute', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputMuted = data.inputMuted
-			this.setVariable('mute_' + sourceName, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
+			this.setVariable(`mute_${sourceName}`, this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted')
 			this.checkFeedbacks('audio_muted')
 		})
 		this.obs.call('GetInputVolume', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
-			this.setVariable('volume_' + sourceName, this.sources[sourceName].inputVolume + 'db')
+			this.setVariable(`volume_${sourceName}`, this.sources[sourceName].inputVolume + 'db')
 			this.checkFeedbacks('volume')
 		})
 		this.obs.call('GetInputAudioBalance', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
-			this.setVariable('balance_' + sourceName, this.sources[sourceName].inputAudioBalance)
+			this.setVariable(`balance_${sourceName}`, this.sources[sourceName].inputAudioBalance)
 		})
 		this.obs.call('GetInputAudioSyncOffset', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
-			this.setVariable('sync_offset_' + sourceName, this.sources[sourceName].inputAudioSyncOffset + 'ms')
+			this.setVariable(`sync_offset_${sourceName}`, this.sources[sourceName].inputAudioSyncOffset + 'ms')
 		})
 		this.obs.call('GetInputAudioMonitorType', { inputName: sourceName }).then((data) => {
 			this.sources[sourceName].monitorType = data.monitorType
@@ -1394,7 +1413,7 @@ class instance extends instance_skel {
 			} else {
 				monitorType = 'Off'
 			}
-			this.setVariable('monitor_' + sourceName, monitorType)
+			this.setVariable(`monitor_${sourceName}`, monitorType)
 			this.checkFeedbacks('audio_monitor_type')
 		})
 		this.obs.call('GetInputAudioTracks', { inputName: sourceName }).then((data) => {
@@ -1456,11 +1475,10 @@ class instance extends instance_skel {
 
 				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 					this.textSourceList.push({ id: sourceName, label: sourceName })
-					this.setVariable('current_text_' + sourceName, settings.inputSettings.text ? settings.inputSettings.text : '')
+					this.setVariable(`current_text_${sourceName}`, settings.inputSettings.text ? settings.inputSettings.text : '')
 				}
 				if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 					this.mediaSourceList.push({ id: sourceName, label: sourceName })
-					this.mediaSources[sourceName] = settings.inputSettings
 					this.startMediaPoll()
 					this.updateActionsFeedbacksVariables()
 				}
@@ -1555,9 +1573,11 @@ class instance extends instance_skel {
 			.then((data) => {
 				this.scenes = data.scenes
 				this.states.previewScene = data.currentPreviewSceneName ? data.currentPreviewSceneName : 'None'
-				this.setVariable('scene_preview', this.states.previewScene)
 				this.states.programScene = data.currentProgramSceneName
-				this.setVariable('scene_active', this.states.programScene)
+				this.setVariables({
+					scene_preview: this.states.previewScene,
+					scene_active: this.states.programScene,
+				})
 				return data
 			})
 			.then((data) => {
@@ -1616,20 +1636,33 @@ class instance extends instance_skel {
 						this.mediaSources[source.id].timeRemaining = remaining
 
 						if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-							this.setVariable('current_media_time_elapsed', this.mediaSources[source.id].timeElapsed)
-							this.setVariable('current_media_time_remaining', this.mediaSources[source.id].timeRemaining)
-							this.setVariable('media_status_' + source.id, 'Playing')
+							this.setVariables({
+								current_media_name: source.id,
+								current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
+								current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
+								[`media_status_${source.id}`]: 'Playing',
+							})
 						} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
-							this.setVariable('media_status_' + source.id, 'Paused')
+							this.setVariable(`media_status_${source.id}`, 'Paused')
 						} else {
-							this.setVariable('media_status_' + source.id, 'Stopped')
+							this.setVariable(`media_status_${source.id}`, 'Stopped')
 						}
-						this.setVariable('media_time_elapsed_' + source.id, this.mediaSources[source.id].timeElapsed)
-						this.setVariable('media_time_remaining_' + source.id, remaining)
-						this.checkFeedbacks('media_playing')
-						this.checkFeedbacks('media_source_time_remaining')
+						this.setVariables({
+							[`media_time_elapsed_${source.id}`]: this.mediaSources[source.id].timeElapsed,
+							[`media_time_remaining_${source.id}`]: remaining,
+						})
+						this.checkFeedbacks('media_playing', 'media_source_time_remaining')
 					})
 					.catch((error) => {})
+
+				/* this.obs
+					.call('GetInputSettings', { inputName: source.id })
+					.then((settings) => {
+						if (settings.inputKind === 'vlc_source') {
+							this.debug(settings.inputSettings)
+						}
+					})
+					.catch((error) => {}) */
 			})
 		}, 1000)
 	}
