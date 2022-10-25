@@ -830,7 +830,7 @@ class instance extends instance_skel {
 								sceneItemId: source.sceneItemId,
 								sceneItemEnabled: enabled,
 							})
-							if (source.isGroup) {
+							if (source.isGroup && sourceName === 'allSources') {
 								for (let x in this.groups[source.sourceName]) {
 									let item = this.groups[source.sourceName][x]
 									let groupEnabled
@@ -852,21 +852,33 @@ class instance extends instance_skel {
 				break
 			//Outputs
 			case 'start_output':
-				requestType = 'StartOutput'
-				requestData = {
-					outputName: action.options.output,
+				if (action.options.output === 'virtualcam_output') {
+					requestType = 'StartVirtualCam'
+				} else {
+					requestType = 'StartOutput'
+					requestData = {
+						outputName: action.options.output,
+					}
 				}
 				break
 			case 'stop_output':
-				requestType = 'StopOutput'
-				requestData = {
-					outputName: action.options.output,
+				if (action.options.output === 'virtualcam_output') {
+					requestType = 'StopVirtualCam'
+				} else {
+					requestType = 'StopOutput'
+					requestData = {
+						outputName: action.options.output,
+					}
 				}
 				break
 			case 'start_stop_output':
-				requestType = 'ToggleOutput'
-				requestData = {
-					outputName: action.options.output,
+				if (action.options.output === 'virtualcam_output') {
+					requestType = 'ToggleVirtualCam'
+				} else {
+					requestType = 'ToggleOutput'
+					requestData = {
+						outputName: action.options.output,
+					}
 				}
 				break
 			case 'ToggleReplayBuffer':
@@ -1133,7 +1145,12 @@ class instance extends instance_skel {
 					let outputKind = output.outputKind
 					if (outputKind === 'virtualcam_output') {
 						this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-					} else if (outputKind != 'ffmpeg_muxer' && outputKind != 'replay_buffer' && outputKind != 'rtmp_output') {
+					} else if (
+						outputKind != 'ffmpeg_muxer' &&
+						outputKind != 'ffmpeg_output' &&
+						outputKind != 'replay_buffer' &&
+						outputKind != 'rtmp_output'
+					) {
 						//The above outputKinds are handled separately by other actions, so they are omitted
 						this.outputList.push({ id: output.outputName, label: output.outputName })
 					}
