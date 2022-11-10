@@ -1476,6 +1476,7 @@ class instance extends instance_skel {
 				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 					this.textSourceList.push({ id: sourceName, label: sourceName })
 					this.setVariable(`current_text_${sourceName}`, settings.inputSettings.text ? settings.inputSettings.text : '')
+					this.updateActionsFeedbacksVariables()
 				}
 				if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 					this.mediaSourceList.push({ id: sourceName, label: sourceName })
