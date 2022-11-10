@@ -47,9 +47,8 @@ class instance extends instance_skel {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'Server IP',
+				label: 'Server IP / Hostname',
 				width: 8,
-				regex: this.REGEX_IP,
 			},
 			{
 				type: 'textinput',

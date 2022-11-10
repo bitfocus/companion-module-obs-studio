@@ -12,6 +12,8 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 - Fix
   - All text source now appear as choices in the Set Text action dropdown on startup
+- Minor
+  - Allow hostnames to be used in the module configuration
 
 ### v2.0.4
 
