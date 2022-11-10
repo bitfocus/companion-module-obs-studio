@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v2.0.5
+
+- Fix
+  - All text source now appear as choices in the Set Text action dropdown on startup
+
 ### v2.0.4
 
 - Fix
