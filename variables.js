@@ -52,7 +52,7 @@ exports.updateVariableDefinitions = function () {
 		if (settings.playlist) {
 			file = settings.playlist[0].value.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 			//Use first value in playlist until support for determining currently playing cue
-		} else {
+		} else if (settings.is_local_file) {
 			file = settings?.local_file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 		}
 		this.setVariable(`media_file_name_${mediaSourceName}`, file)
