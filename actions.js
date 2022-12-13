@@ -46,6 +46,9 @@ module.exports = {
 		actions['save_replay_buffer'] = {
 			label: 'Save Replay Buffer',
 		}
+		actions['ToggleReplayBuffer'] = {
+			label: 'Toggle Replay Buffer',
+		}
 		actions['set_scene'] = {
 			label: 'Set Program Scene',
 			options: [
