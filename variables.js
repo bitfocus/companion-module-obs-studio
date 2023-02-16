@@ -96,5 +96,16 @@ export function getVariables() {
 			variables.push({ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` })
 		}
 	}
+
+	let sceneIndex = 0
+	for (let s = this.scenes.length - 1; s >= 0; s--) {
+		let index = ++sceneIndex
+
+		let sceneName = this.scenes[s].sceneName
+		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
+		this.setVariableValues({
+			[`scene_${index}`]: sceneName,
+		})
+	}
 	return variables
 }

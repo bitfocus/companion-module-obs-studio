@@ -12,6 +12,10 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 - Major
   - Rewrite to support Companion v3
+- New
+  - Variables for scene names based on the scene order within OBS
+- Fix
+  - Filter Enabled feedback now properly lists all filters
 
 ### v2.0.5
 
