@@ -1,28 +1,43 @@
-exports.getPresets = function () {
-	let presets = []
+import { combineRgb } from '@companion-module/base'
 
-	const ColorWhite = this.rgb(255, 255, 255)
-	const ColorBlack = this.rgb(0, 0, 0)
-	const ColorRed = this.rgb(200, 0, 0)
-	const ColorGreen = this.rgb(0, 200, 0)
-	const ColorYellow = this.rgb(212, 174, 0)
+export function getPresets() {
+	let presets = {}
+
+	const ColorWhite = combineRgb(255, 255, 255)
+	const ColorBlack = combineRgb(0, 0, 0)
+	const ColorRed = combineRgb(200, 0, 0)
+	const ColorGreen = combineRgb(0, 200, 0)
+	const ColorYellow = combineRgb(212, 174, 0)
 
 	for (let s in this.sceneChoices) {
 		let scene = this.sceneChoices[s]
 
-		let baseObj = {
+		presets[`toProgram_${scene.id}`] = {
+			type: 'button',
 			category: 'Scene to Program',
-			label: scene.label,
-			bank: {
-				style: 'text',
+			name: scene.label,
+			style: {
 				text: scene.label,
 				size: 'auto',
 				color: ColorWhite,
 				bgcolor: 0,
 			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'set_scene',
+							options: {
+								scene: scene.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
 			feedbacks: [
 				{
-					type: 'scene_active',
+					feedbackId: 'scene_active',
 					options: {
 						bg: ColorRed,
 						fg: ColorWhite,
@@ -32,199 +47,233 @@ exports.getPresets = function () {
 					},
 				},
 			],
-			actions: [
+		}
+
+		presets[`toPreview_${scene.id}`] = {
+			type: 'button',
+			category: 'Scene to Preview',
+			name: scene.label,
+			style: {
+				text: scene.label,
+				size: 'auto',
+				color: ColorWhite,
+				bgcolor: 0,
+			},
+			steps: [
 				{
-					action: 'set_scene',
+					down: [
+						{
+							actionId: 'preview_scene',
+							options: {
+								scene: scene.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'scene_active',
 					options: {
+						bg: ColorRed,
+						fg: ColorWhite,
+						bg_preview: ColorGreen,
+						fg_preview: ColorWhite,
 						scene: scene.id,
 					},
 				},
 			],
 		}
-
-		presets.push(baseObj)
-
-		let toPreview = {}
-		presets.push(
-			Object.assign(toPreview, baseObj, {
-				category: 'Scene to Preview',
-				actions: [
-					{
-						action: 'preview_scene',
-						options: {
-							scene: scene.id,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'scene_active',
-						options: {
-							bg: ColorRed,
-							fg: ColorWhite,
-							bg_preview: ColorGreen,
-							fg_preview: ColorWhite,
-							scene: scene.id,
-						},
-					},
-				],
-			})
-		)
 	}
 
-	presets.push({
+	presets['transitionAuto'] = {
+		type: 'button',
 		category: 'Transitions',
-		label: 'Send previewed scene to program',
-		bank: {
-			style: 'text',
+		name: 'Send previewed scene to program',
+		style: {
 			text: 'AUTO',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-		actions: [
+		steps: [
 			{
-				action: 'do_transition',
+				down: [
+					{
+						actionId: 'do_transition',
+					},
+				],
+				up: [],
 			},
 		],
 		feedbacks: [
 			{
-				type: 'transition_active',
+				feedbackId: 'transition_active',
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
 				},
 			},
 		],
-	})
+	}
 
 	for (let s in this.transitionList) {
 		let transition = this.transitionList[s]
 
-		let baseObj = {
+		presets[`quickTransition_${transition.id}`] = {
+			type: 'button',
 			category: 'Transitions',
-			label: transition.label,
-			bank: {
-				style: 'text',
+			name: transition.label,
+			style: {
 				text: transition.label,
 				size: 14,
 				color: ColorWhite,
 				bgcolor: 0,
 			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'quick_transition',
+							options: {
+								transition: transition.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
 			feedbacks: [
 				{
-					type: 'transition_active',
+					feedbackId: 'transition_active',
 					style: {
 						bgcolor: ColorGreen,
 						color: ColorWhite,
 					},
 				},
 			],
-			actions: [
-				{
-					action: 'quick_transition',
-					options: {
-						transition: transition.id,
-					},
-				},
-			],
 		}
-		presets.push(baseObj)
 	}
 
 	// Preset for Start Streaming button with colors indicating streaming status
-	presets.push({
+	presets['streaming'] = {
+		type: 'button',
 		category: 'Streaming',
-		label: 'OBS Streaming',
-		bank: {
-			style: 'text',
+		name: 'OBS Streaming',
+		style: {
 			text: 'OBS STREAM',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'StartStopStreaming',
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
-				type: 'streaming',
+				feedbackId: 'streaming',
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
 				},
 			},
 		],
-		actions: [
-			{
-				action: 'StartStopStreaming',
-			},
-		],
-	})
+	}
 
-	presets.push({
+	presets['streamingTimecode'] = {
+		type: 'button',
 		category: 'Streaming',
-		label: 'Streaming Status / Timecode',
-		bank: {
-			style: 'text',
+		name: 'Streaming Status / Timecode',
+		style: {
 			text: 'Streaming:\\n$(obs:streaming)\\n$(obs:stream_timecode)',
 			size: 14,
 			color: ColorWhite,
 			bgcolor: 0,
 		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'StartStopStreaming',
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
-				type: 'streaming',
+				feedbackId: 'streaming',
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
 				},
 			},
 		],
-		actions: [
-			{
-				action: 'StartStopStreaming',
-			},
-		],
-	})
+	}
 
-	presets.push({
+	presets['streamingService'] = {
+		type: 'button',
 		category: 'Streaming',
-		label: 'Streaming Service Info',
-		bank: {
-			style: 'text',
+		name: 'Streaming Service Info',
+		style: {
 			text: '$(obs:stream_service)\\n$(obs:streaming)',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'StartStopStreaming',
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
-				type: 'streaming',
+				feedbackId: 'streaming',
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
 				},
 			},
 		],
-		actions: [
-			{
-				action: 'StartStopStreaming',
-			},
-		],
-	})
+	}
 
 	// Preset for Start Recording button with colors indicating recording status
-	presets.push({
+	presets['recording'] = {
+		type: 'button',
 		category: 'Recording',
-		label: 'OBS Recording',
-		bank: {
-			style: 'text',
+		name: 'OBS Recording',
+		style: {
 			text: 'OBS RECORD',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'StartStopRecording',
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
-				type: 'recording',
+				feedbackId: 'recording',
 				options: {
 					bg: ColorRed,
 					fg: ColorWhite,
@@ -233,26 +282,31 @@ exports.getPresets = function () {
 				},
 			},
 		],
-		actions: [
-			{
-				action: 'StartStopRecording',
-			},
-		],
-	})
+	}
 
-	presets.push({
+	presets['recordingTimecode'] = {
+		type: 'button',
 		category: 'Recording',
-		label: 'Recording Status / Timecode',
-		bank: {
-			style: 'text',
+		name: 'Recording Status / Timecode',
+		style: {
 			text: 'Recording:\\n$(obs:recording)\\n$(obs:recording_timecode)',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'StartStopRecording',
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
-				type: 'recording',
+				feedbackId: 'recording',
 				options: {
 					bg: ColorRed,
 					fg: ColorWhite,
@@ -261,29 +315,37 @@ exports.getPresets = function () {
 				},
 			},
 		],
-		actions: [
-			{
-				action: 'StartStopRecording',
-			},
-		],
-	})
+	}
 
 	for (let s in this.outputList) {
 		let output = this.outputList[s]
 
-		let baseObj = {
+		presets[`toggleOutput_${output.id}`] = {
+			type: 'button',
 			category: 'Outputs',
-			label: 'Toggle ' + output.label,
-			bank: {
-				style: 'text',
-				text: 'OBS ' + output.label,
+			name: `Toggle ${output.label}`,
+			style: {
+				text: `OBS ${output.label}`,
 				size: 'auto',
 				color: ColorWhite,
 				bgcolor: 0,
 			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'start_stop_output',
+							options: {
+								output: output.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
 			feedbacks: [
 				{
-					type: 'output_active',
+					feedbackId: 'output_active',
 					options: {
 						output: output.id,
 					},
@@ -293,34 +355,31 @@ exports.getPresets = function () {
 					},
 				},
 			],
-			actions: [
-				{
-					action: 'start_stop_output',
-					options: {
-						output: output.id,
-					},
-				},
-			],
 		}
-		presets.push(baseObj)
 	}
 
 	for (let s in this.sourceChoices) {
 		let source = this.sourceChoices[s]
 
-		let baseObj = {
+		presets[`sourceStatus_${source.id}`] = {
+			type: 'button',
 			category: 'Sources',
-			label: source.label + 'Status',
-			bank: {
-				style: 'text',
+			name: `${source.label} Status`,
+			style: {
 				text: source.label,
 				size: 'auto',
 				color: ColorWhite,
 				bgcolor: 0,
 			},
+			steps: [
+				{
+					down: [],
+					up: [],
+				},
+			],
 			feedbacks: [
 				{
-					type: 'scene_item_previewed',
+					feedbackId: 'scene_item_previewed',
 					options: {
 						source: source.id,
 					},
@@ -330,7 +389,7 @@ exports.getPresets = function () {
 					},
 				},
 				{
-					type: 'scene_item_active',
+					feedbackId: 'scene_item_active',
 					options: {
 						source: source.id,
 					},
@@ -341,98 +400,131 @@ exports.getPresets = function () {
 				},
 			],
 		}
-		presets.push(baseObj)
 	}
 
-	presets.push({
+	presets['computerStats'] = {
+		type: 'button',
 		category: 'General',
-		label: 'Computer Stats',
-		bank: {
-			style: 'text',
+		name: 'Computer Stats',
+		style: {
 			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-	})
+		steps: [{}],
+		feedbacks: [],
+	}
 
-	presets.push({
+	presets['toggleStudioMode'] = {
+		type: 'button',
 		category: 'General',
-		label: 'Toggle Studio Mode',
-		bank: {
-			style: 'text',
+		name: 'Toggle Studio Mode',
+		style: {
 			text: 'Toggle Studio Mode',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-		actions: [
+		steps: [
 			{
-				action: 'toggle_studio_mode',
+				down: [
+					{
+						actionId: 'toggle_studio_mode',
+					},
+				],
+				up: [],
 			},
 		],
-	})
+		feedbacks: [],
+	}
 
-	presets.push({
+	presets['takeScreenshot'] = {
+		type: 'button',
 		category: 'General',
-		label: 'Take Screenshot',
-		bank: {
-			style: 'text',
+		name: 'Take Screenshot',
+		style: {
 			text: 'Take Screenshot',
 			size: 7,
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-		actions: [
+		steps: [
 			{
-				action: 'take_screenshot',
-				options: {
-					format: 'png',
-					compression: 0,
-					source: 'programScene',
-					path: '',
-				},
+				down: [
+					{
+						actionId: 'take_screenshot',
+						options: {
+							format: 'png',
+							compression: 0,
+							source: 'programScene',
+							path: '',
+						},
+					},
+				],
+				up: [],
 			},
 		],
-	})
+		feedbacks: [],
+	}
 
-	presets.push({
+	presets['playPauseCurrentMedia'] = {
+		type: 'button',
 		category: 'Media Sources',
-		label: 'Computer Stats',
-		bank: {
-			style: 'text',
+		name: 'Play/Pause Current Media',
+		style: {
 			text: 'Play/\\nPause:\\n$(obs:current_media_name)',
 			size: 'auto',
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-		actions: [
+		steps: [
 			{
-				action: 'play_pause_media',
-				options: {
-					source: 'currentMedia',
-					playPause: 'toggle',
-				},
+				down: [
+					{
+						actionId: 'play_pause_media',
+						options: {
+							source: 'currentMedia',
+							playPause: 'toggle',
+						},
+					},
+				],
+				up: [],
 			},
 		],
-	})
+		feedbacks: [],
+	}
 
 	for (let s in this.mediaSourceList) {
 		let mediaSource = this.mediaSourceList[s]
-
-		let baseObj = {
+		let sourceName = mediaSource.label.replace(/[\W]/gi, '_')
+		presets[`toggleMedia_${mediaSource.id}`] = {
+			type: 'button',
 			category: 'Media Sources',
-			label: 'Play Pause' + mediaSource.label,
-			bank: {
-				style: 'text',
-				text: mediaSource.label + '\\n$(obs:media_status_' + mediaSource.label + ')',
+			name: `Play Pause ${mediaSource.label}`,
+			style: {
+				text: `${mediaSource.label}\\n$(obs:media_status_${sourceName})`,
 				size: 'auto',
 				color: ColorWhite,
 				bgcolor: 0,
 			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'play_pause_media',
+							options: {
+								source: mediaSource.id,
+								playPause: 'toggle',
+							},
+						},
+					],
+					up: [],
+				},
+			],
 			feedbacks: [
 				{
-					type: 'media_playing',
+					feedbackId: 'media_playing',
 					options: {
 						source: mediaSource.id,
 					},
@@ -442,17 +534,7 @@ exports.getPresets = function () {
 					},
 				},
 			],
-			actions: [
-				{
-					action: 'play_pause_media',
-					options: {
-						source: mediaSource.id,
-						playPause: 'toggle',
-					},
-				},
-			],
 		}
-		presets.push(baseObj)
 	}
 
 	return presets

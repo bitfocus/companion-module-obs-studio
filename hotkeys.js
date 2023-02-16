@@ -1,4 +1,4 @@
-module.exports = [
+export default [
 	{ label: 'A', id: 'OBS_KEY_A' },
 	{ label: 'B', id: 'OBS_KEY_B' },
 	{ label: 'C', id: 'OBS_KEY_C' },

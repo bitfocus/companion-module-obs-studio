@@ -1,0 +1,30 @@
+{
+	"id": "obs-studio",
+	"name": "obs-studio",
+	"shortname": "obs",
+	"description": "Control OBS Studio using the obs-websocket plugin",
+	"version": "3.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/bitfocus/companion-module-obs-studio.git",
+	"bugs": "https://github.com/bitfocus/companion-module-obs-studio/issues",
+	"maintainers": [
+		{
+			"name": "William Viker",
+			"email": "william@bitfocus.io"
+		},
+		{
+			"name": "Bryce Seifert",
+			"email": "bryceapps@icloud.com"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node18",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../index.js"
+	},
+	"manufacturer": "OBS",
+	"products": ["Studio"],
+	"keywords": ["Stream"]
+}

@@ -5,7 +5,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 ### Configuration
 
 - Download and install [**OBS 28 or above**](https://obsproject.com), which includes obs-websocket by default.
-- Enable and configure the plugin as needed in OBS under Tools > obs-websocket Settings
+- Enable and configure the obs-websocket plugin within OBS under Tools > WebSocket Server Settings
 - In Companion under the OBS module settings, enter the IP address or hostname of the computer running OBS, the port you are using for the websocket connection (by default the port is 4455), and the server password (leave blank if authentication is not enabled)
 
 ### Available actions
@@ -40,8 +40,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Set Audio Monitor
 - Set Audio Sync Offset
 - Set Audio Balance
-- Set Source Text (FreeType 2)
-- Set Source Text (GDI+)
+- Set Source Text
 - Refresh Browser Source
 - Play / Pause Media
 - Restart Media
