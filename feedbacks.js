@@ -1,27 +1,31 @@
-exports.initFeedbacks = function () {
+import { combineRgb } from '@companion-module/base'
+
+export function getFeedbacks() {
 	const feedbacks = {}
 
-	const ColorWhite = this.rgb(255, 255, 255)
-	const ColorBlack = this.rgb(0, 0, 0)
-	const ColorRed = this.rgb(200, 0, 0)
-	const ColorGreen = this.rgb(0, 200, 0)
-	const ColorOrange = this.rgb(255, 102, 0)
+	const ColorWhite = combineRgb(255, 255, 255)
+	const ColorBlack = combineRgb(0, 0, 0)
+	const ColorRed = combineRgb(200, 0, 0)
+	const ColorGreen = combineRgb(0, 200, 0)
+	const ColorOrange = combineRgb(255, 102, 0)
 
 	feedbacks['streaming'] = {
 		type: 'boolean',
-		label: 'Streaming Active',
+		name: 'Streaming Active',
 		description: 'If streaming is active, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
+		options: [],
 		callback: () => {
 			return this.states.streaming
 		},
 	}
 
 	feedbacks['recording'] = {
-		label: 'Recording Status',
+		type: 'advanced',
+		name: 'Recording Status',
 		description: 'If recording is active or paused, change the style of the button',
 		options: [
 			{
@@ -61,7 +65,8 @@ exports.initFeedbacks = function () {
 	}
 
 	feedbacks['scene_active'] = {
-		label: 'Scene in Preview / Program',
+		type: 'advanced',
+		name: 'Scene in Preview / Program',
 		description: 'If a scene is in preview or program, change colors of the button',
 		options: [
 			{
@@ -130,9 +135,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['scene_item_active'] = {
 		type: 'boolean',
-		label: 'Source Visible in Program',
+		name: 'Source Visible in Program',
 		description: 'If a source is visible in the program, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorRed,
 		},
@@ -163,9 +168,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['scene_item_previewed'] = {
 		type: 'boolean',
-		label: 'Source Active in Preview',
+		name: 'Source Active in Preview',
 		description: 'If a source is enabled in the preview scene, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -186,9 +191,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['profile_active'] = {
 		type: 'boolean',
-		label: 'Profile Active',
+		name: 'Profile Active',
 		description: 'If a profile is active, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -211,9 +216,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['scene_collection_active'] = {
 		type: 'boolean',
-		label: 'Scene Collection Active',
+		name: 'Scene Collection Active',
 		description: 'If a scene collection is active, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -236,9 +241,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
-		label: 'Source Enabled in Scene',
+		name: 'Source Enabled in Scene',
 		description: 'If a source is enabled in a specific scene, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -291,9 +296,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['output_active'] = {
 		type: 'boolean',
-		label: 'Output Active',
+		name: 'Output Active',
 		description: 'If an output is currently active, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -314,12 +319,13 @@ exports.initFeedbacks = function () {
 
 	feedbacks['replayBufferActive'] = {
 		type: 'boolean',
-		label: 'Replay Buffer Active',
+		name: 'Replay Buffer Active',
 		description: 'If the replay buffer is currently active, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorRed,
 		},
+		options: [],
 		callback: () => {
 			return this.states.replayBuffer
 		},
@@ -327,12 +333,13 @@ exports.initFeedbacks = function () {
 
 	feedbacks['transition_active'] = {
 		type: 'boolean',
-		label: 'Transition in Progress',
+		name: 'Transition in Progress',
 		description: 'If a transition is in progress, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
+		options: [],
 		callback: () => {
 			return this.states.transitionActive
 		},
@@ -340,9 +347,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['current_transition'] = {
 		type: 'boolean',
-		label: 'Current Transition Type',
+		name: 'Current Transition Type',
 		description: 'If a transition type is selected, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -365,9 +372,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['transition_duration'] = {
 		type: 'boolean',
-		label: 'Transition Duration',
+		name: 'Transition Duration',
 		description: 'If the transition duration is matched, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -391,9 +398,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['filter_enabled'] = {
 		type: 'boolean',
-		label: 'Filter Enabled',
+		name: 'Filter Enabled',
 		description: 'If a filter is enabled, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -427,9 +434,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['audio_muted'] = {
 		type: 'boolean',
-		label: 'Audio Muted',
+		name: 'Audio Muted',
 		description: 'If an audio source is muted, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorRed,
 		},
@@ -449,9 +456,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['audio_monitor_type'] = {
 		type: 'boolean',
-		label: 'Audio Monitor Type',
+		name: 'Audio Monitor Type',
 		description: 'If the audio monitor type is matched, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorRed,
 		},
@@ -490,9 +497,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['volume'] = {
 		type: 'boolean',
-		label: 'Volume',
+		name: 'Volume',
 		description: 'If an audio source volume is matched, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -521,9 +528,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['media_playing'] = {
 		type: 'boolean',
-		label: 'Media Playing',
+		name: 'Media Playing',
 		description: 'If a media source is playing, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
 		},
@@ -543,9 +550,9 @@ exports.initFeedbacks = function () {
 
 	feedbacks['media_source_time_remaining'] = {
 		type: 'boolean',
-		label: 'Media Source Remaining Time',
+		name: 'Media Source Remaining Time',
 		description: 'If remaining time of a media source is below a threshold, change the style of the button',
-		style: {
+		defaultStyle: {
 			color: ColorBlack,
 			bgcolor: ColorRed,
 		},
@@ -618,8 +625,6 @@ exports.initFeedbacks = function () {
 			}
 		},
 	}
-
-	this.setFeedbackDefinitions(feedbacks)
 
 	return feedbacks
 }
