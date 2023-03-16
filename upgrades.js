@@ -20,7 +20,7 @@ export default [
 			updatedFeedbacks: [],
 		}
 		if (props.config) {
-			if (props.config.port == undefined || config.port == '' || config.port == 4444) {
+			if (props.config.port == undefined || props.config.port == '' || props.config.port == 4444) {
 				changes.updatedConfig.port = 4455
 			}
 		}
