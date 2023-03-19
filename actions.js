@@ -158,9 +158,9 @@ export function getActions() {
 		callback: async (action) => {
 			if (action.options.scene === 'customSceneName') {
 				const scene = await this.parseVariablesInString(action.options.customSceneName)
-				this.sendRequest('SetCurrentProgramScene', { sceneName: scene })
+				this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
-				this.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
+				this.sendRequest('SetCurrentPreviewScene', { sceneName: action.options.scene })
 			}
 		},
 	}
