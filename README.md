@@ -8,6 +8,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.0.1
+
+- Fix
+  - Set Preview Scene action now properly sends scene to preview instead of program
+  - Possible error when executing upgrade scripts resolved
+
 ### v3.0.0
 
 - Major
