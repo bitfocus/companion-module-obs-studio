@@ -94,6 +94,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 - Profile Active
 - Scene Collection Active
+- Studio Mode Active
 
 ### Available variables
 

@@ -626,5 +626,19 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['studioMode'] = {
+		type: 'boolean',
+		name: 'Studio Mode Active',
+		description: 'If Studio Mode is active, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [],
+		callback: () => {
+			return this.states.studioMode
+		},
+	}
+
 	return feedbacks
 }
