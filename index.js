@@ -452,6 +452,7 @@ class OBSInstance extends InstanceBase {
 		//UI
 		this.obs.on('StudioModeStateChanged', (data) => {
 			this.states.studioMode = data.studioModeEnabled ? true : false
+			this.checkFeedbacks('studioMode')
 		})
 	}
 
