@@ -224,32 +224,39 @@ export function getActions() {
 				choices: this.transitionList,
 			},
 			{
+				type: 'checkbox',
+				label: 'Custom Duration',
+				id: 'customDuration',
+			},
+			{
 				type: 'number',
-				label: 'Duration (optional; in ms)',
+				label: 'Duration (in ms)',
 				id: 'transition_time',
-				default: null,
+				default: 500,
 				min: 0,
 				max: 60 * 1000, //max is required by api
 				range: false,
+				isVisible: (options) => options.customDuration === true,
 			},
 		],
 		callback: (action) => {
-			if (action.options.transition == 'Default' && !action.options.transition_time) {
+			if (action.options.transition == 'Default' && !action.options.customDuration) {
 				this.sendRequest('TriggerStudioModeTransition')
 			} else {
 				let transitionWaitTime
 				let transitionDuration
 				let revertTransition = this.states.currentTransition
 				let revertTransitionDuration = this.states.transitionDuration
-				if (action.options.transition != 'Cut' && action.options.transition_time > 50) {
-					transitionWaitTime = action.options.transition_time + 50
-				} else if (action.options.transition_time == null) {
-					transitionWaitTime = revertTransitionDuration + 50
+
+				if (action.options.transition != 'Cut' && action.options.customDuration) {
+					transitionWaitTime =
+						action.options.transition_time > 50 ? action.options.transition_time + 50 : revertTransitionDuration + 50
 				} else {
 					transitionWaitTime = 100
 				}
-				if (action.options.transition_time != null) {
-					transitionDuration = action.options.transition_time
+				if (action.options.customDuration) {
+					transitionDuration =
+						action.options.transition_time != null ? action.options.transition_time : revertTransitionDuration
 				} else {
 					transitionDuration = revertTransitionDuration
 				}
