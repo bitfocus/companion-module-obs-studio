@@ -228,11 +228,13 @@ class OBSInstance extends InstanceBase {
 			this.states.programScene = data.sceneName
 			this.setVariableValues({ scene_active: this.states.programScene })
 			this.checkFeedbacks('scene_active')
+			this.checkFeedbacks('sceneProgram')
 		})
 		this.obs.on('CurrentPreviewSceneChanged', (data) => {
 			this.states.previewScene = data.sceneName ? data.sceneName : 'None'
 			this.setVariableValues({ scene_preview: this.states.previewScene })
 			this.checkFeedbacks('scene_active')
+			this.checkFeedbacks('scenePreview')
 		})
 		this.obs.on('SceneListChanged', () => {})
 		//Inputs
