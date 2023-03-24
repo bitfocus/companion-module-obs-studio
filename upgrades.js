@@ -39,7 +39,7 @@ export default [
 
 		return changes
 	},
-	/* function (context, props) {
+	function v3_1_0(context, props) {
 		let changes = {
 			updatedConfig: null,
 			updatedActions: [],
@@ -59,5 +59,5 @@ export default [
 		}
 
 		return changes
-	}, */
+	},
 ]
