@@ -37,13 +37,13 @@ export function getPresets() {
 			],
 			feedbacks: [
 				{
-					feedbackId: 'scene_active',
+					feedbackId: 'sceneProgram',
 					options: {
-						bg: ColorRed,
-						fg: ColorWhite,
-						bg_preview: ColorGreen,
-						fg_preview: ColorWhite,
 						scene: scene.id,
+					},
+					style: {
+						bgcolor: ColorRed,
+						color: ColorWhite,
 					},
 				},
 			],
@@ -74,13 +74,13 @@ export function getPresets() {
 			],
 			feedbacks: [
 				{
-					feedbackId: 'scene_active',
+					feedbackId: 'scenePreview',
 					options: {
-						bg: ColorRed,
-						fg: ColorWhite,
-						bg_preview: ColorGreen,
-						fg_preview: ColorWhite,
 						scene: scene.id,
+					},
+					style: {
+						bgcolor: ColorGreen,
+						color: ColorWhite,
 					},
 				},
 			],

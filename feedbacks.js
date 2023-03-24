@@ -133,6 +133,52 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['sceneProgram'] = {
+		type: 'boolean',
+		name: 'Scene in Program',
+		description: 'If a scene is in program, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorRed,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: this.sceneListDefault,
+				choices: this.sceneChoices,
+				minChoicesForSearch: 5,
+			},
+		],
+		callback: (feedback) => {
+			return this.states.programScene === feedback.options.scene
+		},
+	}
+
+	feedbacks['scenePreview'] = {
+		type: 'boolean',
+		name: 'Scene in Preview',
+		description: 'If a scene is in preview, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: this.sceneListDefault,
+				choices: this.sceneChoices,
+				minChoicesForSearch: 5,
+			},
+		],
+		callback: (feedback) => {
+			return this.states.previewScene === feedback.options.scene
+		},
+	}
+
 	feedbacks['scene_item_active'] = {
 		type: 'boolean',
 		name: 'Source Visible in Program',
