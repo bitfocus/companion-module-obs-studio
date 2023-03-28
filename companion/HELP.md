@@ -108,7 +108,6 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - stream_timecode
 - total_stream_time
 - stream_service
-- bytes_per_sec (Amount of data per second (in bytes) transmitted by the stream encoder)
 - kbits_per_sec (Amount of data per second (in kilobits) transmitted by the stream encoder)
 - render_missed_frames
 - render_total_frames

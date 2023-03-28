@@ -20,6 +20,7 @@ export function getVariables() {
 	variables.push({ variableId: 'stream_timecode', name: 'Stream Timecode' })
 	variables.push({ variableId: 'stream_service', name: 'Stream Service' })
 	variables.push({ variableId: 'streaming', name: 'Streaming State' })
+	variables.push({ variableId: 'kbits_per_sec', name: 'Stream output in kilobits per second' })
 	variables.push({ variableId: 'scene_active', name: 'Current active scene' })
 	variables.push({ variableId: 'scene_preview', name: 'Current preview scene' })
 	variables.push({ variableId: 'profile', name: 'Current profile' })
