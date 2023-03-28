@@ -633,12 +633,21 @@ class OBSInstance extends InstanceBase {
 		this.states.streaming = streamStatus.outputActive
 		this.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
 
+		let kbits = 0
+		if (streamStatus.outputBytes > this.states.outputBytes) {
+			kbits = Math.round(((streamStatus.outputBytes - this.states.outputBytes) * 8) / 1000)
+			this.states.outputBytes = streamStatus.outputBytes
+		} else {
+			this.states.outputBytes = streamStatus.outputBytes
+		}
+
 		this.checkFeedbacks('streaming')
 		this.setVariableValues({
 			streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
 			stream_timecode: this.states.streamingTimecode,
 			output_skipped_frames: streamStatus.outputSkippedFrames,
 			output_total_frames: streamStatus.outputTotalFrames,
+			kbits_per_sec: kbits,
 			stream_service: streamService.streamServiceSettings?.service
 				? streamService.streamServiceSettings.service
 				: 'Custom',
