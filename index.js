@@ -632,6 +632,7 @@ class OBSInstance extends InstanceBase {
 
 		this.states.streaming = streamStatus.outputActive
 		this.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+		this.states.streamCongestion = streamStatus.outputCongestion
 
 		let kbits = 0
 		if (streamStatus.outputBytes > this.states.outputBytes) {
@@ -641,7 +642,7 @@ class OBSInstance extends InstanceBase {
 			this.states.outputBytes = streamStatus.outputBytes
 		}
 
-		this.checkFeedbacks('streaming')
+		this.checkFeedbacks('streaming', 'streamCongestion')
 		this.setVariableValues({
 			streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
 			stream_timecode: this.states.streamingTimecode,
