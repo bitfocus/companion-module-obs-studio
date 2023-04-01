@@ -686,5 +686,21 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['streamCongestion'] = {
+		type: 'advanced',
+		name: 'Stream Congestion',
+		description: 'Change the style of the button to show stream congestion',
+		options: [],
+		callback: () => {
+			if (this.states.streamCongestion > 0.8) {
+				return { bgcolor: ColorRed }
+			} else if (this.states.congestion > 0.4) {
+				return { bgcolor: ColorOrange }
+			} else {
+				return { bgcolor: ColorGreen }
+			}
+		},
+	}
+
 	return feedbacks
 }

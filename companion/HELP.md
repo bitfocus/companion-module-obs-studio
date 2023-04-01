@@ -71,6 +71,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Recording Status (If recording is active or paused, change the style of the button)
 - Output Active
 - Replay Buffer Active
+- Stream Congestion
 
 **Switching & Transitions**
 
