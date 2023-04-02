@@ -702,5 +702,61 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['audioPeaking'] = {
+		type: 'boolean',
+		name: 'Audio Peaking',
+		description: 'If audio is above a certain dB value, change the style of the button',
+		defaultStyle: {
+			color: ColorBlack,
+			bgcolor: ColorRed,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+			{
+				type: 'number',
+				label: 'Peak in dB (-100 to 26) ',
+				id: 'peak',
+				default: 0,
+				min: -100,
+				max: 26,
+				range: false,
+			},
+		],
+		callback: (feedback) => {
+			return this.audioPeak?.[feedback.options.source] > feedback.options.peak
+		},
+	}
+
+	feedbacks['audioMeter'] = {
+		type: 'advanced',
+		name: 'Audio Meter',
+		description: 'Change the style of the button to show audio meter colors similar to the OBS UI',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+		],
+		callback: (feedback) => {
+			let peak = this.audioPeak?.[feedback.options.source]
+			if (peak > -9) {
+				return { bgcolor: ColorRed }
+			} else if (peak > -20) {
+				return { bgcolor: ColorOrange }
+			} else {
+				return { bgcolor: ColorGreen }
+			}
+		},
+	}
+
 	return feedbacks
 }

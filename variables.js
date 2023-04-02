@@ -58,7 +58,7 @@ export function getVariables() {
 
 		let settings = this.sources[sourceName]?.settings
 		let file = ''
-		if (settings.playlist) {
+		if (settings?.playlist) {
 			file = settings.playlist[0].value.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 			//Use first value in playlist until support for determining currently playing cue
 		} else if (settings.is_local_file) {

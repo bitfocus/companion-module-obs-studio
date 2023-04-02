@@ -99,6 +99,7 @@ class OBSInstance extends InstanceBase {
 						EventSubscription.Ui |
 						EventSubscription.InputActiveStateChanged |
 						EventSubscription.InputShowStateChanged |
+						EventSubscription.InputVolumeMeters |
 						EventSubscription.SceneItemTransformChanged,
 					rpcVersion: 1,
 				}
@@ -289,7 +290,9 @@ class OBSInstance extends InstanceBase {
 			this.setVariableValues({ [`monitor_${data.inputName}`]: monitorType })
 			this.checkFeedbacks('audio_monitor_type')
 		})
-		this.obs.on('InputVolumeMeters', () => {})
+		this.obs.on('InputVolumeMeters', (data) => {
+			this.updateAudioPeak(data)
+		})
 		//Transitions
 		this.obs.on('CurrentSceneTransitionChanged', async (data) => {
 			let transition = await this.sendRequest('GetCurrentSceneTransition')
@@ -1025,6 +1028,21 @@ class OBSInstance extends InstanceBase {
 			clearInterval(this.mediaPoll)
 			this.mediaPoll = null
 		}
+	}
+
+	updateAudioPeak(data) {
+		this.audioPeak = {}
+		data.inputs.forEach((input) => {
+			let channel = input.inputLevelsMul[0]
+			if (channel) {
+				let channelPeak = channel?.[1]
+				let dbPeak = Math.round(20.0 * Math.log10(channelPeak))
+				if (this.audioPeak && dbPeak) {
+					this.audioPeak[input.inputName] = dbPeak
+					this.checkFeedbacks('audioPeaking', 'audioMeter')
+				}
+			}
+		})
 	}
 
 	organizeChoices() {
