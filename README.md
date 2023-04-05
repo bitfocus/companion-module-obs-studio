@@ -8,6 +8,18 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.1.0
+
+- New
+  - Feedback for Studio Mode Enabled
+  - Feedback for stream congestion (similar to the green/yellow/red square in the OBS UI)
+  - Feedback for audio meters (similar to the audio meters in the OBS UI)
+  - Feedback for audio peaking if above a certain value
+- Fix
+  - Quick Transition actions causing transition state to get stuck
+  - Kbps variable has been restored
+  - Certain variable updates (mute, media_status, and others) were not working when the source has an invalid variable name
+
 ### v3.0.1
 
 - Fix
