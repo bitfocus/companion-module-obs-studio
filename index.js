@@ -256,29 +256,34 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('InputMuteStateChanged', (data) => {
 			this.sources[data.inputName].inputMuted = data.inputMuted
+			let name = this.sources[data.inputName].validName
 			this.setVariableValues({
-				[`mute_${data.inputName}`]: this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted',
+				[`mute_${name}`]: this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted',
 			})
 			this.checkFeedbacks('audio_muted')
 		})
 		this.obs.on('InputVolumeChanged', (data) => {
 			this.sources[data.inputName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
-			this.setVariableValues({ [`volume_${data.inputName}`]: this.sources[data.inputName].inputVolume + 'db' })
+			let name = this.sources[data.inputName].validName
+			this.setVariableValues({ [`volume_${name}`]: this.sources[data.inputName].inputVolume + 'db' })
 			this.checkFeedbacks('volume')
 		})
 		this.obs.on('InputAudioBalanceChanged', (data) => {
 			this.sources[data.inputName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
-			this.setVariableValues({ [`balance_${data.inputName}`]: this.sources[data.inputName].inputAudioBalance })
+			let name = this.sources[data.inputName].validName
+			this.setVariableValues({ [`balance_${name}`]: this.sources[data.inputName].inputAudioBalance })
 		})
 		this.obs.on('InputAudioSyncOffsetChanged', (data) => {
 			this.sources[data.inputName].inputAudioSyncOffset = data.inputAudioSyncOffset
+			let name = this.sources[data.inputName].validName
 			this.setVariableValues({
-				[`sync_offset_${data.inputName}`]: this.sources[data.inputName].inputAudioSyncOffset + 'ms',
+				[`sync_offset_${name}`]: this.sources[data.inputName].inputAudioSyncOffset + 'ms',
 			})
 		})
 		this.obs.on('InputAudioTracksChanged', () => {})
 		this.obs.on('InputAudioMonitorTypeChanged', (data) => {
 			this.sources[data.inputName].monitorType = data.monitorType
+			let name = this.sources[data.inputName].validName
 			let monitorType
 			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
 				monitorType = 'Monitor / Output'
@@ -287,7 +292,7 @@ class OBSInstance extends InstanceBase {
 			} else {
 				monitorType = 'Off'
 			}
-			this.setVariableValues({ [`monitor_${data.inputName}`]: monitorType })
+			this.setVariableValues({ [`monitor_${name}`]: monitorType })
 			this.checkFeedbacks('audio_monitor_type')
 		})
 		this.obs.on('InputVolumeMeters', (data) => {
@@ -433,25 +438,26 @@ class OBSInstance extends InstanceBase {
 		//Media Inputs
 		this.obs.on('MediaInputPlaybackStarted', (data) => {
 			this.states.currentMedia = data.inputName
-			this.setVariableValues({ current_media_name: this.states.currentMedia })
-			this.setVariableValues({ [`media_status_${data.inputName}`]: 'Playing' })
 
+			let name = this.sources[data.inputName].validName
 			this.setVariableValues({
 				current_media_name: this.states.currentMedia,
-				[`media_status_${data.inputName}`]: 'Playing',
+				[`media_status_${name}`]: 'Playing',
 			})
 		})
 		this.obs.on('MediaInputPlaybackEnded', (data) => {
 			if (this.states.currentMedia == data.inputName) {
+				let name = this.sources[data.inputName].validName
 				this.setVariableValues({
 					current_media_name: 'None',
-					[`media_status_${data.inputName}`]: 'Stopped',
+					[`media_status_${name}`]: 'Stopped',
 				})
 			}
 		})
 		this.obs.on('MediaInputActionTriggered', (data) => {
 			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				this.setVariableValues({ [`media_status_${data.inputName}`]: 'Paused' })
+				let name = this.sources[data.inputName].validName
+				this.setVariableValues({ [`media_status_${name}`]: 'Paused' })
 			}
 		})
 		//UI
@@ -957,7 +963,9 @@ class OBSInstance extends InstanceBase {
 			if (input) {
 				this.sources[input] = {
 					sourceName: input,
+					validName: input.replace(/[\W]/gi, '_'),
 				}
+
 				if (!this.sourceChoices.find((item) => item.id === input)) {
 					this.sourceChoices.push({ id: input, label: input })
 				}
