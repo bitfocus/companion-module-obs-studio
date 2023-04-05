@@ -39,4 +39,25 @@ export default [
 
 		return changes
 	},
+	function v3_1_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const action of props.actions) {
+			if (action.actionId === 'quick_transition') {
+				if (action.options.transition_time > 0) {
+					action.options.customDuration = true
+				} else {
+					action.options.customDuration = false
+					action.options.transition_time = 500
+				}
+				changes.updatedActions.push(action)
+			}
+		}
+
+		return changes
+	},
 ]

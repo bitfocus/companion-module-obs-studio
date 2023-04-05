@@ -138,6 +138,8 @@ export function getPresets() {
 							actionId: 'quick_transition',
 							options: {
 								transition: transition.id,
+								customDuration: false,
+								transition_time: 500,
 							},
 						},
 					],
