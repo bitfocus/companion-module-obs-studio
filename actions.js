@@ -248,18 +248,22 @@ export function getActions() {
 				let revertTransition = this.states.currentTransition
 				let revertTransitionDuration = this.states.transitionDuration
 
-				if (action.options.transition != 'Cut' && action.options.customDuration) {
-					transitionWaitTime =
-						action.options.transition_time > 50 ? action.options.transition_time + 50 : revertTransitionDuration + 50
-				} else {
+				if (action.options.transition == 'Cut') {
 					transitionWaitTime = 100
+				} else if (action.options.transition != 'Cut' && action.options.customDuration) {
+					transitionWaitTime =
+						action.options.transition_time > 50 ? action.options.transition_time + 100 : revertTransitionDuration + 100
+				} else {
+					transitionWaitTime = revertTransitionDuration + 100
 				}
+
 				if (action.options.customDuration) {
 					transitionDuration =
 						action.options.transition_time != null ? action.options.transition_time : revertTransitionDuration
 				} else {
 					transitionDuration = revertTransitionDuration
 				}
+
 				try {
 					this.obs.callBatch([
 						{
