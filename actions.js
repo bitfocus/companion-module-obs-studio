@@ -246,7 +246,7 @@ export function getActions() {
 				let transitionWaitTime
 				let transitionDuration
 				let revertTransition = this.states.currentTransition
-				let revertTransitionDuration = this.states.transitionDuration
+				let revertTransitionDuration = this.states.transitionDuration > 0 ? this.states.transitionDuration : 500
 
 				if (action.options.transition == 'Cut') {
 					transitionWaitTime = 100
