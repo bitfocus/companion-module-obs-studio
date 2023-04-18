@@ -8,6 +8,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.1.1
+
+- Fix
+  - Upgrade script error crashing module
+  - Additional fixes for Quick Transition causing transition state to get stuck
+
 ### v3.1.0
 
 - New
