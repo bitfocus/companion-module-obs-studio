@@ -1398,8 +1398,8 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			const command = await this.parseVariablesInString(action.options.command)
-			const arg = ''
+			let command = await this.parseVariablesInString(action.options.command)
+			let arg = ''
 			try {
 				command.replace(/ /g, '')
 			} catch (e) {
