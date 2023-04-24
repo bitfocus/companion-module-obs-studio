@@ -1419,6 +1419,60 @@ export function getActions() {
 			this.sendRequest(command, arg ? arg : {})
 		},
 	}
+	actions['vendorRequest'] = {
+		name: 'Custom Vendor Request',
+		options: [
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'vendorName',
+				id: 'vendorName',
+				default: '',
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'requestType',
+				id: 'requestType',
+				default: '',
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'requestData',
+				id: 'requestData',
+				default: '',
+			},
+		],
+		callback: async (action) => {
+			let vendorName = await this.parseVariablesInString(action.options.vendorName)
+			let requestType = await this.parseVariablesInString(action.options.requestType)
+			let requestData = ''
+			try {
+				vendorName.replace(/ /g, '')
+				requestType.replace(/ /g, '')
+			} catch (e) {
+				this.log('warn', 'Unknown vendor or request format')
+				return
+			}
+
+			if (action.options.requestData) {
+				requestData = await this.parseVariablesInString(action.options.requestData)
+				try {
+					requestData = JSON.parse(requestData)
+				} catch (e) {
+					this.log('warn', 'Request data must be formatted as valid JSON.')
+					return
+				}
+			}
+			let data = {
+				vendorName: vendorName,
+				requestType: requestType,
+				requestData: requestData,
+			}
+			this.sendRequest('CallVendorRequest', data)
+		},
+	}
 
 	return actions
 }

@@ -62,6 +62,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Trigger Hotkey by Key
 - Trigger Hotkey by ID _(See help info below for more info)_
 - Custom Command _(Request data must be valid JSON. See [obs-websocket protocol documentation](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests) for request types and required request data)_
+- Custom Vendor Request _(Request data must be valid JSON. Requests will vary based on plugin. See documentation for your specific plugin for more info. Support for this feature will be limited due to the large number of plugins available)_
 
 ### Available feedbacks
 
