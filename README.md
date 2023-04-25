@@ -8,6 +8,14 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.2.0
+
+- Feature
+  - New Custom Vendor Request action for sending commands to third party plugins
+- Fix
+  - Custom Command failing to run
+  - Crash when the file name for an image source was invalid
+
 ### v3.1.1
 
 - Fix
