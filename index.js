@@ -390,7 +390,7 @@ class OBSInstance extends InstanceBase {
 								if (input.inputKind === 'image_source') {
 									this.setVariableValues({
 										[`image_file_name_${name}`]: input.inputSettings?.file
-											? input.inputSettings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+											? input.inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 											: '',
 									})
 								}
@@ -523,7 +523,7 @@ class OBSInstance extends InstanceBase {
 			this.states.monitors = monitorList
 			monitorList.monitors.forEach((monitor) => {
 				let monitorName = monitor.monitorName
-				if (monitorName.match(/\([0-9]+\)/i)) {
+				if (monitorName?.match(/\([0-9]+\)/i)) {
 					monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
 				}
 				this.monitors.push({

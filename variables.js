@@ -59,10 +59,10 @@ export function getVariables() {
 		let settings = this.sources[sourceName]?.settings
 		let file = ''
 		if (settings?.playlist) {
-			file = settings.playlist[0].value.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+			file = settings.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 			//Use first value in playlist until support for determining currently playing cue
 		} else if (settings.is_local_file) {
-			file = settings?.local_file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+			file = settings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 		}
 		this.setVariableValues({ [`media_file_name_${mediaSourceName}`]: file })
 	}
@@ -84,7 +84,7 @@ export function getVariables() {
 			})
 			this.setVariableValues({
 				[`image_file_name_${sourceName}`]: source.settings?.file
-					? source.settings.file.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+					? source.settings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 					: '',
 			})
 		}
