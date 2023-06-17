@@ -758,5 +758,51 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['vendorEvent'] = {
+		type: 'boolean',
+		name: 'Vendor Event',
+		description: 'Change the style of the button based on third party vendor events',
+		options: [
+			{
+				type: 'textinput',
+				label: 'vendorName',
+				id: 'vendorName',
+				default: 'downstream-keyer',
+			},
+			{
+				type: 'textinput',
+				label: 'eventType',
+				id: 'eventType',
+				default: 'dsk_scene_changed',
+			},
+			{
+				type: 'textinput',
+				label: 'eventData Key',
+				id: 'eventDataKey',
+				default: 'new_scene',
+			},
+			{
+				type: 'textinput',
+				label: 'eventData Value',
+				id: 'eventDataValue',
+				default: 'Scene 1',
+			},
+		],
+		callback: (feedback) => {
+			if (this.vendorEvent) {
+				if (this.vendorEvent.vendorName == feedback.options.vendorName) {
+					if (this.vendorEvent.eventType == feedback.options.eventType) {
+						if (this.vendorEvent.eventData) {
+							let key = this.vendorEvent.eventData[feedback.options.eventDataKey]
+							if (key && key == feedback.options.eventDataValue) {
+								return true
+							}
+						}
+					}
+				}
+			}
+		},
+	}
+
 	return feedbacks
 }
