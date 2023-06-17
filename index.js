@@ -176,7 +176,10 @@ class OBSInstance extends InstanceBase {
 		this.obs.once('ExitStarted', () => {
 			this.connectionLost()
 		})
-		this.obs.on('VendorEvent', () => {})
+		this.obs.on('VendorEvent', (data) => {
+			this.vendorEvent = data
+			this.checkFeedbacks('vendorEvent')
+		})
 		//Config
 		this.obs.on('CurrentSceneCollectionChanging', () => {
 			this.stopMediaPoll()
@@ -1125,6 +1128,7 @@ class OBSInstance extends InstanceBase {
 		this.filterList = []
 		this.audioSourceList = []
 		//Set Initial States
+		this.vendorEvent = {}
 		this.states.sceneCollectionChanging = false
 		this.initActions()
 		this.initVariables()
