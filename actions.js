@@ -197,6 +197,34 @@ export function getActions() {
 			}
 		},
 	}
+	actions['previewPreviousScene'] = {
+		name: 'Preview Previous Scene',
+		options: [],
+		callback: () => {
+			if (this.states.previewScene) {
+				let previewScene = this.scenes.find((scene) => scene.sceneName === this.states.previewScene)
+				let previousIndex = previewScene?.sceneIndex + 1
+				let previousScene = this.scenes.find((scene) => scene.sceneIndex === previousIndex)
+				if (previousScene) {
+					this.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
+				}
+			}
+		},
+	}
+	actions['previewNextScene'] = {
+		name: 'Preview Next Scene',
+		options: [],
+		callback: () => {
+			if (this.states.previewScene) {
+				let previewScene = this.scenes.find((scene) => scene.sceneName === this.states.previewScene)
+				let nextIndex = previewScene?.sceneIndex - 1
+				let nextScene = this.scenes.find((scene) => scene.sceneIndex === nextIndex)
+				if (nextScene) {
+					this.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
+				}
+			}
+		},
+	}
 	actions['do_transition'] = {
 		name: 'Transition',
 		description: 'Transitions preview to program in Studio Mode',

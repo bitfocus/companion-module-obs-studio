@@ -237,7 +237,9 @@ class OBSInstance extends InstanceBase {
 			this.checkFeedbacks('scene_active')
 			this.checkFeedbacks('scenePreview')
 		})
-		this.obs.on('SceneListChanged', () => {})
+		this.obs.on('SceneListChanged', (data) => {
+			this.scenes = data.scenes
+		})
 		//Inputs
 		this.obs.on('InputCreated', () => {})
 		this.obs.on('InputRemoved', () => {})
