@@ -74,6 +74,14 @@ export default [
 				action.options.all = false
 				changes.updatedActions.push(action)
 			}
+			if (action.actionId === 'toggle_scene_item') {
+				if (action.options.source === 'allSources') {
+					action.options.all = true
+				} else {
+					action.options.all = false
+				}
+				changes.updatedActions.push(action)
+			}
 		}
 
 		return changes

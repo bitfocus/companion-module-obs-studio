@@ -670,11 +670,18 @@ export function getActions() {
 				choices: this.sceneChoicesProgramPreview,
 			},
 			{
+				type: 'checkbox',
+				label: 'All Sources',
+				id: 'all',
+				default: false,
+			},
+			{
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: 'allSources',
-				choices: this.sourceChoicesAllSources,
+				default: this.sourceListDefault,
+				choices: this.sourceChoices,
+				isVisible: (options) => options.all === false,
 			},
 			{
 				type: 'dropdown',
@@ -692,13 +699,15 @@ export function getActions() {
 			let sceneName = action.options.scene
 			let sourceName = action.options.source
 			let enabled = true
+			let requests = []
 
 			// special scene names
-			if (!sceneName || sceneName === 'Current Scene') {
+			if (sceneName === 'Current Scene') {
 				sceneName = this.states.programScene
 			} else if (sceneName === 'Preview Scene') {
 				sceneName = this.states.previewScene
 			}
+
 			if (this.sources[sourceName]?.groupedSource) {
 				let group = this.sources[sourceName].groupName
 				let source = this.groups[group].find((item) => item.sourceName === sourceName)
@@ -716,18 +725,22 @@ export function getActions() {
 			let targetScene = this.sceneItems[sceneName]
 			if (targetScene) {
 				targetScene.forEach((source) => {
-					if (sourceName === 'allSources' || source.sourceName === sourceName) {
+					if (action.options.all || source.sourceName === sourceName) {
 						if (action.options.visible === 'toggle') {
 							enabled = !source.sceneItemEnabled
 						} else {
 							enabled = action.options.visible == 'true' ? true : false
 						}
-						this.sendRequest('SetSceneItemEnabled', {
-							sceneName: sceneName,
-							sceneItemId: source.sceneItemId,
-							sceneItemEnabled: enabled,
+						requests.push({
+							requestType: 'SetSceneItemEnabled',
+							requestData: {
+								sceneName: sceneName,
+								sceneItemId: source.sceneItemId,
+								sceneItemEnabled: enabled,
+							},
 						})
-						if (source.isGroup && sourceName === 'allSources') {
+
+						if (source.isGroup && action.options.all) {
 							for (let x in this.groups[source.sourceName]) {
 								let item = this.groups[source.sourceName][x]
 								let groupEnabled
@@ -736,15 +749,19 @@ export function getActions() {
 								} else {
 									groupEnabled = action.options.visible == 'true' ? true : false
 								}
-								this.sendRequest('SetSceneItemEnabled', {
-									sceneName: source.sourceName,
-									sceneItemId: item.sceneItemId,
-									sceneItemEnabled: groupEnabled,
+								requests.push({
+									requestType: 'SetSceneItemEnabled',
+									requestData: {
+										sceneName: source.sourceName,
+										sceneItemId: item.sceneItemId,
+										sceneItemEnabled: groupEnabled,
+									},
 								})
 							}
 						}
 					}
 				})
+				this.sendBatch(requests)
 			}
 		},
 	}
