@@ -83,6 +83,16 @@ export default [
 				changes.updatedActions.push(action)
 			}
 		}
+		for (const feedback of props.feedbacks) {
+			if (feedback.feedbackId === 'scene_item_active_in_scene') {
+				if (feedback.options.source === 'anySource') {
+					feedback.options.any = true
+				} else {
+					feedback.options.any = false
+				}
+				changes.updatedFeedbacks.push(feedback)
+			}
+		}
 
 		return changes
 	},

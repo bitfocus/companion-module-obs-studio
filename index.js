@@ -102,7 +102,7 @@ class OBSInstance extends InstanceBase {
 						EventSubscription.InputVolumeMeters |
 						EventSubscription.SceneItemTransformChanged,
 					rpcVersion: 1,
-				},
+				}
 			)
 			if (obsWebSocketVersion) {
 				this.updateStatus('ok')
@@ -134,12 +134,12 @@ class OBSInstance extends InstanceBase {
 				} else if (error?.message.match(/(missing an `authentication` string)/i)) {
 					this.log(
 						'error',
-						`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`,
+						`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`
 					)
 				} else if (error?.message.match(/(Authentication failed)/i)) {
 					this.log(
 						'error',
-						`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
+						`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`
 					)
 					this.updateStatus('bad_config', 'Invalid password')
 				} else if (error?.message.match(/(ECONNREFUSED)/i)) {
@@ -1082,7 +1082,6 @@ class OBSInstance extends InstanceBase {
 		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
 		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
 		//Special Choices - Sources
-		this.sourceChoicesAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceChoices)
 		this.sourceChoicesWithScenes = this.sourceChoices.concat(this.sceneChoices)
 		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
 		//Default Choices

@@ -303,16 +303,31 @@ export function getFeedbacks() {
 				minChoicesForSearch: 5,
 			},
 			{
+				type: 'checkbox',
+				label: 'Any Source',
+				id: 'any',
+				default: false,
+			},
+			{
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
 				default: this.sourceListDefault,
-				choices: this.sourceChoicesAnySource,
+				choices: this.sourceChoices,
 				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
-			if (feedback.options.source !== 'anySource') {
+			if (feedback.options.any) {
+				let scene = this.sceneItems[feedback.options.scene]
+
+				if (scene) {
+					let enabled = this.sceneItems[feedback.options.scene].find((item) => item.sceneItemEnabled === true)
+					if (enabled) {
+						return true
+					}
+				}
+			} else {
 				if (this.sources[feedback.options.source]?.groupedSource) {
 					let group = this.sources[feedback.options.source].groupName
 					let sceneItem = this.groups[group].find((item) => item.sourceName === feedback.options.source)
@@ -325,15 +340,6 @@ export function getFeedbacks() {
 					)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
-					}
-				}
-			} else {
-				let scene = this.sceneItems[feedback.options.scene]
-
-				if (scene) {
-					let enabled = this.sceneItems[feedback.options.scene].find((item) => item.sceneItemEnabled === true)
-					if (enabled) {
-						return true
 					}
 				}
 			}
