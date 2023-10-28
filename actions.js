@@ -292,33 +292,31 @@ export function getActions() {
 					transitionDuration = revertTransitionDuration
 				}
 
-				try {
-					this.obs.callBatch([
-						{
-							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: action.options.transition },
-						},
-						{
-							requestType: 'SetCurrentSceneTransitionDuration',
-							requestData: { transitionDuration: transitionDuration },
-						},
-						{
-							requestType: 'TriggerStudioModeTransition',
-						},
-						{
-							requestType: 'Sleep',
-							requestData: { sleepMillis: transitionWaitTime },
-						},
-						{
-							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: revertTransition },
-						},
-						{
-							requestType: 'SetCurrentSceneTransitionDuration',
-							requestData: { transitionDuration: revertTransitionDuration },
-						},
-					])
-				} catch (error) {}
+				this.sendBatch([
+					{
+						requestType: 'SetCurrentSceneTransition',
+						requestData: { transitionName: action.options.transition },
+					},
+					{
+						requestType: 'SetCurrentSceneTransitionDuration',
+						requestData: { transitionDuration: transitionDuration },
+					},
+					{
+						requestType: 'TriggerStudioModeTransition',
+					},
+					{
+						requestType: 'Sleep',
+						requestData: { sleepMillis: transitionWaitTime },
+					},
+					{
+						requestType: 'SetCurrentSceneTransition',
+						requestData: { transitionName: revertTransition },
+					},
+					{
+						requestType: 'SetCurrentSceneTransitionDuration',
+						requestData: { transitionDuration: revertTransitionDuration },
+					},
+				])
 			}
 		},
 	}
