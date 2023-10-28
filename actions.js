@@ -235,7 +235,7 @@ export function getActions() {
 			} else {
 				this.log(
 					'warn',
-					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead'
+					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead',
 				)
 			}
 		},
@@ -1056,11 +1056,18 @@ export function getActions() {
 				choices: this.sourceChoicesWithScenes,
 			},
 			{
+				type: 'checkbox',
+				label: 'All Filters',
+				id: 'all',
+				default: false,
+			},
+			{
 				type: 'dropdown',
 				label: 'Filter',
 				id: 'filter',
 				default: this.filterListDefault,
 				choices: this.filterList,
+				isVisible: (options) => options.all === false,
 			},
 			{
 				type: 'dropdown',
@@ -1075,25 +1082,43 @@ export function getActions() {
 			},
 		],
 		callback: (action) => {
-			let filterVisibility
-			if (action.options.visible !== 'toggle') {
-				filterVisibility = action.options.visible === 'true' ? true : false
-			} else if (action.options.visible === 'toggle') {
-				if (this.sourceFilters[action.options.source]) {
-					let filter = this.sourceFilters[action.options.source].find(
-						(item) => item.filterName === action.options.filter
-					)
-					if (filter) {
+			let sourceFilterList = this.sourceFilters[action.options.source]
+			if (action.options.all) {
+				let requests = []
+				sourceFilterList.forEach((filter) => {
+					let name = filter.filterName
+					let filterVisibility
+					if (action.options.visible !== 'toggle') {
+						filterVisibility = action.options.visible === 'true' ? true : false
+					} else if (action.options.visible === 'toggle') {
 						filterVisibility = !filter.filterEnabled
 					}
-				}
-			}
+					requests.push({
+						requestType: 'SetSourceFilterEnabled',
+						requestData: { sourceName: action.options.source, filterName: name, filterEnabled: filterVisibility },
+					})
+				})
 
-			this.sendRequest('SetSourceFilterEnabled', {
-				sourceName: action.options.source,
-				filterName: action.options.filter,
-				filterEnabled: filterVisibility,
-			})
+				this.sendBatch(requests)
+			} else {
+				let filterVisibility
+				if (action.options.visible !== 'toggle') {
+					filterVisibility = action.options.visible === 'true' ? true : false
+				} else if (action.options.visible === 'toggle') {
+					if (sourceFilterList) {
+						let filter = sourceFilterList.find((item) => item.filterName === action.options.filter)
+						if (filter) {
+							filterVisibility = !filter.filterEnabled
+						}
+					}
+				}
+
+				this.sendRequest('SetSourceFilterEnabled', {
+					sourceName: action.options.source,
+					filterName: action.options.filter,
+					filterEnabled: filterVisibility,
+				})
+			}
 		},
 	}
 	actions['play_pause_media'] = {

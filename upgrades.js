@@ -62,4 +62,20 @@ export default [
 
 		return changes
 	},
+	function v3_3_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const action of props.actions) {
+			if (action.actionId === 'toggle_filter') {
+				action.options.all = false
+				changes.updatedActions.push(action)
+			}
+		}
+
+		return changes
+	},
 ]

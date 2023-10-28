@@ -102,7 +102,7 @@ class OBSInstance extends InstanceBase {
 						EventSubscription.InputVolumeMeters |
 						EventSubscription.SceneItemTransformChanged,
 					rpcVersion: 1,
-				}
+				},
 			)
 			if (obsWebSocketVersion) {
 				this.updateStatus('ok')
@@ -134,12 +134,12 @@ class OBSInstance extends InstanceBase {
 				} else if (error?.message.match(/(missing an `authentication` string)/i)) {
 					this.log(
 						'error',
-						`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`
+						`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`,
 					)
 				} else if (error?.message.match(/(Authentication failed)/i)) {
 					this.log(
 						'error',
-						`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`
+						`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
 					)
 					this.updateStatus('bad_config', 'Invalid password')
 				} else if (error?.message.match(/(ECONNREFUSED)/i)) {
@@ -478,6 +478,14 @@ class OBSInstance extends InstanceBase {
 			return data
 		} catch (error) {
 			this.log('debug', `Request ${requestType} failed (${error})`)
+		}
+	}
+
+	async sendBatch(batch) {
+		try {
+			this.obs.callBatch(batch)
+		} catch (error) {
+			this.log('debug', `Batch request failed (${error})`)
 		}
 	}
 
