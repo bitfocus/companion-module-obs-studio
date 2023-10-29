@@ -481,6 +481,14 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
+	async sendBatch(batch) {
+		try {
+			this.obs.callBatch(batch)
+		} catch (error) {
+			this.log('debug', `Batch request failed (${error})`)
+		}
+	}
+
 	startReconnectionPoll() {
 		this.stopReconnectionPoll()
 		this.reconnectionPoll = setInterval(() => {
@@ -1074,8 +1082,6 @@ class OBSInstance extends InstanceBase {
 		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
 		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
 		//Special Choices - Sources
-		this.sourceChoicesAllSources = [{ id: 'allSources', label: '<ALL SOURCES>' }].concat(this.sourceChoices)
-		this.sourceChoicesAnySource = [{ id: 'anySource', label: '<ANY SOURCE>' }].concat(this.sourceChoices)
 		this.sourceChoicesWithScenes = this.sourceChoices.concat(this.sceneChoices)
 		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
 		//Default Choices

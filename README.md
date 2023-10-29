@@ -8,6 +8,17 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.3.0
+
+- New
+  - Preview next/previous scene actions
+  - Adjust source volume by percentage action
+  - VendorEvent feedback
+- Improved
+  - Control all filters on a source with the "Set Source Filter Visibility" action
+- Fix
+  - More reliable behavior when controlling Source Visibility for all sources
+
 ### v3.2.0
 
 - Feature

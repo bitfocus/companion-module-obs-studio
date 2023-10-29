@@ -62,4 +62,38 @@ export default [
 
 		return changes
 	},
+	function v3_3_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const action of props.actions) {
+			if (action.actionId === 'toggle_filter') {
+				action.options.all = false
+				changes.updatedActions.push(action)
+			}
+			if (action.actionId === 'toggle_scene_item') {
+				if (action.options.source === 'allSources') {
+					action.options.all = true
+				} else {
+					action.options.all = false
+				}
+				changes.updatedActions.push(action)
+			}
+		}
+		for (const feedback of props.feedbacks) {
+			if (feedback.feedbackId === 'scene_item_active_in_scene') {
+				if (feedback.options.source === 'anySource') {
+					feedback.options.any = true
+				} else {
+					feedback.options.any = false
+				}
+				changes.updatedFeedbacks.push(feedback)
+			}
+		}
+
+		return changes
+	},
 ]

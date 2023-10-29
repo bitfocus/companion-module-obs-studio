@@ -292,33 +292,31 @@ export function getActions() {
 					transitionDuration = revertTransitionDuration
 				}
 
-				try {
-					this.obs.callBatch([
-						{
-							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: action.options.transition },
-						},
-						{
-							requestType: 'SetCurrentSceneTransitionDuration',
-							requestData: { transitionDuration: transitionDuration },
-						},
-						{
-							requestType: 'TriggerStudioModeTransition',
-						},
-						{
-							requestType: 'Sleep',
-							requestData: { sleepMillis: transitionWaitTime },
-						},
-						{
-							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: revertTransition },
-						},
-						{
-							requestType: 'SetCurrentSceneTransitionDuration',
-							requestData: { transitionDuration: revertTransitionDuration },
-						},
-					])
-				} catch (error) {}
+				this.sendBatch([
+					{
+						requestType: 'SetCurrentSceneTransition',
+						requestData: { transitionName: action.options.transition },
+					},
+					{
+						requestType: 'SetCurrentSceneTransitionDuration',
+						requestData: { transitionDuration: transitionDuration },
+					},
+					{
+						requestType: 'TriggerStudioModeTransition',
+					},
+					{
+						requestType: 'Sleep',
+						requestData: { sleepMillis: transitionWaitTime },
+					},
+					{
+						requestType: 'SetCurrentSceneTransition',
+						requestData: { transitionName: revertTransition },
+					},
+					{
+						requestType: 'SetCurrentSceneTransitionDuration',
+						requestData: { transitionDuration: revertTransitionDuration },
+					},
+				])
 			}
 		},
 	}
@@ -672,11 +670,18 @@ export function getActions() {
 				choices: this.sceneChoicesProgramPreview,
 			},
 			{
+				type: 'checkbox',
+				label: 'All Sources',
+				id: 'all',
+				default: false,
+			},
+			{
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: 'allSources',
-				choices: this.sourceChoicesAllSources,
+				default: this.sourceListDefault,
+				choices: this.sourceChoices,
+				isVisible: (options) => options.all === false,
 			},
 			{
 				type: 'dropdown',
@@ -694,13 +699,15 @@ export function getActions() {
 			let sceneName = action.options.scene
 			let sourceName = action.options.source
 			let enabled = true
+			let requests = []
 
 			// special scene names
-			if (!sceneName || sceneName === 'Current Scene') {
+			if (sceneName === 'Current Scene') {
 				sceneName = this.states.programScene
 			} else if (sceneName === 'Preview Scene') {
 				sceneName = this.states.previewScene
 			}
+
 			if (this.sources[sourceName]?.groupedSource) {
 				let group = this.sources[sourceName].groupName
 				let source = this.groups[group].find((item) => item.sourceName === sourceName)
@@ -718,18 +725,22 @@ export function getActions() {
 			let targetScene = this.sceneItems[sceneName]
 			if (targetScene) {
 				targetScene.forEach((source) => {
-					if (sourceName === 'allSources' || source.sourceName === sourceName) {
+					if (action.options.all || source.sourceName === sourceName) {
 						if (action.options.visible === 'toggle') {
 							enabled = !source.sceneItemEnabled
 						} else {
 							enabled = action.options.visible == 'true' ? true : false
 						}
-						this.sendRequest('SetSceneItemEnabled', {
-							sceneName: sceneName,
-							sceneItemId: source.sceneItemId,
-							sceneItemEnabled: enabled,
+						requests.push({
+							requestType: 'SetSceneItemEnabled',
+							requestData: {
+								sceneName: sceneName,
+								sceneItemId: source.sceneItemId,
+								sceneItemEnabled: enabled,
+							},
 						})
-						if (source.isGroup && sourceName === 'allSources') {
+
+						if (source.isGroup && action.options.all) {
 							for (let x in this.groups[source.sourceName]) {
 								let item = this.groups[source.sourceName][x]
 								let groupEnabled
@@ -738,15 +749,19 @@ export function getActions() {
 								} else {
 									groupEnabled = action.options.visible == 'true' ? true : false
 								}
-								this.sendRequest('SetSceneItemEnabled', {
-									sceneName: source.sourceName,
-									sceneItemId: item.sceneItemId,
-									sceneItemEnabled: groupEnabled,
+								requests.push({
+									requestType: 'SetSceneItemEnabled',
+									requestData: {
+										sceneName: source.sourceName,
+										sceneItemId: item.sceneItemId,
+										sceneItemEnabled: groupEnabled,
+									},
 								})
 							}
 						}
 					}
 				})
+				this.sendBatch(requests)
 			}
 		},
 	}
@@ -1056,11 +1071,18 @@ export function getActions() {
 				choices: this.sourceChoicesWithScenes,
 			},
 			{
+				type: 'checkbox',
+				label: 'All Filters',
+				id: 'all',
+				default: false,
+			},
+			{
 				type: 'dropdown',
 				label: 'Filter',
 				id: 'filter',
 				default: this.filterListDefault,
 				choices: this.filterList,
+				isVisible: (options) => options.all === false,
 			},
 			{
 				type: 'dropdown',
@@ -1075,25 +1097,43 @@ export function getActions() {
 			},
 		],
 		callback: (action) => {
-			let filterVisibility
-			if (action.options.visible !== 'toggle') {
-				filterVisibility = action.options.visible === 'true' ? true : false
-			} else if (action.options.visible === 'toggle') {
-				if (this.sourceFilters[action.options.source]) {
-					let filter = this.sourceFilters[action.options.source].find(
-						(item) => item.filterName === action.options.filter
-					)
-					if (filter) {
+			let sourceFilterList = this.sourceFilters[action.options.source]
+			if (action.options.all) {
+				let requests = []
+				sourceFilterList.forEach((filter) => {
+					let name = filter.filterName
+					let filterVisibility
+					if (action.options.visible !== 'toggle') {
+						filterVisibility = action.options.visible === 'true' ? true : false
+					} else if (action.options.visible === 'toggle') {
 						filterVisibility = !filter.filterEnabled
 					}
-				}
-			}
+					requests.push({
+						requestType: 'SetSourceFilterEnabled',
+						requestData: { sourceName: action.options.source, filterName: name, filterEnabled: filterVisibility },
+					})
+				})
 
-			this.sendRequest('SetSourceFilterEnabled', {
-				sourceName: action.options.source,
-				filterName: action.options.filter,
-				filterEnabled: filterVisibility,
-			})
+				this.sendBatch(requests)
+			} else {
+				let filterVisibility
+				if (action.options.visible !== 'toggle') {
+					filterVisibility = action.options.visible === 'true' ? true : false
+				} else if (action.options.visible === 'toggle') {
+					if (sourceFilterList) {
+						let filter = sourceFilterList.find((item) => item.filterName === action.options.filter)
+						if (filter) {
+							filterVisibility = !filter.filterEnabled
+						}
+					}
+				}
+
+				this.sendRequest('SetSourceFilterEnabled', {
+					sourceName: action.options.source,
+					filterName: action.options.filter,
+					filterEnabled: filterVisibility,
+				})
+			}
 		},
 	}
 	actions['play_pause_media'] = {
