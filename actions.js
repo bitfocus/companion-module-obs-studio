@@ -235,7 +235,7 @@ export function getActions() {
 			} else {
 				this.log(
 					'warn',
-					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead'
+					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead',
 				)
 			}
 		},
@@ -1061,11 +1061,11 @@ export function getActions() {
 		},
 	}
 	actions['toggle_filter'] = {
-		name: 'Set Source Filter Visibility',
+		name: 'Set Filter Visibility',
 		options: [
 			{
 				type: 'dropdown',
-				label: 'Source',
+				label: 'Source / Scene',
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoicesWithScenes,
