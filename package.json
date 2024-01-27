@@ -8,15 +8,15 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@companion-module/base": "~1.6.0",
-		"obs-websocket-js": "5.0.3"
+		"@companion-module/base": "~1.7.0",
+		"obs-websocket-js": "5.0.4"
 	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.4.1"
+		"@companion-module/tools": "^1.4.2"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
