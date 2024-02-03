@@ -303,6 +303,37 @@ class OBSInstance extends InstanceBase {
 		this.obs.on('InputVolumeMeters', (data) => {
 			this.updateAudioPeak(data)
 		})
+		this.obs.on('InputSettingsChanged', (data) => {
+			let source = data.inputName
+			let settings = data.inputSettings
+
+			if (this.sources[source]) {
+				this.sources[source].settings = settings
+				let validName = source.replace(/[\W]/gi, '_')
+				let inputKind = this.sources[source].inputKind
+
+				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
+					this.setVariableValues({
+						[`current_text_${validName}`]: settings.text ? settings.text : '',
+					})
+				} else if (inputKind === 'image_source') {
+					this.setVariableValues({
+						[`image_file_name_${validName}`]: settings?.file
+							? settings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+							: '',
+					})
+				} else if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+					let file = ''
+					if (settings?.playlist) {
+						file = settings.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						//Use first value in playlist until support for determining currently playing cue
+					} else if (settings?.local_file) {
+						file = settings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+					}
+					this.setVariableValues({ [`media_file_name_${validName}`]: file })
+				}
+			}
+		})
 		//Transitions
 		this.obs.on('CurrentSceneTransitionChanged', async (data) => {
 			let transition = await this.sendRequest('GetCurrentSceneTransition')
@@ -376,35 +407,7 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('SceneItemLockStateChanged', () => {})
 		this.obs.on('SceneItemSelected', () => {})
-		this.obs.on('SceneItemTransformChanged', async (data) => {
-			if (data.sceneName) {
-				let sceneItem = this.sceneItems[data.sceneName]?.findIndex((item) => item.sceneItemId === data.sceneItemId)
-				if (sceneItem !== undefined) {
-					let source = this.sceneItems[data.sceneName][sceneItem]?.sourceName
-					if (source && this.sources[source]) {
-						if (this.sceneItems[data.sceneName][sceneItem]?.inputKind) {
-							let input = await this.sendRequest('GetInputSettings', { inputName: source })
-							if (input) {
-								this.sources[source].settings = input.inputSettings
-								let name = this.sources[source].validName
-								if (input.inputKind === 'text_ft2_source_v2' || input.inputKind === 'text_gdiplus_v2') {
-									this.setVariableValues({
-										[`current_text_${name}`]: input.inputSettings.text ? input.inputSettings.text : '',
-									})
-								}
-								if (input.inputKind === 'image_source') {
-									this.setVariableValues({
-										[`image_file_name_${name}`]: input.inputSettings?.file
-											? input.inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-											: '',
-									})
-								}
-							}
-						}
-					}
-				}
-			}
-		})
+		this.obs.on('SceneItemTransformChanged', () => {})
 		//Outputs
 		this.obs.on('StreamStateChanged', (data) => {
 			this.states.streaming = data.outputActive
