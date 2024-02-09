@@ -708,6 +708,29 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['freeDiskSpaceRemaining'] = {
+		type: 'boolean',
+		name: 'Disk Space Remaining',
+		description: 'Change the style of the button if remaining disk space is below a certain value',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorRed,
+		},
+		options: [
+			{
+				type: 'number',
+				label: 'Remaining Space (MB)',
+				id: 'diskSpace',
+				default: 10000,
+				min: 0,
+				range: false,
+			},
+		],
+		callback: (feedback) => {
+			return this.states.stats?.availableDiskSpace < feedback.options.diskSpace
+		},
+	}
+
 	feedbacks['audioPeaking'] = {
 		type: 'boolean',
 		name: 'Audio Peaking',

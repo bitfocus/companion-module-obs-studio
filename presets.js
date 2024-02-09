@@ -418,6 +418,41 @@ export function getPresets() {
 		feedbacks: [],
 	}
 
+	presets['remainingDiskSpace'] = {
+		type: 'button',
+		category: 'General',
+		name: 'Remaining Disk Space',
+		style: {
+			text: 'Disk Space Remaining:\\n$(obs:free_disk_space)',
+			size: 'auto',
+			color: ColorWhite,
+			bgcolor: 0,
+		},
+		steps: [{}],
+		feedbacks: [
+			{
+				feedbackId: 'freeDiskSpaceRemaining',
+				options: {
+					diskSpace: 50000,
+				},
+				style: {
+					bgcolor: ColorYellow,
+					color: ColorWhite,
+				},
+			},
+			{
+				feedbackId: 'freeDiskSpaceRemaining',
+				options: {
+					diskSpace: 10000,
+				},
+				style: {
+					bgcolor: ColorRed,
+					color: ColorWhite,
+				},
+			},
+		],
+	}
+
 	presets['toggleStudioMode'] = {
 		type: 'button',
 		category: 'General',

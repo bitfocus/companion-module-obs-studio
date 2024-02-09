@@ -619,7 +619,9 @@ class OBSInstance extends InstanceBase {
 			.call('GetStats')
 			.then((data) => {
 				this.states.stats = data
-				let freeSpace = this.roundNumber(data.availableDiskSpace, 0)
+
+				let freeSpaceMB = this.roundNumber(data.availableDiskSpace, 0)
+				let freeSpace = freeSpaceMB
 				if (freeSpace > 1000) {
 					freeSpace = `${this.roundNumber(freeSpace / 1000, 0)} GB`
 				} else {
@@ -636,7 +638,9 @@ class OBSInstance extends InstanceBase {
 					cpu_usage: `${this.roundNumber(data.cpuUsage, 2)}%`,
 					memory_usage: `${this.roundNumber(data.memoryUsage, 0)} MB`,
 					free_disk_space: freeSpace,
+					free_disk_space_mb: freeSpaceMB,
 				})
+				this.checkFeedbacks('freeDiskSpaceRemaining')
 			})
 			.catch((error) => {
 				if (error?.message.match(/(Not connected)/i)) {

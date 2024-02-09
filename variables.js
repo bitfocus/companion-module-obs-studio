@@ -8,6 +8,7 @@ export function getVariables() {
 	variables.push({ variableId: 'cpu_usage', name: 'Current CPU usage (percentage)' })
 	variables.push({ variableId: 'memory_usage', name: 'Current RAM usage (in megabytes)' })
 	variables.push({ variableId: 'free_disk_space', name: 'Free recording disk space' })
+	variables.push({ variableId: 'free_disk_space_mb', name: 'Free recording disk space in MB, with no unit text' })
 	variables.push({ variableId: 'render_missed_frames', name: 'Number of frames missed due to rendering lag' })
 	variables.push({ variableId: 'render_total_frames', name: 'Number of frames rendered' })
 	variables.push({ variableId: 'output_skipped_frames', name: 'Number of encoder frames skipped' })

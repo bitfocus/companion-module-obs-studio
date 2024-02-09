@@ -97,6 +97,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Profile Active
 - Scene Collection Active
 - Studio Mode Active
+- Disk Space Remaining
 
 ### Available variables
 
@@ -154,6 +155,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - memory_usage
 - strain
 - free_disk_space
+- free_disk_space_mb
 - base_resolution
 - output_resolution
 - target_framerate
