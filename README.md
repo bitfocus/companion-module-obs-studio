@@ -8,6 +8,15 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.4.0
+
+- New
+  - Disk Space Remaining feedback to alert when available disk space is below specified threshold
+  - free_disk_space_mb variable that returns a raw number value (no units) of MB free on disk, for use in expressions
+- Improved
+  - Rename 'Set Source Filter Visibility' to 'Set Filter Visibility' since it can also be used for scenes
+  - Use newly available InputSettingsChanged event (requires OBS v30.1) to more accurately update changes to current_text, image_file_name, and media_file_name variables
+
 ### v3.3.0
 
 - New
