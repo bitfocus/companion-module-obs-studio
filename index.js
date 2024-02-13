@@ -121,8 +121,11 @@ class OBSInstance extends InstanceBase {
 				this.getProfileList()
 				this.getSceneTransitionList()
 				this.getSceneCollectionList()
-				this.getScenesSources()
+				//this.getScenesSources()
 				this.startStatsPoll()
+				//TESTING
+				this.buildSceneList()
+				this.buildSpecialInputs()
 			}
 		} catch (error) {
 			if (!this.reconnectionPoll) {
@@ -235,12 +238,13 @@ class OBSInstance extends InstanceBase {
 			this.checkFeedbacks('sceneProgram')
 		})
 		this.obs.on('CurrentPreviewSceneChanged', (data) => {
-			this.states.previewScene = data.sceneName ? data.sceneName : 'None'
+			this.states.previewScene = data.sceneName ?? 'None'
 			this.setVariableValues({ scene_preview: this.states.previewScene })
 			this.checkFeedbacks('scene_active')
 			this.checkFeedbacks('scenePreview')
 		})
 		this.obs.on('SceneListChanged', (data) => {
+			console.log(data)
 			this.scenes = data.scenes
 		})
 		//Inputs
@@ -314,7 +318,7 @@ class OBSInstance extends InstanceBase {
 
 				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 					this.setVariableValues({
-						[`current_text_${validName}`]: settings.text ? settings.text : '',
+						[`current_text_${validName}`]: settings.text ?? '',
 					})
 				} else if (inputKind === 'image_source') {
 					this.setVariableValues({
@@ -339,7 +343,7 @@ class OBSInstance extends InstanceBase {
 			let transition = await this.sendRequest('GetCurrentSceneTransition')
 
 			this.states.currentTransition = data.transitionName
-			this.states.transitionDuration = transition.transitionDuration ? transition.transitionDuration : '0'
+			this.states.transitionDuration = transition.transitionDuration ?? '0'
 
 			this.checkFeedbacks('transition_duration', 'current_transition')
 			this.setVariableValues({
@@ -348,7 +352,7 @@ class OBSInstance extends InstanceBase {
 			})
 		})
 		this.obs.on('CurrentSceneTransitionDurationChanged', (data) => {
-			this.states.transitionDuration = data.transitionDuration ? data.transitionDuration : '0'
+			this.states.transitionDuration = data.transitionDuration ?? '0'
 			this.checkFeedbacks('transition_duration')
 			this.setVariableValues({ transition_duration: this.states.transitionDuration })
 		})
@@ -469,9 +473,18 @@ class OBSInstance extends InstanceBase {
 			}
 		})
 		//UI
-		this.obs.on('StudioModeStateChanged', (data) => {
+		this.obs.on('StudioModeStateChanged', async (data) => {
 			this.states.studioMode = data.studioModeEnabled ? true : false
 			this.checkFeedbacks('studioMode')
+
+			if (this.states.studioMode) {
+				let preview = await this.sendRequest('GetCurrentPreviewScene')
+				this.states.previewScene = preview?.sceneName ?? 'None'
+			} else {
+				this.states.previewScene = 'None'
+			}
+			this.checkFeedbacks('studioMode', 'scenePreview')
+			this.setVariableValues({ scene_preview: this.states.previewScene })
 		})
 	}
 
@@ -695,7 +708,7 @@ class OBSInstance extends InstanceBase {
 		})
 
 		this.states.currentTransition = currentTransition.transitionName
-		this.states.transitionDuration = currentTransition.transitionDuration ? currentTransition.transitionDuration : '0'
+		this.states.transitionDuration = currentTransition.transitionDuration ?? '0'
 
 		this.checkFeedbacks('transition_duration', 'current_transition')
 		this.setVariableValues({
@@ -773,23 +786,23 @@ class OBSInstance extends InstanceBase {
 		let validName = sourceName.replace(/[\W]/gi, '_')
 
 		let inputMute = await this.sendRequest('GetInputMute', { inputName: sourceName })
-		this.sources[sourceName].inputMuted = inputMute.inputMuted
+		this.sources[sourceName].inputMuted = inputMute?.inputMuted
 
 		let inputVolume = await this.sendRequest('GetInputVolume', { inputName: sourceName })
-		this.sources[sourceName].inputVolume = this.roundNumber(inputVolume.inputVolumeDb, 1)
+		this.sources[sourceName].inputVolume = this.roundNumber(inputVolume?.inputVolumeDb, 1)
 
 		let audioBalance = await this.sendRequest('GetInputAudioBalance', { inputName: sourceName })
-		this.sources[sourceName].inputAudioBalance = this.roundNumber(audioBalance.inputAudioBalance, 1)
+		this.sources[sourceName].inputAudioBalance = this.roundNumber(audioBalance?.inputAudioBalance, 1)
 
 		let syncOffset = await this.sendRequest('GetInputAudioSyncOffset', { inputName: sourceName })
-		this.sources[sourceName].inputAudioSyncOffset = syncOffset.inputAudioSyncOffset
+		this.sources[sourceName].inputAudioSyncOffset = syncOffset?.inputAudioSyncOffset
 
 		let audioMonitor = await this.sendRequest('GetInputAudioMonitorType', { inputName: sourceName })
-		this.sources[sourceName].monitorType = audioMonitor.monitorType
+		this.sources[sourceName].monitorType = audioMonitor?.monitorType
 		let monitorType
-		if (audioMonitor.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+		if (audioMonitor?.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
 			monitorType = 'Monitor / Output'
-		} else if (audioMonitor.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+		} else if (audioMonitor?.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
 			monitorType = 'Monitor Only'
 		} else {
 			monitorType = 'Off'
@@ -856,7 +869,7 @@ class OBSInstance extends InstanceBase {
 	async getInputSettings(sourceName, inputKind) {
 		let settings = await this.sendRequest('GetInputSettings', { inputName: sourceName })
 
-		let name = this.sources[sourceName].validName ? this.sources[sourceName].validName : sourceName
+		let name = this.sources[sourceName].validName ?? sourceName
 		this.sources[sourceName].settings = settings.inputSettings
 
 		if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
@@ -864,7 +877,7 @@ class OBSInstance extends InstanceBase {
 			if (settings?.inputSettings?.text) {
 				this.textSourceList.push({ id: sourceName, label: sourceName })
 				this.setVariableValues({
-					[`current_text_${name}`]: settings.inputSettings.text ? settings.inputSettings.text : '',
+					[`current_text_${name}`]: settings.inputSettings.text ?? '',
 				})
 			} else if (settings?.inputSettings?.from_file) {
 				this.setVariableValues({
@@ -921,9 +934,9 @@ class OBSInstance extends InstanceBase {
 	}
 
 	addScene(sceneName) {
-		this.sceneChoices.push({ id: sceneName, label: sceneName })
+		//this.sceneChoices.push({ id: sceneName, label: sceneName })
 		this.updateActionsFeedbacksVariables()
-		this.getSceneItems(sceneName)
+		//this.getSceneItems(sceneName)
 	}
 
 	removeScene(sceneName) {
@@ -943,7 +956,7 @@ class OBSInstance extends InstanceBase {
 	}
 
 	async getScenesSources() {
-		this.scenes = {}
+		//this.scenes = []
 		this.sources = {}
 		this.mediaSources = {}
 		this.imageSources = {}
@@ -958,40 +971,6 @@ class OBSInstance extends InstanceBase {
 		this.mediaSourceList = []
 		this.textSourceList = []
 		this.imageSourceList = []
-
-		let sceneList = await this.sendRequest('GetSceneList')
-
-		this.scenes = sceneList.scenes
-		this.states.previewScene = sceneList.currentPreviewSceneName ? sceneList.currentPreviewSceneName : 'None'
-		this.states.programScene = sceneList.currentProgramSceneName
-
-		this.setVariableValues({
-			scene_preview: this.states.previewScene,
-			scene_active: this.states.programScene,
-		})
-
-		sceneList.scenes.forEach((scene) => {
-			let sceneName = scene.sceneName
-			this.addScene(sceneName)
-			this.getSourceFilters(sceneName)
-		})
-
-		let specialInputs = await this.sendRequest('GetSpecialInputs')
-
-		for (let x in specialInputs) {
-			let input = specialInputs[x]
-			if (input) {
-				this.sources[input] = {
-					sourceName: input,
-					validName: input.replace(/[\W]/gi, '_'),
-				}
-
-				if (!this.sourceChoices.find((item) => item.id === input)) {
-					this.sourceChoices.push({ id: input, label: input })
-				}
-				this.getAudioSources(input)
-			}
-		}
 	}
 
 	formatTimecode(data) {
@@ -1111,7 +1090,7 @@ class OBSInstance extends InstanceBase {
 
 	initializeStates() {
 		//Basic Info
-		this.scenes = {}
+		//this.scenes = {}
 		this.sources = {}
 		this.states = {}
 		this.transitions = {}
@@ -1148,6 +1127,49 @@ class OBSInstance extends InstanceBase {
 		this.initFeedbacks()
 		this.initPresets()
 		this.checkFeedbacks()
+	}
+
+	async buildSceneList() {
+		this.scenes = []
+		this.sceneChoices = []
+
+		let sceneList = await this.sendRequest('GetSceneList')
+
+		this.scenes = sceneList.scenes
+		this.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
+		this.states.programScene = sceneList.currentProgramSceneName
+
+		this.setVariableValues({
+			scene_preview: this.states.previewScene,
+			scene_active: this.states.programScene,
+		})
+
+		this.scenes.forEach((scene) => {
+			let sceneName = scene.sceneName
+			this.sceneChoices.push({ id: sceneName, label: sceneName })
+			//this.addScene(sceneName)
+		})
+		this.updateActionsFeedbacksVariables()
+	}
+
+	async buildSpecialInputs() {
+		let specialInputs = await this.sendRequest('GetSpecialInputs')
+
+		for (let x in specialInputs) {
+			let input = specialInputs[x]
+
+			if (input) {
+				this.sources[input] = {
+					sourceName: input,
+					validName: input.replace(/[\W]/gi, '_'),
+				}
+
+				if (!this.sourceChoices.find((item) => item.id === input)) {
+					this.sourceChoices.push({ id: input, label: input })
+				}
+				this.getAudioSources(input)
+			}
+		}
 	}
 }
 runEntrypoint(OBSInstance, UpgradeScripts)

@@ -100,7 +100,7 @@ export function getVariables() {
 	}
 
 	let sceneIndex = 0
-	for (let s = this.scenes.length - 1; s >= 0; s--) {
+	for (let s = this.scenes?.length - 1; s >= 0; s--) {
 		let index = ++sceneIndex
 
 		let sceneName = this.scenes[s].sceneName

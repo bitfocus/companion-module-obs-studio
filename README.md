@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### Unreleased
+
+- Improved
+  - Update scene_preview variable and Scene in Preview feedback when switching into Studio Mode
+
 ### v3.4.0
 
 - New
