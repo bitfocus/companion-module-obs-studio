@@ -244,7 +244,6 @@ class OBSInstance extends InstanceBase {
 			this.checkFeedbacks('scenePreview')
 		})
 		this.obs.on('SceneListChanged', (data) => {
-			console.log(data)
 			this.scenes = data.scenes
 		})
 		//Inputs
@@ -499,7 +498,8 @@ class OBSInstance extends InstanceBase {
 
 	async sendBatch(batch) {
 		try {
-			this.obs.callBatch(batch)
+			let data = this.obs.callBatch(batch)
+			return data
 		} catch (error) {
 			this.log('debug', `Batch request failed (${error})`)
 		}
@@ -779,48 +779,93 @@ class OBSInstance extends InstanceBase {
 					this.updateActionsFeedbacksVariables()
 				}
 			})
-			.catch((error) => {})
+			.catch((error) => {
+				//Ignore, this source is not an audio source
+			})
 	}
 
 	async getSourceAudio(sourceName) {
-		let validName = sourceName.replace(/[\W]/gi, '_')
+		let validName = this.validName(sourceName)
 
-		let inputMute = await this.sendRequest('GetInputMute', { inputName: sourceName })
-		this.sources[sourceName].inputMuted = inputMute?.inputMuted
+		let batch = [
+			{
+				requestId: sourceName,
+				requestType: 'GetInputMute',
+				requestData: { inputName: sourceName },
+			},
+			{
+				requestId: sourceName,
+				requestType: 'GetInputVolume',
+				requestData: { inputName: sourceName },
+			},
+			{
+				requestId: sourceName,
+				requestType: 'GetInputAudioBalance',
+				requestData: { inputName: sourceName },
+			},
+			{
+				requestId: sourceName,
+				requestType: 'GetInputAudioSyncOffset',
+				requestData: { inputName: sourceName },
+			},
+			{
+				requestId: sourceName,
+				requestType: 'GetInputAudioMonitorType',
+				requestData: { inputName: sourceName },
+			},
+			{
+				requestId: sourceName,
+				requestType: 'GetInputAudioTracks',
+				requestData: { inputName: sourceName },
+			},
+		]
 
-		let inputVolume = await this.sendRequest('GetInputVolume', { inputName: sourceName })
-		this.sources[sourceName].inputVolume = this.roundNumber(inputVolume?.inputVolumeDb, 1)
+		let data = await this.sendBatch(batch)
+		for (const response of data) {
+			if (response.requestStatus.result && response.responseData) {
+				let sourceName = response.requestId
+				let type = response.requestType
+				let data = response.responseData
 
-		let audioBalance = await this.sendRequest('GetInputAudioBalance', { inputName: sourceName })
-		this.sources[sourceName].inputAudioBalance = this.roundNumber(audioBalance?.inputAudioBalance, 1)
-
-		let syncOffset = await this.sendRequest('GetInputAudioSyncOffset', { inputName: sourceName })
-		this.sources[sourceName].inputAudioSyncOffset = syncOffset?.inputAudioSyncOffset
-
-		let audioMonitor = await this.sendRequest('GetInputAudioMonitorType', { inputName: sourceName })
-		this.sources[sourceName].monitorType = audioMonitor?.monitorType
-		let monitorType
-		if (audioMonitor?.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-			monitorType = 'Monitor / Output'
-		} else if (audioMonitor?.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-			monitorType = 'Monitor Only'
-		} else {
-			monitorType = 'Off'
+				switch (type) {
+					case 'GetInputMute':
+						this.sources[sourceName].inputMuted = data.inputMuted
+						break
+					case 'GetInputVolume':
+						this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+						break
+					case 'GetInputAudioBalance':
+						this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+						break
+					case 'GetInputAudioSyncOffset':
+						this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
+						break
+					case 'GetInputAudioMonitorType':
+						this.sources[sourceName].monitorType = data.monitorType
+						let monitorType
+						if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+							monitorType = 'Monitor / Output'
+						} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+							monitorType = 'Monitor Only'
+						} else {
+							monitorType = 'Off'
+						}
+						this.setVariableValues({ [`monitor_${validName}`]: monitorType })
+						break
+					case 'GetInputAudioTracks':
+						this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
+						break
+				}
+			}
 		}
-
-		let audioTracks = await this.sendRequest('GetInputAudioTracks', { inputName: sourceName })
-		this.sources[sourceName].inputAudioTracks = audioTracks.inputAudioTracks
 
 		this.setVariableValues({
 			[`mute_${validName}`]: this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted',
 			[`volume_${validName}`]: this.sources[sourceName].inputVolume + 'db',
 			[`balance_${validName}`]: this.sources[sourceName].inputAudioBalance,
 			[`sync_offset_${validName}`]: this.sources[sourceName].inputAudioSyncOffset + 'ms',
-			[`monitor_${validName}`]: monitorType,
 		})
 		this.checkFeedbacks('audio_muted', 'volume', 'audio_monitor_type')
-
-		this.updateActionsFeedbacksVariables()
 	}
 
 	async getSourceFilters(sourceName) {
@@ -1148,8 +1193,117 @@ class OBSInstance extends InstanceBase {
 			let sceneName = scene.sceneName
 			this.sceneChoices.push({ id: sceneName, label: sceneName })
 			//this.addScene(sceneName)
+			this.buildSourceList(sceneName)
 		})
 		this.updateActionsFeedbacksVariables()
+	}
+
+	async buildSourceList(sceneName) {
+		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
+
+		this.sceneItems[sceneName] = data.sceneItems
+
+		let batch = []
+		for (const sceneItem of data.sceneItems) {
+			let sourceName = sceneItem.sourceName
+			this.sources[sourceName] = sceneItem
+
+			//Generate name that can be used as valid Variable IDs
+			this.sources[sourceName].validName = this.validName(sceneItem.sourceName)
+
+			if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+				this.sourceChoices.push({ id: sourceName, label: sourceName })
+			}
+
+			if (sceneItem.isGroup) {
+				this.getGroupInfo(sourceName)
+			}
+			//let active = await this.sendRequest('GetSourceActive', { sourceName: sourceName })
+			batch.push(
+				{
+					requestId: sourceName,
+					requestType: 'GetSourceActive',
+					requestData: { sourceName: sourceName },
+				},
+				{
+					requestId: sourceName,
+					requestType: 'GetSourceFilterList',
+					requestData: { sourceName: sourceName },
+				}
+			)
+
+			this.getAudioSources(sourceName)
+
+			if (sceneItem.inputKind) {
+				let inputKind = sceneItem.inputKind
+				batch.push({
+					requestId: sourceName,
+					requestType: 'GetInputSettings',
+					requestData: { inputName: sourceName },
+				})
+				//this.getInputSettings(sourceName, inputKind)
+			}
+		}
+		let batchTest = await this.sendBatch(batch)
+		//console.log(batchTest)
+		this.processBatch(batchTest)
+		//console.log(this.sources)
+		this.updateActionsFeedbacksVariables()
+	}
+
+	getAudioInfo(sourceName) {}
+
+	sendBatchToSources(requestType) {
+		let batch = []
+		for (const source in this.sources) {
+			batch.push({
+				requestId: source,
+				requestType: requestType,
+				requestData: requestData,
+			})
+		}
+		this.sendBatch(batch)
+	}
+
+	processBatch(reply) {
+		for (const response of reply) {
+			if (response.requestStatus.result) {
+				let sourceName = response.requestId
+				let type = response.requestType
+				let data = response.responseData
+
+				switch (type) {
+					case 'GetSourceActive':
+						this.sources[sourceName].active = data.videoActive
+						this.sources[sourceName].videoShowing = data.videoShowing
+						break
+					case 'GetSourceFilterList':
+						this.sourceFilters[sourceName] = data.filters
+						if (data?.filters) {
+							this.sourceFilters[sourceName] = data.filters
+							data.filters.forEach((filter) => {
+								if (!this.filterList.find((item) => item.id === filter.filterName)) {
+									this.filterList.push({ id: filter.filterName, label: filter.filterName })
+								}
+							})
+						}
+						break
+					case 'GetInputSettings':
+						break
+				}
+			}
+		}
+		this.updateActionsFeedbacksVariables()
+		this.checkFeedbacks('scene_item_active')
+	}
+
+	validName(name) {
+		try {
+			return name.replace(/[\W]/gi, '_')
+		} catch (error) {
+			this.log('debug', `Unable to generate validName for ${name}: ${error}`)
+			return name
+		}
 	}
 
 	async buildSpecialInputs() {
@@ -1161,7 +1315,7 @@ class OBSInstance extends InstanceBase {
 			if (input) {
 				this.sources[input] = {
 					sourceName: input,
-					validName: input.replace(/[\W]/gi, '_'),
+					validName: this.validName(input),
 				}
 
 				if (!this.sourceChoices.find((item) => item.id === input)) {
