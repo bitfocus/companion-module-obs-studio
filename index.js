@@ -1,4 +1,4 @@
-import { InstanceBase, Regex, runEntrypoint } from '@companion-module/base'
+import { InstanceBase, InstanceStatus, Regex, runEntrypoint } from '@companion-module/base'
 import { getActions } from './actions.js'
 import { getPresets } from './presets.js'
 import { getVariables } from './variables.js'
@@ -12,18 +12,19 @@ class OBSInstance extends InstanceBase {
 		super(internal)
 	}
 
+	//Companion Internal and Configuration
 	async init(config) {
 		this.config = config
+		this.updateStatus(InstanceStatus.Connecting)
 
-		this.updateStatus('connecting')
 		if (this.config.host && this.config.port) {
 			this.connectOBS()
 		} else if (this.config.host && !this.config.port) {
-			this.updateStatus('bad_config', 'Missing WebSocket Server port')
+			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server port')
 		} else if (!this.config.host && this.config.port) {
-			this.updateStatus('bad_config', 'Missing WebSocket Server IP address or hostname')
+			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server IP address or hostname')
 		} else {
-			this.updateStatus('bad_config', 'Missing WebSocket Server connection info')
+			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server connection info')
 		}
 	}
 
@@ -54,7 +55,6 @@ class OBSInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config
-
 		this.init(config)
 	}
 
@@ -83,6 +83,36 @@ class OBSInstance extends InstanceBase {
 		this.setActionDefinitions(actions)
 	}
 
+	//Utilities
+	validName(name) {
+		//Generate a valid name for use as a variable ID
+		try {
+			return name.replace(/[\W]/gi, '_')
+		} catch (error) {
+			this.log('debug', `Unable to generate validName for ${name}: ${error}`)
+			return name
+		}
+	}
+
+	formatTimecode(data) {
+		//Converts milliseconds into a readable time format (hh:mm:ss)
+		try {
+			let formattedTime = new Date(data).toISOString().slice(11, 19)
+			return formattedTime
+		} catch (error) {}
+	}
+
+	roundNumber(number, decimalPlaces) {
+		//Rounds a number to a specified number of decimal places
+		try {
+			return Number(Math.round(number + 'e' + decimalPlaces ?? 0) + 'e-' + decimalPlaces ?? 0)
+		} catch (error) {
+			this.log('debug', `Error rounding number ${number}: ${error}`)
+			return number
+		}
+	}
+
+	//OBS Websocket Connection
 	async connectOBS() {
 		if (this.obs) {
 			await this.obs.disconnect()
@@ -102,10 +132,10 @@ class OBSInstance extends InstanceBase {
 						EventSubscription.InputVolumeMeters |
 						EventSubscription.SceneItemTransformChanged,
 					rpcVersion: 1,
-				}
+				},
 			)
 			if (obsWebSocketVersion) {
-				this.updateStatus('ok')
+				this.updateStatus(InstanceStatus.Ok)
 				this.stopReconnectionPoll()
 				this.log('info', 'Connected to OBS')
 				this.obsListeners()
@@ -128,31 +158,39 @@ class OBSInstance extends InstanceBase {
 				this.buildSpecialInputs()
 			}
 		} catch (error) {
-			if (!this.reconnectionPoll) {
-				this.startReconnectionPoll()
+			this.processWebsocketError(error)
+		}
+	}
 
-				if (error?.message.match(/(Server sent no subprotocol)/i)) {
-					this.log('error', 'Failed to connect to OBS. Please upgrade OBS to version 28 or above')
-					this.updateStatus('bad_config', 'Outdated websocket plugin')
-				} else if (error?.message.match(/(missing an `authentication` string)/i)) {
-					this.log(
-						'error',
-						`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`
-					)
-				} else if (error?.message.match(/(Authentication failed)/i)) {
-					this.log(
-						'error',
-						`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`
-					)
-					this.updateStatus('bad_config', 'Invalid password')
-				} else if (error?.message.match(/(ECONNREFUSED)/i)) {
-					this.log('error', `Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
-					this.updateStatus('connection_failure')
-				} else {
-					this.log('error', `Failed to connect to OBS (${error.message})`)
-					this.updateStatus('unknown_error')
-				}
-			}
+	processWebsocketError(error) {
+		let tryReconnect = null
+
+		if (error?.message.match(/(Server sent no subprotocol)/i)) {
+			tryReconnect = false
+			this.log('error', 'Failed to connect to OBS. Please upgrade OBS to version 28 or above')
+			this.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated websocket plugin')
+		} else if (error?.message.match(/(missing an `authentication` string)/i)) {
+			tryReconnect = false
+			this.log('error', `Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
+		} else if (error?.message.match(/(Authentication failed)/i)) {
+			tryReconnect = false
+			this.log(
+				'error',
+				`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
+			)
+			this.updateStatus(InstanceStatus.BadConfig, 'Invalid password')
+		} else if (error?.message.match(/(ECONNREFUSED)/i)) {
+			tryReconnect = true
+			this.log('error', `Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
+			this.updateStatus(InstanceStatus.ConnectionFailure)
+		} else {
+			tryReconnect = true
+			this.log('error', `Failed to connect to OBS (${error.message})`)
+			this.updateStatus(InstanceStatus.UnknownError)
+		}
+
+		if (!this.reconnectionPoll && tryReconnect) {
+			this.startReconnectionPoll()
 		}
 	}
 
@@ -167,13 +205,14 @@ class OBSInstance extends InstanceBase {
 
 	connectionLost() {
 		this.log('error', 'Connection lost to OBS')
-		this.updateStatus('disconnected')
+		this.updateStatus(InstanceStatus.Disconnected)
 		this.disconnectOBS()
 		if (!this.reconnectionPoll) {
 			this.startReconnectionPoll()
 		}
 	}
 
+	//OBS Websocket Listeners
 	async obsListeners() {
 		//General
 		this.obs.once('ExitStarted', () => {
@@ -487,6 +526,7 @@ class OBSInstance extends InstanceBase {
 		})
 	}
 
+	//OBS Websocket Commands
 	async sendRequest(requestType, requestData) {
 		try {
 			let data = await this.obs.call(requestType, requestData)
@@ -502,20 +542,6 @@ class OBSInstance extends InstanceBase {
 			return data
 		} catch (error) {
 			this.log('debug', `Batch request failed (${error})`)
-		}
-	}
-
-	startReconnectionPoll() {
-		this.stopReconnectionPoll()
-		this.reconnectionPoll = setInterval(() => {
-			this.connectOBS()
-		}, 5000)
-	}
-
-	stopReconnectionPoll() {
-		if (this.reconnectionPoll) {
-			clearInterval(this.reconnectionPoll)
-			delete this.reconnectionPoll
 		}
 	}
 
@@ -592,11 +618,18 @@ class OBSInstance extends InstanceBase {
 			.catch((error) => {})
 	}
 
-	roundNumber(number, decimalPlaces) {
-		if (number) {
-			return Number(Math.round(number + 'e' + decimalPlaces) + 'e-' + decimalPlaces)
-		} else {
-			return number
+	//Polls
+	startReconnectionPoll() {
+		this.stopReconnectionPoll()
+		this.reconnectionPoll = setInterval(() => {
+			this.connectOBS()
+		}, 5000)
+	}
+
+	stopReconnectionPoll() {
+		if (this.reconnectionPoll) {
+			clearInterval(this.reconnectionPoll)
+			delete this.reconnectionPoll
 		}
 	}
 
@@ -624,6 +657,62 @@ class OBSInstance extends InstanceBase {
 		if (this.statsPoll) {
 			clearInterval(this.statsPoll)
 			delete this.statsPoll
+		}
+	}
+
+	startMediaPoll() {
+		this.stopMediaPoll()
+		this.mediaPoll = setInterval(() => {
+			this.mediaSourceList.forEach(async (source) => {
+				let sourceName = source.id.replace(/[\W]/gi, '_')
+
+				let data = await this.sendRequest('GetMediaInputStatus', { inputName: source.id })
+
+				this.mediaSources[source.id] = data
+
+				let remaining = data.mediaDuration - data.mediaCursor
+				if (remaining > 0) {
+					remaining = this.formatTimecode(remaining)
+				} else {
+					remaining = '--:--:--'
+				}
+
+				this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
+				this.mediaSources[source.id].timeRemaining = remaining
+
+				if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+					this.setVariableValues({
+						current_media_name: source.id,
+						current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
+						current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
+						[`media_status_${sourceName}`]: 'Playing',
+					})
+				} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+					this.setVariableValues({ [`media_status_${sourceName}`]: 'Paused' })
+				} else {
+					this.setVariableValues({ [`media_status_${sourceName}`]: 'Stopped' })
+				}
+				this.setVariableValues({
+					[`media_time_elapsed_${sourceName}`]: this.mediaSources[source.id].timeElapsed,
+					[`media_time_remaining_${sourceName}`]: remaining,
+				})
+				this.checkFeedbacks('media_playing', 'media_source_time_remaining')
+
+				/* this.obs
+					.call('GetInputSettings', { inputName: source.id })
+					.then((settings) => {
+						if (settings.inputKind === 'vlc_source') {
+						}
+					})
+					.catch((error) => {}) */
+			})
+		}, 1000)
+	}
+
+	stopMediaPoll() {
+		if (this.mediaPoll) {
+			clearInterval(this.mediaPoll)
+			this.mediaPoll = null
 		}
 	}
 
@@ -1018,70 +1107,6 @@ class OBSInstance extends InstanceBase {
 		this.imageSourceList = []
 	}
 
-	formatTimecode(data) {
-		//Converts milliseconds into a readable time format (hh:mm:ss)
-		try {
-			let formattedTime = new Date(data).toISOString().slice(11, 19)
-			return formattedTime
-		} catch (error) {}
-	}
-
-	startMediaPoll() {
-		this.stopMediaPoll()
-		this.mediaPoll = setInterval(() => {
-			this.mediaSourceList.forEach(async (source) => {
-				let sourceName = source.id.replace(/[\W]/gi, '_')
-
-				let data = await this.sendRequest('GetMediaInputStatus', { inputName: source.id })
-
-				this.mediaSources[source.id] = data
-
-				let remaining = data.mediaDuration - data.mediaCursor
-				if (remaining > 0) {
-					remaining = this.formatTimecode(remaining)
-				} else {
-					remaining = '--:--:--'
-				}
-
-				this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
-				this.mediaSources[source.id].timeRemaining = remaining
-
-				if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-					this.setVariableValues({
-						current_media_name: source.id,
-						current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
-						current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
-						[`media_status_${sourceName}`]: 'Playing',
-					})
-				} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
-					this.setVariableValues({ [`media_status_${sourceName}`]: 'Paused' })
-				} else {
-					this.setVariableValues({ [`media_status_${sourceName}`]: 'Stopped' })
-				}
-				this.setVariableValues({
-					[`media_time_elapsed_${sourceName}`]: this.mediaSources[source.id].timeElapsed,
-					[`media_time_remaining_${sourceName}`]: remaining,
-				})
-				this.checkFeedbacks('media_playing', 'media_source_time_remaining')
-
-				/* this.obs
-					.call('GetInputSettings', { inputName: source.id })
-					.then((settings) => {
-						if (settings.inputKind === 'vlc_source') {
-						}
-					})
-					.catch((error) => {}) */
-			})
-		}, 1000)
-	}
-
-	stopMediaPoll() {
-		if (this.mediaPoll) {
-			clearInterval(this.mediaPoll)
-			this.mediaPoll = null
-		}
-	}
-
 	updateAudioPeak(data) {
 		this.audioPeak = {}
 		data.inputs.forEach((input) => {
@@ -1229,7 +1254,7 @@ class OBSInstance extends InstanceBase {
 					requestId: sourceName,
 					requestType: 'GetSourceFilterList',
 					requestData: { sourceName: sourceName },
-				}
+				},
 			)
 
 			this.getAudioSources(sourceName)
@@ -1250,8 +1275,6 @@ class OBSInstance extends InstanceBase {
 		//console.log(this.sources)
 		this.updateActionsFeedbacksVariables()
 	}
-
-	getAudioInfo(sourceName) {}
 
 	sendBatchToSources(requestType) {
 		let batch = []
@@ -1295,15 +1318,6 @@ class OBSInstance extends InstanceBase {
 		}
 		this.updateActionsFeedbacksVariables()
 		this.checkFeedbacks('scene_item_active')
-	}
-
-	validName(name) {
-		try {
-			return name.replace(/[\W]/gi, '_')
-		} catch (error) {
-			this.log('debug', `Unable to generate validName for ${name}: ${error}`)
-			return name
-		}
 	}
 
 	async buildSpecialInputs() {
