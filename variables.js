@@ -43,6 +43,8 @@ export function getVariables() {
 		replay_buffer_path: 'None',
 		current_media_time_elapsed: '--:--:--',
 		current_media_time_remaining: '--:--:--',
+		scene_preview: this.states.previewScene ?? 'None',
+		scene_active: this.states.programScene ?? 'None',
 	})
 	//Source Specific Variables
 	for (let s in this.mediaSourceList) {

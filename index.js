@@ -112,6 +112,96 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
+	organizeChoices() {
+		//Sort choices alphabetically
+		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
+		this.sceneChoices?.sort((a, b) => a.id.localeCompare(b.id))
+		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
+		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
+		//Special Choices - Scenes
+		this.sceneChoicesProgramPreview = [
+			{ id: 'Current Scene', label: 'Current Scene' },
+			{ id: 'Preview Scene', label: 'Preview Scene' },
+		].concat(this.sceneChoices)
+		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
+		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
+		//Special Choices - Sources
+		this.sourceChoicesWithScenes = this.sourceChoices.concat(this.sceneChoices)
+		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
+		//Default Choices
+		this.sourceListDefault = this.sourceChoices?.[0] ? this.sourceChoices?.[0]?.id : ''
+		this.sceneListDefault = this.sceneChoices?.[0] ? this.sceneChoices?.[0]?.id : ''
+		this.filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
+		this.audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
+		this.profileChoicesDefault = this.profileChoices?.[0] ? this.profileChoices[0].id : ''
+	}
+
+	updateActionsFeedbacksVariables() {
+		this.organizeChoices()
+
+		this.initActions()
+		this.initVariables()
+		this.initFeedbacks()
+		this.initPresets()
+		this.checkFeedbacks()
+	}
+
+	initializeStates() {
+		//Basic Info
+		this.scenes = []
+		this.sources = {}
+		this.states = {}
+		this.transitions = {}
+		this.profiles = {}
+		this.sceneCollections = {}
+		this.outputs = {}
+		this.sceneItems = {}
+		this.groups = {}
+		//Source Types
+		this.mediaSources = {}
+		this.imageSources = {}
+		this.textSources = {}
+		this.sourceFilters = {}
+		//Choices
+		this.sceneChoices = []
+		this.sourceChoices = []
+		this.profileChoices = []
+		this.sceneCollectionList = []
+		this.textSourceList = []
+		this.mediaSourceList = []
+		this.imageSourceList = []
+		this.hotkeyNames = []
+		this.imageFormats = []
+		this.transitionList = []
+		this.monitors = []
+		this.outputList = []
+		this.filterList = []
+		this.audioSourceList = []
+		//Set Initial States
+		this.vendorEvent = {}
+		this.states.sceneCollectionChanging = false
+	}
+
+	resetSceneSourceStates() {
+		this.scenes = []
+		this.sources = {}
+		this.mediaSources = {}
+		this.imageSources = {}
+		this.textSources = {}
+		this.sourceFilters = {}
+		this.groups = {}
+
+		this.sceneChoices = []
+		this.sourceChoices = []
+		this.filterList = []
+		this.audioSourceList = []
+		this.mediaSourceList = []
+		this.textSourceList = []
+		this.imageSourceList = []
+	}
+
 	//OBS Websocket Connection
 	async connectOBS() {
 		if (this.obs) {
@@ -121,41 +211,42 @@ class OBSInstance extends InstanceBase {
 		}
 		try {
 			const { obsWebSocketVersion } = await this.obs.connect(
-				`ws:///${this.config.host}:${this.config.port}`,
+				`ws://${this.config.host}:${this.config.port}`,
 				this.config.pass,
 				{
 					eventSubscriptions:
 						EventSubscription.All |
-						EventSubscription.Ui |
 						EventSubscription.InputActiveStateChanged |
 						EventSubscription.InputShowStateChanged |
 						EventSubscription.InputVolumeMeters |
 						EventSubscription.SceneItemTransformChanged,
 					rpcVersion: 1,
-				},
+				}
 			)
 			if (obsWebSocketVersion) {
 				this.updateStatus(InstanceStatus.Ok)
 				this.stopReconnectionPoll()
 				this.log('info', 'Connected to OBS')
-				this.obsListeners()
 
 				//Setup Initial State Objects
 				this.initializeStates()
 
-				//Get Initial Info
+				//Start Listeners
+				this.obsListeners()
+
+				//Get Initial OBS Info
 				this.obsInfo()
 				this.getStats()
 				this.getRecordStatus()
 				this.getStreamStatus()
+				this.startStatsPoll()
+
+				//Build Scenes, Sources, Parameters
+				this.buildSceneList()
+				this.buildSpecialInputs()
 				this.getProfileList()
 				this.getSceneTransitionList()
 				this.getSceneCollectionList()
-				//this.getScenesSources()
-				this.startStatsPoll()
-				//TESTING
-				this.buildSceneList()
-				this.buildSpecialInputs()
 			}
 		} catch (error) {
 			this.processWebsocketError(error)
@@ -163,34 +254,37 @@ class OBSInstance extends InstanceBase {
 	}
 
 	processWebsocketError(error) {
-		let tryReconnect = null
-
-		if (error?.message.match(/(Server sent no subprotocol)/i)) {
-			tryReconnect = false
-			this.log('error', 'Failed to connect to OBS. Please upgrade OBS to version 28 or above')
-			this.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated websocket plugin')
-		} else if (error?.message.match(/(missing an `authentication` string)/i)) {
-			tryReconnect = false
-			this.log('error', `Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
-		} else if (error?.message.match(/(Authentication failed)/i)) {
-			tryReconnect = false
-			this.log(
-				'error',
-				`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
-			)
-			this.updateStatus(InstanceStatus.BadConfig, 'Invalid password')
-		} else if (error?.message.match(/(ECONNREFUSED)/i)) {
-			tryReconnect = true
-			this.log('error', `Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
-			this.updateStatus(InstanceStatus.ConnectionFailure)
-		} else {
-			tryReconnect = true
-			this.log('error', `Failed to connect to OBS (${error.message})`)
-			this.updateStatus(InstanceStatus.UnknownError)
-		}
-
-		if (!this.reconnectionPoll && tryReconnect) {
-			this.startReconnectionPoll()
+		if (!this.reconnectionPoll) {
+			let tryReconnect = null
+			if (error?.message.match(/(Server sent no subprotocol)/i)) {
+				tryReconnect = false
+				this.log('error', 'Failed to connect to OBS. Please upgrade OBS to version 28 or above')
+				this.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated websocket plugin')
+			} else if (error?.message.match(/(missing an `authentication` string)/i)) {
+				tryReconnect = false
+				this.log(
+					'error',
+					`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`
+				)
+			} else if (error?.message.match(/(Authentication failed)/i)) {
+				tryReconnect = false
+				this.log(
+					'error',
+					`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`
+				)
+				this.updateStatus(InstanceStatus.BadConfig, 'Invalid password')
+			} else if (error?.message.match(/(ECONNREFUSED)/i)) {
+				tryReconnect = true
+				this.log('error', `Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
+				this.updateStatus(InstanceStatus.ConnectionFailure)
+			} else {
+				tryReconnect = true
+				this.log('error', `Failed to connect to OBS (${error.message})`)
+				this.updateStatus(InstanceStatus.UnknownError)
+			}
+			if (tryReconnect) {
+				this.startReconnectionPoll()
+			}
 		}
 	}
 
@@ -204,10 +298,11 @@ class OBSInstance extends InstanceBase {
 	}
 
 	connectionLost() {
-		this.log('error', 'Connection lost to OBS')
-		this.updateStatus(InstanceStatus.Disconnected)
-		this.disconnectOBS()
 		if (!this.reconnectionPoll) {
+			this.log('error', 'Connection lost to OBS')
+			this.updateStatus(InstanceStatus.Disconnected)
+			this.disconnectOBS()
+
 			this.startReconnectionPoll()
 		}
 	}
@@ -232,8 +327,10 @@ class OBSInstance extends InstanceBase {
 			this.checkFeedbacks('scene_collection_active')
 			this.setVariableValues({ scene_collection: this.states.currentSceneCollection })
 			this.states.sceneCollectionChanging = false
-			this.getScenesSources()
+			this.resetSceneSourceStates()
+			this.buildSceneList()
 			this.getSceneTransitionList()
+			this.obsInfo()
 		})
 		this.obs.on('SceneCollectionListChanged', () => {
 			this.getSceneCollectionList()
@@ -349,32 +446,7 @@ class OBSInstance extends InstanceBase {
 			let source = data.inputName
 			let settings = data.inputSettings
 
-			if (this.sources[source]) {
-				this.sources[source].settings = settings
-				let validName = source.replace(/[\W]/gi, '_')
-				let inputKind = this.sources[source].inputKind
-
-				if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
-					this.setVariableValues({
-						[`current_text_${validName}`]: settings.text ?? '',
-					})
-				} else if (inputKind === 'image_source') {
-					this.setVariableValues({
-						[`image_file_name_${validName}`]: settings?.file
-							? settings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-							: '',
-					})
-				} else if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
-					let file = ''
-					if (settings?.playlist) {
-						file = settings.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-						//Use first value in playlist until support for determining currently playing cue
-					} else if (settings?.local_file) {
-						file = settings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-					}
-					this.setVariableValues({ [`media_file_name_${validName}`]: file })
-				}
-			}
+			this.updateInputSettings(source, settings)
 		})
 		//Transitions
 		this.obs.on('CurrentSceneTransitionChanged', async (data) => {
@@ -545,79 +617,6 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
-	async obsInfo() {
-		try {
-			let version = await this.sendRequest('GetVersion')
-			this.states.version = version
-			version.supportedImageFormats.forEach((format) => {
-				this.imageFormats.push({ id: format, label: format })
-			})
-
-			let inputKindList = await this.sendRequest('GetInputKindList')
-			this.states.inputKindList = inputKindList
-
-			let hotkeyList = await this.sendRequest('GetHotkeyList')
-			hotkeyList.hotkeys.forEach((hotkey) => {
-				this.hotkeyNames.push({ id: hotkey, label: hotkey })
-			})
-
-			let studioMode = await this.sendRequest('GetStudioModeEnabled')
-			this.states.studioMode = studioMode.studioModeEnabled ? true : false
-
-			let videoSettings = await this.sendRequest('GetVideoSettings')
-			this.states.resolution = `${videoSettings.baseWidth}x${videoSettings.baseHeight}`
-			this.states.outputResolution = `${videoSettings.outputWidth}x${videoSettings.outputHeight}`
-			this.states.framerate = `${this.roundNumber(videoSettings.fpsNumerator / videoSettings.fpsDenominator, 2)} fps`
-			this.setVariableValues({
-				base_resolution: this.states.resolution,
-				output_resolution: this.states.outputResolution,
-				target_framerate: this.states.framerate,
-			})
-
-			let monitorList = await this.sendRequest('GetMonitorList')
-			this.states.monitors = monitorList
-			monitorList.monitors.forEach((monitor) => {
-				let monitorName = monitor.monitorName
-				if (monitorName?.match(/\([0-9]+\)/i)) {
-					monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
-				}
-				this.monitors.push({
-					id: monitor.monitorIndex,
-					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
-				})
-			})
-
-			let outputData = await this.sendRequest('GetOutputList')
-			this.outputs = {}
-			this.outputList = []
-			outputData.outputs.forEach((output) => {
-				let outputKind = output.outputKind
-				if (outputKind === 'virtualcam_output') {
-					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-				} else if (
-					outputKind != 'ffmpeg_muxer' &&
-					outputKind != 'ffmpeg_output' &&
-					outputKind != 'replay_buffer' &&
-					outputKind != 'rtmp_output'
-				) {
-					//The above outputKinds are handled separately by other actions, so they are omitted
-					this.outputList.push({ id: output.outputName, label: output.outputName })
-				}
-				this.getOutputStatus(output.outputName)
-			})
-		} catch (error) {
-			this.log('debug', error)
-		}
-
-		this.obs
-			.call('GetReplayBufferStatus')
-			.then((data) => {
-				this.states.replayBuffer = data.outputActive
-				this.checkFeedbacks('replayBufferActive')
-			})
-			.catch((error) => {})
-	}
-
 	//Polls
 	startReconnectionPoll() {
 		this.stopReconnectionPoll()
@@ -663,49 +662,7 @@ class OBSInstance extends InstanceBase {
 	startMediaPoll() {
 		this.stopMediaPoll()
 		this.mediaPoll = setInterval(() => {
-			this.mediaSourceList.forEach(async (source) => {
-				let sourceName = source.id.replace(/[\W]/gi, '_')
-
-				let data = await this.sendRequest('GetMediaInputStatus', { inputName: source.id })
-
-				this.mediaSources[source.id] = data
-
-				let remaining = data.mediaDuration - data.mediaCursor
-				if (remaining > 0) {
-					remaining = this.formatTimecode(remaining)
-				} else {
-					remaining = '--:--:--'
-				}
-
-				this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
-				this.mediaSources[source.id].timeRemaining = remaining
-
-				if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-					this.setVariableValues({
-						current_media_name: source.id,
-						current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
-						current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
-						[`media_status_${sourceName}`]: 'Playing',
-					})
-				} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
-					this.setVariableValues({ [`media_status_${sourceName}`]: 'Paused' })
-				} else {
-					this.setVariableValues({ [`media_status_${sourceName}`]: 'Stopped' })
-				}
-				this.setVariableValues({
-					[`media_time_elapsed_${sourceName}`]: this.mediaSources[source.id].timeElapsed,
-					[`media_time_remaining_${sourceName}`]: remaining,
-				})
-				this.checkFeedbacks('media_playing', 'media_source_time_remaining')
-
-				/* this.obs
-					.call('GetInputSettings', { inputName: source.id })
-					.then((settings) => {
-						if (settings.inputKind === 'vlc_source') {
-						}
-					})
-					.catch((error) => {}) */
-			})
+			this.getMediaStatus()
 		}, 1000)
 	}
 
@@ -713,6 +670,121 @@ class OBSInstance extends InstanceBase {
 		if (this.mediaPoll) {
 			clearInterval(this.mediaPoll)
 			this.mediaPoll = null
+		}
+	}
+
+	//General OBS Project Info
+	async obsInfo() {
+		try {
+			let version = await this.sendRequest('GetVersion')
+			this.states.version = version
+			this.log(
+				'debug',
+				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`
+			)
+			version.supportedImageFormats.forEach((format) => {
+				this.imageFormats.push({ id: format, label: format })
+			})
+
+			let inputKindList = await this.sendRequest('GetInputKindList')
+			this.states.inputKindList = inputKindList
+
+			this.getHotkeyList()
+			this.getOutputs()
+
+			let studioMode = await this.sendRequest('GetStudioModeEnabled')
+			this.states.studioMode = studioMode.studioModeEnabled ? true : false
+
+			let videoSettings = await this.sendRequest('GetVideoSettings')
+			this.states.resolution = `${videoSettings.baseWidth}x${videoSettings.baseHeight}`
+			this.states.outputResolution = `${videoSettings.outputWidth}x${videoSettings.outputHeight}`
+			this.states.framerate = `${this.roundNumber(videoSettings.fpsNumerator / videoSettings.fpsDenominator, 2)} fps`
+			this.setVariableValues({
+				base_resolution: this.states.resolution,
+				output_resolution: this.states.outputResolution,
+				target_framerate: this.states.framerate,
+			})
+
+			let monitorList = await this.sendRequest('GetMonitorList')
+			this.states.monitors = monitorList
+			monitorList.monitors.forEach((monitor) => {
+				let monitorName = monitor.monitorName
+				if (monitorName?.match(/\([0-9]+\)/i)) {
+					monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
+				}
+				this.monitors.push({
+					id: monitor.monitorIndex,
+					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
+				})
+			})
+		} catch (error) {
+			this.log('debug', error)
+		}
+
+		this.obs
+			.call('GetReplayBufferStatus')
+			.then((data) => {
+				this.states.replayBuffer = data.outputActive
+				this.checkFeedbacks('replayBufferActive')
+			})
+			.catch((error) => {})
+	}
+
+	async getHotkeyList() {
+		let hotkeyList = await this.sendRequest('GetHotkeyList')
+		hotkeyList?.hotkeys?.forEach((hotkey) => {
+			this.hotkeyNames.push({ id: hotkey, label: hotkey })
+		})
+		this.updateActionsFeedbacksVariables()
+	}
+
+	async getProfileList() {
+		let profiles = await this.sendRequest('GetProfileList')
+		this.profileChoices = []
+
+		this.states.currentProfile = profiles.currentProfileName
+
+		profiles.profiles.forEach((profile) => {
+			this.profileChoices.push({ id: profile, label: profile })
+		})
+
+		this.checkFeedbacks('profile_active')
+		this.setVariableValues({ profile: this.states.currentProfile })
+		this.updateActionsFeedbacksVariables()
+	}
+
+	async getSceneCollectionList() {
+		let collections = await this.sendRequest('GetSceneCollectionList')
+		this.sceneCollectionList = []
+
+		this.states.currentSceneCollection = collections.currentSceneCollectionName
+		collections.sceneCollections.forEach((sceneCollection) => {
+			this.sceneCollectionList.push({ id: sceneCollection, label: sceneCollection })
+		})
+
+		this.checkFeedbacks('scene_collection_active')
+		this.setVariableValues({ scene_collection: this.states.currentSceneCollection })
+
+		this.updateActionsFeedbacksVariables()
+	}
+
+	async buildSpecialInputs() {
+		let specialInputs = await this.sendRequest('GetSpecialInputs')
+
+		for (let x in specialInputs) {
+			let input = specialInputs[x]
+
+			if (input) {
+				this.sources[input] = {
+					sourceName: input,
+					validName: this.validName(input),
+				}
+
+				if (!this.sourceChoices.find((item) => item.id === input)) {
+					this.sourceChoices.push({ id: input, label: input })
+				}
+				this.getAudioSources(input)
+			}
 		}
 	}
 
@@ -751,12 +823,7 @@ class OBSInstance extends InstanceBase {
 			})
 	}
 
-	async getOutputStatus(outputName) {
-		let outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
-		this.outputs[outputName] = outputStatus
-		this.checkFeedbacks('output_active')
-	}
-
+	//Outputs, Streams, Recordings
 	async getStreamStatus() {
 		let streamStatus = await this.sendRequest('GetStreamStatus')
 		let streamService = await this.sendRequest('GetStreamServiceSettings')
@@ -786,26 +853,6 @@ class OBSInstance extends InstanceBase {
 		})
 	}
 
-	async getSceneTransitionList() {
-		this.transitionList = []
-
-		let sceneTransitionList = await this.sendRequest('GetSceneTransitionList')
-		let currentTransition = await this.sendRequest('GetSceneTransitionList')
-
-		sceneTransitionList.transitions.forEach((transition) => {
-			this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
-		})
-
-		this.states.currentTransition = currentTransition.transitionName
-		this.states.transitionDuration = currentTransition.transitionDuration ?? '0'
-
-		this.checkFeedbacks('transition_duration', 'current_transition')
-		this.setVariableValues({
-			current_transition: this.states.currentTransition,
-			transition_duration: this.states.transitionDuration,
-		})
-	}
-
 	async getRecordStatus() {
 		let recordStatus = await this.sendRequest('GetRecordStatus')
 		let recordDirectory = await this.sendRequest('GetRecordDirectory')
@@ -827,36 +874,333 @@ class OBSInstance extends InstanceBase {
 		})
 	}
 
-	async getProfileList() {
-		let profiles = await this.sendRequest('GetProfileList')
-		this.profileChoices = []
-
-		this.states.currentProfile = profiles.currentProfileName
-
-		profiles.profiles.forEach((profile) => {
-			this.profileChoices.push({ id: profile, label: profile })
+	async getOutputs() {
+		let outputData = await this.sendRequest('GetOutputList')
+		this.outputs = {}
+		this.outputList = []
+		outputData?.outputs.forEach((output) => {
+			let outputKind = output.outputKind
+			if (outputKind === 'virtualcam_output') {
+				this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
+			} else if (
+				outputKind != 'ffmpeg_muxer' &&
+				outputKind != 'ffmpeg_output' &&
+				outputKind != 'replay_buffer' &&
+				outputKind != 'rtmp_output'
+			) {
+				//The above outputKinds are handled separately by other actions, so they are omitted
+				this.outputList.push({ id: output.outputName, label: output.outputName })
+			}
+			this.getOutputStatus(output.outputName)
 		})
-
-		this.checkFeedbacks('profile_active')
-		this.setVariableValues({ profile: this.states.currentProfile })
 		this.updateActionsFeedbacksVariables()
 	}
 
-	async getSceneCollectionList() {
-		let collections = await this.sendRequest('GetSceneCollectionList')
-		this.sceneCollectionList = []
+	async getOutputStatus(outputName) {
+		let outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
+		this.outputs[outputName] = outputStatus
+		this.checkFeedbacks('output_active')
+	}
 
-		this.states.currentSceneCollection = collections.currentSceneCollectionName
-		collections.sceneCollections.forEach((sceneCollection) => {
-			this.sceneCollectionList.push({ id: sceneCollection, label: sceneCollection })
+	//Scene Collection Specific Info
+	async buildSceneList() {
+		this.scenes = []
+		this.sceneChoices = []
+
+		let sceneList = await this.sendRequest('GetSceneList')
+
+		this.scenes = sceneList.scenes
+		this.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
+		this.states.programScene = sceneList.currentProgramSceneName
+
+		this.setVariableValues({
+			scene_preview: this.states.te,
+			scene_active: this.states.programScene,
 		})
 
-		this.checkFeedbacks('scene_collection_active')
-		this.setVariableValues({ scene_collection: this.states.currentSceneCollection })
-
+		this.scenes.forEach((scene) => {
+			let sceneName = scene.sceneName
+			this.sceneChoices.push({ id: sceneName, label: sceneName })
+			//this.addScene(sceneName)
+			this.buildSourceList(sceneName)
+		})
 		this.updateActionsFeedbacksVariables()
 	}
 
+	async buildSourceList(sceneName) {
+		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
+
+		this.sceneItems[sceneName] = data.sceneItems
+
+		let batch = []
+		for (const sceneItem of data.sceneItems) {
+			let sourceName = sceneItem.sourceName
+			this.sources[sourceName] = sceneItem
+
+			//Generate name that can be used as valid Variable IDs
+			this.sources[sourceName].validName = this.validName(sceneItem.sourceName)
+
+			if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+				this.sourceChoices.push({ id: sourceName, label: sourceName })
+			}
+
+			if (sceneItem.isGroup) {
+				this.getGroupInfo(sourceName)
+			}
+
+			batch.push(
+				{
+					requestId: sourceName,
+					requestType: 'GetSourceActive',
+					requestData: { sourceName: sourceName },
+				},
+				{
+					requestId: sourceName,
+					requestType: 'GetSourceFilterList',
+					requestData: { sourceName: sourceName },
+				}
+			)
+			if (sceneItem.inputKind) {
+				batch.push({
+					requestId: sourceName,
+					requestType: 'GetInputSettings',
+					requestData: { inputName: sourceName },
+				})
+			}
+			this.getAudioSources(sourceName)
+		}
+
+		let sourceBatch = await this.sendBatch(batch)
+
+		if (sourceBatch) {
+			for (const response of sourceBatch) {
+				if (response.requestStatus.result) {
+					let sourceName = response.requestId
+					let type = response.requestType
+					let data = response.responseData
+
+					switch (type) {
+						case 'GetSourceActive':
+							this.sources[sourceName].active = data.videoActive
+							this.sources[sourceName].videoShowing = data.videoShowing
+							break
+						case 'GetSourceFilterList':
+							this.sourceFilters[sourceName] = data.filters
+							if (data?.filters) {
+								this.sourceFilters[sourceName] = data.filters
+								data.filters.forEach((filter) => {
+									if (!this.filterList.find((item) => item.id === filter.filterName)) {
+										this.filterList.push({ id: filter.filterName, label: filter.filterName })
+									}
+								})
+							}
+							break
+						case 'GetInputSettings':
+							this.buildInputSettings(sourceName, data.inputKind, data.inputSettings)
+							break
+						default:
+							break
+					}
+				}
+			}
+			this.checkFeedbacks('scene_item_active')
+			this.updateActionsFeedbacksVariables()
+		}
+	}
+
+	async getSceneTransitionList() {
+		this.transitionList = []
+
+		let sceneTransitionList = await this.sendRequest('GetSceneTransitionList')
+		let currentTransition = await this.sendRequest('GetSceneTransitionList')
+
+		sceneTransitionList.transitions.forEach((transition) => {
+			this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
+		})
+
+		this.states.currentTransition = currentTransition.transitionName
+		this.states.transitionDuration = currentTransition.transitionDuration ?? '0'
+
+		this.checkFeedbacks('transition_duration', 'current_transition')
+		this.setVariableValues({
+			current_transition: this.states.currentTransition,
+			transition_duration: this.states.transitionDuration,
+		})
+	}
+
+	//Source Info
+	async getMediaStatus() {
+		this.mediaSourceList.forEach(async (source) => {
+			let sourceName = source.id.replace(/[\W]/gi, '_')
+
+			let data = await this.sendRequest('GetMediaInputStatus', { inputName: source.id })
+
+			this.mediaSources[source.id] = data
+
+			let remaining = data.mediaDuration - data.mediaCursor
+			if (remaining > 0) {
+				remaining = this.formatTimecode(remaining)
+			} else {
+				remaining = '--:--:--'
+			}
+
+			this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
+			this.mediaSources[source.id].timeRemaining = remaining
+
+			if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+				this.setVariableValues({
+					current_media_name: source.id,
+					current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
+					current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
+					[`media_status_${sourceName}`]: 'Playing',
+				})
+			} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+				this.setVariableValues({ [`media_status_${sourceName}`]: 'Paused' })
+			} else {
+				this.setVariableValues({ [`media_status_${sourceName}`]: 'Stopped' })
+			}
+			this.setVariableValues({
+				[`media_time_elapsed_${sourceName}`]: this.mediaSources[source.id].timeElapsed,
+				[`media_time_remaining_${sourceName}`]: remaining,
+			})
+			this.checkFeedbacks('media_playing', 'media_source_time_remaining')
+
+			/* this.obs
+				.call('GetInputSettings', { inputName: source.id })
+				.then((settings) => {
+					if (settings.inputKind === 'vlc_source') {
+					}
+				})
+				.catch((error) => {}) */
+		})
+	}
+
+	async getInputSettings(sourceName, inputKind) {
+		let settings = await this.sendRequest('GetInputSettings', { inputName: sourceName })
+
+		let name = this.sources[sourceName].validName ?? sourceName
+		this.sources[sourceName].settings = settings.inputSettings
+
+		if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
+			//Exclude text sources that read from file, as there is no way to edit or read the text value
+			if (settings?.inputSettings?.text) {
+				this.textSourceList.push({ id: sourceName, label: sourceName })
+				this.setVariableValues({
+					[`current_text_${name}`]: settings.inputSettings.text ?? '',
+				})
+			} else if (settings?.inputSettings?.from_file) {
+				this.setVariableValues({
+					[`current_text_${name}`]: `Text from file: ${settings.inputSettings.text_file}`,
+				})
+			}
+
+			this.updateActionsFeedbacksVariables()
+		}
+		if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+			this.mediaSourceList.push({ id: sourceName, label: sourceName })
+			this.startMediaPoll()
+			this.updateActionsFeedbacksVariables()
+		}
+		if (inputKind === 'image_source') {
+			this.imageSourceList.push({ id: sourceName, label: sourceName })
+		}
+	}
+
+	buildInputSettings(sourceName, inputKind, inputSettings) {
+		let name = this.sources[sourceName].validName ?? sourceName
+		this.sources[sourceName].settings = inputSettings
+
+		switch (inputKind) {
+			case 'text_ft2_source_v2':
+			case 'text_gdiplus_v2':
+				//Exclude text sources that read from file, as there is no way to edit or read the text value
+				if (inputSettings?.text) {
+					this.textSourceList.push({ id: sourceName, label: sourceName })
+					this.setVariableValues({
+						[`current_text_${name}`]: inputSettings.text ?? '',
+					})
+				} else if (inputSettings?.from_file) {
+					this.setVariableValues({
+						[`current_text_${name}`]: `Text from file: ${inputSettings.text_file}`,
+					})
+				}
+				//this.updateActionsFeedbacksVariables()
+				break
+			case 'ffmpeg_source':
+			case 'vlc_source':
+				this.mediaSourceList.push({ id: sourceName, label: sourceName })
+				this.startMediaPoll()
+				//this.updateActionsFeedbacksVariables()
+				break
+			case 'image_source':
+				this.imageSourceList.push({ id: sourceName, label: sourceName })
+				break
+			default:
+				break
+		}
+	}
+
+	updateInputSettings(sourceName, inputSettings) {
+		if (this.sources[sourceName]) {
+			this.sources[sourceName].settings = inputSettings
+			let name = this.sources[sourceName].validName ?? sourceName
+			let inputKind = this.sources[sourceName].inputKind
+
+			switch (inputKind) {
+				case 'text_ft2_source_v2':
+				case 'text_gdiplus_v2':
+					//Exclude text sources that read from file, as there is no way to edit or read the text value
+					if (inputSettings?.text) {
+						this.setVariableValues({
+							[`current_text_${name}`]: inputSettings.text ?? '',
+						})
+					} else if (inputSettings?.from_file) {
+						this.setVariableValues({
+							[`current_text_${name}`]: `Text from file: ${inputSettings.text_file}`,
+						})
+					}
+					break
+				case 'ffmpeg_source':
+				case 'vlc_source':
+					let file = ''
+					if (inputSettings?.playlist) {
+						file = settings.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						//Use first value in playlist until support for determining currently playing cue
+					} else if (inputSettings?.local_file) {
+						file = inputSettings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+					}
+					this.setVariableValues({ [`media_file_name_${validName}`]: file })
+
+					break
+				case 'image_source':
+					this.setVariableValues({
+						[`image_file_name_${validName}`]: inputSettings?.file
+							? inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+							: '',
+					})
+					break
+				default:
+					break
+			}
+		}
+	}
+
+	async getSourceFilters(sourceName) {
+		let data = await this.sendRequest('GetSourceFilterList', { sourceName: sourceName })
+
+		if (data?.filters) {
+			this.sourceFilters[sourceName] = data.filters
+			data.filters.forEach((filter) => {
+				if (!this.filterList.find((item) => item.id === filter.filterName)) {
+					this.filterList.push({ id: filter.filterName, label: filter.filterName })
+				}
+			})
+
+			this.updateActionsFeedbacksVariables()
+		}
+	}
+
+	//Audio
 	getAudioSources(sourceName) {
 		this.obs
 			.call('GetInputAudioTracks', { inputName: sourceName })
@@ -944,32 +1288,34 @@ class OBSInstance extends InstanceBase {
 					case 'GetInputAudioTracks':
 						this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 						break
+					default:
+						break
 				}
 			}
 		}
 
 		this.setVariableValues({
 			[`mute_${validName}`]: this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted',
-			[`volume_${validName}`]: this.sources[sourceName].inputVolume + 'db',
+			[`volume_${validName}`]: this.sources[sourceName].inputVolume + 'dB',
 			[`balance_${validName}`]: this.sources[sourceName].inputAudioBalance,
 			[`sync_offset_${validName}`]: this.sources[sourceName].inputAudioSyncOffset + 'ms',
 		})
 		this.checkFeedbacks('audio_muted', 'volume', 'audio_monitor_type')
 	}
 
-	async getSourceFilters(sourceName) {
-		let data = await this.sendRequest('GetSourceFilterList', { sourceName: sourceName })
-
-		if (data?.filters) {
-			this.sourceFilters[sourceName] = data.filters
-			data.filters.forEach((filter) => {
-				if (!this.filterList.find((item) => item.id === filter.filterName)) {
-					this.filterList.push({ id: filter.filterName, label: filter.filterName })
+	updateAudioPeak(data) {
+		this.audioPeak = {}
+		data.inputs.forEach((input) => {
+			let channel = input.inputLevelsMul[0]
+			if (channel) {
+				let channelPeak = channel?.[1]
+				let dbPeak = Math.round(20.0 * Math.log10(channelPeak))
+				if (this.audioPeak && dbPeak) {
+					this.audioPeak[input.inputName] = dbPeak
+					this.checkFeedbacks('audioPeaking', 'audioMeter')
 				}
-			})
-
-			this.updateActionsFeedbacksVariables()
-		}
+			}
+		})
 	}
 
 	getGroupInfo(groupName) {
@@ -1000,37 +1346,7 @@ class OBSInstance extends InstanceBase {
 			.catch((error) => {})
 	}
 
-	async getInputSettings(sourceName, inputKind) {
-		let settings = await this.sendRequest('GetInputSettings', { inputName: sourceName })
-
-		let name = this.sources[sourceName].validName ?? sourceName
-		this.sources[sourceName].settings = settings.inputSettings
-
-		if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
-			//Exclude text sources that read from file, as there is no way to edit or read the text value
-			if (settings?.inputSettings?.text) {
-				this.textSourceList.push({ id: sourceName, label: sourceName })
-				this.setVariableValues({
-					[`current_text_${name}`]: settings.inputSettings.text ?? '',
-				})
-			} else if (settings?.inputSettings?.from_file) {
-				this.setVariableValues({
-					[`current_text_${name}`]: `Text from file: ${settings.inputSettings.text_file}`,
-				})
-			}
-
-			this.updateActionsFeedbacksVariables()
-		}
-		if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
-			this.mediaSourceList.push({ id: sourceName, label: sourceName })
-			this.startMediaPoll()
-			this.updateActionsFeedbacksVariables()
-		}
-		if (inputKind === 'image_source') {
-			this.imageSourceList.push({ id: sourceName, label: sourceName })
-		}
-	}
-
+	//Need Evaluation
 	async getSceneItems(sceneName) {
 		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
 
@@ -1087,257 +1403,6 @@ class OBSInstance extends InstanceBase {
 		this.sceneChoices.splice(scene, 1)
 
 		this.updateActionsFeedbacksVariables()
-	}
-
-	async getScenesSources() {
-		//this.scenes = []
-		this.sources = {}
-		this.mediaSources = {}
-		this.imageSources = {}
-		this.textSources = {}
-		this.sourceFilters = {}
-		this.groups = {}
-
-		this.sceneChoices = []
-		this.sourceChoices = []
-		this.filterList = []
-		this.audioSourceList = []
-		this.mediaSourceList = []
-		this.textSourceList = []
-		this.imageSourceList = []
-	}
-
-	updateAudioPeak(data) {
-		this.audioPeak = {}
-		data.inputs.forEach((input) => {
-			let channel = input.inputLevelsMul[0]
-			if (channel) {
-				let channelPeak = channel?.[1]
-				let dbPeak = Math.round(20.0 * Math.log10(channelPeak))
-				if (this.audioPeak && dbPeak) {
-					this.audioPeak[input.inputName] = dbPeak
-					this.checkFeedbacks('audioPeaking', 'audioMeter')
-				}
-			}
-		})
-	}
-
-	organizeChoices() {
-		//Sort choices alphabetically
-		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
-		this.sceneChoices?.sort((a, b) => a.id.localeCompare(b.id))
-		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		//Special Choices - Scenes
-		this.sceneChoicesProgramPreview = [
-			{ id: 'Current Scene', label: 'Current Scene' },
-			{ id: 'Preview Scene', label: 'Preview Scene' },
-		].concat(this.sceneChoices)
-		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
-		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
-		//Special Choices - Sources
-		this.sourceChoicesWithScenes = this.sourceChoices.concat(this.sceneChoices)
-		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
-		//Default Choices
-		this.sourceListDefault = this.sourceChoices?.[0] ? this.sourceChoices?.[0]?.id : ''
-		this.sceneListDefault = this.sceneChoices?.[0] ? this.sceneChoices?.[0]?.id : ''
-		this.filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
-		this.audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
-		this.profileChoicesDefault = this.profileChoices?.[0] ? this.profileChoices[0].id : ''
-	}
-
-	updateActionsFeedbacksVariables() {
-		this.organizeChoices()
-
-		this.initActions()
-		this.initVariables()
-		this.initFeedbacks()
-		this.initPresets()
-		this.checkFeedbacks()
-	}
-
-	initializeStates() {
-		//Basic Info
-		//this.scenes = {}
-		this.sources = {}
-		this.states = {}
-		this.transitions = {}
-		this.profiles = {}
-		this.sceneCollections = {}
-		this.outputs = {}
-		this.sceneItems = {}
-		this.groups = {}
-		//Source Types
-		this.mediaSources = {}
-		this.imageSources = {}
-		this.textSources = {}
-		this.sourceFilters = {}
-		//Choices
-		this.sceneChoices = []
-		this.sourceChoices = []
-		this.profileChoices = []
-		this.sceneCollectionList = []
-		this.textSourceList = []
-		this.mediaSourceList = []
-		this.imageSourceList = []
-		this.hotkeyNames = []
-		this.imageFormats = []
-		this.transitionList = []
-		this.monitors = []
-		this.outputList = []
-		this.filterList = []
-		this.audioSourceList = []
-		//Set Initial States
-		this.vendorEvent = {}
-		this.states.sceneCollectionChanging = false
-		this.initActions()
-		this.initVariables()
-		this.initFeedbacks()
-		this.initPresets()
-		this.checkFeedbacks()
-	}
-
-	async buildSceneList() {
-		this.scenes = []
-		this.sceneChoices = []
-
-		let sceneList = await this.sendRequest('GetSceneList')
-
-		this.scenes = sceneList.scenes
-		this.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
-		this.states.programScene = sceneList.currentProgramSceneName
-
-		this.setVariableValues({
-			scene_preview: this.states.previewScene,
-			scene_active: this.states.programScene,
-		})
-
-		this.scenes.forEach((scene) => {
-			let sceneName = scene.sceneName
-			this.sceneChoices.push({ id: sceneName, label: sceneName })
-			//this.addScene(sceneName)
-			this.buildSourceList(sceneName)
-		})
-		this.updateActionsFeedbacksVariables()
-	}
-
-	async buildSourceList(sceneName) {
-		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
-
-		this.sceneItems[sceneName] = data.sceneItems
-
-		let batch = []
-		for (const sceneItem of data.sceneItems) {
-			let sourceName = sceneItem.sourceName
-			this.sources[sourceName] = sceneItem
-
-			//Generate name that can be used as valid Variable IDs
-			this.sources[sourceName].validName = this.validName(sceneItem.sourceName)
-
-			if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-				this.sourceChoices.push({ id: sourceName, label: sourceName })
-			}
-
-			if (sceneItem.isGroup) {
-				this.getGroupInfo(sourceName)
-			}
-			//let active = await this.sendRequest('GetSourceActive', { sourceName: sourceName })
-			batch.push(
-				{
-					requestId: sourceName,
-					requestType: 'GetSourceActive',
-					requestData: { sourceName: sourceName },
-				},
-				{
-					requestId: sourceName,
-					requestType: 'GetSourceFilterList',
-					requestData: { sourceName: sourceName },
-				},
-			)
-
-			this.getAudioSources(sourceName)
-
-			if (sceneItem.inputKind) {
-				let inputKind = sceneItem.inputKind
-				batch.push({
-					requestId: sourceName,
-					requestType: 'GetInputSettings',
-					requestData: { inputName: sourceName },
-				})
-				//this.getInputSettings(sourceName, inputKind)
-			}
-		}
-		let batchTest = await this.sendBatch(batch)
-		//console.log(batchTest)
-		this.processBatch(batchTest)
-		//console.log(this.sources)
-		this.updateActionsFeedbacksVariables()
-	}
-
-	sendBatchToSources(requestType) {
-		let batch = []
-		for (const source in this.sources) {
-			batch.push({
-				requestId: source,
-				requestType: requestType,
-				requestData: requestData,
-			})
-		}
-		this.sendBatch(batch)
-	}
-
-	processBatch(reply) {
-		for (const response of reply) {
-			if (response.requestStatus.result) {
-				let sourceName = response.requestId
-				let type = response.requestType
-				let data = response.responseData
-
-				switch (type) {
-					case 'GetSourceActive':
-						this.sources[sourceName].active = data.videoActive
-						this.sources[sourceName].videoShowing = data.videoShowing
-						break
-					case 'GetSourceFilterList':
-						this.sourceFilters[sourceName] = data.filters
-						if (data?.filters) {
-							this.sourceFilters[sourceName] = data.filters
-							data.filters.forEach((filter) => {
-								if (!this.filterList.find((item) => item.id === filter.filterName)) {
-									this.filterList.push({ id: filter.filterName, label: filter.filterName })
-								}
-							})
-						}
-						break
-					case 'GetInputSettings':
-						break
-				}
-			}
-		}
-		this.updateActionsFeedbacksVariables()
-		this.checkFeedbacks('scene_item_active')
-	}
-
-	async buildSpecialInputs() {
-		let specialInputs = await this.sendRequest('GetSpecialInputs')
-
-		for (let x in specialInputs) {
-			let input = specialInputs[x]
-
-			if (input) {
-				this.sources[input] = {
-					sourceName: input,
-					validName: this.validName(input),
-				}
-
-				if (!this.sourceChoices.find((item) => item.id === input)) {
-					this.sourceChoices.push({ id: input, label: input })
-				}
-				this.getAudioSources(input)
-			}
-		}
 	}
 }
 runEntrypoint(OBSInstance, UpgradeScripts)

@@ -393,6 +393,7 @@ export function getPresets() {
 				{
 					feedbackId: 'scene_item_active',
 					options: {
+						scene: 'anyScene',
 						source: source.id,
 					},
 					style: {
