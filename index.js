@@ -231,24 +231,28 @@ class OBSInstance extends InstanceBase {
 				//Setup Initial State Objects
 				this.initializeStates()
 
-				//Start Listeners
-				this.obsListeners()
-
 				//Get Initial OBS Info
-				this.obsInfo()
-				this.getStats()
-				this.getRecordStatus()
-				this.getStreamStatus()
-				this.startStatsPoll()
+				let initialInfo = await this.obsInfo()
 
-				//Build General Parameters
-				this.buildProfileList()
-				this.buildSceneCollectionList()
+				if (initialInfo) {
+					//Start Listeners
+					this.obsListeners()
 
-				//Build Scene Collection Parameters
-				this.buildSceneTransitionList()
-				this.buildSpecialInputs()
-				this.buildSceneList()
+					//Get Project Info
+					this.getStats()
+					this.getRecordStatus()
+					this.getStreamStatus()
+					this.startStatsPoll()
+
+					//Build General Parameters
+					this.buildProfileList()
+					this.buildSceneCollectionList()
+
+					//Build Scene Collection Parameters
+					this.buildSceneTransitionList()
+					this.buildSpecialInputs()
+					this.buildSceneList()
+				}
 			}
 		} catch (error) {
 			this.processWebsocketError(error)
@@ -702,17 +706,12 @@ class OBSInstance extends InstanceBase {
 			this.buildOutputList()
 			this.buildMonitorList()
 			this.getVideoSettings()
+			this.getReplayBufferStatus()
+			return true
 		} catch (error) {
 			this.log('debug', error)
+			return false
 		}
-
-		this.obs
-			.call('GetReplayBufferStatus')
-			.then((data) => {
-				this.states.replayBuffer = data.outputActive
-				this.checkFeedbacks('replayBufferActive')
-			})
-			.catch((error) => {})
 	}
 
 	async buildHotkeyList() {
@@ -900,21 +899,23 @@ class OBSInstance extends InstanceBase {
 		let recordStatus = await this.sendRequest('GetRecordStatus')
 		let recordDirectory = await this.sendRequest('GetRecordDirectory')
 
-		if (recordStatus.outputActive === true) {
-			this.states.recording = 'Recording'
-		} else {
-			this.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
+		if (recordStatus) {
+			if (recordStatus.outputActive === true) {
+				this.states.recording = 'Recording'
+			} else {
+				this.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
+			}
+
+			this.states.recordingTimecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			this.states.recordDirectory = recordDirectory.recordDirectory
+
+			this.checkFeedbacks('recording')
+			this.setVariableValues({
+				recording: this.states.recording,
+				recording_timecode: this.states.recordingTimecode,
+				recording_path: this.states.recordDirectory,
+			})
 		}
-
-		this.states.recordingTimecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-		this.states.recordDirectory = recordDirectory.recordDirectory
-
-		this.checkFeedbacks('recording')
-		this.setVariableValues({
-			recording: this.states.recording,
-			recording_timecode: this.states.recordingTimecode,
-			recording_path: this.states.recordDirectory,
-		})
 	}
 
 	async getOutputStatus(outputName) {
@@ -922,6 +923,15 @@ class OBSInstance extends InstanceBase {
 			let outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
 			this.outputs[outputName] = outputStatus
 			this.checkFeedbacks('output_active')
+		}
+	}
+
+	async getReplayBufferStatus() {
+		let replayBuffer = await this.sendRequest('GetReplayBufferStatus')
+
+		if (replayBuffer) {
+			this.states.replayBuffer = replayBuffer.outputActive
+			this.checkFeedbacks('replayBufferActive')
 		}
 	}
 
@@ -954,6 +964,7 @@ class OBSInstance extends InstanceBase {
 
 	async buildSourceList(sceneName) {
 		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
+
 		if (data) {
 			this.sceneItems[sceneName] = data.sceneItems
 
@@ -1295,6 +1306,7 @@ class OBSInstance extends InstanceBase {
 		]
 
 		let data = await this.sendBatch(batch)
+
 		for (const response of data) {
 			if (response.requestStatus.result && response.responseData) {
 				let sourceName = response.requestId
