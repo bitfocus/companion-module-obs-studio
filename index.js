@@ -389,8 +389,15 @@ class OBSInstance extends InstanceBase {
 			this.scenes = data.scenes
 		})
 		//Inputs
-		this.obs.on('InputCreated', () => {})
-		this.obs.on('InputRemoved', () => {})
+		this.obs.on('InputCreated', (data) => {})
+		this.obs.on('InputRemoved', (data) => {
+			let source = this.sourceChoices.findIndex((item) => item.id == data.inputName)
+			if (source > -1) {
+				this.sourceChoices.splice(source, 1)
+			}
+			delete this.sources[data.inputName]
+			this.updateActionsFeedbacksVariables()
+		})
 		this.obs.on('InputNameChanged', () => {})
 		this.obs.on('InputActiveStateChanged', (data) => {
 			if (this.sources[data.inputName]) {
@@ -502,16 +509,15 @@ class OBSInstance extends InstanceBase {
 		//Scene Items
 		this.obs.on('SceneItemCreated', (data) => {
 			if (this.states.sceneCollectionChanging === false) {
-				this.getSceneItems(data.sceneName)
+				this.buildSourceList(data.sceneName)
 			}
 		})
 		this.obs.on('SceneItemRemoved', (data) => {
 			if (this.states.sceneCollectionChanging === false) {
-				let source = this.sourceChoices.findIndex((item) => item.id === data.sourceName)
-				this.sourceChoices.splice(source, 1)
-				this.updateActionsFeedbacksVariables()
-
-				this.getSceneItems(data.sceneName)
+				let item = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+				if (item > -1) {
+					this.sceneItems[data.sceneName].splice(item, 1)
+				}
 			}
 		})
 		this.obs.on('SceneItemListReindexed', () => {})
@@ -955,7 +961,6 @@ class OBSInstance extends InstanceBase {
 			this.scenes.forEach((scene) => {
 				let sceneName = scene.sceneName
 				this.sceneChoices.push({ id: sceneName, label: sceneName })
-				//this.addScene(sceneName)
 				this.buildSourceList(sceneName)
 			})
 			this.updateActionsFeedbacksVariables()
@@ -1045,6 +1050,38 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
+	async getGroupInfo(groupName) {
+		let data = await this.sendRequest('GetGroupSceneItemList', { sceneName: groupName })
+		if (data) {
+			this.groups[groupName] = data.sceneItems
+			data.sceneItems?.forEach(async (sceneItem) => {
+				let sourceName = sceneItem.sourceName
+				this.sources[sourceName] = sceneItem
+				this.sources[sourceName].validName = this.validName(sourceName)
+
+				//Flag that this source is part of a group
+				this.sources[sourceName].groupedSource = true
+				this.sources[sourceName].groupName = groupName
+
+				if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+					this.sourceChoices.push({ id: sourceName, label: sourceName })
+					this.updateActionsFeedbacksVariables()
+				}
+
+				this.getSourceFilters(sourceName)
+				this.getAudioSources(sourceName)
+
+				if (sceneItem.inputKind) {
+					let input = await this.sendRequest('GetInputSettings', { inputName: sourceName })
+
+					if (input.inputSettings) {
+						this.updateInputSettings(sourceName, input.inputSettings)
+					}
+				}
+			})
+		}
+	}
+
 	async buildSceneTransitionList() {
 		this.transitionList = []
 
@@ -1065,6 +1102,22 @@ class OBSInstance extends InstanceBase {
 				transition_duration: this.states.transitionDuration,
 			})
 		}
+	}
+
+	//Scene and Source Actions
+	addScene(sceneName) {
+		this.sceneChoices.push({ id: sceneName, label: sceneName })
+		this.buildSourceList(sceneName)
+		this.updateActionsFeedbacksVariables()
+	}
+
+	removeScene(sceneName) {
+		let scene = this.sceneChoices.findIndex((item) => item.id === sceneName)
+		if (scene) {
+			this.sceneChoices.splice(scene, 1)
+		}
+		delete this.sceneItems[sceneName]
+		this.updateActionsFeedbacksVariables()
 	}
 
 	//Source Info
@@ -1125,37 +1178,6 @@ class OBSInstance extends InstanceBase {
 					this.checkFeedbacks('media_playing', 'media_source_time_remaining')
 				}
 			}
-		}
-	}
-
-	async getInputSettings(sourceName, inputKind) {
-		let settings = await this.sendRequest('GetInputSettings', { inputName: sourceName })
-
-		let name = this.sources[sourceName].validName ?? sourceName
-		this.sources[sourceName].settings = settings?.inputSettings
-
-		if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
-			//Exclude text sources that read from file, as there is no way to edit or read the text value
-			if (settings?.inputSettings?.text) {
-				this.textSourceList.push({ id: sourceName, label: sourceName })
-				this.setVariableValues({
-					[`current_text_${name}`]: settings.inputSettings.text ?? '',
-				})
-			} else if (settings?.inputSettings?.from_file) {
-				this.setVariableValues({
-					[`current_text_${name}`]: `Text from file: ${settings?.inputSettings.text_file}`,
-				})
-			}
-
-			this.updateActionsFeedbacksVariables()
-		}
-		if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
-			this.mediaSourceList.push({ id: sourceName, label: sourceName })
-			this.startMediaPoll()
-			this.updateActionsFeedbacksVariables()
-		}
-		if (inputKind === 'image_source') {
-			this.imageSourceList.push({ id: sourceName, label: sourceName })
 		}
 	}
 
@@ -1252,7 +1274,7 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
-	//Audio
+	//Audio Sources
 	getAudioSources(sourceName) {
 		this.obs
 			.call('GetInputAudioTracks', { inputName: sourceName })
@@ -1369,93 +1391,6 @@ class OBSInstance extends InstanceBase {
 				}
 			}
 		})
-	}
-
-	getGroupInfo(groupName) {
-		this.obs
-			.call('GetGroupSceneItemList', { sceneName: groupName })
-			.then((data) => {
-				this.groups[groupName] = data.sceneItems
-				data.sceneItems.forEach((sceneItem) => {
-					let sourceName = sceneItem.sourceName
-					this.sources[sourceName] = sceneItem
-					this.sources[sourceName].groupedSource = true
-					this.sources[sourceName].groupName = groupName
-
-					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-						this.sourceChoices.push({ id: sourceName, label: sourceName })
-						this.updateActionsFeedbacksVariables()
-					}
-
-					this.getSourceFilters(sourceName)
-					this.getAudioSources(sourceName)
-
-					if (sceneItem.inputKind) {
-						let inputKind = sceneItem.inputKind
-						this.getInputSettings(sourceName, inputKind)
-					}
-				})
-			})
-			.catch((error) => {})
-	}
-
-	//Need Evaluation
-	async getSceneItems(sceneName) {
-		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
-
-		this.sceneItems[sceneName] = data.sceneItems
-		data.sceneItems.forEach(async (sceneItem) => {
-			let sourceName = sceneItem.sourceName
-			this.sources[sourceName] = sceneItem
-
-			//Generate name that can be used as valid Variable IDs
-			this.sources[sourceName].validName = sceneItem.sourceName.replace(/[\W]/gi, '_')
-
-			if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-				this.sourceChoices.push({ id: sourceName, label: sourceName })
-			}
-
-			if (sceneItem.isGroup) {
-				this.getGroupInfo(sourceName)
-			}
-			let active = await this.sendRequest('GetSourceActive', { sourceName: sourceName })
-
-			if (this.sources[sourceName]) {
-				this.sources[sourceName].active = active.videoActive
-			}
-
-			this.getSourceFilters(sourceName)
-			this.getAudioSources(sourceName)
-
-			if (sceneItem.inputKind) {
-				let inputKind = sceneItem.inputKind
-				this.getInputSettings(sourceName, inputKind)
-			}
-
-			this.updateActionsFeedbacksVariables()
-		})
-	}
-
-	addScene(sceneName) {
-		//this.sceneChoices.push({ id: sceneName, label: sceneName })
-		this.updateActionsFeedbacksVariables()
-		//this.getSceneItems(sceneName)
-	}
-
-	removeScene(sceneName) {
-		for (let x in this.sceneItems[sceneName]) {
-			let sourceName = this.sceneItems[sceneName][x].sourceName
-			delete this.sources[sourceName]
-
-			let source = this.sourceChoices.findIndex((item) => item.id === sourceName)
-			this.sourceChoices.splice(source, 1)
-		}
-		delete this.sceneItems[sceneName]
-
-		let scene = this.sceneChoices.findIndex((item) => item.id === sceneName)
-		this.sceneChoices.splice(scene, 1)
-
-		this.updateActionsFeedbacksVariables()
 	}
 }
 runEntrypoint(OBSInstance, UpgradeScripts)

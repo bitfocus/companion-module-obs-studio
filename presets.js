@@ -483,7 +483,7 @@ export function getPresets() {
 		name: 'Take Screenshot',
 		style: {
 			text: 'Take Screenshot',
-			size: 7,
+			size: 12,
 			color: ColorWhite,
 			bgcolor: 0,
 		},
