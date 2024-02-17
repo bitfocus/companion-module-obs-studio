@@ -1065,7 +1065,6 @@ class OBSInstance extends InstanceBase {
 
 				if (!this.sourceChoices.find((item) => item.id === sourceName)) {
 					this.sourceChoices.push({ id: sourceName, label: sourceName })
-					this.updateActionsFeedbacksVariables()
 				}
 
 				this.getSourceFilters(sourceName)
@@ -1079,6 +1078,7 @@ class OBSInstance extends InstanceBase {
 					}
 				}
 			})
+			this.updateActionsFeedbacksVariables()
 		}
 	}
 

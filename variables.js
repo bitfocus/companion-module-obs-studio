@@ -46,50 +46,60 @@ export function getVariables() {
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
 	})
+
 	//Source Specific Variables
-	for (let s in this.mediaSourceList) {
-		let sourceName = this.mediaSourceList[s].id
-		let source = this.sources[sourceName]
-		let mediaSourceName = source.validName ? source.validName : source.sourceName
-		variables.push({ variableId: `media_status_${mediaSourceName}`, name: `${mediaSourceName} - Media status` })
-		variables.push({ variableId: `media_file_name_${mediaSourceName}`, name: `${mediaSourceName} - Media file name` })
-		variables.push({ variableId: `media_time_elapsed_${mediaSourceName}`, name: `${mediaSourceName} - Time elapsed` })
-		variables.push({
-			variableId: `media_time_remaining_${mediaSourceName}`,
-			name: `${mediaSourceName} - Time remaining`,
-		})
-
-		let settings = this.sources[sourceName]?.settings
-		let file = ''
-		if (settings?.playlist) {
-			file = settings.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-			//Use first value in playlist until support for determining currently playing cue
-		} else if (settings?.local_file) {
-			file = settings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-		}
-		this.setVariableValues({ [`media_file_name_${mediaSourceName}`]: file })
-	}
-
 	for (let s in this.sources) {
 		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : source.sourceName.replace(/[\W]/gi, '_')
+		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+		let inputSettings = source.settings
+		if (source.inputKind) {
+			switch (source.inputKind) {
+				case 'text_ft2_source_v2':
+				case 'text_gdiplus_v2':
+					variables.push({ variableId: `current_text_${sourceName}`, name: `${sourceName} - Current text` })
+					if (inputSettings?.text) {
+						this.setVariableValues({
+							[`current_text_${sourceName}`]: inputSettings.text ?? '',
+						})
+					} else if (inputSettings?.from_file) {
+						this.setVariableValues({
+							[`current_text_${sourceName}`]: `Text from file: ${inputSettings.text_file}`,
+						})
+					}
+					break
+				case 'ffmpeg_source':
+				case 'vlc_source':
+					variables.push({ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` })
+					variables.push({ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` })
+					variables.push({ variableId: `media_time_elapsed_${sourceName}`, name: `${sourceName} - Time elapsed` })
+					variables.push({
+						variableId: `media_time_remaining_${sourceName}`,
+						name: `${sourceName} - Time remaining`,
+					})
+					let file = ''
+					if (inputSettings?.playlist) {
+						file = inputSettings?.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						//Use first value in playlist until support for determining currently playing cue
+					} else if (inputSettings?.local_file) {
+						file = inputSettings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+					}
+					this.setVariableValues({ [`media_file_name_${sourceName}`]: file })
 
-		if (source.inputKind === 'text_ft2_source_v2' || source.inputKind === 'text_gdiplus_v2') {
-			variables.push({ variableId: `current_text_${sourceName}`, name: `${sourceName} - Current text` })
-			this.setVariableValues({
-				[`current_text_${sourceName}`]: source.settings?.text ? source.settings.text : '',
-			})
-		}
-		if (source.inputKind === 'image_source') {
-			variables.push({
-				variableId: `image_file_name_${sourceName}`,
-				name: `${sourceName} - Image file name`,
-			})
-			this.setVariableValues({
-				[`image_file_name_${sourceName}`]: source.settings?.file
-					? source.settings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
-					: '',
-			})
+					break
+				case 'image_source':
+					variables.push({
+						variableId: `image_file_name_${sourceName}`,
+						name: `${sourceName} - Image file name`,
+					})
+					this.setVariableValues({
+						[`image_file_name_${sourceName}`]: source.inputSettings?.file
+							? source.inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+							: '',
+					})
+					break
+				default:
+					break
+			}
 		}
 
 		if (source.inputAudioTracks) {
@@ -101,6 +111,7 @@ export function getVariables() {
 		}
 	}
 
+	//Scene Variables
 	let sceneIndex = 0
 	for (let s = this.scenes?.length - 1; s >= 0; s--) {
 		let index = ++sceneIndex
