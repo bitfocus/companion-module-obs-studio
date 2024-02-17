@@ -8,6 +8,14 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.4.1
+
+- Fix
+  - Performance improvements for Scene Collections with a large number of sources
+  - More accurately update action/feedback dropdowns when scenes/sources are removed
+  - Properly update scene_preview variable and Scene in Preview feedback when switching into Studio Mode
+  - Properly update scene_preview and scene_active variables when switching Scene Collections
+
 ### v3.4.0
 
 - New
