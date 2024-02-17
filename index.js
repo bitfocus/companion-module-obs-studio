@@ -897,9 +897,11 @@ class OBSInstance extends InstanceBase {
 	}
 
 	async getOutputStatus(outputName) {
-		let outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
-		this.outputs[outputName] = outputStatus
-		this.checkFeedbacks('output_active')
+		if (!this.states.sceneCollectionChanging) {
+			let outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
+			this.outputs[outputName] = outputStatus
+			this.checkFeedbacks('output_active')
+		}
 	}
 
 	//Scene Collection Specific Info
@@ -929,82 +931,83 @@ class OBSInstance extends InstanceBase {
 
 	async buildSourceList(sceneName) {
 		let data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
+		if (data) {
+			this.sceneItems[sceneName] = data.sceneItems
 
-		this.sceneItems[sceneName] = data.sceneItems
+			let batch = []
+			for (const sceneItem of data.sceneItems) {
+				let sourceName = sceneItem.sourceName
+				this.sources[sourceName] = sceneItem
 
-		let batch = []
-		for (const sceneItem of data.sceneItems) {
-			let sourceName = sceneItem.sourceName
-			this.sources[sourceName] = sceneItem
+				//Generate name that can be used as valid Variable IDs
+				this.sources[sourceName].validName = this.validName(sceneItem.sourceName)
 
-			//Generate name that can be used as valid Variable IDs
-			this.sources[sourceName].validName = this.validName(sceneItem.sourceName)
-
-			if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-				this.sourceChoices.push({ id: sourceName, label: sourceName })
-			}
-
-			if (sceneItem.isGroup) {
-				this.getGroupInfo(sourceName)
-			}
-
-			batch.push(
-				{
-					requestId: sourceName,
-					requestType: 'GetSourceActive',
-					requestData: { sourceName: sourceName },
-				},
-				{
-					requestId: sourceName,
-					requestType: 'GetSourceFilterList',
-					requestData: { sourceName: sourceName },
+				if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+					this.sourceChoices.push({ id: sourceName, label: sourceName })
 				}
-			)
-			if (sceneItem.inputKind) {
-				batch.push({
-					requestId: sourceName,
-					requestType: 'GetInputSettings',
-					requestData: { inputName: sourceName },
-				})
+
+				if (sceneItem.isGroup) {
+					this.getGroupInfo(sourceName)
+				}
+
+				batch.push(
+					{
+						requestId: sourceName,
+						requestType: 'GetSourceActive',
+						requestData: { sourceName: sourceName },
+					},
+					{
+						requestId: sourceName,
+						requestType: 'GetSourceFilterList',
+						requestData: { sourceName: sourceName },
+					}
+				)
+				if (sceneItem.inputKind) {
+					batch.push({
+						requestId: sourceName,
+						requestType: 'GetInputSettings',
+						requestData: { inputName: sourceName },
+					})
+				}
+				this.getAudioSources(sourceName)
 			}
-			this.getAudioSources(sourceName)
-		}
 
-		let sourceBatch = await this.sendBatch(batch)
+			let sourceBatch = await this.sendBatch(batch)
 
-		if (sourceBatch) {
-			for (const response of sourceBatch) {
-				if (response.requestStatus.result) {
-					let sourceName = response.requestId
-					let type = response.requestType
-					let data = response.responseData
+			if (sourceBatch) {
+				for (const response of sourceBatch) {
+					if (response.requestStatus.result) {
+						let sourceName = response.requestId
+						let type = response.requestType
+						let data = response.responseData
 
-					switch (type) {
-						case 'GetSourceActive':
-							this.sources[sourceName].active = data.videoActive
-							this.sources[sourceName].videoShowing = data.videoShowing
-							break
-						case 'GetSourceFilterList':
-							this.sourceFilters[sourceName] = data.filters
-							if (data?.filters) {
+						switch (type) {
+							case 'GetSourceActive':
+								this.sources[sourceName].active = data.videoActive
+								this.sources[sourceName].videoShowing = data.videoShowing
+								break
+							case 'GetSourceFilterList':
 								this.sourceFilters[sourceName] = data.filters
-								data.filters.forEach((filter) => {
-									if (!this.filterList.find((item) => item.id === filter.filterName)) {
-										this.filterList.push({ id: filter.filterName, label: filter.filterName })
-									}
-								})
-							}
-							break
-						case 'GetInputSettings':
-							this.buildInputSettings(sourceName, data.inputKind, data.inputSettings)
-							break
-						default:
-							break
+								if (data?.filters) {
+									this.sourceFilters[sourceName] = data.filters
+									data.filters.forEach((filter) => {
+										if (!this.filterList.find((item) => item.id === filter.filterName)) {
+											this.filterList.push({ id: filter.filterName, label: filter.filterName })
+										}
+									})
+								}
+								break
+							case 'GetInputSettings':
+								this.buildInputSettings(sourceName, data.inputKind, data.inputSettings)
+								break
+							default:
+								break
+						}
 					}
 				}
+				this.checkFeedbacks('scene_item_active')
+				this.updateActionsFeedbacksVariables()
 			}
-			this.checkFeedbacks('scene_item_active')
-			this.updateActionsFeedbacksVariables()
 		}
 	}
 
@@ -1193,10 +1196,9 @@ class OBSInstance extends InstanceBase {
 			data.filters.forEach((filter) => {
 				if (!this.filterList.find((item) => item.id === filter.filterName)) {
 					this.filterList.push({ id: filter.filterName, label: filter.filterName })
+					this.updateActionsFeedbacksVariables()
 				}
 			})
-
-			this.updateActionsFeedbacksVariables()
 		}
 	}
 
