@@ -241,12 +241,14 @@ class OBSInstance extends InstanceBase {
 				this.getStreamStatus()
 				this.startStatsPoll()
 
-				//Build Scenes, Sources, Parameters
-				this.buildSceneList()
+				//Build General Parameters
+				this.buildProfileList()
+				this.buildSceneCollectionList()
+
+				//Build Scene Collection Parameters
+				this.buildSceneTransitionList()
 				this.buildSpecialInputs()
-				this.getProfileList()
-				this.getSceneTransitionList()
-				this.getSceneCollectionList()
+				this.buildSceneList()
 			}
 		} catch (error) {
 			this.processWebsocketError(error)
@@ -329,11 +331,11 @@ class OBSInstance extends InstanceBase {
 			this.states.sceneCollectionChanging = false
 			this.resetSceneSourceStates()
 			this.buildSceneList()
-			this.getSceneTransitionList()
+			this.buildSceneTransitionList()
 			this.obsInfo()
 		})
 		this.obs.on('SceneCollectionListChanged', () => {
-			this.getSceneCollectionList()
+			this.buildSceneCollectionList()
 		})
 		this.obs.on('CurrentProfileChanging', () => {})
 		this.obs.on('CurrentProfileChanged', (data) => {
@@ -343,7 +345,7 @@ class OBSInstance extends InstanceBase {
 			this.obsInfo()
 		})
 		this.obs.on('ProfileListChanged', () => {
-			this.getProfileList()
+			this.buildProfileList()
 		})
 		//Scenes
 		this.obs.on('SceneCreated', (data) => {
@@ -485,7 +487,7 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('SourceFilterNameChanged', () => {})
 		this.obs.on('SourceFilterEnableStateChanged', (data) => {
-			if ('this.sourceFilters[data.sourceName]') {
+			if (this.sourceFilters[data.sourceName]) {
 				let filter = this.sourceFilters[data.sourceName].findIndex((item) => item.filterName == data.filterName)
 				if (filter !== undefined) {
 					this.sourceFilters[data.sourceName][filter].filterEnabled = data.filterEnabled
@@ -610,7 +612,14 @@ class OBSInstance extends InstanceBase {
 
 	async sendBatch(batch) {
 		try {
-			let data = this.obs.callBatch(batch)
+			let data = await this.obs.callBatch(batch)
+
+			let errors = data.filter((request) => request.requestStatus.result === false)
+			if (errors.length > 0) {
+				let errorMessages = errors.map((error) => error.requestStatus.comment).join(' // ')
+				this.log('debug', `Partial batch request failure (${errorMessages})`)
+			}
+
 			return data
 		} catch (error) {
 			this.log('debug', `Batch request failed (${error})`)
@@ -686,37 +695,13 @@ class OBSInstance extends InstanceBase {
 				this.imageFormats.push({ id: format, label: format })
 			})
 
-			let inputKindList = await this.sendRequest('GetInputKindList')
-			this.states.inputKindList = inputKindList
-
-			this.getHotkeyList()
-			this.getOutputs()
-
 			let studioMode = await this.sendRequest('GetStudioModeEnabled')
 			this.states.studioMode = studioMode.studioModeEnabled ? true : false
 
-			let videoSettings = await this.sendRequest('GetVideoSettings')
-			this.states.resolution = `${videoSettings.baseWidth}x${videoSettings.baseHeight}`
-			this.states.outputResolution = `${videoSettings.outputWidth}x${videoSettings.outputHeight}`
-			this.states.framerate = `${this.roundNumber(videoSettings.fpsNumerator / videoSettings.fpsDenominator, 2)} fps`
-			this.setVariableValues({
-				base_resolution: this.states.resolution,
-				output_resolution: this.states.outputResolution,
-				target_framerate: this.states.framerate,
-			})
-
-			let monitorList = await this.sendRequest('GetMonitorList')
-			this.states.monitors = monitorList
-			monitorList.monitors.forEach((monitor) => {
-				let monitorName = monitor.monitorName
-				if (monitorName?.match(/\([0-9]+\)/i)) {
-					monitorName = `Display ${monitorName.replace(/[^0-9]/g, '')}`
-				}
-				this.monitors.push({
-					id: monitor.monitorIndex,
-					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
-				})
-			})
+			this.buildHotkeyList()
+			this.buildOutputList()
+			this.buildMonitorList()
+			this.getVideoSettings()
 		} catch (error) {
 			this.log('debug', error)
 		}
@@ -730,7 +715,7 @@ class OBSInstance extends InstanceBase {
 			.catch((error) => {})
 	}
 
-	async getHotkeyList() {
+	async buildHotkeyList() {
 		let hotkeyList = await this.sendRequest('GetHotkeyList')
 		hotkeyList?.hotkeys?.forEach((hotkey) => {
 			this.hotkeyNames.push({ id: hotkey, label: hotkey })
@@ -738,7 +723,7 @@ class OBSInstance extends InstanceBase {
 		this.updateActionsFeedbacksVariables()
 	}
 
-	async getProfileList() {
+	async buildProfileList() {
 		let profiles = await this.sendRequest('GetProfileList')
 		this.profileChoices = []
 
@@ -753,7 +738,7 @@ class OBSInstance extends InstanceBase {
 		this.updateActionsFeedbacksVariables()
 	}
 
-	async getSceneCollectionList() {
+	async buildSceneCollectionList() {
 		let collections = await this.sendRequest('GetSceneCollectionList')
 		this.sceneCollectionList = []
 
@@ -786,6 +771,48 @@ class OBSInstance extends InstanceBase {
 					this.getAudioSources(input)
 				}
 			}
+		}
+	}
+
+	async buildOutputList() {
+		this.outputs = {}
+		this.outputList = []
+
+		let outputData = await this.sendRequest('GetOutputList')
+
+		if (outputData) {
+			outputData.outputs?.forEach((output) => {
+				let outputKind = output.outputKind
+				if (outputKind === 'virtualcam_output') {
+					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
+				} else if (
+					outputKind != 'ffmpeg_muxer' &&
+					outputKind != 'ffmpeg_output' &&
+					outputKind != 'replay_buffer' &&
+					outputKind != 'rtmp_output'
+				) {
+					//The above outputKinds are handled separately by other actions, so they are omitted
+					this.outputList.push({ id: output.outputName, label: output.outputName })
+				}
+				this.getOutputStatus(output.outputName)
+			})
+			this.updateActionsFeedbacksVariables()
+		}
+	}
+
+	async buildMonitorList() {
+		let monitorList = await this.sendRequest('GetMonitorList')
+		this.states.monitors = monitorList
+
+		if (monitorList) {
+			monitorList.monitors?.forEach((monitor) => {
+				let monitorName = monitor.monitorName ?? `Display ${monitor.monitorIndex}`
+
+				this.monitors.push({
+					id: monitor.monitorIndex,
+					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
+				})
+			})
 		}
 	}
 
@@ -822,6 +849,21 @@ class OBSInstance extends InstanceBase {
 					this.connectionLost()
 				}
 			})
+	}
+
+	async getVideoSettings() {
+		let videoSettings = await this.sendRequest('GetVideoSettings')
+
+		if (videoSettings) {
+			this.states.resolution = `${videoSettings.baseWidth}x${videoSettings.baseHeight}`
+			this.states.outputResolution = `${videoSettings.outputWidth}x${videoSettings.outputHeight}`
+			this.states.framerate = `${this.roundNumber(videoSettings.fpsNumerator / videoSettings.fpsDenominator, 2)} fps`
+			this.setVariableValues({
+				base_resolution: this.states.resolution,
+				output_resolution: this.states.outputResolution,
+				target_framerate: this.states.framerate,
+			})
+		}
 	}
 
 	//Outputs, Streams, Recordings
@@ -875,28 +917,6 @@ class OBSInstance extends InstanceBase {
 		})
 	}
 
-	async getOutputs() {
-		let outputData = await this.sendRequest('GetOutputList')
-		this.outputs = {}
-		this.outputList = []
-		outputData?.outputs.forEach((output) => {
-			let outputKind = output.outputKind
-			if (outputKind === 'virtualcam_output') {
-				this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-			} else if (
-				outputKind != 'ffmpeg_muxer' &&
-				outputKind != 'ffmpeg_output' &&
-				outputKind != 'replay_buffer' &&
-				outputKind != 'rtmp_output'
-			) {
-				//The above outputKinds are handled separately by other actions, so they are omitted
-				this.outputList.push({ id: output.outputName, label: output.outputName })
-			}
-			this.getOutputStatus(output.outputName)
-		})
-		this.updateActionsFeedbacksVariables()
-	}
-
 	async getOutputStatus(outputName) {
 		if (!this.states.sceneCollectionChanging) {
 			let outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
@@ -912,22 +932,24 @@ class OBSInstance extends InstanceBase {
 
 		let sceneList = await this.sendRequest('GetSceneList')
 
-		this.scenes = sceneList.scenes
-		this.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
-		this.states.programScene = sceneList.currentProgramSceneName
+		if (sceneList) {
+			this.scenes = sceneList.scenes
+			this.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
+			this.states.programScene = sceneList.currentProgramSceneName
 
-		this.setVariableValues({
-			scene_preview: this.states.te,
-			scene_active: this.states.programScene,
-		})
+			this.setVariableValues({
+				scene_preview: this.states.te,
+				scene_active: this.states.programScene,
+			})
 
-		this.scenes.forEach((scene) => {
-			let sceneName = scene.sceneName
-			this.sceneChoices.push({ id: sceneName, label: sceneName })
-			//this.addScene(sceneName)
-			this.buildSourceList(sceneName)
-		})
-		this.updateActionsFeedbacksVariables()
+			this.scenes.forEach((scene) => {
+				let sceneName = scene.sceneName
+				this.sceneChoices.push({ id: sceneName, label: sceneName })
+				//this.addScene(sceneName)
+				this.buildSourceList(sceneName)
+			})
+			this.updateActionsFeedbacksVariables()
+		}
 	}
 
 	async buildSourceList(sceneName) {
@@ -1012,71 +1034,87 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
-	async getSceneTransitionList() {
+	async buildSceneTransitionList() {
 		this.transitionList = []
 
 		let sceneTransitionList = await this.sendRequest('GetSceneTransitionList')
-		let currentTransition = await this.sendRequest('GetSceneTransitionList')
+		let currentTransition = await this.sendRequest('GetCurrentSceneTransition')
 
-		sceneTransitionList?.transitions.forEach((transition) => {
-			this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
-		})
+		if (sceneTransitionList) {
+			sceneTransitionList.transitions?.forEach((transition) => {
+				this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
+			})
 
-		this.states.currentTransition = currentTransition?.transitionName ?? 'None'
-		this.states.transitionDuration = currentTransition?.transitionDuration ?? '0'
+			this.states.currentTransition = currentTransition?.transitionName ?? 'None'
+			this.states.transitionDuration = currentTransition?.transitionDuration ?? '0'
 
-		this.checkFeedbacks('transition_duration', 'current_transition')
-		this.setVariableValues({
-			current_transition: this.states.currentTransition,
-			transition_duration: this.states.transitionDuration,
-		})
+			this.checkFeedbacks('transition_duration', 'current_transition')
+			this.setVariableValues({
+				current_transition: this.states.currentTransition,
+				transition_duration: this.states.transitionDuration,
+			})
+		}
 	}
 
 	//Source Info
 	async getMediaStatus() {
-		this.mediaSourceList.forEach(async (source) => {
-			let sourceName = source.id.replace(/[\W]/gi, '_')
-
-			let data = await this.sendRequest('GetMediaInputStatus', { inputName: source.id })
-
-			this.mediaSources[source.id] = data
-
-			let remaining = data?.mediaDuration - data?.mediaCursor
-			if (remaining > 0) {
-				remaining = this.formatTimecode(remaining)
-			} else {
-				remaining = '--:--:--'
-			}
-
-			this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
-			this.mediaSources[source.id].timeRemaining = remaining
-
-			if (data?.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-				this.setVariableValues({
-					current_media_name: source.id,
-					current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
-					current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
-					[`media_status_${sourceName}`]: 'Playing',
-				})
-			} else if (data?.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
-				this.setVariableValues({ [`media_status_${sourceName}`]: 'Paused' })
-			} else {
-				this.setVariableValues({ [`media_status_${sourceName}`]: 'Stopped' })
-			}
-			this.setVariableValues({
-				[`media_time_elapsed_${sourceName}`]: this.mediaSources[source.id].timeElapsed,
-				[`media_time_remaining_${sourceName}`]: remaining,
+		let batch = []
+		for (const source of this.mediaSourceList) {
+			let sourceName = source.id
+			batch.push({
+				requestId: sourceName,
+				requestType: 'GetMediaInputStatus',
+				requestData: { inputName: sourceName },
 			})
-			this.checkFeedbacks('media_playing', 'media_source_time_remaining')
+		}
 
-			/* this.obs
-				.call('GetInputSettings', { inputName: source.id })
-				.then((settings) => {
-					if (settings.inputKind === 'vlc_source') {
+		let data = await this.sendBatch(batch)
+
+		if (data) {
+			for (const response of data) {
+				if (response.requestStatus.result) {
+					let sourceName = response.requestId
+					let validName = this.sources[sourceName].validName ?? sourceName
+					let data = response.responseData
+
+					this.mediaSources[sourceName] = data
+
+					let remaining = data?.mediaDuration - data?.mediaCursor
+					if (remaining > 0) {
+						remaining = this.formatTimecode(remaining)
+					} else {
+						remaining = '--:--:--'
 					}
-				})
-				.catch((error) => {}) */
-		})
+
+					this.mediaSources[sourceName].timeElapsed = this.formatTimecode(data.mediaCursor)
+					this.mediaSources[sourceName].timeRemaining = remaining
+
+					if (data?.mediaState) {
+						switch (data?.mediaState) {
+							case 'OBS_MEDIA_STATE_PLAYING':
+								this.setVariableValues({
+									current_media_name: sourceName,
+									current_media_time_elapsed: this.mediaSources[sourceName].timeElapsed,
+									current_media_time_remaining: this.mediaSources[sourceName].timeRemaining,
+									[`media_status_${validName}`]: 'Playing',
+								})
+								break
+							case 'OBS_MEDIA_STATE_PAUSED':
+								this.setVariableValues({ [`media_status_${validName}`]: 'Paused' })
+								break
+							default:
+								this.setVariableValues({ [`media_status_${validName}`]: 'Stopped' })
+								break
+						}
+					}
+					this.setVariableValues({
+						[`media_time_elapsed_${validName}`]: this.mediaSources[sourceName].timeElapsed,
+						[`media_time_remaining_${validName}`]: remaining,
+					})
+					this.checkFeedbacks('media_playing', 'media_source_time_remaining')
+				}
+			}
+		}
 	}
 
 	async getInputSettings(sourceName, inputKind) {
@@ -1128,13 +1166,13 @@ class OBSInstance extends InstanceBase {
 						[`current_text_${name}`]: `Text from file: ${inputSettings.text_file}`,
 					})
 				}
-				//this.updateActionsFeedbacksVariables()
 				break
 			case 'ffmpeg_source':
 			case 'vlc_source':
 				this.mediaSourceList.push({ id: sourceName, label: sourceName })
-				this.startMediaPoll()
-				//this.updateActionsFeedbacksVariables()
+				if (!this.mediaPoll) {
+					this.startMediaPoll()
+				}
 				break
 			case 'image_source':
 				this.imageSourceList.push({ id: sourceName, label: sourceName })
