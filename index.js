@@ -453,7 +453,7 @@ class OBSInstance extends InstanceBase {
 			let transition = await this.sendRequest('GetCurrentSceneTransition')
 
 			this.states.currentTransition = data.transitionName
-			this.states.transitionDuration = transition.transitionDuration ?? '0'
+			this.states.transitionDuration = transition?.transitionDuration ?? '0'
 
 			this.checkFeedbacks('transition_duration', 'current_transition')
 			this.setVariableValues({
@@ -742,9 +742,9 @@ class OBSInstance extends InstanceBase {
 		let profiles = await this.sendRequest('GetProfileList')
 		this.profileChoices = []
 
-		this.states.currentProfile = profiles.currentProfileName
+		this.states.currentProfile = profiles?.currentProfileName
 
-		profiles.profiles.forEach((profile) => {
+		profiles?.profiles.forEach((profile) => {
 			this.profileChoices.push({ id: profile, label: profile })
 		})
 
@@ -757,8 +757,8 @@ class OBSInstance extends InstanceBase {
 		let collections = await this.sendRequest('GetSceneCollectionList')
 		this.sceneCollectionList = []
 
-		this.states.currentSceneCollection = collections.currentSceneCollectionName
-		collections.sceneCollections.forEach((sceneCollection) => {
+		this.states.currentSceneCollection = collections?.currentSceneCollectionName
+		collections?.sceneCollections.forEach((sceneCollection) => {
 			this.sceneCollectionList.push({ id: sceneCollection, label: sceneCollection })
 		})
 
@@ -770,20 +770,21 @@ class OBSInstance extends InstanceBase {
 
 	async buildSpecialInputs() {
 		let specialInputs = await this.sendRequest('GetSpecialInputs')
+		if (specialInputs) {
+			for (let x in specialInputs) {
+				let input = specialInputs[x]
 
-		for (let x in specialInputs) {
-			let input = specialInputs[x]
+				if (input) {
+					this.sources[input] = {
+						sourceName: input,
+						validName: this.validName(input),
+					}
 
-			if (input) {
-				this.sources[input] = {
-					sourceName: input,
-					validName: this.validName(input),
+					if (!this.sourceChoices.find((item) => item.id === input)) {
+						this.sourceChoices.push({ id: input, label: input })
+					}
+					this.getAudioSources(input)
 				}
-
-				if (!this.sourceChoices.find((item) => item.id === input)) {
-					this.sourceChoices.push({ id: input, label: input })
-				}
-				this.getAudioSources(input)
 			}
 		}
 	}
@@ -828,29 +829,29 @@ class OBSInstance extends InstanceBase {
 		let streamStatus = await this.sendRequest('GetStreamStatus')
 		let streamService = await this.sendRequest('GetStreamServiceSettings')
 
-		this.states.streaming = streamStatus.outputActive
-		this.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-		this.states.streamCongestion = streamStatus.outputCongestion
+		if (streamStatus) {
+			this.states.streaming = streamStatus.outputActive
+			this.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			this.states.streamCongestion = streamStatus.outputCongestion
 
-		let kbits = 0
-		if (streamStatus.outputBytes > this.states.outputBytes) {
-			kbits = Math.round(((streamStatus.outputBytes - this.states.outputBytes) * 8) / 1000)
-			this.states.outputBytes = streamStatus.outputBytes
-		} else {
-			this.states.outputBytes = streamStatus.outputBytes
+			let kbits = 0
+			if (streamStatus.outputBytes > this.states.outputBytes) {
+				kbits = Math.round(((streamStatus.outputBytes - this.states.outputBytes) * 8) / 1000)
+				this.states.outputBytes = streamStatus.outputBytes
+			} else {
+				this.states.outputBytes = streamStatus.outputBytes
+			}
+
+			this.checkFeedbacks('streaming', 'streamCongestion')
+			this.setVariableValues({
+				streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
+				stream_timecode: this.states.streamingTimecode,
+				output_skipped_frames: streamStatus.outputSkippedFrames,
+				output_total_frames: streamStatus.outputTotalFrames,
+				kbits_per_sec: kbits,
+				stream_service: streamService?.streamServiceSettings?.service ?? 'Custom',
+			})
 		}
-
-		this.checkFeedbacks('streaming', 'streamCongestion')
-		this.setVariableValues({
-			streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
-			stream_timecode: this.states.streamingTimecode,
-			output_skipped_frames: streamStatus.outputSkippedFrames,
-			output_total_frames: streamStatus.outputTotalFrames,
-			kbits_per_sec: kbits,
-			stream_service: streamService.streamServiceSettings?.service
-				? streamService.streamServiceSettings.service
-				: 'Custom',
-		})
 	}
 
 	async getRecordStatus() {
@@ -1017,12 +1018,12 @@ class OBSInstance extends InstanceBase {
 		let sceneTransitionList = await this.sendRequest('GetSceneTransitionList')
 		let currentTransition = await this.sendRequest('GetSceneTransitionList')
 
-		sceneTransitionList.transitions.forEach((transition) => {
+		sceneTransitionList?.transitions.forEach((transition) => {
 			this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
 		})
 
-		this.states.currentTransition = currentTransition.transitionName
-		this.states.transitionDuration = currentTransition.transitionDuration ?? '0'
+		this.states.currentTransition = currentTransition?.transitionName ?? 'None'
+		this.states.transitionDuration = currentTransition?.transitionDuration ?? '0'
 
 		this.checkFeedbacks('transition_duration', 'current_transition')
 		this.setVariableValues({
@@ -1040,7 +1041,7 @@ class OBSInstance extends InstanceBase {
 
 			this.mediaSources[source.id] = data
 
-			let remaining = data.mediaDuration - data.mediaCursor
+			let remaining = data?.mediaDuration - data?.mediaCursor
 			if (remaining > 0) {
 				remaining = this.formatTimecode(remaining)
 			} else {
@@ -1050,14 +1051,14 @@ class OBSInstance extends InstanceBase {
 			this.mediaSources[source.id].timeElapsed = this.formatTimecode(data.mediaCursor)
 			this.mediaSources[source.id].timeRemaining = remaining
 
-			if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+			if (data?.mediaState === 'OBS_MEDIA_STATE_PLAYING') {
 				this.setVariableValues({
 					current_media_name: source.id,
 					current_media_time_elapsed: this.mediaSources[source.id].timeElapsed,
 					current_media_time_remaining: this.mediaSources[source.id].timeRemaining,
 					[`media_status_${sourceName}`]: 'Playing',
 				})
-			} else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+			} else if (data?.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
 				this.setVariableValues({ [`media_status_${sourceName}`]: 'Paused' })
 			} else {
 				this.setVariableValues({ [`media_status_${sourceName}`]: 'Stopped' })
@@ -1082,7 +1083,7 @@ class OBSInstance extends InstanceBase {
 		let settings = await this.sendRequest('GetInputSettings', { inputName: sourceName })
 
 		let name = this.sources[sourceName].validName ?? sourceName
-		this.sources[sourceName].settings = settings.inputSettings
+		this.sources[sourceName].settings = settings?.inputSettings
 
 		if (inputKind === 'text_ft2_source_v2' || inputKind === 'text_gdiplus_v2') {
 			//Exclude text sources that read from file, as there is no way to edit or read the text value
@@ -1093,7 +1094,7 @@ class OBSInstance extends InstanceBase {
 				})
 			} else if (settings?.inputSettings?.from_file) {
 				this.setVariableValues({
-					[`current_text_${name}`]: `Text from file: ${settings.inputSettings.text_file}`,
+					[`current_text_${name}`]: `Text from file: ${settings?.inputSettings.text_file}`,
 				})
 			}
 
