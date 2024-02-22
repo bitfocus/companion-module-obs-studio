@@ -1446,25 +1446,35 @@ export function getActions() {
 			let scaleY = await this.parseVariablesInString(action.options.scaleY)
 			let rotation = await this.parseVariablesInString(action.options.rotation)
 
-			let transform = {
-				positionX: positionX,
-				positionY: positionY,
-				rotation: rotation,
-				scaleX: scaleX,
-				scaleY: scaleY,
+			let transform = {}
+			if (positionX) {
+				transform.positionX = Number(positionX)
+			}
+			if (positionY) {
+				transform.positionY = Number(positionY)
+			}
+			if (scaleX) {
+				transform.scaleX = Number(scaleX)
+			}
+			if (scaleY) {
+				transform.scaleY = Number(scaleY)
+			}
+			if (rotation) {
+				transform.rotation = Number(rotation)
 			}
 
-			this.obs.call('GetSceneItemId', { sceneName: sourceScene, sourceName: action.options.source }).then((data) => {
-				if (data.sceneItemId) {
-					requestType = 'SetSceneItemTransform'
-					requestData = {
-						sceneName: sourceScene,
-						sceneItemId: data.sceneItemId,
-						sceneItemTransform: transform,
-					}
-					this.sendRequest(requestType, requestData)
-				}
+			let sceneItem = await this.sendRequest('GetSceneItemId', {
+				sceneName: sourceScene,
+				sourceName: action.options.source,
 			})
+
+			if (sceneItem?.sceneItemId) {
+				this.sendRequest('SetSceneItemTransform', {
+					sceneName: sourceScene,
+					sceneItemId: sceneItem?.sceneItemId,
+					sceneItemTransform: transform,
+				})
+			}
 		},
 	}
 	actions['openInputPropertiesDialog'] = {

@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### unreleased
+
+- Fix
+  - "Set Source Transform" action not working
+
 ### v3.4.1
 
 - Fix

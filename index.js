@@ -616,7 +616,7 @@ class OBSInstance extends InstanceBase {
 			let data = await this.obs.call(requestType, requestData)
 			return data
 		} catch (error) {
-			this.log('debug', `Request ${requestType} failed (${error})`)
+			this.log('debug', `Request ${requestType ?? ''} failed (${error})`)
 		}
 	}
 
@@ -1244,12 +1244,12 @@ class OBSInstance extends InstanceBase {
 					} else if (inputSettings?.local_file) {
 						file = inputSettings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 					}
-					this.setVariableValues({ [`media_file_name_${validName}`]: file })
+					this.setVariableValues({ [`media_file_name_${name}`]: file })
 
 					break
 				case 'image_source':
 					this.setVariableValues({
-						[`image_file_name_${validName}`]: inputSettings?.file
+						[`image_file_name_${name}`]: inputSettings?.file
 							? inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
 							: '',
 					})
