@@ -1613,10 +1613,10 @@ node-releases@^2.0.14:
   resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.14.tgz#2ffb053bceb8b2be8495ece1ab6ce600c4461b0b"
   integrity sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==
 
-obs-websocket-js@5.0.4:
-  version "5.0.4"
-  resolved "https://registry.yarnpkg.com/obs-websocket-js/-/obs-websocket-js-5.0.4.tgz#f44aca7545df0c13e836869881c42c506ca78585"
-  integrity sha512-6ieuC2rq/mQoEMwO2dVKv3ZqeGL6nKHuSvnd2d/CmXuK2nOfw88NInJUyvpFHNaltmkc6P5ywVZu68Q8K5xvqQ==
+obs-websocket-js@5.0.5:
+  version "5.0.5"
+  resolved "https://registry.yarnpkg.com/obs-websocket-js/-/obs-websocket-js-5.0.5.tgz#4700be77eeca8b7cd2007e325d007264c5808192"
+  integrity sha512-mSMqLXJ4z28jgwy7Ecv8CtpYh/xdbcn524kq0n6wT3kN6xkgWU/Zc6OtiVZo+gyyylC0anjehMLEVF+CDSwccw==
   dependencies:
     "@msgpack/msgpack" "^2.7.1"
     crypto-js "^4.1.1"
