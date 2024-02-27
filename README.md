@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.4.3
+
+- Fix
+  - Module not reconnecting when OBS was reopened under specific situations on Windows
+
 ### v3.4.2
 
 - Fix

@@ -319,6 +319,9 @@ class OBSInstance extends InstanceBase {
 		this.obs.once('ExitStarted', () => {
 			this.connectionLost()
 		})
+		this.obs.on('ConnectionClosed', () => {
+			this.connectionLost()
+		})
 		this.obs.on('VendorEvent', (data) => {
 			this.vendorEvent = data
 			this.checkFeedbacks('vendorEvent')

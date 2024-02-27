@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "3.4.2",
+	"version": "3.4.3",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -9,7 +9,7 @@
 	"license": "MIT",
 	"dependencies": {
 		"@companion-module/base": "~1.7.0",
-		"obs-websocket-js": "5.0.4"
+		"obs-websocket-js": "5.0.5"
 	},
 	"repository": {
 		"type": "git",
