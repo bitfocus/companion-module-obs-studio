@@ -301,6 +301,7 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
+				allowCustom: true,
 				minChoicesForSearch: 5,
 			},
 			{
@@ -315,30 +316,33 @@ export function getFeedbacks() {
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoices,
+				allowCustom: true,
 				minChoicesForSearch: 5,
+				isVisible: (options) => !options.any,
 			},
 		],
-		callback: (feedback) => {
+		callback: async (feedback, context) => {
+			let sceneName = await this.parseVariablesInString(feedback.options.scene, context)
+			let sourceName = await this.parseVariablesInString(feedback.options.source, context)
+
 			if (feedback.options.any) {
-				let scene = this.sceneItems[feedback.options.scene]
+				let scene = this.sceneItems[sceneName]
 
 				if (scene) {
-					let enabled = this.sceneItems[feedback.options.scene].find((item) => item.sceneItemEnabled === true)
+					let enabled = this.sceneItems[sceneName].find((item) => item.sceneItemEnabled === true)
 					if (enabled) {
 						return true
 					}
 				}
 			} else {
-				if (this.sources[feedback.options.source]?.groupedSource) {
-					let group = this.sources[feedback.options.source].groupName
-					let sceneItem = this.groups[group].find((item) => item.sourceName === feedback.options.source)
+				if (this.sources[sourceName]?.groupedSource) {
+					let group = this.sources[sourceName].groupName
+					let sceneItem = this.groups[group].find((item) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
-				} else if (this.sceneItems[feedback.options.scene]) {
-					let sceneItem = this.sceneItems[feedback.options.scene].find(
-						(item) => item.sourceName === feedback.options.source
-					)
+				} else if (this.sceneItems[sceneName]) {
+					let sceneItem = this.sceneItems[sceneName].find((item) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
