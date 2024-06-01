@@ -1079,7 +1079,8 @@ class OBSInstance extends InstanceBase {
 					let input = await this.sendRequest('GetInputSettings', { inputName: sourceName })
 
 					if (input.inputSettings) {
-						this.updateInputSettings(sourceName, input.inputSettings)
+						this.buildInputSettings(sourceName, sceneItem.inputKind, input.inputSettings)
+						this.updateActionsFeedbacksVariables()
 					}
 				}
 			})
