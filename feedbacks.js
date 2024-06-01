@@ -4,6 +4,7 @@ export function getFeedbacks() {
 	const feedbacks = {}
 
 	const ColorWhite = combineRgb(255, 255, 255)
+	const ColorGray = combineRgb(72, 72, 72)
 	const ColorBlack = combineRgb(0, 0, 0)
 	const ColorRed = combineRgb(200, 0, 0)
 	const ColorGreen = combineRgb(0, 200, 0)
@@ -696,14 +697,43 @@ export function getFeedbacks() {
 		type: 'advanced',
 		name: 'Stream Congestion',
 		description: 'Change the style of the button to show stream congestion',
-		options: [],
-		callback: () => {
-			if (this.states.streamCongestion > 0.8) {
-				return { bgcolor: ColorRed }
-			} else if (this.states.congestion > 0.4) {
-				return { bgcolor: ColorOrange }
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Background color (No Stream)',
+				id: 'colorNoStream',
+				default: ColorGray,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Low Congestion)',
+				id: 'colorLow',
+				default: ColorGreen,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Medium Congestion)',
+				id: 'colorMedium',
+				default: ColorOrange,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (High Congestion)',
+				id: 'colorHigh',
+				default: ColorRed,
+			},
+		],
+		callback: (feedback) => {
+			if (this.states.streaming === false) {
+				return { bgcolor: feedback.options.colorNoStream }
 			} else {
-				return { bgcolor: ColorGreen }
+				if (this.states.streamCongestion > 0.8) {
+					return { bgcolor: feedback.options.colorHigh }
+				} else if (this.states.congestion > 0.4) {
+					return { bgcolor: feedback.options.colorMedium }
+				} else {
+					return { bgcolor: feedback.options.colorLow }
+				}
 			}
 		},
 	}

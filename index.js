@@ -542,7 +542,7 @@ class OBSInstance extends InstanceBase {
 			this.states.streaming = data.outputActive
 
 			this.setVariableValues({ streaming: this.states.streaming ? 'Live' : 'Off-Air' })
-			this.checkFeedbacks('streaming')
+			this.checkFeedbacks('streaming', 'streamCongestion')
 		})
 		this.obs.on('RecordStateChanged', (data) => {
 			if (data.outputActive === true) {
