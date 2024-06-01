@@ -484,10 +484,12 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('SceneTransitionStarted', () => {
 			this.states.transitionActive = true
+			this.setVariableValues({ transition_active: 'True' })
 			this.checkFeedbacks('transition_active')
 		})
 		this.obs.on('SceneTransitionEnded', () => {
 			this.states.transitionActive = false
+			this.setVariableValues({ transition_active: 'False' })
 			this.checkFeedbacks('transition_active')
 		})
 		this.obs.on('SceneTransitionVideoEnded', () => {})
@@ -1103,6 +1105,7 @@ class OBSInstance extends InstanceBase {
 			this.setVariableValues({
 				current_transition: this.states.currentTransition,
 				transition_duration: this.states.transitionDuration,
+				transition_active: 'False',
 			})
 		}
 	}
