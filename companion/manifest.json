@@ -3,7 +3,7 @@
 	"name": "obs-studio",
 	"shortname": "obs",
 	"description": "Control OBS Studio using the obs-websocket plugin",
-	"version": "3.4.3",
+	"version": "3.5.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-obs-studio.git",
 	"bugs": "https://github.com/bitfocus/companion-module-obs-studio/issues",
