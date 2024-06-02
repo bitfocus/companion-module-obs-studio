@@ -1145,6 +1145,45 @@ export function getActions() {
 			}
 		},
 	}
+	actions['setFilterSettings'] = {
+		name: 'Set Filter Settings',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source / Scene',
+				id: 'source',
+				default: this.sourceListDefault,
+				choices: this.sourceChoicesWithScenes,
+			},
+			{
+				type: 'dropdown',
+				label: 'Filter',
+				id: 'filter',
+				default: this.filterListDefault,
+				choices: this.filterList,
+			},
+			{
+				type: 'textinput',
+				label: 'Filter Settings',
+				id: 'settings',
+				default: '{"left": 100, "top": 0, "right": 100, "bottom": 0}',
+				tooltip: 'Must be a JSON object with the settings for the filter',
+			},
+		],
+		callback: (action) => {
+			try {
+				let settings = JSON.parse(action.options.settings)
+				this.sendRequest('SetSourceFilterSettings', {
+					sourceName: action.options.source,
+					filterName: action.options.filter,
+					filterSettings: settings,
+				})
+			} catch (e) {
+				this.log('warn', `Error parsing JSON for Set Filter Settings (${e.message})`)
+				return
+			}
+		},
+	}
 	actions['play_pause_media'] = {
 		name: 'Play / Pause Media',
 		options: [
