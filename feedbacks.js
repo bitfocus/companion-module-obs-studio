@@ -4,6 +4,7 @@ export function getFeedbacks() {
 	const feedbacks = {}
 
 	const ColorWhite = combineRgb(255, 255, 255)
+	const ColorGray = combineRgb(72, 72, 72)
 	const ColorBlack = combineRgb(0, 0, 0)
 	const ColorRed = combineRgb(200, 0, 0)
 	const ColorGreen = combineRgb(0, 200, 0)
@@ -300,6 +301,7 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
+				allowCustom: true,
 				minChoicesForSearch: 5,
 			},
 			{
@@ -314,30 +316,33 @@ export function getFeedbacks() {
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoices,
+				allowCustom: true,
 				minChoicesForSearch: 5,
+				isVisible: (options) => !options.any,
 			},
 		],
-		callback: (feedback) => {
+		callback: async (feedback, context) => {
+			let sceneName = await this.parseVariablesInString(feedback.options.scene, context)
+			let sourceName = await this.parseVariablesInString(feedback.options.source, context)
+
 			if (feedback.options.any) {
-				let scene = this.sceneItems[feedback.options.scene]
+				let scene = this.sceneItems[sceneName]
 
 				if (scene) {
-					let enabled = this.sceneItems[feedback.options.scene].find((item) => item.sceneItemEnabled === true)
+					let enabled = this.sceneItems[sceneName].find((item) => item.sceneItemEnabled === true)
 					if (enabled) {
 						return true
 					}
 				}
 			} else {
-				if (this.sources[feedback.options.source]?.groupedSource) {
-					let group = this.sources[feedback.options.source].groupName
-					let sceneItem = this.groups[group].find((item) => item.sourceName === feedback.options.source)
+				if (this.sources[sourceName]?.groupedSource) {
+					let group = this.sources[sourceName].groupName
+					let sceneItem = this.groups[group].find((item) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
-				} else if (this.sceneItems[feedback.options.scene]) {
-					let sceneItem = this.sceneItems[feedback.options.scene].find(
-						(item) => item.sourceName === feedback.options.source
-					)
+				} else if (this.sceneItems[sceneName]) {
+					let sceneItem = this.sceneItems[sceneName].find((item) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
@@ -696,14 +701,43 @@ export function getFeedbacks() {
 		type: 'advanced',
 		name: 'Stream Congestion',
 		description: 'Change the style of the button to show stream congestion',
-		options: [],
-		callback: () => {
-			if (this.states.streamCongestion > 0.8) {
-				return { bgcolor: ColorRed }
-			} else if (this.states.congestion > 0.4) {
-				return { bgcolor: ColorOrange }
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Background color (No Stream)',
+				id: 'colorNoStream',
+				default: ColorGray,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Low Congestion)',
+				id: 'colorLow',
+				default: ColorGreen,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Medium Congestion)',
+				id: 'colorMedium',
+				default: ColorOrange,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (High Congestion)',
+				id: 'colorHigh',
+				default: ColorRed,
+			},
+		],
+		callback: (feedback) => {
+			if (this.states.streaming === false) {
+				return { bgcolor: feedback.options.colorNoStream }
 			} else {
-				return { bgcolor: ColorGreen }
+				if (this.states.streamCongestion > 0.8) {
+					return { bgcolor: feedback.options.colorHigh }
+				} else if (this.states.congestion > 0.4) {
+					return { bgcolor: feedback.options.colorMedium }
+				} else {
+					return { bgcolor: feedback.options.colorLow }
+				}
 			}
 		},
 	}

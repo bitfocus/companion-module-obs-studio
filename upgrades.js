@@ -96,4 +96,27 @@ export default [
 
 		return changes
 	},
+	function v3_5_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const feedback of props.feedbacks) {
+			if (feedback.feedbackId === 'streamCongestion') {
+				if (!feedback.options.colorNoStream) {
+					feedback.options = {
+						colorNoStream: '#484848',
+						colorLow: '#00c800',
+						colorMedium: '#ff6600',
+						colorHigh: '#c80000',
+					}
+				}
+				changes.updatedFeedbacks.push(feedback)
+			}
+		}
+
+		return changes
+	},
 ]

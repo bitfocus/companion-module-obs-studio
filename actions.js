@@ -670,6 +670,7 @@ export function getActions() {
 				id: 'scene',
 				default: 'Current Scene',
 				choices: this.sceneChoicesProgramPreview,
+				allowCustom: true,
 			},
 			{
 				type: 'checkbox',
@@ -683,6 +684,7 @@ export function getActions() {
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoices,
+				allowCustom: true,
 				isVisible: (options) => options.all === false,
 			},
 			{
@@ -697,9 +699,9 @@ export function getActions() {
 				],
 			},
 		],
-		callback: (action) => {
-			let sceneName = action.options.scene
-			let sourceName = action.options.source
+		callback: async (action) => {
+			let sceneName = await this.parseVariablesInString(action.options.scene)
+			let sourceName = await this.parseVariablesInString(action.options.source)
 			let enabled = true
 			let requests = []
 
@@ -1071,6 +1073,7 @@ export function getActions() {
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoicesWithScenes,
+				allowCustom: true,
 			},
 			{
 				type: 'checkbox',
@@ -1084,6 +1087,7 @@ export function getActions() {
 				id: 'filter',
 				default: this.filterListDefault,
 				choices: this.filterList,
+				allowCustom: true,
 				isVisible: (options) => options.all === false,
 			},
 			{
@@ -1098,8 +1102,11 @@ export function getActions() {
 				],
 			},
 		],
-		callback: (action) => {
-			let sourceFilterList = this.sourceFilters[action.options.source]
+		callback: async (action) => {
+			let source = await this.parseVariablesInString(action.options.source)
+			let filterName = await this.parseVariablesInString(action.options.filter)
+
+			let sourceFilterList = this.sourceFilters[source]
 			if (action.options.all) {
 				let requests = []
 				sourceFilterList.forEach((filter) => {
@@ -1112,7 +1119,7 @@ export function getActions() {
 					}
 					requests.push({
 						requestType: 'SetSourceFilterEnabled',
-						requestData: { sourceName: action.options.source, filterName: name, filterEnabled: filterVisibility },
+						requestData: { sourceName: source, filterName: name, filterEnabled: filterVisibility },
 					})
 				})
 
@@ -1123,7 +1130,7 @@ export function getActions() {
 					filterVisibility = action.options.visible === 'true' ? true : false
 				} else if (action.options.visible === 'toggle') {
 					if (sourceFilterList) {
-						let filter = sourceFilterList.find((item) => item.filterName === action.options.filter)
+						let filter = sourceFilterList.find((item) => item.filterName === filterName)
 						if (filter) {
 							filterVisibility = !filter.filterEnabled
 						}
@@ -1131,10 +1138,49 @@ export function getActions() {
 				}
 
 				this.sendRequest('SetSourceFilterEnabled', {
-					sourceName: action.options.source,
-					filterName: action.options.filter,
+					sourceName: source,
+					filterName: filterName,
 					filterEnabled: filterVisibility,
 				})
+			}
+		},
+	}
+	actions['setFilterSettings'] = {
+		name: 'Set Filter Settings',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source / Scene',
+				id: 'source',
+				default: this.sourceListDefault,
+				choices: this.sourceChoicesWithScenes,
+			},
+			{
+				type: 'dropdown',
+				label: 'Filter',
+				id: 'filter',
+				default: this.filterListDefault,
+				choices: this.filterList,
+			},
+			{
+				type: 'textinput',
+				label: 'Filter Settings',
+				id: 'settings',
+				default: '{"left": 100, "top": 0, "right": 100, "bottom": 0}',
+				tooltip: 'Must be a JSON object with the settings for the filter',
+			},
+		],
+		callback: (action) => {
+			try {
+				let settings = JSON.parse(action.options.settings)
+				this.sendRequest('SetSourceFilterSettings', {
+					sourceName: action.options.source,
+					filterName: action.options.filter,
+					filterSettings: settings,
+				})
+			} catch (e) {
+				this.log('warn', `Error parsing JSON for Set Filter Settings (${e.message})`)
+				return
 			}
 		},
 	}

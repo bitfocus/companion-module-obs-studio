@@ -33,6 +33,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 - Set Source Visibility _(Individual sources, or All Sources within a scene)_
 - Set Filter Visibility
+- Set Filter Settings
 - Set Source Transform (Position / Scale / Rotation)
 - Source Mute (Set / Toggle)
 - Set Source Volume

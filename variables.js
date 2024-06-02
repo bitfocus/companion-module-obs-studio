@@ -28,6 +28,7 @@ export function getVariables() {
 	variables.push({ variableId: 'scene_collection', name: 'Current scene collection' })
 	variables.push({ variableId: 'current_transition', name: 'Current transition' })
 	variables.push({ variableId: 'transition_duration', name: 'Current transition duration' })
+	variables.push({ variableId: 'transition_active', name: 'Transition in progress' })
 	variables.push({ variableId: 'current_media_name', name: 'Source name for currently playing media source' })
 	variables.push({ variableId: 'current_media_time_elapsed', name: 'Time elapsed for currently playing media source' })
 	variables.push({
