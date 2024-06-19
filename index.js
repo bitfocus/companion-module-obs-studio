@@ -253,6 +253,10 @@ class OBSInstance extends InstanceBase {
 					this.buildSpecialInputs()
 					this.buildSceneList()
 				}
+				else {
+					//throw an error if initial info returns false.
+					throw new Error('could not get OBS info')
+				}
 			}
 		} catch (error) {
 			this.processWebsocketError(error)
