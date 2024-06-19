@@ -322,8 +322,8 @@ export function getFeedbacks() {
 			},
 		],
 		callback: async (feedback, context) => {
-			let sceneName = await this.parseVariablesInString(feedback.options.scene, context)
-			let sourceName = await this.parseVariablesInString(feedback.options.source, context)
+			let sceneName = await context.parseVariablesInString(feedback.options.scene)
+			let sourceName = await context.parseVariablesInString(feedback.options.source)
 
 			if (feedback.options.any) {
 				let scene = this.sceneItems[sceneName]
