@@ -24,10 +24,10 @@
     p-timeout "^4.1.0"
     tslib "^2.6.2"
 
-"@companion-module/tools@^1.5.0":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-1.5.0.tgz#ce3cc1fc8aa71ebcbb8fcc65ccaad22099bb3c9e"
-  integrity sha512-J9sY2DE6i7bWYZ1uoPE8Drux53StYVqpVe+xHF0mERvV9QXOvPQ5AqxM12ts/Jd0vzd94jqLEUzm1I/y/KEWtw==
+"@companion-module/tools@^1.5.1":
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-1.5.1.tgz#5f5d3e65eee22926e704de3084e3f66de9d841d0"
+  integrity sha512-9KJC0mZLpg7dlS3MKCYzbUbOjiDMpjjwHgeAxMzh9AOM1ybgsEkmYLfIyZ/EWWSSJ/1s75IJmOtIUWVkZUuqhQ==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^5.59.9"
     "@typescript-eslint/parser" "^5.59.9"
@@ -38,7 +38,7 @@
     find-up "^7.0.0"
     parse-author "^2.0.0"
     prettier "^2.8.8"
-    tar "^6.2.0"
+    tar "^6.2.1"
     webpack "^5.90.0"
     webpack-cli "^5.1.4"
     zx "^7.2.3"
@@ -2092,7 +2092,7 @@ tapable@^2.1.1, tapable@^2.2.0:
   resolved "https://registry.yarnpkg.com/tapable/-/tapable-2.2.1.tgz#1967a73ef4060a82f12ab96af86d52fdb76eeca0"
   integrity sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==
 
-tar@^6.2.0:
+tar@^6.2.1:
   version "6.2.1"
   resolved "https://registry.yarnpkg.com/tar/-/tar-6.2.1.tgz#717549c541bc3c2af15751bea94b1dd068d4b03a"
   integrity sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==

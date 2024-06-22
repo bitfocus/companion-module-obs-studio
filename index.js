@@ -571,6 +571,11 @@ class OBSInstance extends InstanceBase {
 			this.states.replayBuffer = data.outputActive
 			this.checkFeedbacks('replayBufferActive')
 		})
+		this.obs.on('RecordFileChanged', (data) => {
+			if (data.newOutputPath) {
+				this.setVariableValues({ recording_file_name: data.newOutputPath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) })
+			}
+		})
 		this.obs.on('VirtualcamStateChanged', (data) => {
 			this.outputs['virtualcam_output'].outputActive = data.outputActive
 			this.checkFeedbacks('output_active')

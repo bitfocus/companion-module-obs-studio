@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "3.5.0",
+	"version": "3.6.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -16,7 +16,7 @@
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.5.0"
+		"@companion-module/tools": "^1.5.1"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
