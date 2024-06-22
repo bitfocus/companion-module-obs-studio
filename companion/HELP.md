@@ -12,7 +12,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 
 **Recording & Streaming & Outputs**
 
-- Recording (Toggle Record / Start / Stop / Toggle Pause / Pause / Resume)
+- Recording (Toggle Record / Start / Stop / Toggle Pause / Pause / Resume / Split / Create Chapter)
 - Streaming (Start / Stop / Toggle)
 - Set Stream Settings
 - Send Stream Caption

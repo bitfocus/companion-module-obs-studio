@@ -59,6 +59,31 @@ export function getActions() {
 			this.sendRequest('ToggleRecordPause')
 		},
 	}
+	actions['SplitRecordFile'] = {
+		name: 'Split Recording',
+		description: 'Requires using the Advanced output mode, and enabling file splitting in the Records settings',
+		options: [],
+		callback: () => {
+			this.sendRequest('SplitRecordFile')
+		},
+	}
+	actions['CreateRecordChapter'] = {
+		name: 'Create Record Chapter',
+		description: 'Requires using the Hybrid MP4 encoder',
+		options: [
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Chapter Name',
+				id: 'chapterName',
+				default: '',
+			},
+		],
+		callback: async (action) => {
+			const chapterName = await this.parseVariablesInString(action.options.chapterName)
+			this.sendRequest('CreateRecordChapter', { chapterName: chapterName })
+		},
+	}
 	actions['start_streaming'] = {
 		name: 'Start Streaming',
 		options: [],
