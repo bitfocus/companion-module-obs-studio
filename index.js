@@ -252,8 +252,7 @@ class OBSInstance extends InstanceBase {
 					this.buildSceneTransitionList()
 					this.buildSpecialInputs()
 					this.buildSceneList()
-				}
-				else {
+				} else {
 					//throw an error if initial info returns false.
 					throw new Error('could not get OBS info')
 				}
@@ -381,16 +380,15 @@ class OBSInstance extends InstanceBase {
 			this.updateActionsFeedbacksVariables()
 		})
 		this.obs.on('CurrentProgramSceneChanged', (data) => {
+			this.states.previousScene = this.states.programScene
 			this.states.programScene = data.sceneName
-			this.setVariableValues({ scene_active: this.states.programScene })
-			this.checkFeedbacks('scene_active')
-			this.checkFeedbacks('sceneProgram')
+			this.setVariableValues({ scene_active: this.states.programScene, scene_previous: this.states.previousScene })
+			this.checkFeedbacks('scene_active', 'sceneProgram', 'scenePrevious')
 		})
 		this.obs.on('CurrentPreviewSceneChanged', (data) => {
 			this.states.previewScene = data.sceneName ?? 'None'
 			this.setVariableValues({ scene_preview: this.states.previewScene })
-			this.checkFeedbacks('scene_active')
-			this.checkFeedbacks('scenePreview')
+			this.checkFeedbacks('scene_active', 'scenePreview')
 		})
 		this.obs.on('SceneListChanged', (data) => {
 			this.scenes = data.scenes

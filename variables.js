@@ -24,6 +24,7 @@ export function getVariables() {
 	variables.push({ variableId: 'kbits_per_sec', name: 'Stream output in kilobits per second' })
 	variables.push({ variableId: 'scene_active', name: 'Current active scene' })
 	variables.push({ variableId: 'scene_preview', name: 'Current preview scene' })
+	variables.push({ variableId: 'scene_previous', name: 'Previously active scene, before the current scene' })
 	variables.push({ variableId: 'profile', name: 'Current profile' })
 	variables.push({ variableId: 'scene_collection', name: 'Current scene collection' })
 	variables.push({ variableId: 'current_transition', name: 'Current transition' })
@@ -46,6 +47,7 @@ export function getVariables() {
 		current_media_time_remaining: '--:--:--',
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
+		scene_previous: this.states.previousScene ?? 'None',
 	})
 
 	//Source Specific Variables
