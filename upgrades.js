@@ -119,4 +119,27 @@ export default [
 
 		return changes
 	},
+	function v3_7_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const action of props.actions) {
+			if (action.actionId === 'set_transition_duration') {
+				if (action.options.duration < 50) {
+					action.options.duration = 50
+				}
+				if (action.options.duration > 20000) {
+					action.options.duration = 20000
+				}
+				action.options.variableValue = '500'
+				action.options.useVariable = false
+				changes.updatedActions.push(action)
+			}
+		}
+
+		return changes
+	},
 ]

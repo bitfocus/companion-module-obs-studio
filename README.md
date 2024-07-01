@@ -13,6 +13,8 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 - New
   - Added Previous Scene Active feedback
   - Added scene_previous variable
+  - Added Adjust Transition Duration action
+  - Allow custom variable in Set Transition Duration action
 
 ### v3.6.0
 
