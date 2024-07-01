@@ -28,6 +28,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Quick Transition _(Performs the selected transition and then returns to the previous transition)_
 - Set Transition Type
 - Set Transition Duration
+- Adjust Transition Duration
 
 **Sources**
 
@@ -78,6 +79,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 **Switching & Transitions**
 
 - Scene in Preview / Program (Program and Preview, Program Only, or Preview Only)
+- Previous Scene Active
 - Transition in Progress
 - Current Transition Type
 - Transition Duration
@@ -127,6 +129,7 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - preview_only
 - scene_active
 - scene_preview
+- scene_previous
 - current_transition
 - transition_duration
 

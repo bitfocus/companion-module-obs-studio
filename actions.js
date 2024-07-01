@@ -368,15 +368,76 @@ export function getActions() {
 			{
 				type: 'number',
 				label: 'Transition time (in ms)',
+				tooltip: 'Must be between 50 and 20000ms',
 				id: 'duration',
-				default: null,
-				min: 0,
-				max: 60 * 1000, //max is required by api
+				default: 500,
+				min: 50,
+				max: 20000, //max is required by api
+				range: false,
+				isVisible: (options) => !options.useVariable,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Transition time variable (in ms)',
+				id: 'variableValue',
+				default: '500',
+				isVisible: (options) => options.useVariable,
+			},
+			{
+				type: 'checkbox',
+				label: 'Use Variable',
+				id: 'useVariable',
+				default: false,
+			},
+		],
+		callback: async (action) => {
+			let duration = null
+			if (action.options.useVariable) {
+				duration = await this.parseVariablesInString(action.options.variableValue)
+				duration = parseInt(duration)
+				if (duration >= 50 && duration <= 20000) {
+					duration = duration
+				} else {
+					this.log('warn', 'Transition duration must be between 50 and 20000ms')
+					return
+				}
+			} else {
+				duration = action.options.duration
+			}
+			this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+		},
+	}
+	actions['adjustTransitionDuration'] = {
+		name: 'Adjust Transition Duration',
+		options: [
+			{
+				type: 'number',
+				label: 'Adjustment amount +/- (in ms)',
+				id: 'duration',
+				default: 500,
+				min: -20000,
+				max: 20000,
 				range: false,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: action.options.duration })
+		callback: async (action) => {
+			if (this.states.transitionDuration) {
+				let duration = null
+				duration = this.states.transitionDuration + action.options.duration
+				if (duration >= 50 && duration <= 20000) {
+					duration = duration
+				} else if (duration < 50) {
+					duration = 50
+				} else if (duration > 20000) {
+					duration = 20000
+				} else {
+					duration = this.states.transitionDuration
+				}
+				this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+			} else {
+				this.log('warn', 'Unable to adjust transition duration')
+			}
 		},
 	}
 	actions['set_stream_settings'] = {

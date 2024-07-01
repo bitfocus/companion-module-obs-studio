@@ -180,6 +180,29 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks['scenePrevious'] = {
+		type: 'boolean',
+		name: 'Previous Scene Active',
+		description: 'If a scene was the last scene previously active, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: this.sceneListDefault,
+				choices: this.sceneChoices,
+				minChoicesForSearch: 5,
+			},
+		],
+		callback: (feedback) => {
+			return this.states.previousScene === feedback.options.scene
+		},
+	}
+
 	feedbacks['scene_item_active'] = {
 		type: 'boolean',
 		name: 'Source Visible in Program',

@@ -8,6 +8,34 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.7.0
+
+- New
+  - Added Previous Scene Active feedback
+  - Added scene_previous variable
+  - Added Adjust Transition Duration action
+  - Allow custom variable in Set Transition Duration action
+
+### v3.6.0
+
+- New
+  - Added Split Record action _(requires OBS 30.2)_
+  - Added Record Chapter action _(requires OBS 30.2)_
+- Fix
+  - Ensure feedbacks that use custom variables are re-checked if the variable changes
+  - Properly throw error if unable to get initial info from obs-websocket
+
+### v3.5.0
+
+- New
+  - Added transition_active variable
+  - Set Filter Settings action
+- Improved
+  - Allow customization of Stream Congestion feedback colors, including a color for when streaming is not active
+  - Allow custom variables in additional actions and feedbacks
+- Fix
+  - Grouped text sources not appearing in dropdown of text sources
+
 ### v3.4.3
 
 - Fix
@@ -92,7 +120,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 - Fix
   - All text source now appear as choices in the Set Text action dropdown on startup
-- Minor
+- Improved
   - Allow hostnames to be used in the module configuration
 
 ### v2.0.4
@@ -100,7 +128,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 - Fix
   - When using Set Scene Visibility on a group source, the sources within groups are now not affected
   - Toggle/Start/Stop Output now works properly with Virtual Camera
-- Minor
+- Improved
   - Update obs-websocket-js to latest version
   - Use obs-websocket's Batch command for certain actions
 
