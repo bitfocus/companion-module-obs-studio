@@ -1202,15 +1202,16 @@ class OBSInstance extends InstanceBase {
 		switch (inputKind) {
 			case 'text_ft2_source_v2':
 			case 'text_gdiplus_v2':
+			case 'text_gdiplus_v3':
 				//Exclude text sources that read from file, as there is no way to edit or read the text value
-				if (inputSettings?.text) {
+				if (inputSettings?.from_file || inputSettings?.read_from_file) {
+					this.setVariableValues({
+						[`current_text_${name}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
+					})
+				} else if (inputSettings?.text) {
 					this.textSourceList.push({ id: sourceName, label: sourceName })
 					this.setVariableValues({
 						[`current_text_${name}`]: inputSettings.text ?? '',
-					})
-				} else if (inputSettings?.from_file) {
-					this.setVariableValues({
-						[`current_text_${name}`]: `Text from file: ${inputSettings.text_file}`,
 					})
 				}
 				break
@@ -1238,14 +1239,15 @@ class OBSInstance extends InstanceBase {
 			switch (inputKind) {
 				case 'text_ft2_source_v2':
 				case 'text_gdiplus_v2':
+				case 'text_gdiplus_v3':
 					//Exclude text sources that read from file, as there is no way to edit or read the text value
-					if (inputSettings?.text) {
+					if (inputSettings?.from_file || inputSettings?.read_from_file) {
+						this.setVariableValues({
+							[`current_text_${name}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
+						})
+					} else if (inputSettings?.text) {
 						this.setVariableValues({
 							[`current_text_${name}`]: inputSettings.text ?? '',
-						})
-					} else if (inputSettings?.from_file) {
-						this.setVariableValues({
-							[`current_text_${name}`]: `Text from file: ${inputSettings.text_file}`,
 						})
 					}
 					break
