@@ -10,6 +10,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ### v3.7.0
 
+- Fix
+  - Certain text sources (gdiplus_v3) not populating in action dropdowns or variables
+
+### v3.7.0
+
 - New
   - Added Previous Scene Active feedback
   - Added scene_previous variable
