@@ -8,7 +8,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
-### v3.7.0
+### v3.7.1
 
 - Fix
   - Certain text sources (gdiplus_v3) not populating in action dropdowns or variables
