@@ -5,7 +5,7 @@ import { getVariables } from './variables.js'
 import { getFeedbacks } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
 
-import OBSWebSocket, { EventSubscription } from 'obs-websocket-js'
+import { OBSWebSocket, EventSubscription } from 'obs-websocket-js'
 
 class OBSInstance extends InstanceBase {
 	constructor(internal) {
