@@ -59,14 +59,15 @@ export function getVariables() {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
 				case 'text_gdiplus_v2':
+				case 'text_gdiplus_v3':
 					variables.push({ variableId: `current_text_${sourceName}`, name: `${sourceName} - Current text` })
-					if (inputSettings?.text) {
+					if (inputSettings?.from_file || inputSettings?.read_from_file) {
+						this.setVariableValues({
+							[`current_text_${sourceName}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
+						})
+					} else if (inputSettings?.text) {
 						this.setVariableValues({
 							[`current_text_${sourceName}`]: inputSettings.text ?? '',
-						})
-					} else if (inputSettings?.from_file) {
-						this.setVariableValues({
-							[`current_text_${sourceName}`]: `Text from file: ${inputSettings.text_file}`,
 						})
 					}
 					break
