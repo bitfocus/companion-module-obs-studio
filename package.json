@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "3.7.1",
+	"version": "3.8.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -8,7 +8,7 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@companion-module/base": "~1.9.0",
+		"@companion-module/base": "~1.10.0",
 		"obs-websocket-js": "5.0.6"
 	},
 	"repository": {
@@ -16,7 +16,8 @@
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.5.1"
+		"@companion-module/tools": "^2.0.0",
+		"prettier": "^3.3.3"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }

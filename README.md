@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.8.0
+
+- New
+  - Allow custom variables or strings to be used in Trigger Hotkey by ID action, and Scene in Preview / Program feedbacks
+
 ### v3.7.1
 
 - Fix

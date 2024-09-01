@@ -260,7 +260,7 @@ export function getActions() {
 			} else {
 				this.log(
 					'warn',
-					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead'
+					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead',
 				)
 			}
 		},
@@ -887,10 +887,12 @@ export function getActions() {
 				id: 'id',
 				default: 'OBSBasic.StartRecording',
 				choices: this.hotkeyNames,
+				allowCustom: true,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('TriggerHotkeyByName', { hotkeyName: action.options.id })
+		callback: async (action) => {
+			let hotkey = await this.parseVariablesInString(action.options.id)
+			this.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
 		},
 	}
 	actions['trigger-hotkey-sequence'] = {
