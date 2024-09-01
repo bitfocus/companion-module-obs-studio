@@ -887,10 +887,12 @@ export function getActions() {
 				id: 'id',
 				default: 'OBSBasic.StartRecording',
 				choices: this.hotkeyNames,
+				allowCustom: true,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('TriggerHotkeyByName', { hotkeyName: action.options.id })
+		callback: async (action) => {
+			let hotkey = await this.parseVariablesInString(action.options.id)
+			this.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
 		},
 	}
 	actions['trigger-hotkey-sequence'] = {
