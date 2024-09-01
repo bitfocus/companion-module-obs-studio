@@ -88,6 +88,7 @@ export function getFeedbacks() {
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
 				minChoicesForSearch: 5,
+				allowCustom: true,
 			},
 			{
 				type: 'colorpicker',
@@ -114,15 +115,16 @@ export function getFeedbacks() {
 				default: ColorGreen,
 			},
 		],
-		callback: (feedback) => {
+		callback: async (feedback, context) => {
 			let mode = feedback.options.mode
+			let scene = await context.parseVariablesInString(feedback.options.scene)
 			if (!mode) {
 				mode = 'programAndPreview'
 			}
-			if (this.states.programScene === feedback.options.scene && (mode === 'programAndPreview' || mode === 'program')) {
+			if (this.states.programScene === scene && (mode === 'programAndPreview' || mode === 'program')) {
 				return { color: feedback.options.fg, bgcolor: feedback.options.bg }
 			} else if (
-				this.states.previewScene === feedback.options.scene &&
+				this.states.previewScene === scene &&
 				typeof feedback.options.fg_preview === 'number' &&
 				this.states.studioMode === true &&
 				(mode === 'programAndPreview' || mode === 'preview')
