@@ -87,7 +87,6 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-
 				allowCustom: true,
 			},
 			{
@@ -151,7 +150,6 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-
 				allowCustom: true,
 			},
 		],
@@ -176,7 +174,6 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-
 				allowCustom: true,
 			},
 		],
@@ -341,7 +338,6 @@ export function getFeedbacks() {
 				default: this.sourceListDefault,
 				choices: this.sourceChoices,
 				allowCustom: true,
-
 				isVisible: (options) => !options.any,
 			},
 		],
