@@ -87,7 +87,7 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-				minChoicesForSearch: 5,
+
 				allowCustom: true,
 			},
 			{
@@ -151,7 +151,7 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-				minChoicesForSearch: 5,
+
 				allowCustom: true,
 			},
 		],
@@ -176,7 +176,7 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-				minChoicesForSearch: 5,
+
 				allowCustom: true,
 			},
 		],
@@ -201,7 +201,6 @@ export function getFeedbacks() {
 				id: 'scene',
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
@@ -257,7 +256,6 @@ export function getFeedbacks() {
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoices,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
@@ -280,7 +278,6 @@ export function getFeedbacks() {
 				id: 'profile',
 				default: this.profileChoicesDefault,
 				choices: this.profileChoices,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
@@ -305,7 +302,6 @@ export function getFeedbacks() {
 				id: 'scene_collection',
 				default: this.sceneCollectionList?.[0] ? this.sceneCollectionList[0].id : '',
 				choices: this.sceneCollectionList,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
@@ -331,7 +327,6 @@ export function getFeedbacks() {
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
 				allowCustom: true,
-				minChoicesForSearch: 5,
 			},
 			{
 				type: 'checkbox',
@@ -346,7 +341,7 @@ export function getFeedbacks() {
 				default: this.sourceListDefault,
 				choices: this.sourceChoices,
 				allowCustom: true,
-				minChoicesForSearch: 5,
+
 				isVisible: (options) => !options.any,
 			},
 		],
@@ -395,7 +390,6 @@ export function getFeedbacks() {
 				id: 'output',
 				default: 'virtualcam_output',
 				choices: this.outputList,
-				minChoicesForSearch: 3,
 			},
 		],
 		callback: (feedback) => {
@@ -446,7 +440,6 @@ export function getFeedbacks() {
 				id: 'transition',
 				default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 				choices: this.transitionList,
-				minChoicesForSearch: 5,
 			},
 		],
 		callback: (feedback) => {
@@ -509,7 +502,7 @@ export function getFeedbacks() {
 		callback: (feedback) => {
 			if (this.sourceFilters[feedback.options.source]) {
 				let filter = this.sourceFilters[feedback.options.source].find(
-					(item) => item.filterName === feedback.options.filter
+					(item) => item.filterName === feedback.options.filter,
 				)
 				if (filter) {
 					return filter.filterEnabled
@@ -685,7 +678,7 @@ export function getFeedbacks() {
 				remainingTime = Math.round(
 					(this.mediaSources[feedback.options.source].mediaDuration -
 						this.mediaSources[feedback.options.source].mediaCursor) /
-						1000
+						1000,
 				)
 				mediaState = this.mediaSources[feedback.options.source].mediaState
 			}

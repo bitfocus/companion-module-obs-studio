@@ -221,7 +221,7 @@ class OBSInstance extends InstanceBase {
 						EventSubscription.InputVolumeMeters |
 						EventSubscription.SceneItemTransformChanged,
 					rpcVersion: 1,
-				}
+				},
 			)
 			if (obsWebSocketVersion) {
 				this.updateStatus(InstanceStatus.Ok)
@@ -273,13 +273,13 @@ class OBSInstance extends InstanceBase {
 				tryReconnect = false
 				this.log(
 					'error',
-					`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`
+					`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`,
 				)
 			} else if (error?.message.match(/(Authentication failed)/i)) {
 				tryReconnect = false
 				this.log(
 					'error',
-					`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`
+					`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
 				)
 				this.updateStatus(InstanceStatus.BadConfig, 'Invalid password')
 			} else if (error?.message.match(/(ECONNREFUSED)/i)) {
@@ -711,7 +711,7 @@ class OBSInstance extends InstanceBase {
 			this.states.version = version
 			this.log(
 				'debug',
-				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`
+				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
 			)
 			version.supportedImageFormats.forEach((format) => {
 				this.imageFormats.push({ id: format, label: format })
@@ -1011,7 +1011,7 @@ class OBSInstance extends InstanceBase {
 						requestId: sourceName,
 						requestType: 'GetSourceFilterList',
 						requestData: { sourceName: sourceName },
-					}
+					},
 				)
 				if (sceneItem.inputKind) {
 					batch.push({

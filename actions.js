@@ -260,7 +260,7 @@ export function getActions() {
 			} else {
 				this.log(
 					'warn',
-					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead'
+					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead',
 				)
 			}
 		},
