@@ -150,10 +150,12 @@ export function getFeedbacks() {
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
 				minChoicesForSearch: 5,
+				allowCustom: true,
 			},
 		],
-		callback: (feedback) => {
-			return this.states.programScene === feedback.options.scene
+		callback: async (feedback, context) => {
+			let scene = await context.parseVariablesInString(feedback.options.scene)
+			return this.states.programScene === scene
 		},
 	}
 
@@ -173,10 +175,12 @@ export function getFeedbacks() {
 				default: this.sceneListDefault,
 				choices: this.sceneChoices,
 				minChoicesForSearch: 5,
+				allowCustom: true,
 			},
 		],
-		callback: (feedback) => {
-			return this.states.previewScene === feedback.options.scene
+		callback: async (feedback, context) => {
+			let scene = await context.parseVariablesInString(feedback.options.scene)
+			return this.states.previewScene === scene
 		},
 	}
 
