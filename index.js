@@ -268,20 +268,21 @@ class OBSInstance extends InstanceBase {
 			if (error?.message.match(/(Server sent no subprotocol)/i)) {
 				tryReconnect = false
 				this.log('error', 'Failed to connect to OBS. Please upgrade OBS to version 28 or above')
-				this.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated websocket plugin')
+				this.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated OBS version')
 			} else if (error?.message.match(/(missing an `authentication` string)/i)) {
 				tryReconnect = false
 				this.log(
 					'error',
 					`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`,
 				)
+				this.updateStatus(InstanceStatus.BadConfig, 'Missing password')
 			} else if (error?.message.match(/(Authentication failed)/i)) {
 				tryReconnect = false
 				this.log(
 					'error',
 					`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
 				)
-				this.updateStatus(InstanceStatus.BadConfig, 'Invalid password')
+				this.updateStatus(InstanceStatus.AuthenticationFailure)
 			} else if (error?.message.match(/(ECONNREFUSED)/i)) {
 				tryReconnect = true
 				this.log('error', `Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)

@@ -1,66 +1,68 @@
 export function getVariables() {
 	const variables = []
 
-	variables.push({ variableId: 'base_resolution', name: 'Current base (canvas) resolution' })
-	variables.push({ variableId: 'output_resolution', name: 'Current  output (scaled) resolution' })
-	variables.push({ variableId: 'target_framerate', name: 'Current profile framerate' })
-	variables.push({ variableId: 'fps', name: 'Current actual framerate' })
-	variables.push({ variableId: 'cpu_usage', name: 'Current CPU usage (percentage)' })
-	variables.push({ variableId: 'memory_usage', name: 'Current RAM usage (in megabytes)' })
-	variables.push({ variableId: 'free_disk_space', name: 'Free recording disk space' })
-	variables.push({ variableId: 'free_disk_space_mb', name: 'Free recording disk space in MB, with no unit text' })
-	variables.push({ variableId: 'render_missed_frames', name: 'Number of frames missed due to rendering lag' })
-	variables.push({ variableId: 'render_total_frames', name: 'Number of frames rendered' })
-	variables.push({ variableId: 'output_skipped_frames', name: 'Number of encoder frames skipped' })
-	variables.push({ variableId: 'output_total_frames', name: 'Number of total encoder frames' })
-	variables.push({ variableId: 'average_frame_time', name: 'Average frame time (in milliseconds)' })
-	variables.push({ variableId: 'recording', name: 'Recording State' })
-	variables.push({ variableId: 'recording_file_name', name: 'File name of the last completed recording' })
-	variables.push({ variableId: 'recording_path', name: 'File path of current recording' })
-	variables.push({ variableId: 'recording_timecode', name: 'Recording timecode' })
-	variables.push({ variableId: 'stream_timecode', name: 'Stream Timecode' })
-	variables.push({ variableId: 'stream_service', name: 'Stream Service' })
-	variables.push({ variableId: 'streaming', name: 'Streaming State' })
-	variables.push({ variableId: 'kbits_per_sec', name: 'Stream output in kilobits per second' })
-	variables.push({ variableId: 'scene_active', name: 'Current active scene' })
-	variables.push({ variableId: 'scene_preview', name: 'Current preview scene' })
-	variables.push({ variableId: 'scene_previous', name: 'Previously active scene, before the current scene' })
-	variables.push({ variableId: 'profile', name: 'Current profile' })
-	variables.push({ variableId: 'scene_collection', name: 'Current scene collection' })
-	variables.push({ variableId: 'current_transition', name: 'Current transition' })
-	variables.push({ variableId: 'transition_duration', name: 'Current transition duration' })
-	variables.push({ variableId: 'transition_active', name: 'Transition in progress' })
-	variables.push({ variableId: 'current_media_name', name: 'Source name for currently playing media source' })
-	variables.push({ variableId: 'current_media_time_elapsed', name: 'Time elapsed for currently playing media source' })
-	variables.push({
-		variableId: 'current_media_time_remaining',
-		name: 'Time remaining for currently playing media source',
-	})
-	variables.push({ variableId: 'replay_buffer_path', name: 'File path of the last replay buffer saved' })
-	variables.push({
-		variableId: 'custom_command_type',
-		name: 'Latest Custom Command type sent to obs-websocket',
-	})
-	variables.push({
-		variableId: 'custom_command_request',
-		name: 'Latest Custom Command request data sent to obs-websocket',
-	})
-	variables.push({
-		variableId: 'custom_command_response',
-		name: 'Latest response from obs-websocket after using the Custom Command action',
-	})
-	variables.push({
-		variableId: 'vendor_event_name',
-		name: 'Vendor name of the latest Vendor Event received from obs-websocket',
-	})
-	variables.push({
-		variableId: 'vendor_event_type',
-		name: 'Latest Vendor Event type received from obs-websocket',
-	})
-	variables.push({
-		variableId: 'vendor_event_data',
-		name: 'Latest Vendor Event data received from obs-websocket',
-	})
+	variables.push(
+		{ variableId: 'base_resolution', name: 'Current base (canvas) resolution' },
+		{ variableId: 'output_resolution', name: 'Current  output (scaled) resolution' },
+		{ variableId: 'target_framerate', name: 'Current profile framerate' },
+		{ variableId: 'fps', name: 'Current actual framerate' },
+		{ variableId: 'cpu_usage', name: 'Current CPU usage (percentage)' },
+		{ variableId: 'memory_usage', name: 'Current RAM usage (in megabytes)' },
+		{ variableId: 'free_disk_space', name: 'Free recording disk space' },
+		{ variableId: 'free_disk_space_mb', name: 'Free recording disk space in MB, with no unit text' },
+		{ variableId: 'render_missed_frames', name: 'Number of frames missed due to rendering lag' },
+		{ variableId: 'render_total_frames', name: 'Number of frames rendered' },
+		{ variableId: 'output_skipped_frames', name: 'Number of encoder frames skipped' },
+		{ variableId: 'output_total_frames', name: 'Number of total encoder frames' },
+		{ variableId: 'average_frame_time', name: 'Average frame time (in milliseconds)' },
+		{ variableId: 'recording', name: 'Recording State' },
+		{ variableId: 'recording_file_name', name: 'File name of the last completed recording' },
+		{ variableId: 'recording_path', name: 'File path of current recording' },
+		{ variableId: 'recording_timecode', name: 'Recording timecode' },
+		{ variableId: 'stream_timecode', name: 'Stream Timecode' },
+		{ variableId: 'stream_service', name: 'Stream Service' },
+		{ variableId: 'streaming', name: 'Streaming State' },
+		{ variableId: 'kbits_per_sec', name: 'Stream output in kilobits per second' },
+		{ variableId: 'scene_active', name: 'Current active scene' },
+		{ variableId: 'scene_preview', name: 'Current preview scene' },
+		{ variableId: 'scene_previous', name: 'Previously active scene, before the current scene' },
+		{ variableId: 'profile', name: 'Current profile' },
+		{ variableId: 'scene_collection', name: 'Current scene collection' },
+		{ variableId: 'current_transition', name: 'Current transition' },
+		{ variableId: 'transition_duration', name: 'Current transition duration' },
+		{ variableId: 'transition_active', name: 'Transition in progress' },
+		{ variableId: 'current_media_name', name: 'Source name for currently playing media source' },
+		{ variableId: 'current_media_time_elapsed', name: 'Time elapsed for currently playing media source' },
+		{
+			variableId: 'current_media_time_remaining',
+			name: 'Time remaining for currently playing media source',
+		},
+		{ variableId: 'replay_buffer_path', name: 'File path of the last replay buffer saved' },
+		{
+			variableId: 'custom_command_type',
+			name: 'Latest Custom Command type sent to obs-websocket',
+		},
+		{
+			variableId: 'custom_command_request',
+			name: 'Latest Custom Command request data sent to obs-websocket',
+		},
+		{
+			variableId: 'custom_command_response',
+			name: 'Latest response from obs-websocket after using the Custom Command action',
+		},
+		{
+			variableId: 'vendor_event_name',
+			name: 'Vendor name of the latest Vendor Event received from obs-websocket',
+		},
+		{
+			variableId: 'vendor_event_type',
+			name: 'Latest Vendor Event type received from obs-websocket',
+		},
+		{
+			variableId: 'vendor_event_data',
+			name: 'Latest Vendor Event data received from obs-websocket',
+		},
+	)
 
 	//Defaults
 	this.setVariableValues({
@@ -97,13 +99,12 @@ export function getVariables() {
 					break
 				case 'ffmpeg_source':
 				case 'vlc_source':
-					variables.push({ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` })
-					variables.push({ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` })
-					variables.push({ variableId: `media_time_elapsed_${sourceName}`, name: `${sourceName} - Time elapsed` })
-					variables.push({
-						variableId: `media_time_remaining_${sourceName}`,
-						name: `${sourceName} - Time remaining`,
-					})
+					variables.push(
+						{ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` },
+						{ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` },
+						{ variableId: `media_time_elapsed_${sourceName}`, name: `${sourceName} - Time elapsed` },
+						{ variableId: `media_time_remaining_${sourceName}`, name: `${sourceName} - Time remaining` },
+					)
 					let file = ''
 					if (inputSettings?.playlist) {
 						file = inputSettings?.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
@@ -131,11 +132,13 @@ export function getVariables() {
 		}
 
 		if (source.inputAudioTracks) {
-			variables.push({ variableId: `volume_${sourceName}`, name: `${sourceName} - Volume` })
-			variables.push({ variableId: `mute_${sourceName}`, name: `${sourceName} - Mute status` })
-			variables.push({ variableId: `monitor_${sourceName}`, name: `${sourceName} - Audio monitor` })
-			variables.push({ variableId: `sync_offset_${sourceName}`, name: `${sourceName} - Sync offset` })
-			variables.push({ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` })
+			variables.push(
+				{ variableId: `volume_${sourceName}`, name: `${sourceName} - Volume` },
+				{ variableId: `mute_${sourceName}`, name: `${sourceName} - Mute status` },
+				{ variableId: `monitor_${sourceName}`, name: `${sourceName} - Audio monitor` },
+				{ variableId: `sync_offset_${sourceName}`, name: `${sourceName} - Sync offset` },
+				{ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` },
+			)
 		}
 	}
 
