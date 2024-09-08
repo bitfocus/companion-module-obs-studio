@@ -645,6 +645,12 @@ class OBSInstance extends InstanceBase {
 					custom_command_request: requestData ? JSON.stringify(requestData) : null,
 					custom_command_response: JSON.stringify(data),
 				})
+			} else {
+				this.setVariableValues({
+					custom_command_type: requestType,
+					custom_command_request: requestData ? JSON.stringify(requestData) : null,
+					custom_command_response: null,
+				})
 			}
 			return data
 		} catch (error) {
