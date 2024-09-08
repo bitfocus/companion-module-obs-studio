@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.9.0
+
+- New
+  - Save responses from obs-websocket when using the Custom Command action to variables so the data can be used in Companion. This includes the new custom_command_type and custom_command_request variables which show the last Custom Command send to OBS, and the custom_command_response, which will show the response data from OBS, if applicable
+
 ### v3.8.0
 
 - New

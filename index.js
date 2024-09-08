@@ -632,6 +632,35 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
+	async sendCustomRequest(requestType, requestData) {
+		try {
+			let data = await this.obs.call(requestType, requestData)
+			if (data) {
+				this.log(
+					'debug',
+					`Custom Command Response: Request ${requestType ?? ''} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
+				)
+				this.setVariableValues({
+					custom_command_type: requestType,
+					custom_command_request: requestData ? JSON.stringify(requestData) : null,
+					custom_command_response: JSON.stringify(data),
+				})
+			} else {
+				this.setVariableValues({
+					custom_command_type: requestType,
+					custom_command_request: requestData ? JSON.stringify(requestData) : null,
+					custom_command_response: null,
+				})
+			}
+			return data
+		} catch (error) {
+			this.log(
+				'warn',
+				`Custom Command Failed: Request ${requestType ?? ''} with data ${requestData ? JSON.stringify(requestData) : 'none'} failed (${error})`,
+			)
+		}
+	}
+
 	async sendBatch(batch) {
 		try {
 			let data = await this.obs.callBatch(batch)

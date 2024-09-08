@@ -37,6 +37,18 @@ export function getVariables() {
 		name: 'Time remaining for currently playing media source',
 	})
 	variables.push({ variableId: 'replay_buffer_path', name: 'File path of the last replay buffer saved' })
+	variables.push({
+		variableId: 'custom_command_type',
+		name: 'Latest Custom Command type sent to obs-websocket',
+	})
+	variables.push({
+		variableId: 'custom_command_request',
+		name: 'Latest Custom Command request data sent to obs-websocket',
+	})
+	variables.push({
+		variableId: 'custom_command_response',
+		name: 'Latest response from obs-websocket after using the Custom Command action',
+	})
 
 	//Defaults
 	this.setVariableValues({
