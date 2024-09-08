@@ -11,7 +11,9 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 ### v3.9.0
 
 - New
-  - Save responses from obs-websocket when using the Custom Command action to variables so the data can be used in Companion. This includes the new custom_command_type and custom_command_request variables which show the last Custom Command send to OBS, and the custom_command_response, which will show the response data from OBS, if applicable
+  - Added custom_command_response variable, which will show a JSON string of the response data from obs-websocket when using the Custom Command action so the data can be used in Companion
+  - Added custom_command_type and custom_command_request variables which show the last Custom Command sent from Companion to obs-websocket to help with data parsing
+  - Added custom vendor_event_name, vendor_event_type, and vendor_event_data variables to allow data processing from custom Vendor Event messages
 
 ### v3.8.0
 
@@ -92,7 +94,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ### v3.2.0
 
-- Feature
+- New
   - New Custom Vendor Request action for sending commands to third party plugins
 - Fix
   - Custom Command failing to run
@@ -124,28 +126,27 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ### v3.0.0
 
-- Major
-  - Rewrite to support Companion v3
 - New
+  - Rewrite to support Companion v3
   - Variables for scene names based on the scene order within OBS
 - Fix
   - Filter Enabled feedback now properly lists all filters
 
 ### v2.0.5
 
-- Fix
-  - All text source now appear as choices in the Set Text action dropdown on startup
 - Improved
   - Allow hostnames to be used in the module configuration
+- Fix
+  - All text source now appear as choices in the Set Text action dropdown on startup
 
 ### v2.0.4
 
-- Fix
-  - When using Set Scene Visibility on a group source, the sources within groups are now not affected
-  - Toggle/Start/Stop Output now works properly with Virtual Camera
 - Improved
   - Update obs-websocket-js to latest version
   - Use obs-websocket's Batch command for certain actions
+- Fix
+  - When using Set Scene Visibility on a group source, the sources within groups are now not affected
+  - Toggle/Start/Stop Output now works properly with Virtual Camera
 
 ### v2.0.3
 

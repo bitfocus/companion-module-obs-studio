@@ -326,7 +326,18 @@ class OBSInstance extends InstanceBase {
 			this.connectionLost()
 		})
 		this.obs.on('VendorEvent', (data) => {
-			this.vendorEvent = data
+			this.vendorEvent = data.eventData
+			let eventData = data.eventData
+			try {
+				eventData = JSON.stringify(eventData)
+			} catch (error) {
+				this.log('debug', `Vendor Event Error: ${error}`)
+			}
+			this.setVariableValues({
+				vendor_event_name: data.vendorName,
+				vendor_event_type: data.eventType,
+				vendor_event_data: eventData,
+			})
 			this.checkFeedbacks('vendorEvent')
 		})
 		//Config
