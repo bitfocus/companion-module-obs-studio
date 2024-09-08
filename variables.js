@@ -49,6 +49,18 @@ export function getVariables() {
 		variableId: 'custom_command_response',
 		name: 'Latest response from obs-websocket after using the Custom Command action',
 	})
+	variables.push({
+		variableId: 'vendor_event_name',
+		name: 'Vendor name of the latest Vendor Event received from obs-websocket',
+	})
+	variables.push({
+		variableId: 'vendor_event_type',
+		name: 'Latest Vendor Event type received from obs-websocket',
+	})
+	variables.push({
+		variableId: 'vendor_event_data',
+		name: 'Latest Vendor Event data received from obs-websocket',
+	})
 
 	//Defaults
 	this.setVariableValues({
