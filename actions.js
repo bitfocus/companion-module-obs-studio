@@ -1680,7 +1680,7 @@ export function getActions() {
 			try {
 				command.replace(/ /g, '')
 			} catch (e) {
-				this.log('warn', 'Request data must be formatted as valid JSON.')
+				this.log('warn', 'Unknown command format')
 				return
 			}
 
@@ -1693,7 +1693,7 @@ export function getActions() {
 					return
 				}
 			}
-			this.sendRequest(command, arg ? arg : {})
+			this.sendCustomRequest(command, arg ? arg : {})
 		},
 	}
 	actions['vendorRequest'] = {
