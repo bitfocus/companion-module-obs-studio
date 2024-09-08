@@ -63,7 +63,10 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Set Profile
 - Set Scene Collection
 - Trigger Hotkey by Key
-- Trigger Hotkey by ID _(See help info below for more info)_
+
+**Advanced**
+
+- Trigger Hotkey by ID
 - Custom Command _(Request data must be valid JSON. See [obs-websocket protocol documentation](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests) for request types and required request data)_
 - Custom Vendor Request _(Request data must be valid JSON. Requests will vary based on plugin. See documentation for your specific plugin for more info. Support for this feature will be limited due to the large number of plugins available)_
 
@@ -102,6 +105,10 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - Scene Collection Active
 - Studio Mode Active
 - Disk Space Remaining
+
+**Advanced**
+
+- Vendor Event
 
 ### Available variables
 
@@ -164,3 +171,12 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - base_resolution
 - output_resolution
 - target_framerate
+
+**Advanced**
+
+- custom_command_response
+- custom_command_type
+- custom_command_request
+- vendor_event_name
+- vendor_event_type
+- vendor_event_data
