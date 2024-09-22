@@ -415,7 +415,12 @@ export function getPresets() {
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-		steps: [{}],
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
 		feedbacks: [],
 	}
 
@@ -429,7 +434,12 @@ export function getPresets() {
 			color: ColorWhite,
 			bgcolor: 0,
 		},
-		steps: [{}],
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
 				feedbackId: 'freeDiskSpaceRemaining',

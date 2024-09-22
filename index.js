@@ -1249,8 +1249,10 @@ class OBSInstance extends InstanceBase {
 					this.setVariableValues({
 						[`current_text_${name}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
 					})
-				} else if (inputSettings?.text) {
-					this.textSourceList.push({ id: sourceName, label: sourceName })
+				} else {
+					if (!this.textSourceList.find((item) => item.id === sourceName)) {
+						this.textSourceList.push({ id: sourceName, label: sourceName })
+					}
 					this.setVariableValues({
 						[`current_text_${name}`]: inputSettings.text ?? '',
 					})
@@ -1258,13 +1260,17 @@ class OBSInstance extends InstanceBase {
 				break
 			case 'ffmpeg_source':
 			case 'vlc_source':
-				this.mediaSourceList.push({ id: sourceName, label: sourceName })
+				if (!this.mediaSourceList.find((item) => item.id === sourceName)) {
+					this.mediaSourceList.push({ id: sourceName, label: sourceName })
+				}
 				if (!this.mediaPoll) {
 					this.startMediaPoll()
 				}
 				break
 			case 'image_source':
-				this.imageSourceList.push({ id: sourceName, label: sourceName })
+				if (!this.imageSourceList.find((item) => item.id === sourceName)) {
+					this.imageSourceList.push({ id: sourceName, label: sourceName })
+				}
 				break
 			default:
 				break

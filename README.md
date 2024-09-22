@@ -8,6 +8,13 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.9.1
+
+- Fix
+  - Adding new text sources would not populate in action dropdowns if Companion was already open
+  - Text and Media sources would occasionally be duplicated in the dropdown list
+  - Invalid preset steps would cause issues with Bitfocus Buttons
+
 ### v3.9.0
 
 - New
