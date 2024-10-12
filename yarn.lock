@@ -2,25 +2,25 @@
 # yarn lockfile v1
 
 
-"@companion-module/base@~1.10.0":
-  version "1.10.0"
-  resolved "https://registry.yarnpkg.com/@companion-module/base/-/base-1.10.0.tgz#fbfe5822422f30c6e4ad04dc2e4e0559a8166571"
-  integrity sha512-ij5eBISaSwr0lfNwNDLB52jYaY66Kna0I6BdbwtCm634XeZtbm3n1gYyUSUdzJQ6z97ImbIKJPIKEn6laxCGxA==
+"@companion-module/base@~1.11.0":
+  version "1.11.0"
+  resolved "https://registry.yarnpkg.com/@companion-module/base/-/base-1.11.0.tgz#26ef06a9cf5edc9c7057043600dc5a7ad7ec2f23"
+  integrity sha512-SJvpAaZb6zSQQ6ub055criM6Frku5nzyN9F6OUrq/xjqbaqmf+xQtAJyiIMkfcIHfuE5EXv3hYWCZbwQSCrIoQ==
   dependencies:
     ajv "^8.17.1"
     colord "^2.9.3"
     ejson "^2.2.3"
-    eventemitter3 "^4.0.7"
+    eventemitter3 "^5.0.1"
     mimic-fn "^3.1.0"
     nanoid "^3.3.7"
     p-queue "^6.6.2"
     p-timeout "^4.1.0"
     tslib "^2.7.0"
 
-"@companion-module/tools@^2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-2.0.4.tgz#dff55d394f7b7ea9fc3ac96a95c6f53074d3db97"
-  integrity sha512-gm22oe62JiUFXpdan7x5J1Iq8vpMJAU++oMPp0Gy1dxtj6d4KdaH1QMLaicdH6H5ZpPmvBpMFF7Ag5Og6TU/xQ==
+"@companion-module/tools@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-2.1.0.tgz#2effd90341f230bf44b2cf3af07ccfe3e9aa19f2"
+  integrity sha512-u/Yvm8TNu5jCNgGQwNYZbkA0yBadiTBqnnnj2pFXSGUotT8aa/01qta+US29qNOm8zqMxxk/9KFRGY69AsZ3kw==
   dependencies:
     "@eslint/js" "^9.10.0"
     eslint-config-prettier "^9.1.0"
@@ -620,7 +620,7 @@ estraverse@^5.2.0:
   resolved "https://registry.yarnpkg.com/estraverse/-/estraverse-5.3.0.tgz#2eea5290702f26ab8fe5370370ff86c965d21123"
   integrity sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==
 
-eventemitter3@^4.0.4, eventemitter3@^4.0.7:
+eventemitter3@^4.0.4:
   version "4.0.7"
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
   integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
