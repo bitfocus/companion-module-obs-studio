@@ -1252,19 +1252,21 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
+				useVariables: true,
 				label: 'Filter Settings',
 				id: 'settings',
 				default: '{"left": 100, "top": 0, "right": 100, "bottom": 0}',
 				tooltip: 'Must be a JSON object with the settings for the filter',
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			try {
-				let settings = JSON.parse(action.options.settings)
+				let settings = await this.parseVariablesInString(action.options.settings)
+				let settingsJSON = JSON.parse(settings)
 				this.sendRequest('SetSourceFilterSettings', {
 					sourceName: action.options.source,
 					filterName: action.options.filter,
-					filterSettings: settings,
+					filterSettings: settingsJSON,
 				})
 			} catch (e) {
 				this.log('warn', `Error parsing JSON for Set Filter Settings (${e.message})`)

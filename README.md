@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### In progress
+
+- New
+  - Ability to use variables in Set Filter Settings action
+
 ### v3.9.1
 
 - Fix
