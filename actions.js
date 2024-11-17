@@ -458,6 +458,7 @@ export function getActions() {
 				label: 'Stream URL',
 				id: 'streamURL',
 				default: '',
+				useVariables: true,
 				isVisible: (options) => options.streamType === 'rtmp_custom',
 			},
 			{
@@ -465,6 +466,7 @@ export function getActions() {
 				label: 'Stream Key',
 				id: 'streamKey',
 				default: '',
+				useVariables: true,
 			},
 			{
 				type: 'checkbox',
@@ -478,6 +480,7 @@ export function getActions() {
 				label: 'User Name (Optional)',
 				id: 'streamUserName',
 				default: '',
+				useVariables: true,
 				isVisible: (options) => options.streamType === 'rtmp_custom',
 			},
 			{
@@ -485,16 +488,17 @@ export function getActions() {
 				label: 'Password (Optional)',
 				id: 'streamPassword',
 				default: '',
+				useVariables: true,
 				isVisible: (options) => options.streamType === 'rtmp_custom',
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let streamServiceSettings = {
-				key: action.options.streamKey,
-				server: action.options.streamURL,
+				key: await this.parseVariablesInString(action.options.streamKey),
+				server: await this.parseVariablesInString(action.options.streamURL),
 				use_auth: action.options.streamAuth,
-				username: action.options.streamUserName,
-				password: action.options.streamPassword,
+				username: await this.parseVariablesInString(action.options.streamUserName),
+				password: await this.parseVariablesInString(action.options.streamPassword),
 			}
 			let streamServiceType = action.options.streamType
 
