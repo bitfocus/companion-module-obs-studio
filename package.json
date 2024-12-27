@@ -4,11 +4,14 @@
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
-		"format": "prettier -w ."
+		"format": "prettier -w .",
+		"package": "companion-module-build",
+		"lint:raw": "eslint",
+		"lint": "yarn lint:raw ."
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@companion-module/base": "~1.11.1",
+		"@companion-module/base": "~1.11.3",
 		"obs-websocket-js": "5.0.6"
 	},
 	"repository": {
@@ -16,8 +19,13 @@
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.1.0",
-		"prettier": "^3.3.3"
+		"@companion-module/tools": "^2.1.1",
+		"eslint": "^9.17.0",
+		"prettier": "^3.4.2"
 	},
-	"prettier": "@companion-module/tools/.prettierrc.json"
+	"engines": {
+		"node": "^22.12"
+	},
+	"prettier": "@companion-module/tools/.prettierrc.json",
+	"packageManager": "yarn@4.5.3"
 }
