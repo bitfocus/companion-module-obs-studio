@@ -397,7 +397,7 @@ export function getActions() {
 				duration = await this.parseVariablesInString(action.options.variableValue)
 				duration = parseInt(duration)
 				if (duration >= 50 && duration <= 20000) {
-					duration = duration
+					//Pass duration as is
 				} else {
 					this.log('warn', 'Transition duration must be between 50 and 20000ms')
 					return
@@ -426,7 +426,7 @@ export function getActions() {
 				let duration = null
 				duration = this.states.transitionDuration + action.options.duration
 				if (duration >= 50 && duration <= 20000) {
-					duration = duration
+					//Pass duration as is
 				} else if (duration < 50) {
 					duration = 50
 				} else if (duration > 20000) {
@@ -657,7 +657,7 @@ export function getActions() {
 			let LOG_RANGE_DB = 96.0
 			let LOG_OFFSET_DB = 6.0
 			let LOG_OFFSET_VAL = -0.77815125038364363
-			let LOG_RANGE_VAL = -2.00860017176191756
+			let LOG_RANGE_VAL = Number('-2.00860017176191756')
 
 			//Calculate current "percent" of volume slider in OBS
 			let dB = this.sources[action.options.source].inputVolume
@@ -1686,7 +1686,7 @@ export function getActions() {
 			try {
 				command.replace(/ /g, '')
 			} catch (e) {
-				this.log('warn', 'Unknown command format')
+				this.log('warn', `Unknown command format: ${e.message}`)
 				return
 			}
 
@@ -1695,7 +1695,7 @@ export function getActions() {
 				try {
 					arg = JSON.parse(arg)
 				} catch (e) {
-					this.log('warn', 'Request data must be formatted as valid JSON.')
+					this.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
 					return
 				}
 			}
@@ -1735,7 +1735,7 @@ export function getActions() {
 				vendorName.replace(/ /g, '')
 				requestType.replace(/ /g, '')
 			} catch (e) {
-				this.log('warn', 'Unknown vendor or request format')
+				this.log('warn', `Unknown vendor or request format ${e.message}`)
 				return
 			}
 
@@ -1744,7 +1744,7 @@ export function getActions() {
 				try {
 					requestData = JSON.parse(requestData)
 				} catch (e) {
-					this.log('warn', 'Request data must be formatted as valid JSON.')
+					this.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
 					return
 				}
 			}

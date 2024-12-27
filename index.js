@@ -99,7 +99,9 @@ class OBSInstance extends InstanceBase {
 		try {
 			let formattedTime = new Date(data).toISOString().slice(11, 19)
 			return formattedTime
-		} catch (error) {}
+		} catch (error) {
+			this.log('debug', `Error formatting timecode: ${error}`)
+		}
 	}
 
 	roundNumber(number, decimalPlaces) {
