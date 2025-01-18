@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.10.1
+
+- Fix
+  - Allow hyphens in source variable names
+
 ### v3.10.0
 
 - New
