@@ -87,7 +87,7 @@ class OBSInstance extends InstanceBase {
 	validName(name) {
 		//Generate a valid name for use as a variable ID
 		try {
-			return name.replace(/[\W]/gi, '_')
+			return name.replace(/[^a-z0-9-_.]+/gi, '_')
 		} catch (error) {
 			this.log('debug', `Unable to generate validName for ${name}: ${error}`)
 			return name
