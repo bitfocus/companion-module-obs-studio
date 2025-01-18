@@ -87,7 +87,7 @@ class OBSInstance extends InstanceBase {
 	validName(name) {
 		//Generate a valid name for use as a variable ID
 		try {
-			return name.replace(/[\W]/gi, '_')
+			return name.replace(/[^a-z0-9-_.]+/gi, '_')
 		} catch (error) {
 			this.log('debug', `Unable to generate validName for ${name}: ${error}`)
 			return name
@@ -408,7 +408,7 @@ class OBSInstance extends InstanceBase {
 			this.scenes = data.scenes
 		})
 		//Inputs
-		this.obs.on('InputCreated', (data) => {})
+		this.obs.on('InputCreated', () => {})
 		this.obs.on('InputRemoved', (data) => {
 			let source = this.sourceChoices.findIndex((item) => item.id == data.inputName)
 			if (source > -1) {
@@ -1351,7 +1351,7 @@ class OBSInstance extends InstanceBase {
 					this.updateActionsFeedbacksVariables()
 				}
 			})
-			.catch((error) => {
+			.catch(() => {
 				//Ignore, this source is not an audio source
 			})
 	}
