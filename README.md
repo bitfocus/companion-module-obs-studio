@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.11.0
+
+- New
+  - Ability to set a threshold in the Audio Meter feedback, so that sources with no signal or a high noise floor do not always show the green color feedback
+
 ### v3.10.1
 
 - Fix
