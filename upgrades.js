@@ -142,4 +142,22 @@ export default [
 
 		return changes
 	},
+	function v3_11_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const feedback of props.feedbacks) {
+			if (feedback.feedbackId === 'audioMeter') {
+				if (!feedback.options.threshold) {
+					feedback.options.threshold = -60
+				}
+				changes.updatedFeedbacks.push(feedback)
+			}
+		}
+
+		return changes
+	},
 ]

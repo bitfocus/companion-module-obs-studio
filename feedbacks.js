@@ -817,7 +817,7 @@ export function getFeedbacks() {
 	feedbacks['audioMeter'] = {
 		type: 'advanced',
 		name: 'Audio Meter',
-		description: 'Change the style of the button to show audio meter colors similar to the OBS UI',
+		description: 'Change the style of the button to show colors based on peak values similar to the OBS UI audio meter',
 		options: [
 			{
 				type: 'dropdown',
@@ -826,15 +826,28 @@ export function getFeedbacks() {
 				default: this.audioSourceListDefault,
 				choices: this.audioSourceList,
 			},
+			{
+				type: 'number',
+				label: 'Threshold (dB)',
+				tooltip:
+					'Minimum value (between -100db and -21db) for the feedback to change to green. Color will default to black for values below this',
+				id: 'threshold',
+				default: -60,
+				max: -21,
+				min: -100,
+			},
 		],
 		callback: (feedback) => {
 			let peak = this.audioPeak?.[feedback.options.source]
+			const threshold = feedback.options.threshold ?? -60
 			if (peak > -9) {
 				return { bgcolor: ColorRed }
 			} else if (peak > -20) {
 				return { bgcolor: ColorOrange }
-			} else {
+			} else if (peak > threshold) {
 				return { bgcolor: ColorGreen }
+			} else {
+				return { bgcolor: ColorBlack }
 			}
 		},
 	}
