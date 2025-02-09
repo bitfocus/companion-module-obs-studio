@@ -207,6 +207,7 @@ class OBSInstance extends InstanceBase {
 	//OBS Websocket Connection
 	async connectOBS() {
 		if (this.obs) {
+			this.obs.removeAllListeners()
 			await this.obs.disconnect()
 		} else {
 			this.obs = new OBSWebSocket()
@@ -302,10 +303,13 @@ class OBSInstance extends InstanceBase {
 
 	async disconnectOBS() {
 		if (this.obs) {
-			await this.obs.disconnect()
 			//Clear all active polls
 			this.stopStatsPoll()
 			this.stopMediaPoll()
+			//Remove listeners, will recreate on connection
+			this.obs.removeAllListeners()
+			//Disconnect from OBS
+			await this.obs.disconnect()
 		}
 	}
 
@@ -1009,7 +1013,7 @@ class OBSInstance extends InstanceBase {
 			this.states.programScene = sceneList.currentProgramSceneName
 
 			this.setVariableValues({
-				scene_preview: this.states.te,
+				scene_preview: this.states.previewScene,
 				scene_active: this.states.programScene,
 			})
 
