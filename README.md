@@ -13,6 +13,8 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 - New
   - Fade Source Volume action, allows fading a source's volume to a specific value over a specific duration
   - Ability to set a threshold in the Audio Meter feedback, so that sources with no signal or a high noise floor do not always show the green color feedback
+- Fix
+  - Previous Scene feedback and scene_previous variable showing incorrect scene after disconnecting and reconnecting to OBS
 
 ### v3.10.1
 
