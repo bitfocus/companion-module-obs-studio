@@ -11,6 +11,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 ### v3.11.0
 
 - New
+  - Fade Source Volume action, allows fading a source's volume to a specific value over a specific duration
   - Ability to set a threshold in the Audio Meter feedback, so that sources with no signal or a high noise floor do not always show the green color feedback
 
 ### v3.10.1

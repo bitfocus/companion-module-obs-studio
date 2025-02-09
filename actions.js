@@ -694,6 +694,66 @@ export function getActions() {
 			this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newDb })
 		},
 	}
+	actions['fadeVolume'] = {
+		name: 'Fade Source Volume',
+		description: 'Fades the volume of a source to a specific value over a specific duration',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+			{
+				type: 'number',
+				label: 'Target Volume (dB)',
+				id: 'volume',
+				default: 0,
+				min: -100,
+				max: 26,
+				range: false,
+			},
+			{
+				type: 'number',
+				label: 'Fade Duration (milliseconds)',
+				id: 'duration',
+				default: 500,
+				range: false,
+				min: 50,
+				max: 5000,
+			},
+		],
+		callback: async (action) => {
+			const currentVolume = this.sources[action.options.source].inputVolume ?? 0
+			const fadeDuration = action.options.duration
+			const fadeSteps = 25
+			const fadeInterval = fadeDuration / fadeSteps
+
+			let fadeBatch = []
+			for (let i = 0; i < fadeSteps + 1; i++) {
+				let newVolume = currentVolume + (action.options.volume - currentVolume) * (i / fadeSteps)
+				fadeBatch.push(
+					{
+						requestType: 'SetInputVolume',
+						requestData: { inputName: action.options.source, inputVolumeDb: newVolume },
+					},
+					{
+						requestType: 'Sleep',
+						requestData: { sleepMillis: fadeInterval },
+					},
+				)
+			}
+
+			if (this.sources[action.options.source].audioFadeActive) {
+				return
+			} else {
+				this.sources[action.options.source].audioFadeActive = true
+				await this.sendBatch(fadeBatch)
+				this.sources[action.options.source].audioFadeActive = false
+			}
+		},
+	}
 	actions['setSyncOffset'] = {
 		name: 'Set Audio Sync Offset',
 		description: 'Sets the sync offset of an audio source',
