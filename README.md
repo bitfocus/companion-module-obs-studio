@@ -1,6 +1,6 @@
 # companion-module-obs-studio
 
-This module will allow you to control OBS Studio using the built-in obs-websocket plugin.
+This module will allow you to control OBS Studio using the built-in WebSocket Server.
 
 ## Getting Started
 

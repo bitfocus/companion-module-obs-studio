@@ -1,6 +1,6 @@
 ## OBS Studio
 
-This module will allow you to control OBS Studio using the obs-websocket plugin.
+This module will allow you to control OBS Studio using the built-in WebSocket Server.
 
 ### Configuration
 
@@ -120,21 +120,17 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - recording_timecode
 - streaming
 - stream_timecode
-- total_stream_time
 - stream_service
 - kbits_per_sec (Amount of data per second (in kilobits) transmitted by the stream encoder)
 - render_missed_frames
 - render_total_frames
 - output_skipped_frames
 - output_total_frames
-- num_dropped_frames
-- num_total_frames
 - average_frame_time
 - replay_buffer_path
 
 **Switching & Transitions**
 
-- preview_only
 - scene_active
 - scene_preview
 - scene_previous
@@ -165,7 +161,6 @@ This module will allow you to control OBS Studio using the obs-websocket plugin.
 - fps
 - cpu_usage
 - memory_usage
-- strain
 - free_disk_space
 - free_disk_space_mb
 - base_resolution
