@@ -675,22 +675,22 @@ class OBSInstance extends InstanceBase {
 				'warn',
 				`Custom Command Failed: Request ${requestType ?? ''} with data ${requestData ? JSON.stringify(requestData) : 'none'} failed (${error})`,
 			)
+			return
 		}
 	}
 
 	async sendBatch(batch) {
 		try {
 			let data = await this.obs.callBatch(batch)
-
 			let errors = data.filter((request) => request.requestStatus.result === false)
 			if (errors.length > 0) {
 				let errorMessages = errors.map((error) => error.requestStatus.comment).join(' // ')
 				this.log('debug', `Partial batch request failure (${errorMessages})`)
 			}
-
 			return data
 		} catch (error) {
 			this.log('debug', `Batch request failed (${error})`)
+			return
 		}
 	}
 

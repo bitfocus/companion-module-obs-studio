@@ -6,65 +6,65 @@ export function getActions() {
 	actions['enable_studio_mode'] = {
 		name: 'Enable Studio Mode',
 		options: [],
-		callback: () => {
-			this.sendRequest('SetStudioModeEnabled', { studioModeEnabled: true })
+		callback: async () => {
+			await this.sendRequest('SetStudioModeEnabled', { studioModeEnabled: true })
 		},
 	}
 	actions['disable_studio_mode'] = {
 		name: 'Disable Studio Mode',
 		options: [],
-		callback: () => {
-			this.sendRequest('SetStudioModeEnabled', { studioModeEnabled: false })
+		callback: async () => {
+			await this.sendRequest('SetStudioModeEnabled', { studioModeEnabled: false })
 		},
 	}
 	actions['toggle_studio_mode'] = {
 		name: 'Toggle Studio Mode',
 		options: [],
-		callback: () => {
-			this.sendRequest('SetStudioModeEnabled', { studioModeEnabled: this.states.studioMode ? false : true })
+		callback: async () => {
+			await this.sendRequest('SetStudioModeEnabled', { studioModeEnabled: this.states.studioMode ? false : true })
 		},
 	}
 	actions['start_recording'] = {
 		name: 'Start Recording',
 		options: [],
-		callback: () => {
-			this.sendRequest('StartRecord')
+		callback: async () => {
+			await this.sendRequest('StartRecord')
 		},
 	}
 	actions['stop_recording'] = {
 		name: 'Stop Recording',
 		options: [],
-		callback: () => {
-			this.sendRequest('StopRecord')
+		callback: async () => {
+			await this.sendRequest('StopRecord')
 		},
 	}
 	actions['pause_recording'] = {
 		name: 'Pause Recording',
 		options: [],
-		callback: () => {
-			this.sendRequest('PauseRecord')
+		callback: async () => {
+			await this.sendRequest('PauseRecord')
 		},
 	}
 	actions['resume_recording'] = {
 		name: 'Resume Recording',
 		options: [],
-		callback: () => {
-			this.sendRequest('ResumeRecord')
+		callback: async () => {
+			await this.sendRequest('ResumeRecord')
 		},
 	}
 	actions['ToggleRecordPause'] = {
 		name: 'Toggle Recording Pause',
 		options: [],
-		callback: () => {
-			this.sendRequest('ToggleRecordPause')
+		callback: async () => {
+			await this.sendRequest('ToggleRecordPause')
 		},
 	}
 	actions['SplitRecordFile'] = {
 		name: 'Split Recording',
 		description: 'Requires using the Advanced output mode, and enabling file splitting in the Records settings',
 		options: [],
-		callback: () => {
-			this.sendRequest('SplitRecordFile')
+		callback: async () => {
+			await this.sendRequest('SplitRecordFile')
 		},
 	}
 	actions['CreateRecordChapter'] = {
@@ -81,56 +81,56 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			const chapterName = await this.parseVariablesInString(action.options.chapterName)
-			this.sendRequest('CreateRecordChapter', { chapterName: chapterName })
+			await this.sendRequest('CreateRecordChapter', { chapterName: chapterName })
 		},
 	}
 	actions['start_streaming'] = {
 		name: 'Start Streaming',
 		options: [],
-		callback: () => {
-			this.sendRequest('StartStream')
+		callback: async () => {
+			await this.sendRequest('StartStream')
 		},
 	}
 	actions['stop_streaming'] = {
 		name: 'Stop Streaming',
 		options: [],
-		callback: () => {
-			this.sendRequest('StopStream')
+		callback: async () => {
+			await this.sendRequest('StopStream')
 		},
 	}
 	actions['StartStopStreaming'] = {
 		name: 'Toggle Streaming',
 		options: [],
-		callback: () => {
-			this.sendRequest('ToggleStream')
+		callback: async () => {
+			await this.sendRequest('ToggleStream')
 		},
 	}
 	actions['start_replay_buffer'] = {
 		name: 'Start Replay Buffer',
 		options: [],
-		callback: () => {
-			this.sendRequest('StartReplayBuffer')
+		callback: async () => {
+			await this.sendRequest('StartReplayBuffer')
 		},
 	}
 	actions['stop_replay_buffer'] = {
 		name: 'Stop Replay Buffer',
 		options: [],
-		callback: () => {
-			this.sendRequest('StopReplayBuffer')
+		callback: async () => {
+			await this.sendRequest('StopReplayBuffer')
 		},
 	}
 	actions['save_replay_buffer'] = {
 		name: 'Save Replay Buffer',
 		options: [],
-		callback: () => {
-			this.sendRequest('SaveReplayBuffer')
+		callback: async () => {
+			await this.sendRequest('SaveReplayBuffer')
 		},
 	}
 	actions['ToggleReplayBuffer'] = {
 		name: 'Toggle Replay Buffer',
 		options: [],
-		callback: () => {
-			this.sendRequest('ToggleReplayBuffer')
+		callback: async () => {
+			await this.sendRequest('ToggleReplayBuffer')
 		},
 	}
 	actions['set_scene'] = {
@@ -155,9 +155,9 @@ export function getActions() {
 		callback: async (action) => {
 			if (action.options.scene === 'customSceneName') {
 				const scene = await this.parseVariablesInString(action.options.customSceneName)
-				this.sendRequest('SetCurrentProgramScene', { sceneName: scene })
+				await this.sendRequest('SetCurrentProgramScene', { sceneName: scene })
 			} else {
-				this.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
+				await this.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
 			}
 		},
 	}
@@ -183,9 +183,9 @@ export function getActions() {
 		callback: async (action) => {
 			if (action.options.scene === 'customSceneName') {
 				const scene = await this.parseVariablesInString(action.options.customSceneName)
-				this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
+				await this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
-				this.sendRequest('SetCurrentPreviewScene', { sceneName: action.options.scene })
+				await this.sendRequest('SetCurrentPreviewScene', { sceneName: action.options.scene })
 			}
 		},
 	}
@@ -216,37 +216,45 @@ export function getActions() {
 			}
 
 			if (this.states.previewScene == scene && this.states.programScene != scene) {
-				this.sendRequest('TriggerStudioModeTransition')
+				await this.sendRequest('TriggerStudioModeTransition')
 			} else {
-				this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
+				await this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			}
 		},
 	}
 	actions['previewPreviousScene'] = {
 		name: 'Preview Previous Scene',
 		options: [],
-		callback: () => {
+		callback: async () => {
 			if (this.states.previewScene) {
 				let previewScene = this.scenes.find((scene) => scene.sceneName === this.states.previewScene)
 				let previousIndex = previewScene?.sceneIndex + 1
 				let previousScene = this.scenes.find((scene) => scene.sceneIndex === previousIndex)
 				if (previousScene) {
-					this.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
+					await this.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
+				} else {
+					return
 				}
+			} else {
+				return
 			}
 		},
 	}
 	actions['previewNextScene'] = {
 		name: 'Preview Next Scene',
 		options: [],
-		callback: () => {
+		callback: async () => {
 			if (this.states.previewScene) {
 				let previewScene = this.scenes.find((scene) => scene.sceneName === this.states.previewScene)
 				let nextIndex = previewScene?.sceneIndex - 1
 				let nextScene = this.scenes.find((scene) => scene.sceneIndex === nextIndex)
 				if (nextScene) {
-					this.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
+					await this.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
+				} else {
+					return
 				}
+			} else {
+				return
 			}
 		},
 	}
@@ -254,14 +262,15 @@ export function getActions() {
 		name: 'Transition',
 		description: 'Transitions preview to program in Studio Mode',
 		options: [],
-		callback: () => {
+		callback: async () => {
 			if (this.states.studioMode) {
-				this.sendRequest('TriggerStudioModeTransition')
+				await this.sendRequest('TriggerStudioModeTransition')
 			} else {
 				this.log(
 					'warn',
 					'The Transition action requires OBS to be in Studio Mode. Try switching to Studio Mode, or using the Change Scene action instead',
 				)
+				return
 			}
 		},
 	}
@@ -292,9 +301,9 @@ export function getActions() {
 				isVisible: (options) => options.customDuration === true,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			if (action.options.transition == 'Default' && !action.options.customDuration) {
-				this.sendRequest('TriggerStudioModeTransition')
+				await this.sendRequest('TriggerStudioModeTransition')
 			} else {
 				let transitionWaitTime
 				let transitionDuration
@@ -318,7 +327,7 @@ export function getActions() {
 				}
 
 				if (!this.states.transitionActive) {
-					this.sendBatch([
+					await this.sendBatch([
 						{
 							requestType: 'SetCurrentSceneTransition',
 							requestData: { transitionName: action.options.transition },
@@ -343,6 +352,8 @@ export function getActions() {
 							requestData: { transitionDuration: revertTransitionDuration },
 						},
 					])
+				} else {
+					return
 				}
 			}
 		},
@@ -358,8 +369,8 @@ export function getActions() {
 				choices: this.transitionList,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetCurrentSceneTransition', { transitionName: action.options.transitions })
+		callback: async (action) => {
+			await this.sendRequest('SetCurrentSceneTransition', { transitionName: action.options.transitions })
 		},
 	}
 	actions['set_transition_duration'] = {
@@ -405,7 +416,7 @@ export function getActions() {
 			} else {
 				duration = action.options.duration
 			}
-			this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+			await this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 		},
 	}
 	actions['adjustTransitionDuration'] = {
@@ -434,9 +445,10 @@ export function getActions() {
 				} else {
 					duration = this.states.transitionDuration
 				}
-				this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+				await this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 			} else {
 				this.log('warn', 'Unable to adjust transition duration')
+				return
 			}
 		},
 	}
@@ -502,7 +514,7 @@ export function getActions() {
 			}
 			let streamServiceType = action.options.streamType
 
-			this.sendRequest('SetStreamServiceSettings', {
+			await this.sendRequest('SetStreamServiceSettings', {
 				streamServiceType: streamServiceType,
 				streamServiceSettings: streamServiceSettings,
 			})
@@ -529,8 +541,8 @@ export function getActions() {
 	actions['StartStopRecording'] = {
 		name: 'Toggle Recording',
 		options: [],
-		callback: () => {
-			this.sendRequest('ToggleRecord')
+		callback: async () => {
+			await this.sendRequest('ToggleRecord')
 		},
 	}
 	actions['set_source_mute'] = {
@@ -554,8 +566,8 @@ export function getActions() {
 				],
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetInputMute', {
+		callback: async (action) => {
+			await this.sendRequest('SetInputMute', {
 				inputName: action.options.source,
 				inputMuted: action.options.mute == 'true' ? true : false,
 			})
@@ -572,8 +584,8 @@ export function getActions() {
 				choices: this.audioSourceList,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('ToggleInputMute', { inputName: action.options.source })
+		callback: async (action) => {
+			await this.sendRequest('ToggleInputMute', { inputName: action.options.source })
 		},
 	}
 	actions['set_volume'] = {
@@ -597,8 +609,11 @@ export function getActions() {
 				range: false,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: action.options.volume })
+		callback: async (action) => {
+			await this.sendRequest('SetInputVolume', {
+				inputName: action.options.source,
+				inputVolumeDb: action.options.volume,
+			})
 		},
 	}
 	actions['adjust_volume'] = {
@@ -620,7 +635,7 @@ export function getActions() {
 				range: false,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let newVolume = this.sources[action.options.source].inputVolume + action.options.volume
 			if (newVolume > 26) {
 				newVolume = 26
@@ -628,7 +643,7 @@ export function getActions() {
 				newVolume = -100
 			}
 
-			this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newVolume })
+			await this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newVolume })
 		},
 	}
 	actions['adjust_volume_percent'] = {
@@ -652,7 +667,7 @@ export function getActions() {
 				range: true,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			//Standard offset values (aka how the OBS code determines slider percentage)
 			let LOG_RANGE_DB = 96.0
 			let LOG_OFFSET_DB = 6.0
@@ -691,7 +706,7 @@ export function getActions() {
 					LOG_OFFSET_DB
 			}
 
-			this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newDb })
+			await this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newDb })
 		},
 	}
 	actions['fadeVolume'] = {
@@ -775,8 +790,8 @@ export function getActions() {
 				range: false,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetInputAudioSyncOffset', {
+		callback: async (action) => {
+			await this.sendRequest('SetInputAudioSyncOffset', {
 				inputName: action.options.source,
 				inputAudioSyncOffset: action.options.offset,
 			})
@@ -803,8 +818,8 @@ export function getActions() {
 				range: false,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetInputAudioBalance', {
+		callback: async (action) => {
+			await this.sendRequest('SetInputAudioBalance', {
 				inputName: action.options.source,
 				inputAudioBalance: action.options.balance,
 			})
@@ -915,7 +930,9 @@ export function getActions() {
 						}
 					}
 				})
-				this.sendBatch(requests)
+				await this.sendBatch(requests)
+			} else {
+				return
 			}
 		},
 	}
@@ -938,8 +955,7 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			let newText = await this.parseVariablesInString(action.options.text)
-
-			this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
+			await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
 		},
 	}
 	actions['trigger-hotkey'] = {
@@ -956,7 +972,7 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			let hotkey = await this.parseVariablesInString(action.options.id)
-			this.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
+			await this.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
 		},
 	}
 	actions['trigger-hotkey-sequence'] = {
@@ -994,7 +1010,7 @@ export function getActions() {
 				default: false,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let keyModifiers = {
 				shift: action.options.keyShift,
 				alt: action.options.keyAlt,
@@ -1002,7 +1018,7 @@ export function getActions() {
 				command: action.options.keyCommand,
 			}
 
-			this.sendRequest('TriggerHotkeyByKeySequence', {
+			await this.sendRequest('TriggerHotkeyByKeySequence', {
 				keyId: action.options.keyId,
 				keyModifiers: keyModifiers,
 			})
@@ -1019,8 +1035,8 @@ export function getActions() {
 				choices: this.profileChoices,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetCurrentProfile', { profileName: action.options.profile })
+		callback: async (action) => {
+			await this.sendRequest('SetCurrentProfile', { profileName: action.options.profile })
 		},
 	}
 	actions['set_scene_collection'] = {
@@ -1034,8 +1050,8 @@ export function getActions() {
 				choices: this.sceneCollectionList,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetCurrentSceneCollection', { sceneCollectionName: action.options.scene_collection })
+		callback: async (action) => {
+			await this.sendRequest('SetCurrentSceneCollection', { sceneCollectionName: action.options.scene_collection })
 		},
 	}
 	actions['start_output'] = {
@@ -1049,11 +1065,11 @@ export function getActions() {
 				choices: this.outputList,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			if (action.options.output === 'virtualcam_output') {
-				this.sendRequest('StartVirtualCam')
+				await this.sendRequest('StartVirtualCam')
 			} else {
-				this.sendRequest('StartOutput', {
+				await this.sendRequest('StartOutput', {
 					outputName: action.options.output,
 				})
 			}
@@ -1070,11 +1086,11 @@ export function getActions() {
 				choices: this.outputList,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			if (action.options.output === 'virtualcam_output') {
-				this.sendRequest('StopVirtualCam')
+				await this.sendRequest('StopVirtualCam')
 			} else {
-				this.sendRequest('StopOutput', {
+				await this.sendRequest('StopOutput', {
 					outputName: action.options.output,
 				})
 			}
@@ -1091,11 +1107,11 @@ export function getActions() {
 				choices: this.outputList,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			if (action.options.output === 'virtualcam_output') {
-				this.sendRequest('ToggleVirtualCam')
+				await this.sendRequest('ToggleVirtualCam')
 			} else {
-				this.sendRequest('ToggleOutput', {
+				await this.sendRequest('ToggleOutput', {
 					outputName: action.options.output,
 				})
 			}
@@ -1112,12 +1128,15 @@ export function getActions() {
 				choices: this.sourceChoices,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			if (this.sources[action.options.source]?.inputKind == 'browser_source') {
-				this.sendRequest('PressInputPropertiesButton', {
+				await this.sendRequest('PressInputPropertiesButton', {
 					inputName: action.options.source,
 					propertyName: 'refreshnocache',
 				})
+			} else {
+				this.log('warn', 'The selected source is not a browser source')
+				return
 			}
 		},
 	}
@@ -1143,7 +1162,7 @@ export function getActions() {
 				],
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let monitorType
 			if (action.options.monitor === 'monitorAndOutput') {
 				monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
@@ -1152,7 +1171,7 @@ export function getActions() {
 			} else {
 				monitorType = 'OBS_MONITORING_TYPE_NONE'
 			}
-			this.sendRequest('SetInputAudioMonitorType', { inputName: action.options.source, monitorType: monitorType })
+			await this.sendRequest('SetInputAudioMonitorType', { inputName: action.options.source, monitorType: monitorType })
 		},
 	}
 	actions['take_screenshot'] = {
@@ -1198,7 +1217,7 @@ export function getActions() {
 				id: 'path',
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let date = new Date().toISOString()
 			let day = date.slice(0, 10)
 			let time = date.slice(11, 19).replace(/:/g, '-')
@@ -1208,7 +1227,7 @@ export function getActions() {
 			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
 			let quality = action.options.compression == 0 ? -1 : action.options.compression
 
-			this.sendRequest('SaveSourceScreenshot', {
+			await this.sendRequest('SaveSourceScreenshot', {
 				sourceName: fileName,
 				imageFormat: action.options.format,
 				imageFilePath: filePath,
@@ -1275,7 +1294,7 @@ export function getActions() {
 					})
 				})
 
-				this.sendBatch(requests)
+				await this.sendBatch(requests)
 			} else {
 				let filterVisibility
 				if (action.options.visible !== 'toggle') {
@@ -1289,7 +1308,7 @@ export function getActions() {
 					}
 				}
 
-				this.sendRequest('SetSourceFilterEnabled', {
+				await this.sendRequest('SetSourceFilterEnabled', {
 					sourceName: source,
 					filterName: filterName,
 					filterEnabled: filterVisibility,
@@ -1327,7 +1346,7 @@ export function getActions() {
 			try {
 				let settings = await this.parseVariablesInString(action.options.settings)
 				let settingsJSON = JSON.parse(settings)
-				this.sendRequest('SetSourceFilterSettings', {
+				await this.sendRequest('SetSourceFilterSettings', {
 					sourceName: action.options.source,
 					filterName: action.options.filter,
 					filterSettings: settingsJSON,
@@ -1360,7 +1379,7 @@ export function getActions() {
 				],
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let playPause
 			let media = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
 			if (action.options.playPause === 'toggle' && media) {
@@ -1375,7 +1394,7 @@ export function getActions() {
 						? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
 						: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
 			}
-			this.sendRequest('TriggerMediaInputAction', {
+			await this.sendRequest('TriggerMediaInputAction', {
 				inputName: media,
 				mediaAction: playPause,
 			})
@@ -1392,8 +1411,8 @@ export function getActions() {
 				choices: this.mediaSourceListCurrentMedia,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('TriggerMediaInputAction', {
+		callback: async (action) => {
+			await this.sendRequest('TriggerMediaInputAction', {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART',
 			})
@@ -1410,8 +1429,8 @@ export function getActions() {
 				choices: this.mediaSourceListCurrentMedia,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('TriggerMediaInputAction', {
+		callback: async (action) => {
+			await this.sendRequest('TriggerMediaInputAction', {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP',
 			})
@@ -1428,8 +1447,8 @@ export function getActions() {
 				choices: this.mediaSourceListCurrentMedia,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('TriggerMediaInputAction', {
+		callback: async (action) => {
+			await this.sendRequest('TriggerMediaInputAction', {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT',
 			})
@@ -1446,8 +1465,8 @@ export function getActions() {
 				choices: this.mediaSourceListCurrentMedia,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('TriggerMediaInputAction', {
+		callback: async (action) => {
+			await this.sendRequest('TriggerMediaInputAction', {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS',
 			})
@@ -1470,8 +1489,8 @@ export function getActions() {
 				default: 1,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('SetMediaInputCursor', {
+		callback: async (action) => {
+			await this.sendRequest('SetMediaInputCursor', {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaCursor: action.options.mediaTime * 1000,
 			})
@@ -1494,8 +1513,8 @@ export function getActions() {
 				default: 1,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('OffsetMediaInputCursor', {
+		callback: async (action) => {
+			await this.sendRequest('OffsetMediaInputCursor', {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaCursorOffset: action.options.scrubAmount * 1000,
 			})
@@ -1544,7 +1563,7 @@ export function getActions() {
 				isVisible: (options) => options.type === 'Source' || options.type === 'Scene',
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let monitor = action.options.window === 'window' ? -1 : action.options.display
 			let requestType
 			let requestData
@@ -1572,8 +1591,10 @@ export function getActions() {
 					sourceName: action.options.source,
 					monitorIndex: monitor,
 				}
+			} else {
+				return
 			}
-			this.sendRequest(requestType, requestData)
+			await this.sendRequest(requestType, requestData)
 		},
 	}
 	actions['source_properties'] = {
@@ -1669,11 +1690,13 @@ export function getActions() {
 			})
 
 			if (sceneItem?.sceneItemId) {
-				this.sendRequest('SetSceneItemTransform', {
+				await this.sendRequest('SetSceneItemTransform', {
 					sceneName: sourceScene,
 					sceneItemId: sceneItem?.sceneItemId,
 					sceneItemTransform: transform,
 				})
+			} else {
+				return
 			}
 		},
 	}
@@ -1688,8 +1711,8 @@ export function getActions() {
 				choices: this.sourceChoices,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source })
+		callback: async (action) => {
+			await this.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source })
 		},
 	}
 	actions['openInputFiltersDialog'] = {
@@ -1703,8 +1726,8 @@ export function getActions() {
 				choices: this.sourceChoices,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source })
+		callback: async (action) => {
+			await this.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source })
 		},
 	}
 	actions['openInputInteractDialog'] = {
@@ -1718,8 +1741,8 @@ export function getActions() {
 				choices: this.sourceChoices,
 			},
 		],
-		callback: (action) => {
-			this.sendRequest('OpenInputInteractDialog', { inputName: action.options.source })
+		callback: async (action) => {
+			await this.sendRequest('OpenInputInteractDialog', { inputName: action.options.source })
 		},
 	}
 	actions['custom_command'] = {
@@ -1759,7 +1782,7 @@ export function getActions() {
 					return
 				}
 			}
-			this.sendCustomRequest(command, arg ? arg : {})
+			await this.sendCustomRequest(command, arg ? arg : {})
 		},
 	}
 	actions['vendorRequest'] = {
@@ -1813,7 +1836,7 @@ export function getActions() {
 				requestType: requestType,
 				requestData: requestData,
 			}
-			this.sendRequest('CallVendorRequest', data)
+			await this.sendRequest('CallVendorRequest', data)
 		},
 	}
 
