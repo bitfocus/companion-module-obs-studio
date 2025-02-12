@@ -352,6 +352,7 @@ export function getActions() {
 							requestData: { transitionDuration: revertTransitionDuration },
 						},
 					])
+					this.states.transitionActive = false
 				} else {
 					return
 				}
