@@ -13,8 +13,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 - New
   - Fade Source Volume action, allows fading a source's volume to a specific value over a specific duration
   - Ability to set a threshold in the Audio Meter feedback, so that sources with no signal or a high noise floor do not always show the green color feedback
+  - All actions now support sequential execution _(requires Companion 3.5)_
 - Fix
+  - Current Media variables showing info from media that is playing, but not in program
+  - Current Media variables disappearing when media is paused, but still in program
   - Previous Scene feedback and scene_previous variable showing incorrect scene after disconnecting and reconnecting to OBS
+  - Quick Transition not working after being used once in some instances
 
 ### v3.10.1
 
