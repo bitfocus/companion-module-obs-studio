@@ -20,7 +20,7 @@
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.1.1",
-		"eslint": "^9.20.0",
+		"eslint": "^9.20.1",
 		"prettier": "^3.5.0"
 	},
 	"engines": {
