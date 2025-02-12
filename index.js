@@ -605,7 +605,6 @@ class OBSInstance extends InstanceBase {
 
 			let name = this.sources[data.inputName].validName
 			this.setVariableValues({
-				current_media_name: this.states.currentMedia,
 				[`media_status_${name}`]: 'Playing',
 			})
 		})
@@ -613,7 +612,6 @@ class OBSInstance extends InstanceBase {
 			if (this.states.currentMedia == data.inputName) {
 				let name = this.sources[data.inputName].validName
 				this.setVariableValues({
-					current_media_name: 'None',
 					[`media_status_${name}`]: 'Stopped',
 				})
 			}
@@ -647,6 +645,7 @@ class OBSInstance extends InstanceBase {
 			return data
 		} catch (error) {
 			this.log('debug', `Request ${requestType ?? ''} failed (${error})`)
+			return
 		}
 	}
 
@@ -676,22 +675,22 @@ class OBSInstance extends InstanceBase {
 				'warn',
 				`Custom Command Failed: Request ${requestType ?? ''} with data ${requestData ? JSON.stringify(requestData) : 'none'} failed (${error})`,
 			)
+			return
 		}
 	}
 
 	async sendBatch(batch) {
 		try {
 			let data = await this.obs.callBatch(batch)
-
 			let errors = data.filter((request) => request.requestStatus.result === false)
 			if (errors.length > 0) {
 				let errorMessages = errors.map((error) => error.requestStatus.comment).join(' // ')
 				this.log('debug', `Partial batch request failure (${errorMessages})`)
 			}
-
 			return data
 		} catch (error) {
 			this.log('debug', `Batch request failed (${error})`)
+			return
 		}
 	}
 
@@ -1196,6 +1195,7 @@ class OBSInstance extends InstanceBase {
 		let data = await this.sendBatch(batch)
 
 		if (data) {
+			let currentMedia = []
 			for (const response of data) {
 				if (response.requestStatus.result) {
 					let sourceName = response.requestId
@@ -1217,14 +1217,25 @@ class OBSInstance extends InstanceBase {
 					if (data?.mediaState) {
 						switch (data?.mediaState) {
 							case 'OBS_MEDIA_STATE_PLAYING':
+								if (this.sources[sourceName]?.active == true) {
+									currentMedia.push({
+										name: sourceName,
+										elapsed: this.mediaSources[sourceName].timeElapsed,
+										remaining: this.mediaSources[sourceName].timeRemaining,
+									})
+								}
 								this.setVariableValues({
-									current_media_name: sourceName,
-									current_media_time_elapsed: this.mediaSources[sourceName].timeElapsed,
-									current_media_time_remaining: this.mediaSources[sourceName].timeRemaining,
 									[`media_status_${validName}`]: 'Playing',
 								})
 								break
 							case 'OBS_MEDIA_STATE_PAUSED':
+								if (this.sources[sourceName]?.active == true) {
+									currentMedia.push({
+										name: sourceName,
+										elapsed: this.mediaSources[sourceName].timeElapsed,
+										remaining: this.mediaSources[sourceName].timeRemaining,
+									})
+								}
 								this.setVariableValues({ [`media_status_${validName}`]: 'Paused' })
 								break
 							default:
@@ -1238,6 +1249,17 @@ class OBSInstance extends InstanceBase {
 					})
 					this.checkFeedbacks('media_playing', 'media_source_time_remaining')
 				}
+			}
+			if (currentMedia) {
+				const names = currentMedia.map((value) => value.name)
+				const elapsed = currentMedia.map((value) => value.elapsed)
+				const remaining = currentMedia.map((value) => value.remaining)
+
+				this.setVariableValues({
+					current_media_name: names.length > 0 ? names.join('\n') : 'None',
+					current_media_time_elapsed: elapsed.length > 0 ? elapsed.join('\n') : '--:--:--',
+					current_media_time_remaining: remaining.length > 0 ? remaining.join('\n') : '--:--:--',
+				})
 			}
 		}
 	}
