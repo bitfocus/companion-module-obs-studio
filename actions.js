@@ -1213,19 +1213,42 @@ export function getActions() {
 				isVisible: (options) => options.source === 'custom',
 			},
 			{
+				type: 'checkbox',
+				label: 'Use Custom Path and Name',
+				default: false,
+				id: 'customname',
+			},
+			{
 				type: 'textinput',
 				label: 'Custom File Path (Optional, default is recording path)',
 				id: 'path',
+				isVisible: (options) => options.customname === true,
 			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Custom File Name',
+				'default': 'Screenshot_$(internal:date_iso)_$(internal:time_hms) ',
+				id: 'prefix',
+				isVisible: (options) => options.customname === true,
+			},
+			
 		],
 		callback: async (action) => {
 			let date = new Date().toISOString()
 			let day = date.slice(0, 10)
 			let time = date.slice(11, 19).replace(/:/g, '-')
 
+
 			let fileName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
+			let filePrefix = (await this.parseVariablesInString(action.options.prefix)).replace(/:/g, '-')
 			let fileLocation = action.options.path ? action.options.path : this.states.recordDirectory
 			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
+
+			if(action.options.customname === true){
+				filePath = fileLocation + '/' + filePrefix + '.' + action.options.format
+			}
+
 			let quality = action.options.compression == 0 ? -1 : action.options.compression
 
 			await this.sendRequest('SaveSourceScreenshot', {
