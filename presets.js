@@ -505,7 +505,7 @@ export function getPresets() {
 							format: 'png',
 							compression: 0,
 							source: 'programScene',
-							customname: false,
+							customName: false,
 							path: '',
 							prefix: 'Screenshot_$(internal:date_iso)_$(internal:time_hms) ',
 						},

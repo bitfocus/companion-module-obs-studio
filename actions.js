@@ -1214,15 +1214,15 @@ export function getActions() {
 			},
 			{
 				type: 'checkbox',
-				label: 'Use Custom Path and Name',
+				label: 'Use Custom Path and Filename',
 				default: false,
-				id: 'customname',
+				id: 'customName',
 			},
 			{
 				type: 'textinput',
 				label: 'Custom File Path (Optional, default is recording path)',
 				id: 'path',
-				isVisible: (options) => options.customname === true,
+				isVisible: (options) => options.customName === true,
 			},
 			{
 				type: 'textinput',
@@ -1230,7 +1230,7 @@ export function getActions() {
 				label: 'Custom File Name',
 				'default': 'Screenshot_$(internal:date_iso)_$(internal:time_hms) ',
 				id: 'prefix',
-				isVisible: (options) => options.customname === true,
+				isVisible: (options) => options.customName === true,
 			},
 			
 		],
@@ -1245,7 +1245,7 @@ export function getActions() {
 			let fileLocation = action.options.path ? action.options.path : this.states.recordDirectory
 			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
 
-			if(action.options.customname === true){
+			if(action.options.customName === true){
 				filePath = fileLocation + '/' + filePrefix + '.' + action.options.format
 			}
 
