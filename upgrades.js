@@ -160,4 +160,23 @@ export default [
 
 		return changes
 	},
+	function v3_12_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+		for (const action of props.actions) {
+			if (action.actionId === 'take_screenshot') {
+				if (!action.options.prefix) {
+					action.options.customName = false
+				}
+                if (!action.options.prefix) {
+					action.options.prefix = 'Screenshot_$(internal:date_iso)_$(internal:time_hms)'
+				}
+				changes.updatedActions.push(action)
+			}
+		}
+		return changes
+	},
 ]
