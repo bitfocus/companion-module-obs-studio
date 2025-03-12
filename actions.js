@@ -1220,6 +1220,7 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
+				useVariables: true,
 				label: 'Custom File Path (Optional, default is recording path)',
 				id: 'path',
 				isVisible: (options) => options.customName === true,
