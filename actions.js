@@ -1243,7 +1243,7 @@ export function getActions() {
 
 			let fileName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
 			let filePrefix = (await this.parseVariablesInString(action.options.prefix)).replace(/:/g, '-')
-			let fileLocation = action.options.path ? action.options.path : this.states.recordDirectory
+			let fileLocation = action.options.path ? await this.parseVariablesInString(action.options.path) : this.states.recordDirectory
 			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
 
 			if(action.options.customName === true){
