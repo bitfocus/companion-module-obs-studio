@@ -19,9 +19,9 @@
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.1.1",
-		"eslint": "^9.20.1",
-		"prettier": "^3.5.0"
+		"@companion-module/tools": "^2.2.2",
+		"eslint": "^9.22.0",
+		"prettier": "^3.5.3"
 	},
 	"engines": {
 		"node": "^22.12"
