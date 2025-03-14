@@ -160,4 +160,25 @@ export default [
 
 		return changes
 	},
+	function v3_12_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+		for (const action of props.actions) {
+			if (action.actionId === 'take_screenshot') {
+				if (!action.options.customName && action.options.path) {
+					action.options.customName = true
+					action.options.fileName = ''
+				} else if (!action.options.customName) {
+					action.options.customName = false
+					action.options.fileName = ''
+				}
+
+				changes.updatedActions.push(action)
+			}
+		}
+		return changes
+	},
 ]
