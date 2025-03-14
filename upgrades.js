@@ -175,7 +175,7 @@ export default [
 					action.options.customName = false
 					action.options.fileName = ''
 				}
-		
+
 				changes.updatedActions.push(action)
 			}
 		}

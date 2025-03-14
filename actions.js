@@ -1235,7 +1235,6 @@ export function getActions() {
 				id: 'fileName',
 				isVisible: (options) => options.customName === true,
 			},
-			
 		],
 		callback: async (action) => {
 			//Get date for default filename
@@ -1244,8 +1243,14 @@ export function getActions() {
 			const time = date.slice(11, 19).replace(/:/g, '-')
 
 			const sourceName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
-			const fileName = action.options.customName && action.options.fileName ? (await this.parseVariablesInString(action.options.fileName)).replace(/:/g, '-') : `${day}_${sourceName}_${time}`
-			const fileLocation = action.options.customName && action.options.path ? await this.parseVariablesInString(action.options.path) : this.states.recordDirectory
+			const fileName =
+				action.options.customName && action.options.fileName
+					? (await this.parseVariablesInString(action.options.fileName)).replace(/:/g, '-')
+					: `${day}_${sourceName}_${time}`
+			const fileLocation =
+				action.options.customName && action.options.path
+					? await this.parseVariablesInString(action.options.path)
+					: this.states.recordDirectory
 			const filePath = `${fileLocation}/${fileName}.${action.options.format}`
 
 			const quality = action.options.compression == 0 ? -1 : action.options.compression
