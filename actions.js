@@ -1196,7 +1196,7 @@ export function getActions() {
 			},
 			{
 				type: 'dropdown',
-				label: 'Source (Optional, default is current scene)',
+				label: 'Source',
 				id: 'source',
 				default: 'programScene',
 				choices: [
@@ -1209,19 +1209,20 @@ export function getActions() {
 				label: 'Custom Source / Scene',
 				id: 'custom',
 				default: this.sourceListDefault,
-				choices: this.sourceChoices,
+				choices: this.sourceChoicesWithScenes,
 				isVisible: (options) => options.source === 'custom',
 			},
 			{
 				type: 'checkbox',
-				label: 'Use Custom Path and Filename',
+				label: 'Use Custom Path / Filename',
 				default: false,
 				id: 'customName',
 			},
 			{
 				type: 'textinput',
 				useVariables: true,
-				label: 'Custom File Path (Optional, default is recording path)',
+				label: 'Custom File Path',
+				tooltip: 'Optional, leave blank to use the recording path',
 				id: 'path',
 				isVisible: (options) => options.customName === true,
 			},
@@ -1229,31 +1230,28 @@ export function getActions() {
 				type: 'textinput',
 				useVariables: true,
 				label: 'Custom File Name',
-				'default': 'Screenshot_$(internal:date_iso)_$(internal:time_hms) ',
-				id: 'prefix',
+				default: 'Screenshot_$(internal:date_iso)_$(internal:time_hms)',
+				tooltip: 'Optional, leave blank to use the format "YYYY-MM-DD_SourceName_HH-MM-SS"',
+				id: 'fileName',
 				isVisible: (options) => options.customName === true,
 			},
 			
 		],
 		callback: async (action) => {
-			let date = new Date().toISOString()
-			let day = date.slice(0, 10)
-			let time = date.slice(11, 19).replace(/:/g, '-')
+			//Get date for default filename
+			const date = new Date().toISOString()
+			const day = date.slice(0, 10)
+			const time = date.slice(11, 19).replace(/:/g, '-')
 
+			const sourceName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
+			const fileName = action.options.customName && action.options.fileName ? (await this.parseVariablesInString(action.options.fileName)).replace(/:/g, '-') : `${day}_${sourceName}_${time}`
+			const fileLocation = action.options.customName && action.options.path ? await this.parseVariablesInString(action.options.path) : this.states.recordDirectory
+			const filePath = `${fileLocation}/${fileName}.${action.options.format}`
 
-			let fileName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
-			let filePrefix = (await this.parseVariablesInString(action.options.prefix)).replace(/:/g, '-')
-			let fileLocation = action.options.path ? await this.parseVariablesInString(action.options.path) : this.states.recordDirectory
-			let filePath = fileLocation + '/' + day + '_' + fileName + '_' + time + '.' + action.options.format
-
-			if(action.options.customName === true){
-				filePath = fileLocation + '/' + filePrefix + '.' + action.options.format
-			}
-
-			let quality = action.options.compression == 0 ? -1 : action.options.compression
+			const quality = action.options.compression == 0 ? -1 : action.options.compression
 
 			await this.sendRequest('SaveSourceScreenshot', {
-				sourceName: fileName,
+				sourceName: sourceName,
 				imageFormat: action.options.format,
 				imageFilePath: filePath,
 				imageCompressionQuality: quality,
