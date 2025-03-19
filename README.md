@@ -8,6 +8,15 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.12.0
+
+- New
+  - Added separate hours, minutes, and seconds variants to recording_timecode and stream_timecode variables
+  - Ability to use Custom File Name in Take Screenshot action
+  - Ability to use variables for Custom File Path in Take Screenshot action
+- Fix
+  - Scene filters not appearing in filters dropdown
+
 ### v3.11.0
 
 - New
