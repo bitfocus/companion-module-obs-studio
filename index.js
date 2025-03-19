@@ -565,6 +565,14 @@ class OBSInstance extends InstanceBase {
 
 			this.setVariableValues({ streaming: this.states.streaming ? 'Live' : 'Off-Air' })
 			this.checkFeedbacks('streaming', 'streamCongestion')
+			if (this.states.streaming === false) {
+				this.setVariableValues({
+					stream_timecode: '00:00:00',
+					stream_timecode_hh: '00',
+					stream_timecode_mm: '00',
+					stream_timecode_ss: '00',
+				})
+			}
 		})
 		this.obs.on('RecordStateChanged', (data) => {
 			if (data.outputActive === true) {
@@ -574,7 +582,12 @@ class OBSInstance extends InstanceBase {
 					this.states.recording = 'Paused'
 				} else {
 					this.states.recording = 'Stopped'
-					this.setVariableValues({ recording_timecode: '00:00:00' })
+					this.setVariableValues({
+						recording_timecode: '00:00:00',
+						recording_timecode_hh: '00',
+						recording_timecode_mm: '00',
+						recording_timecode_ss: '00',
+					})
 				}
 			}
 			if (data.outputPath) {
@@ -937,6 +950,11 @@ class OBSInstance extends InstanceBase {
 		if (streamStatus) {
 			this.states.streaming = streamStatus.outputActive
 			this.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+
+			const timecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			this.states.streamingTimecode = timecode
+			const streamingTimecodeSplit = String(timecode)?.split(':')
+
 			this.states.streamCongestion = streamStatus.outputCongestion
 
 			let kbits = 0
@@ -951,6 +969,9 @@ class OBSInstance extends InstanceBase {
 			this.setVariableValues({
 				streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
 				stream_timecode: this.states.streamingTimecode,
+				stream_timecode_hh: streamingTimecodeSplit[0],
+				stream_timecode_mm: streamingTimecodeSplit[1],
+				stream_timecode_ss: streamingTimecodeSplit[2],
 				output_skipped_frames: streamStatus.outputSkippedFrames,
 				output_total_frames: streamStatus.outputTotalFrames,
 				kbits_per_sec: kbits,
@@ -970,13 +991,18 @@ class OBSInstance extends InstanceBase {
 				this.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
 			}
 
-			this.states.recordingTimecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			const timecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			this.states.recordingTimecode = timecode
+			const recordingTimecodeSplit = String(timecode)?.split(':')
 			this.states.recordDirectory = recordDirectory.recordDirectory
 
 			this.checkFeedbacks('recording')
 			this.setVariableValues({
 				recording: this.states.recording,
 				recording_timecode: this.states.recordingTimecode,
+				recording_timecode_hh: recordingTimecodeSplit[0],
+				recording_timecode_mm: recordingTimecodeSplit[1],
+				recording_timecode_ss: recordingTimecodeSplit[2],
 				recording_path: this.states.recordDirectory,
 			})
 		}
