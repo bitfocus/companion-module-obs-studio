@@ -8,6 +8,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.13.0
+
+- New
+  - Action: Adjust Audio Sync Offset
+  - Action: Adjust Audio Balance
+
 ### v3.12.0
 
 - New
