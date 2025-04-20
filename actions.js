@@ -820,7 +820,11 @@ export function getActions() {
 			let current = this.sources[action.options.source]?.inputAudioSyncOffset
 			let offset = parseInt(action.options.offset)
 			let newOffset = current + offset
-
+			if (newOffset > 20000) {
+				newOffset = 20000
+			} else if (newOffset < -950) {
+				newOffset = -950
+			}
 			await this.sendRequest('SetInputAudioSyncOffset', {
 				inputName: action.options.source,
 				inputAudioSyncOffset: newOffset,
@@ -852,6 +856,39 @@ export function getActions() {
 			await this.sendRequest('SetInputAudioBalance', {
 				inputName: action.options.source,
 				inputAudioBalance: action.options.balance,
+			})
+		},
+	}
+	actions['adjustAudioBalance'] = {
+		name: 'Adjust Audio Balance',
+		description: 'Adjust the balance of an audio source',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+			{
+				type: 'textinput',
+				label: 'Adjustment amount (+ / -)',
+				id: 'offset',
+				default: 0.1,
+			},
+		],
+		callback: async (action) => {
+			let current = this.sources[action.options.source]?.inputAudioBalance
+			let offset = parseFloat(action.options.offset)
+			let newOffset = current + offset
+			if (newOffset > 1.0) {
+				newOffset = 1.0
+			} else if (newOffset < 0.0) {
+				newOffset = 0.0
+			}
+			await this.sendRequest('SetInputAudioBalance', {
+				inputName: action.options.source,
+				inputAudioBalance: newOffset,
 			})
 		},
 	}
