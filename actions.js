@@ -798,6 +798,35 @@ export function getActions() {
 			})
 		},
 	}
+	actions['adjustSyncOffset'] = {
+		name: 'Adjust Audio Sync Offset',
+		description: 'Adjusts the sync offset of an audio source',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+			{
+				type: 'textinput',
+				label: 'Adjustment amount (+ / - ms)',
+				id: 'offset',
+				default: 1,
+			},
+		],
+		callback: async (action) => {
+			let current = this.sources[action.options.source]?.inputAudioSyncOffset
+			let offset = parseInt(action.options.offset)
+			let newOffset = current + offset
+
+			await this.sendRequest('SetInputAudioSyncOffset', {
+				inputName: action.options.source,
+				inputAudioSyncOffset: newOffset,
+			})
+		},
+	}
 	actions['setAudioBalance'] = {
 		name: 'Set Audio Balance',
 		description: 'Sets the balance of an audio source',
