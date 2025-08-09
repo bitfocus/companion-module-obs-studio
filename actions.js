@@ -1025,6 +1025,28 @@ export function getActions() {
 			await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
 		},
 	}
+	actions['resetCaptureDevice'] = {
+		name: 'Deactivate and reactivate video capture source',
+		description: 'Helps to reset it if your video is stuck',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.sourceListDefault,
+				choices: this.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			if (this.sources[action.options.source]?.inputKind == 'dshow_input') {
+				// Setting "SetInputSettings" without changing a parameter seems to restart the source
+				await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: {  } })
+			} else {
+				this.log('warn', 'The selected source is not a video capture source, but: ' + this.sources[action.options.source]?.inputKind)
+				return
+			}
+		},
+	}
 	actions['trigger-hotkey'] = {
 		name: 'Trigger Hotkey by ID',
 		options: [
