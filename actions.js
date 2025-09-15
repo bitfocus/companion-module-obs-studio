@@ -1022,6 +1022,9 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			let newText = await this.parseVariablesInString(action.options.text)
+			if (typeof newText === 'string') {
+				newText = newText.replace(/\\n/g, '\n')
+			}
 			await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
 		},
 	}
