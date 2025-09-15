@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.13.1
+
+- Fix
+  - Set Source Text action not handling newline character
+
 ### v3.13.0
 
 - New
@@ -216,7 +221,6 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 ### v2.0.0
 
 - New
-
   - Support for obs-websocket version 5.0.0
   - New "Current Media" option on all media control actions
   - Custom variables for "Set Program Scene", "Set Preview Scene", and "Custom Command" actions
