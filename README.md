@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.13.2
+
+- Fix
+  - Fixed vendor events not handling
+
 ### v3.13.1
 
 - Fix
