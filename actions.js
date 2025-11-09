@@ -374,6 +374,32 @@ export function getActions() {
 			await this.sendRequest('SetCurrentSceneTransition', { transitionName: action.options.transitions })
 		},
 	}
+	actions['adjustTransitionType'] = {
+		name: 'Adjust Transition Type',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Adjust',
+				id: 'adjust',
+				choices: [
+					{ id: 'next', label: 'Next' },
+					{ id: 'previous', label: 'Previous' },
+				],
+				default: 'next',
+			},
+		],
+		callback: async (action) => {
+			let currentTransitionIndex = this.transitionList.findIndex((item) => item.id === this.states.currentTransition)
+			if (action.options.adjust === 'next') {
+				let nextTransition = this.transitionList[currentTransitionIndex + 1]?.id ?? this.transitionList[0].id
+				await this.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition })
+			} else if (action.options.adjust === 'previous') {
+				let previousTransition =
+					this.transitionList[currentTransitionIndex - 1]?.id ?? this.transitionList[this.transitionList.length - 1].id
+				await this.sendRequest('SetCurrentSceneTransition', { transitionName: previousTransition })
+			}
+		},
+	}
 	actions['set_transition_duration'] = {
 		name: 'Set Transition Duration',
 		options: [
