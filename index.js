@@ -1189,6 +1189,8 @@ class OBSInstance extends InstanceBase {
 				this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
 			})
 
+			let transitionListVariable = this.transitionList?.map((item) => item.id) ?? []
+
 			this.states.currentTransition = currentTransition?.transitionName ?? 'None'
 			this.states.transitionDuration = currentTransition?.transitionDuration ?? '0'
 
@@ -1197,6 +1199,7 @@ class OBSInstance extends InstanceBase {
 				current_transition: this.states.currentTransition,
 				transition_duration: this.states.transitionDuration,
 				transition_active: 'False',
+				transition_list: transitionListVariable,
 			})
 		}
 	}
