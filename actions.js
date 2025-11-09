@@ -1028,6 +1028,27 @@ export function getActions() {
 			await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
 		},
 	}
+	actions['resetCaptureDevice'] = {
+		name: 'Reset Video Capture Device',
+		description: 'Deactivates and Reactivates a Video Capture Source to reset it',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.sourceListDefault,
+				choices: this.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			if (this.sources[action.options.source]?.inputKind) {
+				await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: {} })
+			} else {
+				this.log('warn', 'The selected source is not an input.')
+				return
+			}
+		},
+	}
 	actions['trigger-hotkey'] = {
 		name: 'Trigger Hotkey by ID',
 		options: [
