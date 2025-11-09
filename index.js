@@ -1370,10 +1370,10 @@ class OBSInstance extends InstanceBase {
 				case 'vlc_source': {
 					let file = ''
 					if (inputSettings?.playlist) {
-						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 						//Use first value in playlist until support for determining currently playing cue
 					} else if (inputSettings?.local_file) {
-						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
 					this.setVariableValues({ [`media_file_name_${name}`]: file })
 
