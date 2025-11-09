@@ -496,6 +496,11 @@ class OBSInstance extends InstanceBase {
 				current_transition: this.states.currentTransition,
 				transition_duration: this.states.transitionDuration,
 			})
+
+			if (!this.transitionList?.find((item) => item.id === data.transitionName)) {
+				await this.buildSceneTransitionList()
+				this.updateActionsFeedbacksVariables()
+			}
 		})
 		this.obs.on('CurrentSceneTransitionDurationChanged', (data) => {
 			this.states.transitionDuration = data.transitionDuration ?? '0'
