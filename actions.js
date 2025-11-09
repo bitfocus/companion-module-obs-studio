@@ -368,10 +368,12 @@ export function getActions() {
 				id: 'transitions',
 				default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 				choices: this.transitionList,
+				allowCustom: true,
 			},
 		],
 		callback: async (action) => {
-			await this.sendRequest('SetCurrentSceneTransition', { transitionName: action.options.transitions })
+			let transition = await this.parseVariablesInString(action.options.transitions)
+			await this.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
 		},
 	}
 	actions['adjustTransitionType'] = {
