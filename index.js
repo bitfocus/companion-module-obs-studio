@@ -161,6 +161,7 @@ class OBSInstance extends InstanceBase {
 		this.outputs = {}
 		this.sceneItems = {}
 		this.groups = {}
+		this.inputKindList = {}
 		//Source Types
 		this.mediaSources = {}
 		this.imageSources = {}
@@ -789,6 +790,8 @@ class OBSInstance extends InstanceBase {
 			this.buildMonitorList()
 			this.getVideoSettings()
 			this.getReplayBufferStatus()
+			this.getInputKindList()
+
 			return true
 		} catch (error) {
 			this.log('debug', error)
@@ -802,6 +805,15 @@ class OBSInstance extends InstanceBase {
 			this.hotkeyNames.push({ id: hotkey, label: hotkey })
 		})
 		this.updateActionsFeedbacksVariables()
+	}
+
+	async getInputKindList() {
+		let inputKindList = await this.sendRequest('GetInputKindList')
+		inputKindList?.inputKinds?.forEach(async (inputKind) => {
+			this.inputKindList[inputKind] = {}
+			let defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
+			this.inputKindList[inputKind] = defaultSettings
+		})
 	}
 
 	async buildProfileList() {
@@ -1306,7 +1318,13 @@ class OBSInstance extends InstanceBase {
 
 	buildInputSettings(sourceName, inputKind, inputSettings) {
 		let name = this.sources[sourceName].validName ?? sourceName
-		this.sources[sourceName].settings = inputSettings
+
+		if (this.inputKindList[inputKind]?.defaultInputSettings) {
+			inputSettings = { ...this.inputKindList[inputKind].defaultInputSettings, ...inputSettings }
+			this.sources[sourceName].settings = inputSettings
+		} else {
+			this.sources[sourceName].settings = inputSettings
+		}
 
 		switch (inputKind) {
 			case 'text_ft2_source_v2':
@@ -1347,7 +1365,10 @@ class OBSInstance extends InstanceBase {
 
 	updateInputSettings(sourceName, inputSettings) {
 		if (this.sources[sourceName]) {
-			this.sources[sourceName].settings = inputSettings
+			this.sources[sourceName].settings = {
+				...(this.sources[sourceName].settings || {}),
+				...(inputSettings || {}),
+			}
 			let name = this.sources[sourceName].validName ?? sourceName
 			let inputKind = this.sources[sourceName].inputKind
 
