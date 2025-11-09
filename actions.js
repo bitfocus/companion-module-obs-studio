@@ -1638,6 +1638,47 @@ export function getActions() {
 			})
 		},
 	}
+	actions['updateMediaLocalFile'] = {
+		name: 'Update Media Source Local File Path',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: 'currentMedia',
+				choices: this.mediaSourceListCurrentMedia,
+			},
+			{
+				type: 'textinput',
+				label: 'File Path',
+				id: 'mediaFilePath',
+				useVariables: true,
+				default: '',
+			},
+		],
+		callback: async (action) => {
+			let mediaFilePath = await this.parseVariablesInString(action.options.mediaFilePath)
+			let inputName = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
+			try {
+				let input = await this.sendRequest('GetInputSettings', {
+					inputName: inputName,
+				})
+				if (input?.inputSettings?.local_file) {
+					await this.sendRequest('SetInputSettings', {
+						inputName: inputName,
+						inputSettings: {
+							local_file: mediaFilePath,
+						},
+					})
+				} else {
+					this.log('warn', `Unable to update media file for ${inputName} because it is not a local file input`)
+				}
+			} catch (e) {
+				this.log('warn', `Error updating media file: ${e.message}`)
+				return
+			}
+		},
+	}
 	actions['open_projector'] = {
 		name: 'Open Projector',
 		options: [
