@@ -107,7 +107,7 @@ class OBSInstance extends InstanceBase {
 	roundNumber(number, decimalPlaces) {
 		//Rounds a number to a specified number of decimal places
 		try {
-			return Number(Math.round(number + 'e' + decimalPlaces ?? 0) + 'e-' + decimalPlaces ?? 0)
+			return Number(Math.round(number + 'e' + (decimalPlaces ?? 0)) + 'e-' + (decimalPlaces ?? 0))
 		} catch (error) {
 			this.log('debug', `Error rounding number ${number}: ${error}`)
 			return number
@@ -591,7 +591,7 @@ class OBSInstance extends InstanceBase {
 				}
 			}
 			if (data.outputPath) {
-				this.setVariableValues({ recording_file_name: data.outputPath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) })
+				this.setVariableValues({ recording_file_name: data.outputPath.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/) })
 			}
 			this.setVariableValues({ recording: this.states.recording })
 			this.checkFeedbacks('recording')
@@ -602,7 +602,7 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('RecordFileChanged', (data) => {
 			if (data.newOutputPath) {
-				this.setVariableValues({ recording_file_name: data.newOutputPath.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/) })
+				this.setVariableValues({ recording_file_name: data.newOutputPath.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/) })
 			}
 		})
 		this.obs.on('VirtualcamStateChanged', (data) => {
@@ -1355,21 +1355,22 @@ class OBSInstance extends InstanceBase {
 					}
 					break
 				case 'ffmpeg_source':
-				case 'vlc_source':
+				case 'vlc_source': {
 					let file = ''
 					if (inputSettings?.playlist) {
-						file = inputSettings?.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
 						//Use first value in playlist until support for determining currently playing cue
 					} else if (inputSettings?.local_file) {
-						file = inputSettings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
 					}
 					this.setVariableValues({ [`media_file_name_${name}`]: file })
 
 					break
+				}
 				case 'image_source':
 					this.setVariableValues({
 						[`image_file_name_${name}`]: inputSettings?.file
-							? inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+							? inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
 							: '',
 					})
 					break
@@ -1467,7 +1468,7 @@ class OBSInstance extends InstanceBase {
 					case 'GetInputAudioSyncOffset':
 						this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
 						break
-					case 'GetInputAudioMonitorType':
+					case 'GetInputAudioMonitorType': {
 						this.sources[sourceName].monitorType = data.monitorType
 						let monitorType
 						if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
@@ -1479,6 +1480,7 @@ class OBSInstance extends InstanceBase {
 						}
 						this.setVariableValues({ [`monitor_${validName}`]: monitorType })
 						break
+					}
 					case 'GetInputAudioTracks':
 						this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
 						break

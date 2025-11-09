@@ -104,7 +104,7 @@ export function getVariables() {
 					}
 					break
 				case 'ffmpeg_source':
-				case 'vlc_source':
+				case 'vlc_source': {
 					variables.push(
 						{ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` },
 						{ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` },
@@ -113,14 +113,15 @@ export function getVariables() {
 					)
 					let file = ''
 					if (inputSettings?.playlist) {
-						file = inputSettings?.playlist[0]?.value?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
 						//Use first value in playlist until support for determining currently playing cue
 					} else if (inputSettings?.local_file) {
-						file = inputSettings?.local_file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
 					}
 					this.setVariableValues({ [`media_file_name_${sourceName}`]: file })
 
 					break
+				}
 				case 'image_source':
 					variables.push({
 						variableId: `image_file_name_${sourceName}`,
@@ -128,7 +129,7 @@ export function getVariables() {
 					})
 					this.setVariableValues({
 						[`image_file_name_${sourceName}`]: source.inputSettings?.file
-							? source.inputSettings?.file?.match(/[^\\\/]+(?=\.[\w]+$)|[^\\\/]+$/)
+							? source.inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
 							: '',
 					})
 					break
