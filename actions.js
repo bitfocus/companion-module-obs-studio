@@ -1056,6 +1056,136 @@ export function getActions() {
 			await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
 		},
 	}
+	actions['setTextProperties'] = {
+		name: 'Set Text Properties',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
+				choices: this.textSourceList,
+			},
+			{
+				type: 'multidropdown',
+				label: 'Properties',
+				id: 'props',
+				default: [],
+				choices: [
+					{ id: 'text', label: 'Text' },
+					{ id: 'fontSize', label: 'Font Size' },
+					{ id: 'fontFace', label: 'Font Face' },
+					{ id: 'fontStyle', label: 'Font Style' },
+					{ id: 'outline', label: 'Outline' },
+					{ id: 'wrap', label: 'Wrap' },
+				],
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Text',
+				id: 'text',
+				isVisibleExpression: `arrayIncludes($(options:props), 'text')`,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Font Size',
+				id: 'fontSize',
+				isVisibleExpression: `arrayIncludes($(options:props), 'fontSize')`,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Font Face',
+				id: 'fontFace',
+				isVisibleExpression: `arrayIncludes($(options:props), 'fontFace')`,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Font Style',
+				id: 'fontStyle',
+				isVisibleExpression: `arrayIncludes($(options:props), 'fontStyle')`,
+			},
+			{
+				type: 'checkbox',
+				label: 'Outline',
+				id: 'outline',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'outline')`,
+			},
+			{
+				type: 'checkbox',
+				label: 'Wrap',
+				id: 'wrap',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'wrap')`,
+			},
+		],
+		callback: async (action) => {
+			const source = action.options.source
+			const props = action.options.props || []
+			const existingSettings = { ...(this.sources[source]?.settings || {}) }
+			let inputSettings = {}
+
+			// Always copy font if it exists, as object, even if not changing
+			let existingFont = existingSettings.font ? { ...existingSettings.font } : {}
+
+			for (const prop of props) {
+				if (prop === 'text') {
+					let val = await this.parseVariablesInString(action.options.text)
+					// Unescape \n for newlines
+					if (typeof val === 'string') {
+						val = val.replace(/\\n/g, '\n')
+					}
+					inputSettings.text = val
+				}
+				if (prop === 'fontSize') {
+					let size = await this.parseVariablesInString(action.options.fontSize)
+					if (!isNaN(Number(size))) {
+						existingFont.size = Number(size)
+					}
+				}
+				if (prop === 'fontFace') {
+					let face = await this.parseVariablesInString(action.options.fontFace)
+					if (face) {
+						existingFont.face = face
+					}
+				}
+				if (prop === 'fontStyle') {
+					let style = await this.parseVariablesInString(action.options.fontStyle)
+					if (style) {
+						existingFont.style = style
+					}
+				}
+				if (prop === 'outline') {
+					inputSettings.outline = action.options.outline
+				}
+				if (prop === 'wrap') {
+					let kind = this.sources[source]?.inputKind || ''
+					if (kind.includes('text_gdiplus')) {
+						inputSettings.extents_wrap = action.options.wrap
+					} else {
+						inputSettings.word_wrap = action.options.wrap
+					}
+				}
+			}
+
+			// If editing any font property, always send font object including existing settings
+			if (
+				props.some((prop) => ['fontSize', 'fontFace', 'fontStyle'].includes(prop)) &&
+				Object.keys(existingFont).length > 0
+			) {
+				inputSettings.font = existingFont
+			}
+			console.log(inputSettings)
+			await this.sendRequest('SetInputSettings', {
+				inputName: source,
+				inputSettings: inputSettings || {},
+			})
+		},
+	}
 	actions['resetCaptureDevice'] = {
 		name: 'Reset Video Capture Device',
 		description: 'Deactivates and Reactivates a Video Capture Source to reset it',
