@@ -496,6 +496,11 @@ class OBSInstance extends InstanceBase {
 				current_transition: this.states.currentTransition,
 				transition_duration: this.states.transitionDuration,
 			})
+
+			if (!this.transitionList?.find((item) => item.id === data.transitionName)) {
+				await this.buildSceneTransitionList()
+				this.updateActionsFeedbacksVariables()
+			}
 		})
 		this.obs.on('CurrentSceneTransitionDurationChanged', (data) => {
 			this.states.transitionDuration = data.transitionDuration ?? '0'
@@ -1176,9 +1181,15 @@ class OBSInstance extends InstanceBase {
 		let currentTransition = await this.sendRequest('GetCurrentSceneTransition')
 
 		if (sceneTransitionList) {
+			if (Array.isArray(sceneTransitionList.transitions)) {
+				//Match the OBS dropdown order
+				sceneTransitionList.transitions.reverse()
+			}
 			sceneTransitionList.transitions?.forEach((transition) => {
 				this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
 			})
+
+			let transitionListVariable = this.transitionList?.map((item) => item.id) ?? []
 
 			this.states.currentTransition = currentTransition?.transitionName ?? 'None'
 			this.states.transitionDuration = currentTransition?.transitionDuration ?? '0'
@@ -1188,6 +1199,7 @@ class OBSInstance extends InstanceBase {
 				current_transition: this.states.currentTransition,
 				transition_duration: this.states.transitionDuration,
 				transition_active: 'False',
+				transition_list: transitionListVariable,
 			})
 		}
 	}
@@ -1358,10 +1370,10 @@ class OBSInstance extends InstanceBase {
 				case 'vlc_source': {
 					let file = ''
 					if (inputSettings?.playlist) {
-						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 						//Use first value in playlist until support for determining currently playing cue
 					} else if (inputSettings?.local_file) {
-						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
 					this.setVariableValues({ [`media_file_name_${name}`]: file })
 

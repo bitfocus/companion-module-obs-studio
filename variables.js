@@ -37,6 +37,7 @@ export function getVariables() {
 		{ variableId: 'current_transition', name: 'Current transition' },
 		{ variableId: 'transition_duration', name: 'Current transition duration' },
 		{ variableId: 'transition_active', name: 'Transition in progress' },
+		{ variableId: 'transition_list', name: 'List of available transition types' },
 		{ variableId: 'current_media_name', name: 'Source name for currently playing media source' },
 		{ variableId: 'current_media_time_elapsed', name: 'Time elapsed for currently playing media source' },
 		{
@@ -113,10 +114,10 @@ export function getVariables() {
 					)
 					let file = ''
 					if (inputSettings?.playlist) {
-						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 						//Use first value in playlist until support for determining currently playing cue
 					} else if (inputSettings?.local_file) {
-						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
 					this.setVariableValues({ [`media_file_name_${sourceName}`]: file })
 

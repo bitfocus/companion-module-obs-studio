@@ -368,10 +368,38 @@ export function getActions() {
 				id: 'transitions',
 				default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 				choices: this.transitionList,
+				allowCustom: true,
 			},
 		],
 		callback: async (action) => {
-			await this.sendRequest('SetCurrentSceneTransition', { transitionName: action.options.transitions })
+			let transition = await this.parseVariablesInString(action.options.transitions)
+			await this.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
+		},
+	}
+	actions['adjustTransitionType'] = {
+		name: 'Adjust Transition Type',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Adjust',
+				id: 'adjust',
+				choices: [
+					{ id: 'next', label: 'Next' },
+					{ id: 'previous', label: 'Previous' },
+				],
+				default: 'next',
+			},
+		],
+		callback: async (action) => {
+			let currentTransitionIndex = this.transitionList.findIndex((item) => item.id === this.states.currentTransition)
+			if (action.options.adjust === 'next') {
+				let nextTransition = this.transitionList[currentTransitionIndex + 1]?.id ?? this.transitionList[0].id
+				await this.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition })
+			} else if (action.options.adjust === 'previous') {
+				let previousTransition =
+					this.transitionList[currentTransitionIndex - 1]?.id ?? this.transitionList[this.transitionList.length - 1].id
+				await this.sendRequest('SetCurrentSceneTransition', { transitionName: previousTransition })
+			}
 		},
 	}
 	actions['set_transition_duration'] = {
@@ -1636,6 +1664,47 @@ export function getActions() {
 				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
 				mediaCursorOffset: action.options.scrubAmount * 1000,
 			})
+		},
+	}
+	actions['updateMediaLocalFile'] = {
+		name: 'Update Media Source Local File Path',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: 'currentMedia',
+				choices: this.mediaSourceListCurrentMedia,
+			},
+			{
+				type: 'textinput',
+				label: 'File Path',
+				id: 'mediaFilePath',
+				useVariables: true,
+				default: '',
+			},
+		],
+		callback: async (action) => {
+			let mediaFilePath = await this.parseVariablesInString(action.options.mediaFilePath)
+			let inputName = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
+			try {
+				let input = await this.sendRequest('GetInputSettings', {
+					inputName: inputName,
+				})
+				if (input?.inputSettings?.local_file) {
+					await this.sendRequest('SetInputSettings', {
+						inputName: inputName,
+						inputSettings: {
+							local_file: mediaFilePath,
+						},
+					})
+				} else {
+					this.log('warn', `Unable to update media file for ${inputName} because it is not a local file input`)
+				}
+			} catch (e) {
+				this.log('warn', `Error updating media file: ${e.message}`)
+				return
+			}
 		},
 	}
 	actions['open_projector'] = {
