@@ -1181,6 +1181,10 @@ class OBSInstance extends InstanceBase {
 		let currentTransition = await this.sendRequest('GetCurrentSceneTransition')
 
 		if (sceneTransitionList) {
+			if (Array.isArray(sceneTransitionList.transitions)) {
+				//Match the OBS dropdown order
+				sceneTransitionList.transitions.reverse()
+			}
 			sceneTransitionList.transitions?.forEach((transition) => {
 				this.transitionList.push({ id: transition.transitionName, label: transition.transitionName })
 			})
