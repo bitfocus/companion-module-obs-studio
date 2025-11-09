@@ -1026,8 +1026,8 @@ export function getActions() {
 		},
 	}
 	actions['resetCaptureDevice'] = {
-		name: 'Deactivate and reactivate video capture source',
-		description: 'Helps to reset it if your video is stuck',
+		name: 'Reset Video Capture Device',
+		description: 'Deactivates and Reactivates a Video Capture Source to reset it',
 		options: [
 			{
 				type: 'dropdown',
@@ -1038,11 +1038,10 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			if (this.sources[action.options.source]?.inputKind == 'dshow_input') {
-				// Setting "SetInputSettings" without changing a parameter seems to restart the source
-				await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: {  } })
+			if (this.sources[action.options.source]?.inputKind) {
+				await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: {} })
 			} else {
-				this.log('warn', 'The selected source is not a video capture source, but: ' + this.sources[action.options.source]?.inputKind)
+				this.log('warn', 'The selected source is not an input.')
 				return
 			}
 		},
