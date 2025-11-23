@@ -1205,6 +1205,7 @@ export function getActions() {
 				default: 100,
 				isVisibleExpression: `arrayIncludes($(options:props), 'backgroundOpacity')`,
 				description: 'GDI+ Text Sources Only',
+				useVariables: true,
 			},
 			{
 				type: 'checkbox',
