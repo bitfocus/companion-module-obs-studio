@@ -8,6 +8,15 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.14.0
+
+- New
+  - Action: Set Text Properties
+  - Aciton: Adjust Transition Type
+  - Action: Update Media Source Local File Path
+  - Action: Reset Video Capture Device (Deactivates and Reactivates a souece to reset it, helpful for resolving issues with capture devices on Windows )
+  - Variable: transition_list (List of available transition types)
+
 ### v3.13.2
 
 - Fix

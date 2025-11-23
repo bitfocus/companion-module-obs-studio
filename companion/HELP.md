@@ -30,6 +30,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Transition Type
 - Set Transition Duration
 - Adjust Transition Duration
+- Adjust Transition Type
 
 **Sources**
 
@@ -44,7 +45,9 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Audio Sync Offset
 - Set Audio Balance
 - Set Source Text
+- Set Text Properties
 - Refresh Browser Source
+- Reset Video Capture Device
 - Play / Pause Media
 - Restart Media
 - Stop Media
@@ -52,6 +55,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Previous Media
 - Set Media Time
 - Scrub Media
+- Update Media Source Local File Path
 - Open Source Properties Window
 - Open Source Filters Window
 - Open Source Interact Window
@@ -136,6 +140,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - scene_previous
 - current_transition
 - transition_duration
+- transition_list
 
 **Sources**
 
