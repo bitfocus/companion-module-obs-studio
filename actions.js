@@ -1416,7 +1416,7 @@ export function getActions() {
 			}
 			await this.sendRequest('SetInputSettings', {
 				inputName: source,
-				inputSettings: inputSettings || {},
+				inputSettings: inputSettings,
 			})
 		},
 	}
