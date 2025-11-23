@@ -115,7 +115,7 @@ class OBSInstance extends InstanceBase {
 	}
 
 	rgbaToObsColor(rgbaString) {
-		// OBS expects colors as 32-bit integers: (alpha << 24) | (red << 16) | (green << 8) | blue
+		// OBS expects colors as 32-bit integers: (alpha << 24) | (blue << 16) | (green << 8) | red
 		// Parse rgba(r, g, b, a) format
 		const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
 		if (!match) {
