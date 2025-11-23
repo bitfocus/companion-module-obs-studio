@@ -832,7 +832,7 @@ class OBSInstance extends InstanceBase {
 				this.inputKindList[inputKind] = {}
 				let defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
 				this.inputKindList[inputKind] = defaultSettings
-			}) ?? []
+			}) ?? [],
 		)
 	}
 
