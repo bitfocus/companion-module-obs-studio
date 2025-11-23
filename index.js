@@ -114,6 +114,24 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
+	rgbaToObsColor(rgbaString) {
+		// OBS expects colors as 32-bit integers: (alpha << 24) | (red << 16) | (green << 8) | blue
+		// Parse rgba(r, g, b, a) format
+		const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
+		if (!match) {
+			// If not in expected format, try to parse as integer or return 0
+			const parsed = parseInt(rgbaString, 10)
+			return isNaN(parsed) ? 0 : parsed
+		}
+
+		const r = parseInt(match[1], 10)
+		const g = parseInt(match[2], 10)
+		const b = parseInt(match[3], 10)
+		const a = match[4] ? Math.round(parseFloat(match[4]) * 255) : 255
+
+		return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0
+	}
+
 	organizeChoices() {
 		//Sort choices alphabetically
 		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
