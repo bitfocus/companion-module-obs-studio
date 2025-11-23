@@ -114,6 +114,24 @@ class OBSInstance extends InstanceBase {
 		}
 	}
 
+	rgbaToObsColor(rgbaString) {
+		// OBS expects colors as 32-bit integers: (alpha << 24) | (blue << 16) | (green << 8) | red
+		// Parse rgba(r, g, b, a) format
+		const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
+		if (!match) {
+			// If not in expected format, try to parse as integer or return 0
+			const parsed = parseInt(rgbaString, 10)
+			return isNaN(parsed) ? 0 : parsed
+		}
+
+		const r = parseInt(match[1], 10)
+		const g = parseInt(match[2], 10)
+		const b = parseInt(match[3], 10)
+		const a = match[4] ? Math.round(parseFloat(match[4]) * 255) : 255
+
+		return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0
+	}
+
 	organizeChoices() {
 		//Sort choices alphabetically
 		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
@@ -161,6 +179,7 @@ class OBSInstance extends InstanceBase {
 		this.outputs = {}
 		this.sceneItems = {}
 		this.groups = {}
+		this.inputKindList = {}
 		//Source Types
 		this.mediaSources = {}
 		this.imageSources = {}
@@ -789,6 +808,8 @@ class OBSInstance extends InstanceBase {
 			this.buildMonitorList()
 			this.getVideoSettings()
 			this.getReplayBufferStatus()
+			this.getInputKindList()
+
 			return true
 		} catch (error) {
 			this.log('debug', error)
@@ -802,6 +823,17 @@ class OBSInstance extends InstanceBase {
 			this.hotkeyNames.push({ id: hotkey, label: hotkey })
 		})
 		this.updateActionsFeedbacksVariables()
+	}
+
+	async getInputKindList() {
+		let inputKindList = await this.sendRequest('GetInputKindList')
+		await Promise.all(
+			inputKindList?.inputKinds?.map(async (inputKind) => {
+				this.inputKindList[inputKind] = {}
+				let defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
+				this.inputKindList[inputKind] = defaultSettings
+			}) ?? []
+		)
 	}
 
 	async buildProfileList() {
@@ -1306,7 +1338,13 @@ class OBSInstance extends InstanceBase {
 
 	buildInputSettings(sourceName, inputKind, inputSettings) {
 		let name = this.sources[sourceName].validName ?? sourceName
-		this.sources[sourceName].settings = inputSettings
+
+		if (this.inputKindList[inputKind]?.defaultInputSettings) {
+			inputSettings = { ...this.inputKindList[inputKind].defaultInputSettings, ...inputSettings }
+			this.sources[sourceName].settings = inputSettings
+		} else {
+			this.sources[sourceName].settings = inputSettings
+		}
 
 		switch (inputKind) {
 			case 'text_ft2_source_v2':
@@ -1347,7 +1385,10 @@ class OBSInstance extends InstanceBase {
 
 	updateInputSettings(sourceName, inputSettings) {
 		if (this.sources[sourceName]) {
-			this.sources[sourceName].settings = inputSettings
+			this.sources[sourceName].settings = {
+				...(this.sources[sourceName].settings || {}),
+				...(inputSettings || {}),
+			}
 			let name = this.sources[sourceName].validName ?? sourceName
 			let inputKind = this.sources[sourceName].inputKind
 
