@@ -827,11 +827,13 @@ class OBSInstance extends InstanceBase {
 
 	async getInputKindList() {
 		let inputKindList = await this.sendRequest('GetInputKindList')
-		inputKindList?.inputKinds?.forEach(async (inputKind) => {
-			this.inputKindList[inputKind] = {}
-			let defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
-			this.inputKindList[inputKind] = defaultSettings
-		})
+		await Promise.all(
+			inputKindList?.inputKinds?.map(async (inputKind) => {
+				this.inputKindList[inputKind] = {}
+				let defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
+				this.inputKindList[inputKind] = defaultSettings
+			}) ?? []
+		)
 	}
 
 	async buildProfileList() {
