@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "3.14.0",
+	"version": "3.15.0",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
@@ -21,11 +21,11 @@
 	"devDependencies": {
 		"@companion-module/tools": "^2.4.2",
 		"eslint": "^9.39.1",
-		"prettier": "^3.6.2"
+		"prettier": "^3.7.3"
 	},
 	"engines": {
 		"node": "^22.12"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.11.0"
+	"packageManager": "yarn@4.12.0"
 }

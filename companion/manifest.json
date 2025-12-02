@@ -14,7 +14,7 @@
 		},
 		{
 			"name": "Bryce Seifert",
-			"email": "bryceapps@icloud.com"
+			"email": "contact@bryce.fyi"
 		}
 	],
 	"legacyIds": [],
@@ -26,5 +26,5 @@
 	},
 	"manufacturer": "OBS",
 	"products": ["Studio"],
-	"keywords": ["Stream"]
+	"keywords": ["Stream", "Live", "Broadcast", "Streaming", "Switcher"]
 }
