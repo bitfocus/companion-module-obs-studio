@@ -490,9 +490,33 @@ export function getActions() {
 				id: 'streamType',
 				choices: [
 					{ id: 'rtmp_common', label: 'Preset Service' },
-					{ id: 'rtmp_custom', label: 'Custom' },
+					{ id: 'rtmp_custom', label: 'Custom RTMP' },
+					{ id: 'whip_custom', label: 'Custom WHIP' },
 				],
 				default: 'rtmp_custom',
+			},
+			{
+				type: 'dropdown',
+				label: 'Service',
+				id: 'service',
+				choices: [
+					{ id: 'Twitter', label: 'Twitter' },
+					{ id: 'Restream.io', label: 'Restream.io' },
+					{ id: 'YouTube - RTMPS', label: 'YouTube - RTMPS' },
+					{ id: 'Twitch', label: 'Twitch' },
+					{ id: 'Facebook Live', label: 'Facebook Live' },
+					{ id: 'Custom', label: 'Custom' },
+				],
+				default: 'Twitch',
+				isVisibleExpression: `$(options:streamType) === 'rtmp_common'`,
+			},
+			{
+				type: 'textinput',
+				label: 'Service Name',
+				id: 'serviceName',
+				default: 'Twitch',
+				useVariables: true,
+				isVisibleExpression: `$(options:streamType) === 'rtmp_common' && $(options:service) === 'Custom'`,
 			},
 			{
 				type: 'textinput',
@@ -500,7 +524,7 @@ export function getActions() {
 				id: 'streamURL',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType === 'rtmp_custom',
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' || $(options:streamType) === 'whip_custom'`,
 			},
 			{
 				type: 'textinput',
@@ -508,13 +532,14 @@ export function getActions() {
 				id: 'streamKey',
 				default: '',
 				useVariables: true,
+				isVisibleExpression: `$(options:streamType) === 'rtmp_common' || $(options:streamType) === 'rtmp_custom'`,
 			},
 			{
 				type: 'checkbox',
 				label: 'Use Authentication',
 				id: 'streamAuth',
 				default: false,
-				isVisible: (options) => options.streamType === 'rtmp_custom',
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom'`,
 			},
 			{
 				type: 'textinput',
@@ -522,7 +547,7 @@ export function getActions() {
 				id: 'streamUserName',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType === 'rtmp_custom',
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:streamAuth)`,
 			},
 			{
 				type: 'textinput',
@@ -530,23 +555,49 @@ export function getActions() {
 				id: 'streamPassword',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType === 'rtmp_custom',
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:streamAuth)`,
+			},
+			{
+				type: 'textinput',
+				id: 'bearerToken',
+				label: 'Bearer Token (Optional)',
+				default: '',
+				useVariables: true,
+				isVisibleExpression: `$(options:streamType) === 'whip_custom'`,
 			},
 		],
 		callback: async (action) => {
-			let streamServiceSettings = {
-				key: await this.parseVariablesInString(action.options.streamKey),
-				server: await this.parseVariablesInString(action.options.streamURL),
-				use_auth: action.options.streamAuth,
-				username: await this.parseVariablesInString(action.options.streamUserName),
-				password: await this.parseVariablesInString(action.options.streamPassword),
+			let streamServiceSettings = {}
+
+			if (action.options.streamType === 'rtmp_common') {
+				streamServiceSettings.key = await this.parseVariablesInString(action.options.streamKey)
+				streamServiceSettings.service =
+					action.options.service === 'Custom'
+						? await this.parseVariablesInString(action.options.serviceName)
+						: action.options.service
 			}
+
+			if (action.options.streamType === 'rtmp_custom') {
+				streamServiceSettings.server = await this.parseVariablesInString(action.options.streamURL)
+				streamServiceSettings.key = await this.parseVariablesInString(action.options.streamKey)
+				streamServiceSettings.use_auth = action.options.streamAuth
+				streamServiceSettings.username = await this.parseVariablesInString(action.options.streamUserName)
+				streamServiceSettings.password = await this.parseVariablesInString(action.options.streamPassword)
+			}
+
+			if (action.options.streamType === 'whip_custom') {
+				streamServiceSettings.server = await this.parseVariablesInString(action.options.streamURL)
+				streamServiceSettings.service = 'WHIP'
+				streamServiceSettings.bearer_token = await this.parseVariablesInString(action.options.bearerToken)
+			}
+
 			let streamServiceType = action.options.streamType
 
 			await this.sendRequest('SetStreamServiceSettings', {
 				streamServiceType: streamServiceType,
 				streamServiceSettings: streamServiceSettings,
 			})
+			this.getStreamStatus()
 		},
 	}
 	actions['SendStreamCaption'] = {

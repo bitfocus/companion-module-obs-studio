@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.15.0
+
+- New
+  - Add WHIP options to Set Stream Settings action
+
 ### v3.14.0
 
 - New

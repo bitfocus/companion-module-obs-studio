@@ -181,4 +181,26 @@ export default [
 		}
 		return changes
 	},
+	function v3_15_0(context, props) {
+		let changes = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+		for (const action of props.actions) {
+			if (action.actionId === 'set_stream_settings') {
+				if (!action.options.service) {
+					action.options.service = 'Twitch'
+				}
+				if (!action.options.serviceName) {
+					action.options.serviceName = 'Twitch'
+				}
+				if (!action.options.bearerToken) {
+					action.options.bearerToken = ''
+				}
+				changes.updatedActions.push(action)
+			}
+		}
+		return changes
+	},
 ]
