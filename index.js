@@ -1,7 +1,7 @@
 import { InstanceBase, InstanceStatus, Regex, runEntrypoint } from '@companion-module/base'
 import { getActions } from './actions.js'
 import { getPresets } from './presets.js'
-import { getVariables } from './variables.js'
+import { getVariables, updateVariableValues } from './variables.js'
 import { getFeedbacks } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
 
@@ -53,7 +53,7 @@ class OBSInstance extends InstanceBase {
 		]
 	}
 
-	async configUpdated(config) {
+	configUpdated(config) {
 		this.config = config
 		this.init(config)
 	}
@@ -66,6 +66,7 @@ class OBSInstance extends InstanceBase {
 	initVariables() {
 		const variables = getVariables.bind(this)()
 		this.setVariableDefinitions(variables)
+		updateVariableValues.bind(this)()
 	}
 
 	initFeedbacks() {
@@ -267,13 +268,13 @@ class OBSInstance extends InstanceBase {
 					this.startStatsPoll()
 
 					//Build General Parameters
-					this.buildProfileList()
-					this.buildSceneCollectionList()
+					await this.buildProfileList()
+					await this.buildSceneCollectionList()
 
 					//Build Scene Collection Parameters
-					this.buildSceneTransitionList()
-					this.buildSpecialInputs()
-					this.buildSceneList()
+					await this.buildSceneTransitionList()
+					await this.buildSpecialInputs()
+					await this.buildSceneList()
 				} else {
 					//throw an error if initial info returns false.
 					throw new Error('could not get OBS info')
@@ -563,9 +564,17 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('SceneItemRemoved', (data) => {
 			if (this.states.sceneCollectionChanging === false) {
-				let item = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-				if (item > -1) {
-					this.sceneItems[data.sceneName].splice(item, 1)
+				if (this.sceneItems[data.sceneName]) {
+					let item = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+					if (item > -1) {
+						this.sceneItems[data.sceneName].splice(item, 1)
+					}
+				}
+				if (this.groups[data.sceneName]) {
+					let item = this.groups[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
+					if (item > -1) {
+						this.groups[data.sceneName].splice(item, 1)
+					}
 				}
 			}
 		})
@@ -573,10 +582,14 @@ class OBSInstance extends InstanceBase {
 		this.obs.on('SceneItemEnableStateChanged', (data) => {
 			if (this.groups[data.sceneName]) {
 				let sceneItem = this.groups[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-				this.groups[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
-			} else {
+				if (sceneItem > -1) {
+					this.groups[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+				}
+			} else if (this.sceneItems[data.sceneName]) {
 				let sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-				this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+				if (sceneItem > -1) {
+					this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+				}
 			}
 			this.checkFeedbacks('scene_item_active_in_scene')
 		})
@@ -600,7 +613,7 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('RecordStateChanged', (data) => {
 			if (data.outputActive === true) {
-				this.states.recording = 'Recording'
+				this.states.recording = 'Recording '
 			} else {
 				if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
 					this.states.recording = 'Paused'
@@ -803,12 +816,12 @@ class OBSInstance extends InstanceBase {
 			let studioMode = await this.sendRequest('GetStudioModeEnabled')
 			this.states.studioMode = studioMode.studioModeEnabled ? true : false
 
-			this.buildHotkeyList()
-			this.buildOutputList()
-			this.buildMonitorList()
-			this.getVideoSettings()
-			this.getReplayBufferStatus()
-			this.getInputKindList()
+			await this.buildHotkeyList()
+			await this.buildOutputList()
+			await this.buildMonitorList()
+			await this.getVideoSettings()
+			await this.getReplayBufferStatus()
+			await this.getInputKindList()
 
 			return true
 		} catch (error) {
@@ -869,21 +882,21 @@ class OBSInstance extends InstanceBase {
 	async buildSpecialInputs() {
 		let specialInputs = await this.sendRequest('GetSpecialInputs')
 		if (specialInputs) {
-			for (let x in specialInputs) {
-				let input = specialInputs[x]
+			await Promise.all(
+				Object.values(specialInputs).map(async (input) => {
+					if (input) {
+						this.sources[input] = {
+							sourceName: input,
+							validName: this.validName(input),
+						}
 
-				if (input) {
-					this.sources[input] = {
-						sourceName: input,
-						validName: this.validName(input),
+						if (!this.sourceChoices.find((item) => item.id === input)) {
+							this.sourceChoices.push({ id: input, label: input })
+						}
+						await this.getAudioSources(input)
 					}
-
-					if (!this.sourceChoices.find((item) => item.id === input)) {
-						this.sourceChoices.push({ id: input, label: input })
-					}
-					this.getAudioSources(input)
-				}
-			}
+				}),
+			)
 		}
 	}
 
@@ -1079,13 +1092,15 @@ class OBSInstance extends InstanceBase {
 				scene_active: this.states.programScene,
 			})
 
-			this.scenes.forEach((scene) => {
-				let sceneName = scene.sceneName
-				this.sceneChoices.push({ id: sceneName, label: sceneName })
-				this.buildSourceList(sceneName)
+			await Promise.all(
+				this.scenes.map(async (scene) => {
+					let sceneName = scene.sceneName
+					this.sceneChoices.push({ id: sceneName, label: sceneName })
+					await this.buildSourceList(sceneName)
 
-				this.getSourceFilters(sceneName)
-			})
+					await this.getSourceFilters(sceneName)
+				}),
+			)
 			this.updateActionsFeedbacksVariables()
 		}
 	}
@@ -1099,17 +1114,21 @@ class OBSInstance extends InstanceBase {
 			let batch = []
 			for (const sceneItem of data.sceneItems) {
 				let sourceName = sceneItem.sourceName
-				this.sources[sourceName] = sceneItem
-
-				//Generate name that can be used as valid Variable IDs
-				this.sources[sourceName].validName = this.validName(sceneItem.sourceName)
+				if (!this.sources[sourceName]) {
+					this.sources[sourceName] = {
+						sourceName: sourceName,
+						validName: this.validName(sourceName),
+						isGroup: sceneItem.isGroup,
+						inputKind: sceneItem.inputKind,
+					}
+				}
 
 				if (!this.sourceChoices.find((item) => item.id === sourceName)) {
 					this.sourceChoices.push({ id: sourceName, label: sourceName })
 				}
 
 				if (sceneItem.isGroup) {
-					this.getGroupInfo(sourceName)
+					await this.getGroupInfo(sourceName)
 				}
 
 				batch.push(
@@ -1131,7 +1150,7 @@ class OBSInstance extends InstanceBase {
 						requestData: { inputName: sourceName },
 					})
 				}
-				this.getAudioSources(sourceName)
+				await this.getAudioSources(sourceName)
 			}
 
 			let sourceBatch = await this.sendBatch(batch)
@@ -1168,7 +1187,7 @@ class OBSInstance extends InstanceBase {
 					}
 				}
 				this.checkFeedbacks('scene_item_active')
-				this.updateActionsFeedbacksVariables()
+				//this.updateActionsFeedbacksVariables()
 			}
 		}
 	}
@@ -1177,32 +1196,37 @@ class OBSInstance extends InstanceBase {
 		let data = await this.sendRequest('GetGroupSceneItemList', { sceneName: groupName })
 		if (data) {
 			this.groups[groupName] = data.sceneItems
-			data.sceneItems?.forEach(async (sceneItem) => {
-				let sourceName = sceneItem.sourceName
-				this.sources[sourceName] = sceneItem
-				this.sources[sourceName].validName = this.validName(sourceName)
-
-				//Flag that this source is part of a group
-				this.sources[sourceName].groupedSource = true
-				this.sources[sourceName].groupName = groupName
-
-				if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-					this.sourceChoices.push({ id: sourceName, label: sourceName })
-				}
-
-				this.getSourceFilters(sourceName)
-				this.getAudioSources(sourceName)
-
-				if (sceneItem.inputKind) {
-					let input = await this.sendRequest('GetInputSettings', { inputName: sourceName })
-
-					if (input.inputSettings) {
-						this.buildInputSettings(sourceName, sceneItem.inputKind, input.inputSettings)
-						this.updateActionsFeedbacksVariables()
+			await Promise.all(
+				data.sceneItems?.map(async (sceneItem) => {
+					let sourceName = sceneItem.sourceName
+					if (!this.sources[sourceName]) {
+						this.sources[sourceName] = {
+							sourceName: sourceName,
+							validName: this.validName(sourceName),
+							inputKind: sceneItem.inputKind,
+						}
 					}
-				}
-			})
-			this.updateActionsFeedbacksVariables()
+
+					//Flag that this source is part of a group
+					this.sources[sourceName].groupedSource = true
+					this.sources[sourceName].groupName = groupName
+
+					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
+						this.sourceChoices.push({ id: sourceName, label: sourceName })
+					}
+
+					await this.getSourceFilters(sourceName)
+					await this.getAudioSources(sourceName)
+
+					if (sceneItem.inputKind) {
+						let input = await this.sendRequest('GetInputSettings', { inputName: sourceName })
+
+						if (input.inputSettings) {
+							this.buildInputSettings(sourceName, sceneItem.inputKind, input.inputSettings)
+						}
+					}
+				}) ?? [],
+			)
 		}
 	}
 
@@ -1237,15 +1261,15 @@ class OBSInstance extends InstanceBase {
 	}
 
 	//Scene and Source Actions
-	addScene(sceneName) {
+	async addScene(sceneName) {
 		this.sceneChoices.push({ id: sceneName, label: sceneName })
-		this.buildSourceList(sceneName)
+		await this.buildSourceList(sceneName)
 		this.updateActionsFeedbacksVariables()
 	}
 
 	removeScene(sceneName) {
 		let scene = this.sceneChoices.findIndex((item) => item.id === sceneName)
-		if (scene) {
+		if (scene !== -1) {
 			this.sceneChoices.splice(scene, 1)
 		}
 		delete this.sceneItems[sceneName]
@@ -1441,27 +1465,22 @@ class OBSInstance extends InstanceBase {
 			data.filters.forEach((filter) => {
 				if (!this.filterList.find((item) => item.id === filter.filterName)) {
 					this.filterList.push({ id: filter.filterName, label: filter.filterName })
-					this.updateActionsFeedbacksVariables()
 				}
 			})
 		}
 	}
 
 	//Audio Sources
-	getAudioSources(sourceName) {
-		this.obs
-			.call('GetInputAudioTracks', { inputName: sourceName })
-			.then((data) => {
-				if (!this.audioSourceList.find((item) => item.id === sourceName)) {
-					this.audioSourceList.push({ id: sourceName, label: sourceName })
-					this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
-					this.getSourceAudio(sourceName)
-					this.updateActionsFeedbacksVariables()
-				}
-			})
-			.catch(() => {
-				//Ignore, this source is not an audio source
-			})
+	async getAudioSources(sourceName) {
+		try {
+			await this.obs.call('GetInputAudioTracks', { inputName: sourceName })
+			if (!this.audioSourceList.find((item) => item.id === sourceName)) {
+				this.audioSourceList.push({ id: sourceName, label: sourceName })
+				await this.getSourceAudio(sourceName)
+			}
+		} catch {
+			//Ignore, this source is not an audio source
+		}
 	}
 
 	async getSourceAudio(sourceName) {
@@ -1511,15 +1530,19 @@ class OBSInstance extends InstanceBase {
 				switch (type) {
 					case 'GetInputMute':
 						this.sources[sourceName].inputMuted = data.inputMuted
+						this.setVariableValues({ [`mute_${validName}`]: data.inputMuted ? 'Muted' : 'Unmuted' })
 						break
 					case 'GetInputVolume':
 						this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+						this.setVariableValues({ [`volume_${validName}`]: this.sources[sourceName].inputVolume + ' dB' })
 						break
 					case 'GetInputAudioBalance':
 						this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+						this.setVariableValues({ [`balance_${validName}`]: this.sources[sourceName].inputAudioBalance })
 						break
 					case 'GetInputAudioSyncOffset':
 						this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
+						this.setVariableValues({ [`sync_offset_${validName}`]: data.inputAudioSyncOffset + 'ms' })
 						break
 					case 'GetInputAudioMonitorType': {
 						this.sources[sourceName].monitorType = data.monitorType
