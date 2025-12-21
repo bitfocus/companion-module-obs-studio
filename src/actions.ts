@@ -1,7 +1,9 @@
+import { CompanionActionDefinitions } from '@companion-module/base'
+import type { OBSInstance } from './main.js'
 import hotkeys from './hotkeys.js'
 
-export function getActions() {
-	let actions = {}
+export function getActions(this: OBSInstance): CompanionActionDefinitions {
+	const actions: CompanionActionDefinitions = {}
 
 	actions['enable_studio_mode'] = {
 		name: 'Enable Studio Mode',
@@ -80,7 +82,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			const chapterName = await this.parseVariablesInString(action.options.chapterName)
+			const chapterName = action.options.chapterName as string
 			await this.sendRequest('CreateRecordChapter', { chapterName: chapterName })
 		},
 	}
@@ -153,8 +155,8 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			if (action.options.scene === 'customSceneName') {
-				const scene = await this.parseVariablesInString(action.options.customSceneName)
+			if (action.options.scene === 'custom') {
+				const scene = action.options.customSceneName as string
 				await this.sendRequest('SetCurrentProgramScene', { sceneName: scene })
 			} else {
 				await this.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
@@ -179,13 +181,39 @@ export function getActions() {
 				default: '',
 				isVisible: (options) => options.scene === 'customSceneName',
 			},
+			{
+				type: 'checkbox',
+				label: 'Revert to preview scene after transition',
+				id: 'revert',
+				default: false,
+			},
+			{
+				type: 'number',
+				label: 'Revert Transition Duration (in ms)',
+				id: 'transition_time',
+				default: 500,
+				min: 0,
+				max: 60 * 1000, //max is required by api
+				range: false,
+				isVisible: (options) => options.revert === true,
+			},
 		],
 		callback: async (action) => {
-			if (action.options.scene === 'customSceneName') {
-				const scene = await this.parseVariablesInString(action.options.customSceneName)
+			if (action.options.scene === 'custom') {
+				const scene = action.options.customSceneName as string
 				await this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
 				await this.sendRequest('SetCurrentPreviewScene', { sceneName: action.options.scene })
+			}
+
+			if (action.options.revert && this.states.programScene !== undefined) {
+				const revertTransitionDuration = action.options.transition_time as number
+				setTimeout(
+					() => {
+						void this.sendRequest('SetCurrentPreviewScene', { sceneName: this.states.programScene })
+					},
+					(revertTransitionDuration ?? 0) + 50,
+				)
 			}
 		},
 	}
@@ -210,9 +238,11 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let scene = action.options.scene
-			if (action.options.scene === 'customSceneName') {
-				scene = await this.parseVariablesInString(action.options.customSceneName)
+			let scene = action.options.scene as string
+			if (action.options.scene === 'custom') {
+				scene = action.options.customSceneName as string
+			} else if (action.options.scene === 'program') {
+				scene = this.states.programScene ?? ''
 			}
 
 			if (this.states.previewScene == scene && this.states.programScene != scene) {
@@ -226,17 +256,17 @@ export function getActions() {
 		name: 'Preview Previous Scene',
 		options: [],
 		callback: async () => {
-			if (this.states.previewScene) {
-				let previewScene = this.scenes.find((scene) => scene.sceneName === this.states.previewScene)
-				let previousIndex = previewScene?.sceneIndex + 1
-				let previousScene = this.scenes.find((scene) => scene.sceneIndex === previousIndex)
+			if (this.states.previewSceneIndex !== undefined) {
+				const previewSceneIndex = this.states.previewSceneIndex
+				const previousIndex = previewSceneIndex + 1 // Assuming higher index means "previous" in the list order
+				const previousScene = this.states.scenes.find((s: any) => s.sceneIndex === previousIndex)
 				if (previousScene) {
 					await this.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
 				} else {
-					return
+					this.log('debug', 'No previous scene found or already at the end of the list.')
 				}
 			} else {
-				return
+				this.log('warn', 'Preview scene index is not available.')
 			}
 		},
 	}
@@ -244,17 +274,17 @@ export function getActions() {
 		name: 'Preview Next Scene',
 		options: [],
 		callback: async () => {
-			if (this.states.previewScene) {
-				let previewScene = this.scenes.find((scene) => scene.sceneName === this.states.previewScene)
-				let nextIndex = previewScene?.sceneIndex - 1
-				let nextScene = this.scenes.find((scene) => scene.sceneIndex === nextIndex)
+			if (this.states.previewSceneIndex !== undefined) {
+				const previewSceneIndex = this.states.previewSceneIndex
+				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
+				const nextScene = this.states.scenes.find((s: any) => s.sceneIndex === nextIndex)
 				if (nextScene) {
 					await this.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
 				} else {
-					return
+					this.log('debug', 'No next scene found or already at the beginning of the list.')
 				}
 			} else {
-				return
+				this.log('warn', 'Preview scene index is not available.')
 			}
 		},
 	}
@@ -289,6 +319,7 @@ export function getActions() {
 				type: 'checkbox',
 				label: 'Custom Duration',
 				id: 'customDuration',
+				default: false,
 			},
 			{
 				type: 'number',
@@ -305,32 +336,38 @@ export function getActions() {
 			if (action.options.transition == 'Default' && !action.options.customDuration) {
 				await this.sendRequest('TriggerStudioModeTransition')
 			} else {
-				let transitionWaitTime
-				let transitionDuration
-				let revertTransition = this.states.currentTransition
-				let revertTransitionDuration = this.states.transitionDuration > 0 ? this.states.transitionDuration : 500
+				const revertTransition = this.states.currentTransition ?? 'Cut'
+				const revertTransitionDuration =
+					(this.states.transitionDuration ?? 0) > 0 ? (this.states.transitionDuration as number) : 500
+				let transitionWaitTime: number
+				let transitionDuration: number
 
 				if (action.options.transition == 'Cut') {
 					transitionWaitTime = 100
 				} else if (action.options.transition != 'Cut' && action.options.customDuration) {
 					transitionWaitTime =
-						action.options.transition_time > 50 ? action.options.transition_time + 100 : revertTransitionDuration + 100
+						(action.options.transition_time as number) > 50
+							? (action.options.transition_time as number) + 100
+							: revertTransitionDuration + 100
 				} else {
 					transitionWaitTime = revertTransitionDuration + 100
 				}
 
 				if (action.options.customDuration) {
 					transitionDuration =
-						action.options.transition_time != null ? action.options.transition_time : revertTransitionDuration
+						action.options.transition_time != null
+							? (action.options.transition_time as number)
+							: revertTransitionDuration
 				} else {
 					transitionDuration = revertTransitionDuration
 				}
 
 				if (!this.states.transitionActive) {
+					this.states.transitionActive = true
 					await this.sendBatch([
 						{
 							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: action.options.transition },
+							requestData: { transitionName: action.options.transition as string },
 						},
 						{
 							requestType: 'SetCurrentSceneTransitionDuration',
@@ -372,7 +409,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let transition = await this.parseVariablesInString(action.options.transitions)
+			const transition = action.options.transitions as string
 			await this.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
 		},
 	}
@@ -391,12 +428,12 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let currentTransitionIndex = this.transitionList.findIndex((item) => item.id === this.states.currentTransition)
+			const currentTransitionIndex = this.transitionList.findIndex((item) => item.id === this.states.currentTransition)
 			if (action.options.adjust === 'next') {
-				let nextTransition = this.transitionList[currentTransitionIndex + 1]?.id ?? this.transitionList[0].id
+				const nextTransition = this.transitionList[currentTransitionIndex + 1]?.id ?? this.transitionList[0].id
 				await this.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition })
 			} else if (action.options.adjust === 'previous') {
-				let previousTransition =
+				const previousTransition =
 					this.transitionList[currentTransitionIndex - 1]?.id ?? this.transitionList[this.transitionList.length - 1].id
 				await this.sendRequest('SetCurrentSceneTransition', { transitionName: previousTransition })
 			}
@@ -422,7 +459,7 @@ export function getActions() {
 				label: 'Transition time variable (in ms)',
 				id: 'variableValue',
 				default: '500',
-				isVisible: (options) => options.useVariable,
+				isVisible: (options) => options.useVariable === true,
 			},
 			{
 				type: 'checkbox',
@@ -432,10 +469,9 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let duration = null
+			let duration: number | null = null
 			if (action.options.useVariable) {
-				duration = await this.parseVariablesInString(action.options.variableValue)
-				duration = parseInt(duration)
+				duration = parseInt(action.options.variableValue as string)
 				if (duration >= 50 && duration <= 20000) {
 					//Pass duration as is
 				} else {
@@ -443,9 +479,11 @@ export function getActions() {
 					return
 				}
 			} else {
-				duration = action.options.duration
+				duration = action.options.duration as number
 			}
-			await this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+			if (duration !== null) {
+				await this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+			}
 		},
 	}
 	actions['adjustTransitionDuration'] = {
@@ -462,9 +500,9 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			if (this.states.transitionDuration) {
-				let duration = null
-				duration = this.states.transitionDuration + action.options.duration
+			if (this.states.transitionDuration !== undefined) {
+				let duration: number | null = null
+				duration = this.states.transitionDuration + (action.options.duration as number)
 				if (duration >= 50 && duration <= 20000) {
 					//Pass duration as is
 				} else if (duration < 50) {
@@ -474,7 +512,9 @@ export function getActions() {
 				} else {
 					duration = this.states.transitionDuration
 				}
-				await this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+				if (duration !== null) {
+					await this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+				}
 			} else {
 				this.log('warn', 'Unable to adjust transition duration')
 				return
@@ -508,7 +548,7 @@ export function getActions() {
 					{ id: 'Custom', label: 'Custom' },
 				],
 				default: 'Twitch',
-				isVisibleExpression: `$(options:streamType) === 'rtmp_common'`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_common'`,
 			},
 			{
 				type: 'textinput',
@@ -516,7 +556,7 @@ export function getActions() {
 				id: 'serviceName',
 				default: 'Twitch',
 				useVariables: true,
-				isVisibleExpression: `$(options:streamType) === 'rtmp_common' && $(options:service) === 'Custom'`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_common' && $(options: service) === 'Custom'`,
 			},
 			{
 				type: 'textinput',
@@ -524,7 +564,7 @@ export function getActions() {
 				id: 'streamURL',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' || $(options:streamType) === 'whip_custom'`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_custom' || $(options: streamType) === 'whip_custom'`,
 			},
 			{
 				type: 'textinput',
@@ -532,14 +572,14 @@ export function getActions() {
 				id: 'streamKey',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: `$(options:streamType) === 'rtmp_common' || $(options:streamType) === 'rtmp_custom'`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_common' || $(options: streamType) === 'rtmp_custom'`,
 			},
 			{
 				type: 'checkbox',
 				label: 'Use Authentication',
 				id: 'streamAuth',
 				default: false,
-				isVisibleExpression: `$(options:streamType) === 'rtmp_custom'`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_custom'`,
 			},
 			{
 				type: 'textinput',
@@ -547,7 +587,7 @@ export function getActions() {
 				id: 'streamUserName',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:streamAuth)`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_custom' && $(options: streamAuth)`,
 			},
 			{
 				type: 'textinput',
@@ -555,7 +595,7 @@ export function getActions() {
 				id: 'streamPassword',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:streamAuth)`,
+				isVisibleExpression: `$(options: streamType) === 'rtmp_custom' && $(options: streamAuth)`,
 			},
 			{
 				type: 'textinput',
@@ -563,41 +603,36 @@ export function getActions() {
 				label: 'Bearer Token (Optional)',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: `$(options:streamType) === 'whip_custom'`,
+				isVisibleExpression: `$(options: streamType) === 'whip_custom'`,
 			},
 		],
 		callback: async (action) => {
-			let streamServiceSettings = {}
+			const streamServiceSettings: Record<string, any> = {}
+			const streamType = action.options.streamType as string
 
-			if (action.options.streamType === 'rtmp_common') {
-				streamServiceSettings.key = await this.parseVariablesInString(action.options.streamKey)
+			if (streamType === 'rtmp_common') {
+				streamServiceSettings.key = action.options.streamKey as string
 				streamServiceSettings.service =
 					action.options.service === 'Custom'
-						? await this.parseVariablesInString(action.options.serviceName)
-						: action.options.service
-			}
-
-			if (action.options.streamType === 'rtmp_custom') {
-				streamServiceSettings.server = await this.parseVariablesInString(action.options.streamURL)
-				streamServiceSettings.key = await this.parseVariablesInString(action.options.streamKey)
-				streamServiceSettings.use_auth = action.options.streamAuth
-				streamServiceSettings.username = await this.parseVariablesInString(action.options.streamUserName)
-				streamServiceSettings.password = await this.parseVariablesInString(action.options.streamPassword)
-			}
-
-			if (action.options.streamType === 'whip_custom') {
-				streamServiceSettings.server = await this.parseVariablesInString(action.options.streamURL)
+						? (action.options.serviceName as string)
+						: (action.options.service as string)
+			} else if (streamType === 'rtmp_custom') {
+				streamServiceSettings.server = action.options.streamURL as string
+				streamServiceSettings.key = action.options.streamKey as string
+				streamServiceSettings.use_auth = action.options.streamAuth as boolean
+				streamServiceSettings.username = action.options.streamUserName as string
+				streamServiceSettings.password = action.options.streamPassword as string
+			} else if (streamType === 'whip_custom') {
+				streamServiceSettings.server = action.options.streamURL as string
 				streamServiceSettings.service = 'WHIP'
-				streamServiceSettings.bearer_token = await this.parseVariablesInString(action.options.bearerToken)
+				streamServiceSettings.bearer_token = action.options.bearerToken as string
 			}
-
-			let streamServiceType = action.options.streamType
 
 			await this.sendRequest('SetStreamServiceSettings', {
-				streamServiceType: streamServiceType,
+				streamServiceType: streamType,
 				streamServiceSettings: streamServiceSettings,
 			})
-			this.getStreamStatus()
+			void this.getStreamStatus()
 		},
 	}
 	actions['SendStreamCaption'] = {
@@ -613,8 +648,8 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			if (this.states.streaming) {
-				let captionText = await this.parseVariablesInString(action.options.customSceneName)
-				this.sendRequest('SendStreamCaption', { captionText: captionText })
+				const captionText = action.options.text as string
+				await this.sendRequest('SendStreamCaption', { captionText: captionText })
 			}
 		},
 	}
@@ -648,7 +683,7 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			await this.sendRequest('SetInputMute', {
-				inputName: action.options.source,
+				inputName: action.options.source as string,
 				inputMuted: action.options.mute == 'true' ? true : false,
 			})
 		},
@@ -665,7 +700,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			await this.sendRequest('ToggleInputMute', { inputName: action.options.source })
+			await this.sendRequest('ToggleInputMute', { inputName: action.options.source as string })
 		},
 	}
 	actions['set_volume'] = {
@@ -691,8 +726,46 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			await this.sendRequest('SetInputVolume', {
-				inputName: action.options.source,
-				inputVolumeDb: action.options.volume,
+				inputName: action.options.source as string,
+				inputVolumeDb: action.options.volume as number,
+			})
+		},
+	}
+	actions['setSceneItemIndex'] = {
+		name: 'Set Scene Item Index',
+		description: 'Sets the index of a scene item in a scene',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene (optional, defaults to current scene)',
+				id: 'scene',
+				default: 'Current Scene',
+				choices: this.sceneChoicesProgramPreview,
+				allowCustom: true,
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.sourceListDefault,
+				choices: this.sourceChoices,
+				allowCustom: true,
+			},
+			{
+				type: 'number',
+				label: 'Position Index',
+				id: 'pos',
+				default: 0,
+				min: 0,
+				max: 26,
+				range: false,
+			},
+		],
+		callback: async (action) => {
+			await this.sendRequest('SetSceneItemIndex', {
+				sceneName: action.options.scene as string,
+				sceneItemId: action.options.source as number,
+				sceneItemIndex: action.options.pos as number,
 			})
 		},
 	}
@@ -712,18 +785,22 @@ export function getActions() {
 				label: 'Volume adjustment amount in dB',
 				id: 'volume',
 				default: 0,
+				min: -100,
+				max: 100,
 				range: false,
 			},
 		],
 		callback: async (action) => {
-			let newVolume = this.sources[action.options.source].inputVolume + action.options.volume
+			const sourceName = action.options.source as string
+			const currentVolume = this.sources[sourceName]?.inputVolume ?? 0
+			let newVolume = currentVolume + (action.options.volume as number)
 			if (newVolume > 26) {
 				newVolume = 26
 			} else if (newVolume < -100) {
 				newVolume = -100
 			}
 
-			await this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newVolume })
+			await this.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newVolume })
 		},
 	}
 	actions['adjust_volume_percent'] = {
@@ -748,14 +825,15 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
+			const sourceName = action.options.source as string
 			//Standard offset values (aka how the OBS code determines slider percentage)
-			let LOG_RANGE_DB = 96.0
-			let LOG_OFFSET_DB = 6.0
-			let LOG_OFFSET_VAL = -0.77815125038364363
-			let LOG_RANGE_VAL = Number('-2.00860017176191756')
+			const LOG_RANGE_DB = 96.0
+			const LOG_OFFSET_DB = 6.0
+			const LOG_OFFSET_VAL = -0.77815125038364363
+			const LOG_RANGE_VAL = Number('-2.00860017176191756')
 
 			//Calculate current "percent" of volume slider in OBS
-			let dB = this.sources[action.options.source].inputVolume
+			const dB = this.sources[sourceName]?.inputVolume ?? 0
 			let currentPercent = 0.0
 			if (dB >= 0.0) {
 				currentPercent = 100.0
@@ -766,16 +844,16 @@ export function getActions() {
 			}
 
 			//Calculate new "percent" of volume slider
-			let percentAdjustment = Math.abs(action.options.percent)
+			const percentAdjustment = Math.abs(action.options.percent as number)
 
-			let newPercent
-			if (action.options.percent > 0) {
+			let newPercent: number
+			if ((action.options.percent as number) > 0) {
 				newPercent = currentPercent + percentAdjustment
 			} else {
 				newPercent = currentPercent - percentAdjustment
 			}
 			newPercent = newPercent / 100
-			let newDb
+			let newDb: number
 			if (newPercent >= 1.0) {
 				newDb = 0.0
 			} else if (newPercent <= 0.0) {
@@ -786,7 +864,7 @@ export function getActions() {
 					LOG_OFFSET_DB
 			}
 
-			await this.sendRequest('SetInputVolume', { inputName: action.options.source, inputVolumeDb: newDb })
+			await this.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newDb })
 		},
 	}
 	actions['fadeVolume'] = {
@@ -820,18 +898,20 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			const currentVolume = this.sources[action.options.source].inputVolume ?? 0
-			const fadeDuration = action.options.duration
+			const sourceName = action.options.source as string
+			const currentVolume = this.sources[sourceName]?.inputVolume ?? 0
+			const targetVolume = action.options.volume as number
+			const fadeDuration = action.options.duration as number
 			const fadeSteps = 25
 			const fadeInterval = fadeDuration / fadeSteps
 
-			let fadeBatch = []
+			const fadeBatch = []
 			for (let i = 0; i < fadeSteps + 1; i++) {
-				let newVolume = currentVolume + (action.options.volume - currentVolume) * (i / fadeSteps)
+				const newVolume = currentVolume + (targetVolume - currentVolume) * (i / fadeSteps)
 				fadeBatch.push(
 					{
 						requestType: 'SetInputVolume',
-						requestData: { inputName: action.options.source, inputVolumeDb: newVolume },
+						requestData: { inputName: sourceName, inputVolumeDb: newVolume },
 					},
 					{
 						requestType: 'Sleep',
@@ -840,12 +920,16 @@ export function getActions() {
 				)
 			}
 
-			if (this.sources[action.options.source].audioFadeActive) {
+			if (this.sources[sourceName]?.audioFadeActive) {
 				return
 			} else {
-				this.sources[action.options.source].audioFadeActive = true
+				if (this.sources[sourceName]) {
+					this.sources[sourceName].audioFadeActive = true
+				}
 				await this.sendBatch(fadeBatch)
-				this.sources[action.options.source].audioFadeActive = false
+				if (this.sources[sourceName]) {
+					this.sources[sourceName].audioFadeActive = false
+				}
 			}
 		},
 	}
@@ -872,8 +956,8 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			await this.sendRequest('SetInputAudioSyncOffset', {
-				inputName: action.options.source,
-				inputAudioSyncOffset: action.options.offset,
+				inputName: action.options.source as string,
+				inputAudioSyncOffset: action.options.offset as number,
 			})
 		},
 	}
@@ -892,12 +976,13 @@ export function getActions() {
 				type: 'textinput',
 				label: 'Adjustment amount (+ / - ms)',
 				id: 'offset',
-				default: 1,
+				default: '1',
 			},
 		],
 		callback: async (action) => {
-			let current = this.sources[action.options.source]?.inputAudioSyncOffset
-			let offset = parseInt(action.options.offset)
+			const sourceName = action.options.source as string
+			const current = this.sources[sourceName]?.inputAudioSyncOffset ?? 0
+			const offset = parseInt(action.options.offset as string)
 			let newOffset = current + offset
 			if (newOffset > 20000) {
 				newOffset = 20000
@@ -905,7 +990,7 @@ export function getActions() {
 				newOffset = -950
 			}
 			await this.sendRequest('SetInputAudioSyncOffset', {
-				inputName: action.options.source,
+				inputName: sourceName,
 				inputAudioSyncOffset: newOffset,
 			})
 		},
@@ -932,9 +1017,10 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
+			const source = action.options.source as string
 			await this.sendRequest('SetInputAudioBalance', {
-				inputName: action.options.source,
-				inputAudioBalance: action.options.balance,
+				inputName: source,
+				inputAudioBalance: action.options.balance as number,
 			})
 		},
 	}
@@ -953,12 +1039,13 @@ export function getActions() {
 				type: 'textinput',
 				label: 'Adjustment amount (+ / -)',
 				id: 'offset',
-				default: 0.1,
+				default: '0.1',
 			},
 		],
 		callback: async (action) => {
-			let current = this.sources[action.options.source]?.inputAudioBalance
-			let offset = parseFloat(action.options.offset)
+			const sourceName = action.options.source as string
+			const current = this.sources[sourceName]?.inputAudioBalance ?? 0
+			const offset = parseFloat(action.options.offset as string)
 			let newOffset = current + offset
 			if (newOffset > 1.0) {
 				newOffset = 1.0
@@ -966,7 +1053,7 @@ export function getActions() {
 				newOffset = 0.0
 			}
 			await this.sendRequest('SetInputAudioBalance', {
-				inputName: action.options.source,
+				inputName: sourceName,
 				inputAudioBalance: newOffset,
 			})
 		},
@@ -1011,33 +1098,38 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let sceneName = await this.parseVariablesInString(action.options.scene)
-			let sourceName = await this.parseVariablesInString(action.options.source)
+			const sourceScene = action.options.scene as string
+			const sourceName = action.options.source as string
 			let enabled = true
-			let requests = []
+			const requests: any[] = []
 
+			let sceneName = sourceScene
 			// special scene names
 			if (sceneName === 'Current Scene') {
-				sceneName = this.states.programScene
+				sceneName = this.states.programScene ?? ''
 			} else if (sceneName === 'Preview Scene') {
-				sceneName = this.states.previewScene
+				sceneName = this.states.previewScene ?? ''
 			}
 
 			if (this.sources[sourceName]?.groupedSource) {
-				let group = this.sources[sourceName].groupName
-				let source = this.groups[group].find((item) => item.sourceName === sourceName)
-				if (action.options.visible === 'toggle') {
-					enabled = !source.sceneItemEnabled
-				} else {
-					enabled = action.options.visible == 'true' ? true : false
+				const group = this.sources[sourceName]?.groupName
+				if (group) {
+					const source = this.groups[group]?.find((item) => item.sourceName === sourceName)
+					if (source) {
+						if (action.options.visible === 'toggle') {
+							enabled = !source.sceneItemEnabled
+						} else {
+							enabled = action.options.visible == 'true' ? true : false
+						}
+						await this.sendRequest('SetSceneItemEnabled', {
+							sceneName: source.groupName,
+							sceneItemId: source.sceneItemId,
+							sceneItemEnabled: enabled,
+						})
+					}
 				}
-				this.sendRequest('SetSceneItemEnabled', {
-					sceneName: source.groupName,
-					sceneItemId: source.sceneItemId,
-					sceneItemEnabled: enabled,
-				})
 			}
-			let targetScene = this.sceneItems[sceneName]
+			const targetScene = this.sceneItems[sceneName]
 			if (targetScene) {
 				targetScene.forEach((source) => {
 					if (action.options.all || source.sourceName === sourceName) {
@@ -1056,22 +1148,23 @@ export function getActions() {
 						})
 
 						if (source.isGroup && action.options.all) {
-							for (let x in this.groups[source.sourceName]) {
-								let item = this.groups[source.sourceName][x]
-								let groupEnabled
-								if (action.options.visible === 'toggle') {
-									groupEnabled = !this.sources[item.sourceName].sceneItemEnabled
-								} else {
-									groupEnabled = action.options.visible == 'true' ? true : false
+							if (this.groups[source.sourceName]) {
+								for (const groupItem of this.groups[source.sourceName]) {
+									let groupEnabled: boolean
+									if (action.options.visible === 'toggle') {
+										groupEnabled = !this.sources[groupItem.sourceName]?.sceneItemEnabled
+									} else {
+										groupEnabled = action.options.visible == 'true' ? true : false
+									}
+									requests.push({
+										requestType: 'SetSceneItemEnabled',
+										requestData: {
+											sceneName: source.sourceName,
+											sceneItemId: groupItem.sceneItemId,
+											sceneItemEnabled: groupEnabled,
+										},
+									})
 								}
-								requests.push({
-									requestType: 'SetSceneItemEnabled',
-									requestData: {
-										sceneName: source.sourceName,
-										sceneItemId: item.sceneItemId,
-										sceneItemEnabled: groupEnabled,
-									},
-								})
 							}
 						}
 					}
@@ -1100,11 +1193,14 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let newText = await this.parseVariablesInString(action.options.text)
+			let newText = action.options.text as string
 			if (typeof newText === 'string') {
 				newText = newText.replace(/\\n/g, '\n')
 			}
-			await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: { text: newText } })
+			await this.sendRequest('SetInputSettings', {
+				inputName: action.options.source as string,
+				inputSettings: { text: newText },
+			})
 		},
 	}
 	actions['setTextProperties'] = {
@@ -1135,6 +1231,7 @@ export function getActions() {
 					{ id: 'backgroundOpacity', label: 'Background Opacity' },
 					{ id: 'outline', label: 'Outline' },
 					{ id: 'outlineSize', label: 'Outline Size' },
+					{ id: 'outlineThickness', label: 'Outline Thickness' },
 					{ id: 'outlineColor', label: 'Outline Color' },
 					{ id: 'dropShadow', label: 'Drop Shadow' },
 					{ id: 'alignment', label: 'Alignment' },
@@ -1151,7 +1248,7 @@ export function getActions() {
 				useVariables: true,
 				label: 'Text',
 				id: 'text',
-				isVisibleExpression: `arrayIncludes($(options:props), 'text')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'text')`,
 			},
 			{
 				type: 'dropdown',
@@ -1164,7 +1261,7 @@ export function getActions() {
 					{ id: 2, label: 'Lowercase' },
 					{ id: 3, label: 'Start Case' },
 				],
-				isVisibleExpression: `arrayIncludes($(options:props), 'textTransform')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'textTransform')`,
 				description: 'GDI+ Text Sources Only',
 			},
 			{
@@ -1172,21 +1269,21 @@ export function getActions() {
 				useVariables: true,
 				label: 'Font Size',
 				id: 'fontSize',
-				isVisibleExpression: `arrayIncludes($(options:props), 'fontSize')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'fontSize')`,
 			},
 			{
 				type: 'textinput',
 				useVariables: true,
 				label: 'Font Face',
 				id: 'fontFace',
-				isVisibleExpression: `arrayIncludes($(options:props), 'fontFace')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'fontFace')`,
 			},
 			{
 				type: 'textinput',
 				useVariables: true,
 				label: 'Font Style',
 				id: 'fontStyle',
-				isVisibleExpression: `arrayIncludes($(options:props), 'fontStyle')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'fontStyle')`,
 			},
 			{
 				type: 'colorpicker',
@@ -1195,7 +1292,7 @@ export function getActions() {
 				default: '#000000',
 				enableAlpha: true,
 				returnType: 'string',
-				isVisibleExpression: `arrayIncludes($(options:props), 'color1')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'color1')`,
 			},
 			{
 				type: 'colorpicker',
@@ -1204,29 +1301,38 @@ export function getActions() {
 				default: '#000000',
 				enableAlpha: true,
 				returnType: 'string',
-				isVisibleExpression: `arrayIncludes($(options:props), 'color2')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'color2')`,
 			},
 			{
 				type: 'checkbox',
 				label: 'Gradient',
 				id: 'gradient',
 				default: false,
-				isVisibleExpression: `arrayIncludes($(options:props), 'gradient')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'gradient')`,
 			},
 			{
 				type: 'checkbox',
 				label: 'Outline',
 				id: 'outline',
 				default: false,
-				isVisibleExpression: `arrayIncludes($(options:props), 'outline')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'outline')`,
 			},
 			{
 				type: 'textinput',
 				label: 'Outline Size',
 				id: 'outlineSize',
-				default: 1,
-				isVisibleExpression: `arrayIncludes($(options:props), 'outlineSize')`,
+				default: '1',
+				isVisibleExpression: `arrayIncludes($(options: props), 'outlineSize')`,
 				description: 'GDI+ Text Sources Only',
+				useVariables: true,
+			},
+			{
+				type: 'textinput',
+				label: 'Outline Thickness',
+				id: 'outlineThickness',
+				default: '1',
+				isVisibleExpression: `arrayIncludes($(options: props), 'outlineThickness')`,
+				description: 'FreeType Text Sources Only',
 				useVariables: true,
 			},
 			{
@@ -1236,7 +1342,7 @@ export function getActions() {
 				default: '#000000',
 				enableAlpha: true,
 				returnType: 'string',
-				isVisibleExpression: `arrayIncludes($(options:props), 'outlineColor')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'outlineColor')`,
 				description: 'GDI+ Text Sources Only',
 			},
 			{
@@ -1246,15 +1352,15 @@ export function getActions() {
 				default: '#000000',
 				enableAlpha: true,
 				returnType: 'string',
-				isVisibleExpression: `arrayIncludes($(options:props), 'backgroundColor')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'backgroundColor')`,
 				description: 'GDI+ Text Sources Only',
 			},
 			{
 				type: 'textinput',
 				label: 'Background Opacity',
 				id: 'backgroundOpacity',
-				default: 100,
-				isVisibleExpression: `arrayIncludes($(options:props), 'backgroundOpacity')`,
+				default: '100',
+				isVisibleExpression: `arrayIncludes($(options: props), 'backgroundOpacity')`,
 				description: 'GDI+ Text Sources Only',
 				useVariables: true,
 			},
@@ -1263,7 +1369,7 @@ export function getActions() {
 				label: 'Drop Shadow',
 				id: 'dropShadow',
 				default: false,
-				isVisibleExpression: `arrayIncludes($(options:props), 'dropShadow')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'dropShadow')`,
 				description: 'FreeType Text Sources Only',
 			},
 			{
@@ -1271,7 +1377,7 @@ export function getActions() {
 				label: 'Wrap',
 				id: 'wrap',
 				default: false,
-				isVisibleExpression: `arrayIncludes($(options:props), 'wrap')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'wrap')`,
 			},
 			{
 				type: 'dropdown',
@@ -1284,7 +1390,7 @@ export function getActions() {
 					{ id: 'right', label: 'Right' },
 				],
 				description: 'GDI+ Text Sources Only',
-				isVisibleExpression: `arrayIncludes($(options:props), 'alignment')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'alignment')`,
 			},
 			{
 				type: 'dropdown',
@@ -1297,14 +1403,14 @@ export function getActions() {
 					{ id: 'bottom', label: 'Bottom' },
 				],
 				description: 'GDI+ Text Sources Only',
-				isVisibleExpression: `arrayIncludes($(options:props), 'verticalAlignment')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'verticalAlignment')`,
 			},
 			{
 				type: 'checkbox',
 				label: 'Vertical',
 				id: 'vertical',
 				default: false,
-				isVisibleExpression: `arrayIncludes($(options:props), 'vertical')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'vertical')`,
 				description: 'GDI+ Text Sources Only',
 			},
 			{
@@ -1312,15 +1418,15 @@ export function getActions() {
 				label: 'Use Custom Text Extents',
 				id: 'extents',
 				default: false,
-				isVisibleExpression: `arrayIncludes($(options:props), 'extents')`,
+				isVisibleExpression: `arrayIncludes($(options: props), 'extents')`,
 				description: 'GDI+ Text Sources Only',
 			},
 			{
 				type: 'textinput',
 				label: 'Text Extents Width',
 				id: 'extentsWidth',
-				default: 100,
-				isVisibleExpression: `arrayIncludes($(options:props), 'extentsWidth')`,
+				default: '100',
+				isVisibleExpression: `arrayIncludes($(options: props), 'extentsWidth')`,
 				useVariables: true,
 				description: 'GDI+ Text Sources Only',
 			},
@@ -1328,25 +1434,25 @@ export function getActions() {
 				type: 'textinput',
 				label: 'Text Extents Height',
 				id: 'extentsHeight',
-				default: 100,
-				isVisibleExpression: `arrayIncludes($(options:props), 'extentsHeight')`,
+				default: '100',
+				isVisibleExpression: `arrayIncludes($(options: props), 'extentsHeight')`,
 				useVariables: true,
 				description: 'GDI+ Text Sources Only',
 			},
 		],
 		callback: async (action) => {
-			const source = action.options.source
-			const props = action.options.props || []
+			const source = action.options.source as string
+			const props = (action.options.props as string[]) || []
 			const existingSettings = { ...(this.sources[source]?.settings || {}) }
 
 			// Start with all existing settings, then overlay changes
-			let inputSettings = { ...existingSettings }
+			const inputSettings: Record<string, any> = { ...existingSettings }
 			// Always copy font if it exists, as object, even if not changing
-			let existingFont = existingSettings.font ? { ...existingSettings.font } : {}
+			const existingFont = existingSettings.font ? { ...existingSettings.font } : {}
 			const kind = this.sources[source]?.inputKind || ''
 			for (const prop of props) {
 				if (prop === 'text') {
-					let val = await this.parseVariablesInString(action.options.text)
+					let val = action.options.text as string
 					// Unescape \n for newlines
 					if (typeof val === 'string') {
 						val = val.replace(/\\n/g, '\n')
@@ -1357,26 +1463,26 @@ export function getActions() {
 					inputSettings.transform = action.options.textTransform
 				}
 				if (prop === 'fontSize') {
-					let size = await this.parseVariablesInString(action.options.fontSize)
+					const size = action.options.fontSize as string
 					const sizeNumber = parseInt(size)
 					if (!isNaN(sizeNumber)) {
 						existingFont.size = sizeNumber
 					}
 				}
 				if (prop === 'fontFace') {
-					let face = await this.parseVariablesInString(action.options.fontFace)
+					const face = action.options.fontFace as string
 					if (face) {
 						existingFont.face = face
 					}
 				}
 				if (prop === 'fontStyle') {
-					let style = await this.parseVariablesInString(action.options.fontStyle)
+					const style = action.options.fontStyle as string
 					if (style) {
 						existingFont.style = style
 					}
 				}
 				if (prop === 'color1') {
-					const colorValue = this.rgbaToObsColor(action.options.color1)
+					const colorValue = this.rgbaToObsColor(action.options.color1 as string)
 					if (kind.includes('text_gdiplus')) {
 						inputSettings.color = colorValue
 					} else {
@@ -1384,33 +1490,40 @@ export function getActions() {
 					}
 				}
 				if (prop === 'color2') {
-					const colorValue = this.rgbaToObsColor(action.options.color2)
+					const colorValue = this.rgbaToObsColor(action.options.color2 as string)
 					if (kind.includes('text_gdiplus')) {
 						inputSettings.gradient_color = colorValue
 					} else {
 						inputSettings.color2 = colorValue
 					}
 				}
-				if (prop === 'outline') {
+				if (prop === 'outline' && (kind.includes('text_gdiplus') || kind.includes('text_ft2_source'))) {
 					inputSettings.outline = action.options.outline
 				}
 				if (prop === 'outlineSize' && kind.includes('text_gdiplus')) {
-					let outlineSize = await this.parseVariablesInString(action.options.outlineSize)
+					const outlineSize = action.options.outlineSize as string
 					const size = parseInt(outlineSize)
 					if (!isNaN(size)) {
 						inputSettings.outline_size = size
 					}
 				}
+				if (prop === 'outlineThickness' && kind.includes('text_ft2_source')) {
+					const outlineThickness = action.options.outlineThickness as string
+					const size = parseInt(outlineThickness)
+					if (!isNaN(size)) {
+						inputSettings.outline_thickness = size
+					}
+				}
 				if (prop === 'outlineColor' && kind.includes('text_gdiplus')) {
-					const colorValue = this.rgbaToObsColor(action.options.outlineColor)
+					const colorValue = this.rgbaToObsColor(action.options.outlineColor as string)
 					inputSettings.outline_color = colorValue
 				}
 				if (prop === 'backgroundColor' && kind.includes('text_gdiplus')) {
-					const colorValue = this.rgbaToObsColor(action.options.backgroundColor)
+					const colorValue = this.rgbaToObsColor(action.options.backgroundColor as string)
 					inputSettings.bk_color = colorValue
 				}
 				if (prop === 'backgroundOpacity' && kind.includes('text_gdiplus')) {
-					let backgroundOpacity = await this.parseVariablesInString(action.options.backgroundOpacity)
+					const backgroundOpacity = action.options.backgroundOpacity as string
 					const opacity = parseInt(backgroundOpacity)
 					if (!isNaN(opacity)) {
 						inputSettings.bk_opacity = opacity
@@ -1440,14 +1553,14 @@ export function getActions() {
 					inputSettings.extents = action.options.extents
 				}
 				if (prop === 'extentsWidth' && kind.includes('text_gdiplus')) {
-					let extentsWidth = await this.parseVariablesInString(action.options.extentsWidth)
+					const extentsWidth = action.options.extentsWidth as string
 					const width = parseInt(extentsWidth)
 					if (!isNaN(width)) {
 						inputSettings.extents_cx = width
 					}
 				}
 				if (prop === 'extentsHeight' && kind.includes('text_gdiplus')) {
-					let extentsHeight = await this.parseVariablesInString(action.options.extentsHeight)
+					const extentsHeight = action.options.extentsHeight as string
 					const height = parseInt(extentsHeight)
 					if (!isNaN(height)) {
 						inputSettings.extents_cy = height
@@ -1484,8 +1597,11 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			if (this.sources[action.options.source]?.inputKind) {
-				await this.sendRequest('SetInputSettings', { inputName: action.options.source, inputSettings: {} })
+			if (this.sources[action.options.source as string]?.inputKind) {
+				await this.sendRequest('SetInputSettings', {
+					inputName: action.options.source as string,
+					inputSettings: {},
+				})
 			} else {
 				this.log('warn', 'The selected source is not an input.')
 				return
@@ -1505,7 +1621,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let hotkey = await this.parseVariablesInString(action.options.id)
+			const hotkey = action.options.id as string
 			await this.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
 		},
 	}
@@ -1545,7 +1661,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let keyModifiers = {
+			const keyModifiers = {
 				shift: action.options.keyShift,
 				alt: action.options.keyAlt,
 				control: action.options.keyControl,
@@ -1663,9 +1779,10 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			if (this.sources[action.options.source]?.inputKind == 'browser_source') {
+			const sourceName = action.options.source as string
+			if (this.sources[sourceName]?.inputKind == 'browser_source') {
 				await this.sendRequest('PressInputPropertiesButton', {
-					inputName: action.options.source,
+					inputName: sourceName,
 					propertyName: 'refreshnocache',
 				})
 			} else {
@@ -1778,12 +1895,10 @@ export function getActions() {
 			const sourceName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
 			const fileName =
 				action.options.customName && action.options.fileName
-					? (await this.parseVariablesInString(action.options.fileName)).replace(/:/g, '-')
-					: `${day}_${sourceName}_${time}`
+					? (action.options.fileName as string).replace(/:/g, '-')
+					: `${day}_${sourceName}_${time} `
 			const fileLocation =
-				action.options.customName && action.options.path
-					? await this.parseVariablesInString(action.options.path)
-					: this.states.recordDirectory
+				action.options.customName && action.options.path ? (action.options.path as string) : this.states.recordDirectory
 			const filePath = `${fileLocation}/${fileName}.${action.options.format}`
 
 			const quality = action.options.compression == 0 ? -1 : action.options.compression
@@ -1835,14 +1950,14 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let source = await this.parseVariablesInString(action.options.source)
-			let filterName = await this.parseVariablesInString(action.options.filter)
+			const source = action.options.source as string
+			const filterName = action.options.filter as string
 
-			let sourceFilterList = this.sourceFilters[source]
+			const sourceFilterList = this.sourceFilters[source]
 			if (action.options.all) {
-				let requests = []
+				const requests: any[] = []
 				sourceFilterList.forEach((filter) => {
-					let name = filter.filterName
+					const name = filter.filterName
 					let filterVisibility
 					if (action.options.visible !== 'toggle') {
 						filterVisibility = action.options.visible === 'true' ? true : false
@@ -1862,7 +1977,7 @@ export function getActions() {
 					filterVisibility = action.options.visible === 'true' ? true : false
 				} else if (action.options.visible === 'toggle') {
 					if (sourceFilterList) {
-						let filter = sourceFilterList.find((item) => item.filterName === filterName)
+						const filter = sourceFilterList.find((item) => item.filterName === filterName)
 						if (filter) {
 							filterVisibility = !filter.filterEnabled
 						}
@@ -1905,14 +2020,14 @@ export function getActions() {
 		],
 		callback: async (action) => {
 			try {
-				let settings = await this.parseVariablesInString(action.options.settings)
-				let settingsJSON = JSON.parse(settings)
+				const settings = action.options.settings as string
+				const settingsJSON = JSON.parse(settings)
 				await this.sendRequest('SetSourceFilterSettings', {
 					sourceName: action.options.source,
 					filterName: action.options.filter,
 					filterSettings: settingsJSON,
 				})
-			} catch (e) {
+			} catch (e: any) {
 				this.log('warn', `Error parsing JSON for Set Filter Settings (${e.message})`)
 				return
 			}
@@ -1941,8 +2056,9 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let playPause
-			let media = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
+			let playPause = action.options.playPause
+			const media =
+				action.options.source === 'currentMedia' ? this.states.currentMedia : (action.options.source as string)
 			if (action.options.playPause === 'toggle' && media) {
 				if (this.mediaSources[media]?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
 					playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
@@ -2045,15 +2161,21 @@ export function getActions() {
 			},
 			{
 				type: 'number',
-				label: 'Timecode (in seconds)',
+				label: 'Time (in ms)',
 				id: 'mediaTime',
 				default: 1,
+				min: 0,
+				max: 24 * 60 * 60 * 1000,
+				range: false,
 			},
 		],
 		callback: async (action) => {
+			const inputName =
+				action.options.source === 'currentMedia' ? this.states.currentMedia : (action.options.source as string)
+			const mediaTime = action.options.mediaTime as number
 			await this.sendRequest('SetMediaInputCursor', {
-				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
-				mediaCursor: action.options.mediaTime * 1000,
+				inputName: inputName,
+				mediaCursor: mediaTime,
 			})
 		},
 	}
@@ -2072,12 +2194,17 @@ export function getActions() {
 				label: 'Scrub Amount (in seconds, positive or negative)',
 				id: 'scrubAmount',
 				default: 1,
+				min: -3600, // 1 hour back
+				max: 3600, // 1 hour forward
 			},
 		],
 		callback: async (action) => {
+			const inputName =
+				action.options.source === 'currentMedia' ? this.states.currentMedia : (action.options.source as string)
+			const scrubAmount = action.options.scrubAmount as number
 			await this.sendRequest('OffsetMediaInputCursor', {
-				inputName: action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source,
-				mediaCursorOffset: action.options.scrubAmount * 1000,
+				inputName: inputName,
+				mediaCursorOffset: scrubAmount * 1000,
 			})
 		},
 	}
@@ -2100,10 +2227,11 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let mediaFilePath = await this.parseVariablesInString(action.options.mediaFilePath)
-			let inputName = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
+			const mediaFilePath = action.options.mediaFilePath as string
+			const inputName =
+				action.options.source === 'currentMedia' ? this.states.currentMedia : (action.options.source as string)
 			try {
-				let input = await this.sendRequest('GetInputSettings', {
+				const input = await this.sendRequest('GetInputSettings', {
 					inputName: inputName,
 				})
 				if (input?.inputSettings?.local_file) {
@@ -2116,7 +2244,7 @@ export function getActions() {
 				} else {
 					this.log('warn', `Unable to update media file for ${inputName} because it is not a local file input`)
 				}
-			} catch (e) {
+			} catch (e: any) {
 				this.log('warn', `Error updating media file: ${e.message}`)
 				return
 			}
@@ -2154,7 +2282,7 @@ export function getActions() {
 				id: 'display',
 				default: 0,
 				choices: this.monitors,
-				isVisible: (options) => options.window === 'fullscreen',
+				isVisible: (options): boolean => options.window === 'fullscreen',
 			},
 			{
 				type: 'dropdown',
@@ -2162,13 +2290,13 @@ export function getActions() {
 				id: 'source',
 				default: this.sourceListDefault,
 				choices: this.sourceChoicesWithScenes,
-				isVisible: (options) => options.type === 'Source' || options.type === 'Scene',
+				isVisible: (options): boolean => options.type === 'Source' || options.type === 'Scene',
 			},
 		],
 		callback: async (action) => {
-			let monitor = action.options.window === 'window' ? -1 : action.options.display
-			let requestType
-			let requestData
+			const monitor = action.options.window === 'window' ? -1 : (action.options.display as number)
+			let requestType: string
+			let requestData: any
 			if (action.options.type === 'Multiview') {
 				requestType = 'OpenVideoMixProjector'
 				requestData = {
@@ -2190,7 +2318,7 @@ export function getActions() {
 			} else if (action.options.type === 'Source' || action.options.type === 'Scene') {
 				requestType = 'OpenSourceProjector'
 				requestData = {
-					sourceName: action.options.source,
+					sourceName: action.options.source as string,
 					monitorIndex: monitor,
 				}
 			} else {
@@ -2254,22 +2382,22 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let sourceScene
+			let sourceScene: string
 			if (action.options.scene == 'Current Scene') {
-				sourceScene = this.states.programScene
+				sourceScene = this.states.programScene ?? ''
 			} else if (action.options.scene == 'Preview Scene') {
-				sourceScene = this.states.previewScene
+				sourceScene = this.states.previewScene ?? ''
 			} else {
-				sourceScene = action.options.scene
+				sourceScene = action.options.scene as string
 			}
 
-			let positionX = await this.parseVariablesInString(action.options.positionX)
-			let positionY = await this.parseVariablesInString(action.options.positionY)
-			let scaleX = await this.parseVariablesInString(action.options.scaleX)
-			let scaleY = await this.parseVariablesInString(action.options.scaleY)
-			let rotation = await this.parseVariablesInString(action.options.rotation)
+			const positionX = action.options.positionX as string
+			const positionY = action.options.positionY as string
+			const scaleX = action.options.scaleX as string
+			const scaleY = action.options.scaleY as string
+			const rotation = action.options.rotation as string
 
-			let transform = {}
+			const transform: { [key: string]: number } = {}
 			if (positionX) {
 				transform.positionX = Number(positionX)
 			}
@@ -2286,19 +2414,24 @@ export function getActions() {
 				transform.rotation = Number(rotation)
 			}
 
-			let sceneItem = await this.sendRequest('GetSceneItemId', {
-				sceneName: sourceScene,
-				sourceName: action.options.source,
-			})
-
-			if (sceneItem?.sceneItemId) {
-				await this.sendRequest('SetSceneItemTransform', {
+			try {
+				const sceneItem = await this.sendRequest('GetSceneItemId', {
 					sceneName: sourceScene,
-					sceneItemId: sceneItem?.sceneItemId,
-					sceneItemTransform: transform,
+					sourceName: action.options.source as string,
 				})
-			} else {
-				return
+
+				if (sceneItem?.sceneItemId) {
+					await this.sendRequest('SetSceneItemTransform', {
+						sceneName: sourceScene,
+						sceneItemId: sceneItem?.sceneItemId,
+						sceneItemTransform: transform,
+					})
+				} else {
+					this.log('warn', `Scene item not found for source: ${action.options.source} in scene: ${sourceScene}`)
+					return
+				}
+			} catch (e: any) {
+				this.log('error', `Set Scene Item Properties Error: ${e.message}`)
 			}
 		},
 	}
@@ -2314,7 +2447,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			await this.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source })
+			await this.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source as string })
 		},
 	}
 	actions['openInputFiltersDialog'] = {
@@ -2329,7 +2462,7 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			await this.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source })
+			await this.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source as string })
 		},
 	}
 	actions['openInputInteractDialog'] = {
@@ -2344,7 +2477,23 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			await this.sendRequest('OpenInputInteractDialog', { inputName: action.options.source })
+			await this.sendRequest('OpenInputInteractDialog', { inputName: action.options.source as string })
+		},
+	}
+	actions['triggerInputActivateState'] = {
+		name: 'Trigger Input Activate State',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.sourceListDefault,
+				choices: this.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			const source = action.options.source as string
+			await this.sendRequest('TriggerInputActivateState', { inputName: source })
 		},
 	}
 	actions['custom_command'] = {
@@ -2366,25 +2515,31 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let command = await this.parseVariablesInString(action.options.command)
-			let arg = ''
+			const command = action.options.command as string
+			let arg: any = ''
 			try {
 				command.replace(/ /g, '')
-			} catch (e) {
+			} catch (e: any) {
 				this.log('warn', `Unknown command format: ${e.message}`)
 				return
 			}
 
 			if (action.options.arg) {
-				arg = await this.parseVariablesInString(action.options.arg)
+				arg = action.options.arg as string
 				try {
 					arg = JSON.parse(arg)
-				} catch (e) {
+				} catch (e: any) {
 					this.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
 					return
 				}
 			}
-			await this.sendCustomRequest(command, arg ? arg : {})
+
+			try {
+				const res = await this.sendRequest(command as any, arg ? arg : {})
+				this.log('debug', `Custom Command Response: ${JSON.stringify(res)}`)
+			} catch (e: any) {
+				this.log('warn', `Custom Command Error: ${e.message}`)
+			}
 		},
 	}
 	actions['vendorRequest'] = {
@@ -2413,27 +2568,27 @@ export function getActions() {
 			},
 		],
 		callback: async (action) => {
-			let vendorName = await this.parseVariablesInString(action.options.vendorName)
-			let requestType = await this.parseVariablesInString(action.options.requestType)
+			const vendorName = action.options.vendorName as string
+			const requestType = action.options.requestType as string
 			let requestData = ''
 			try {
 				vendorName.replace(/ /g, '')
 				requestType.replace(/ /g, '')
-			} catch (e) {
+			} catch (e: any) {
 				this.log('warn', `Unknown vendor or request format ${e.message}`)
 				return
 			}
 
 			if (action.options.requestData) {
-				requestData = await this.parseVariablesInString(action.options.requestData)
+				requestData = action.options.requestData as string
 				try {
 					requestData = JSON.parse(requestData)
-				} catch (e) {
+				} catch (e: any) {
 					this.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
 					return
 				}
 			}
-			let data = {
+			const data = {
 				vendorName: vendorName,
 				requestType: requestType,
 				requestData: requestData,

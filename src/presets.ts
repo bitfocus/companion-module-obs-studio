@@ -1,16 +1,15 @@
-import { combineRgb } from '@companion-module/base'
+import { CompanionPresetDefinitions, combineRgb } from '@companion-module/base'
+import type { OBSInstance } from './main.js'
 
-export function getPresets() {
-	let presets = {}
+export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
+	const presets: CompanionPresetDefinitions = {}
 
 	const ColorWhite = combineRgb(255, 255, 255)
 	const ColorRed = combineRgb(200, 0, 0)
 	const ColorGreen = combineRgb(0, 200, 0)
 	const ColorYellow = combineRgb(212, 174, 0)
 
-	for (let s in this.sceneChoices) {
-		let scene = this.sceneChoices[s]
-
+	for (const scene of this.sceneChoices) {
 		presets[`toProgram_${scene.id}`] = {
 			type: 'button',
 			category: 'Scene to Program',
@@ -101,6 +100,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'do_transition',
+						options: {},
 					},
 				],
 				up: [],
@@ -109,6 +109,7 @@ export function getPresets() {
 		feedbacks: [
 			{
 				feedbackId: 'transition_active',
+				options: {},
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
@@ -117,9 +118,7 @@ export function getPresets() {
 		],
 	}
 
-	for (let s in this.transitionList) {
-		let transition = this.transitionList[s]
-
+	for (const transition of this.transitionList) {
 		presets[`quickTransition_${transition.id}`] = {
 			type: 'button',
 			category: 'Transitions',
@@ -148,6 +147,7 @@ export function getPresets() {
 			feedbacks: [
 				{
 					feedbackId: 'transition_active',
+					options: {},
 					style: {
 						bgcolor: ColorGreen,
 						color: ColorWhite,
@@ -173,6 +173,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'StartStopStreaming',
+						options: {},
 					},
 				],
 				up: [],
@@ -181,6 +182,7 @@ export function getPresets() {
 		feedbacks: [
 			{
 				feedbackId: 'streaming',
+				options: {},
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
@@ -204,6 +206,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'StartStopStreaming',
+						options: {},
 					},
 				],
 				up: [],
@@ -212,6 +215,7 @@ export function getPresets() {
 		feedbacks: [
 			{
 				feedbackId: 'streaming',
+				options: {},
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
@@ -235,6 +239,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'StartStopStreaming',
+						options: {},
 					},
 				],
 				up: [],
@@ -243,6 +248,7 @@ export function getPresets() {
 		feedbacks: [
 			{
 				feedbackId: 'streaming',
+				options: {},
 				style: {
 					bgcolor: ColorGreen,
 					color: ColorWhite,
@@ -267,6 +273,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'StartStopRecording',
+						options: {},
 					},
 				],
 				up: [],
@@ -300,6 +307,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'StartStopRecording',
+						options: {},
 					},
 				],
 				up: [],
@@ -318,9 +326,7 @@ export function getPresets() {
 		],
 	}
 
-	for (let s in this.outputList) {
-		let output = this.outputList[s]
-
+	for (const output of this.outputList) {
 		presets[`toggleOutput_${output.id}`] = {
 			type: 'button',
 			category: 'Outputs',
@@ -359,9 +365,7 @@ export function getPresets() {
 		}
 	}
 
-	for (let s in this.sourceChoices) {
-		let source = this.sourceChoices[s]
-
+	for (const source of this.sourceChoices) {
 		presets[`sourceStatus_${source.id}`] = {
 			type: 'button',
 			category: 'Sources',
@@ -478,6 +482,7 @@ export function getPresets() {
 				down: [
 					{
 						actionId: 'toggle_studio_mode',
+						options: {},
 					},
 				],
 				up: [],
@@ -544,9 +549,8 @@ export function getPresets() {
 		feedbacks: [],
 	}
 
-	for (let s in this.mediaSourceList) {
-		let mediaSource = this.mediaSourceList[s]
-		let sourceName = mediaSource.label.replace(/[\W]/gi, '_')
+	for (const mediaSource of this.mediaSourceList) {
+		const sourceName = mediaSource.label.replace(/[\W]/gi, '_')
 		presets[`toggleMedia_${mediaSource.id}`] = {
 			type: 'button',
 			category: 'Media Sources',

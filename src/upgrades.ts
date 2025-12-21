@@ -1,4 +1,11 @@
-import { CreateConvertToBooleanFeedbackUpgradeScript } from '@companion-module/base'
+import {
+	CompanionMigrationAction,
+	CompanionMigrationFeedback,
+	CompanionUpgradeContext,
+	CompanionStaticUpgradeResult,
+	CreateConvertToBooleanFeedbackUpgradeScript,
+} from '@companion-module/base'
+import { ModuleConfig } from './types.js'
 
 export default [
 	CreateConvertToBooleanFeedbackUpgradeScript({
@@ -13,14 +20,17 @@ export default [
 		transition_duration: true,
 		filter_enabled: true,
 	}),
-	function v2_0_0(context, props) {
-		let changes = {
+	function v2_0_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
 		}
 		if (props.config) {
-			let config = props.config
+			const config = props.config
 			if (config.port == undefined || config.port == '' || config.port == 4444) {
 				config.port = 4455
 				changes.updatedConfig = config
@@ -41,8 +51,11 @@ export default [
 
 		return changes
 	},
-	function v3_1_0(context, props) {
-		let changes = {
+	function v3_1_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -50,7 +63,7 @@ export default [
 
 		for (const action of props.actions) {
 			if (action.actionId === 'quick_transition') {
-				if (action.options.transition_time > 0) {
+				if ((action.options.transition_time as number) > 0) {
 					action.options.customDuration = true
 				} else {
 					action.options.customDuration = false
@@ -62,8 +75,11 @@ export default [
 
 		return changes
 	},
-	function v3_3_0(context, props) {
-		let changes = {
+	function v3_3_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -96,8 +112,11 @@ export default [
 
 		return changes
 	},
-	function v3_5_0(context, props) {
-		let changes = {
+	function v3_5_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -107,9 +126,10 @@ export default [
 			if (feedback.feedbackId === 'streamCongestion') {
 				if (!feedback.options.colorNoStream) {
 					feedback.options = {
-						colorNoStream: '#484848',
+						...feedback.options,
+						colorNoStream: '#464646',
 						colorLow: '#00c800',
-						colorMedium: '#ff6600',
+						colorMedium: '#d4ae00',
 						colorHigh: '#c80000',
 					}
 				}
@@ -119,8 +139,11 @@ export default [
 
 		return changes
 	},
-	function v3_7_0(context, props) {
-		let changes = {
+	function v3_7_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -128,11 +151,13 @@ export default [
 
 		for (const action of props.actions) {
 			if (action.actionId === 'set_transition_duration') {
-				if (action.options.duration < 50) {
-					action.options.duration = 50
-				}
-				if (action.options.duration > 20000) {
-					action.options.duration = 20000
+				if (typeof action.options.duration === 'number') {
+					if (action.options.duration < 50) {
+						action.options.duration = 50
+					}
+					if (action.options.duration > 20000) {
+						action.options.duration = 20000
+					}
 				}
 				action.options.variableValue = '500'
 				action.options.useVariable = false
@@ -142,8 +167,11 @@ export default [
 
 		return changes
 	},
-	function v3_11_0(context, props) {
-		let changes = {
+	function v3_11_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -160,8 +188,11 @@ export default [
 
 		return changes
 	},
-	function v3_12_0(context, props) {
-		let changes = {
+	function v3_12_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -181,8 +212,11 @@ export default [
 		}
 		return changes
 	},
-	function v3_15_0(context, props) {
-		let changes = {
+	function v3_15_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],

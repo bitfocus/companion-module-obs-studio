@@ -1,5 +1,8 @@
-export function getVariables() {
-	const variables = []
+import { CompanionVariableDefinition } from '@companion-module/base'
+import { OBSInstance } from './main.js'
+
+export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
+	const variables: CompanionVariableDefinition[] = []
 
 	variables.push(
 		{ variableId: 'base_resolution', name: 'Current base (canvas) resolution' },
@@ -72,9 +75,9 @@ export function getVariables() {
 	)
 
 	//Source Specific Variables
-	for (let s in this.sources) {
-		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+	for (const s in this.sources) {
+		const source = this.sources[s]
+		const sourceName = source.validName ? source.validName : this.validName(source.sourceName)
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
@@ -116,13 +119,13 @@ export function getVariables() {
 	//Scene Variables
 	let sceneIndex = 0
 	for (let s = this.scenes?.length - 1; s >= 0; s--) {
-		let index = ++sceneIndex
+		const index = ++sceneIndex
 		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
 	}
 	return variables
 }
 
-export function updateVariableValues() {
+export function updateVariableValues(this: OBSInstance): void {
 	//Defaults
 	this.setVariableValues({
 		current_media_name: 'None',
@@ -136,10 +139,10 @@ export function updateVariableValues() {
 	})
 
 	//Source Specific Variables
-	for (let s in this.sources) {
-		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
-		let inputSettings = source.settings
+	for (const s in this.sources) {
+		const source = this.sources[s]
+		const sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+		const inputSettings = source.settings
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
@@ -209,9 +212,9 @@ export function updateVariableValues() {
 	//Scene Variables
 	let sceneIndex = 0
 	for (let s = this.scenes?.length - 1; s >= 0; s--) {
-		let index = ++sceneIndex
+		const index = ++sceneIndex
 
-		let sceneName = this.scenes[s].sceneName
+		const sceneName = this.scenes[s].sceneName
 		this.setVariableValues({
 			[`scene_${index}`]: sceneName,
 		})

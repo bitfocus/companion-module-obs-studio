@@ -1,7 +1,8 @@
-import { combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import type { OBSInstance } from './main.js'
 
-export function getFeedbacks() {
-	const feedbacks = {}
+export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
+	const feedbacks: CompanionFeedbackDefinitions = {}
 
 	const ColorWhite = combineRgb(255, 255, 255)
 	const ColorGray = combineRgb(72, 72, 72)
@@ -20,7 +21,7 @@ export function getFeedbacks() {
 		},
 		options: [],
 		callback: () => {
-			return this.states.streaming
+			return !!this.states.streaming
 		},
 	}
 
@@ -56,9 +57,9 @@ export function getFeedbacks() {
 		],
 		callback: (feedback) => {
 			if (this.states.recording === 'Recording') {
-				return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+				return { color: feedback.options.fg as number, bgcolor: feedback.options.bg as number }
 			} else if (this.states.recording === 'Paused') {
-				return { color: feedback.options.fg_paused, bgcolor: feedback.options.bg_paused }
+				return { color: feedback.options.fg_paused as number, bgcolor: feedback.options.bg_paused as number }
 			} else {
 				return {}
 			}
@@ -114,21 +115,20 @@ export function getFeedbacks() {
 				default: ColorGreen,
 			},
 		],
-		callback: async (feedback, context) => {
+		callback: (feedback) => {
 			let mode = feedback.options.mode
-			let scene = await context.parseVariablesInString(feedback.options.scene)
+			const scene = feedback.options.scene as string
 			if (!mode) {
 				mode = 'programAndPreview'
 			}
 			if (this.states.programScene === scene && (mode === 'programAndPreview' || mode === 'program')) {
-				return { color: feedback.options.fg, bgcolor: feedback.options.bg }
+				return { color: feedback.options.fg as number, bgcolor: feedback.options.bg as number }
 			} else if (
 				this.states.previewScene === scene &&
-				typeof feedback.options.fg_preview === 'number' &&
 				this.states.studioMode === true &&
 				(mode === 'programAndPreview' || mode === 'preview')
 			) {
-				return { color: feedback.options.fg_preview, bgcolor: feedback.options.bg_preview }
+				return { color: feedback.options.fg_preview as number, bgcolor: feedback.options.bg_preview as number }
 			} else {
 				return {}
 			}
@@ -153,8 +153,8 @@ export function getFeedbacks() {
 				allowCustom: true,
 			},
 		],
-		callback: async (feedback, context) => {
-			let scene = await context.parseVariablesInString(feedback.options.scene)
+		callback: (feedback) => {
+			const scene = feedback.options.scene as string
 			return this.states.programScene === scene
 		},
 	}
@@ -177,8 +177,8 @@ export function getFeedbacks() {
 				allowCustom: true,
 			},
 		],
-		callback: async (feedback, context) => {
-			let scene = await context.parseVariablesInString(feedback.options.scene)
+		callback: (feedback) => {
+			const scene = feedback.options.scene as string
 			return this.states.previewScene === scene
 		},
 	}
@@ -201,7 +201,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.states.previousScene === feedback.options.scene
+			return this.states.previousScene === (feedback.options.scene as string)
 		},
 	}
 
@@ -230,11 +230,15 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			if (this.sources[feedback.options.source]?.active && feedback.options.scene === 'anyScene') {
+			if (this.sources[feedback.options.source as string]?.active && feedback.options.scene === 'anyScene') {
 				return true
-			} else if (this.sources[feedback.options.source]?.active && feedback.options.scene === this.states.programScene) {
+			} else if (
+				this.sources[feedback.options.source as string]?.active &&
+				feedback.options.scene === this.states.programScene
+			) {
 				return true
 			}
+			return false
 		},
 	}
 
@@ -256,7 +260,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.sources[feedback.options.source]?.videoShowing
+			return !!this.sources[feedback.options.source as string]?.videoShowing
 		},
 	}
 
@@ -278,9 +282,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			if (this.states.currentProfile === feedback.options.profile) {
-				return true
-			}
+			return this.states.currentProfile === (feedback.options.profile as string)
 		},
 	}
 
@@ -302,9 +304,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			if (this.states.currentSceneCollection === feedback.options.scene_collection) {
-				return true
-			}
+			return this.states.currentSceneCollection === (feedback.options.scene_collection as string)
 		},
 	}
 
@@ -341,28 +341,28 @@ export function getFeedbacks() {
 				isVisible: (options) => !options.any,
 			},
 		],
-		callback: async (feedback, context) => {
-			let sceneName = await context.parseVariablesInString(feedback.options.scene)
-			let sourceName = await context.parseVariablesInString(feedback.options.source)
+		callback: (feedback) => {
+			const sceneName = feedback.options.scene as string
+			const sourceName = feedback.options.source as string
 
 			if (feedback.options.any) {
-				let scene = this.sceneItems[sceneName]
+				const scene = this.sceneItems[sceneName]
 
 				if (scene) {
-					let enabled = this.sceneItems[sceneName].find((item) => item.sceneItemEnabled === true)
+					const enabled = this.sceneItems[sceneName].find((item) => item.sceneItemEnabled === true)
 					if (enabled) {
 						return true
 					}
 				}
 			} else {
 				if (this.sources[sourceName]?.groupedSource) {
-					let group = this.sources[sourceName].groupName
-					let sceneItem = this.groups[group].find((item) => item.sourceName === sourceName)
+					const group = this.sources[sourceName].groupName
+					const sceneItem = this.groups[group].find((item) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
 				} else if (this.sceneItems[sceneName]) {
-					let sceneItem = this.sceneItems[sceneName].find((item) => item.sourceName === sourceName)
+					const sceneItem = this.sceneItems[sceneName].find((item) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
@@ -389,7 +389,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.outputs[feedback.options.output]?.outputActive
+			return !!this.states.outputActive[feedback.options.output as string]
 		},
 	}
 
@@ -403,7 +403,7 @@ export function getFeedbacks() {
 		},
 		options: [],
 		callback: () => {
-			return this.states.replayBuffer
+			return !!this.states.replayBufferActive
 		},
 	}
 
@@ -417,7 +417,7 @@ export function getFeedbacks() {
 		},
 		options: [],
 		callback: () => {
-			return this.states.transitionActive
+			return !!this.states.transitionActive
 		},
 	}
 
@@ -442,6 +442,7 @@ export function getFeedbacks() {
 			if (this.states.currentTransition === feedback.options.transition) {
 				return true
 			}
+			return false
 		},
 	}
 
@@ -458,16 +459,14 @@ export function getFeedbacks() {
 				type: 'number',
 				label: 'Transition time (in ms)',
 				id: 'duration',
-				default: null,
+				default: 500,
 				min: 0,
 				max: 60 * 1000, //max is required by api
 				range: false,
 			},
 		],
 		callback: (feedback) => {
-			if (this.states.transitionDuration === feedback.options.duration) {
-				return true
-			}
+			return this.states.transitionDuration === (feedback.options.duration as number)
 		},
 	}
 
@@ -496,14 +495,12 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			if (this.sourceFilters[feedback.options.source]) {
-				let filter = this.sourceFilters[feedback.options.source].find(
-					(item) => item.filterName === feedback.options.filter,
-				)
-				if (filter) {
-					return filter.filterEnabled
-				}
+			const sourceFilters = this.sourceFilters[feedback.options.source as string]
+			if (sourceFilters) {
+				const filter = sourceFilters.find((item) => item.filterName === (feedback.options.filter as string))
+				return !!filter?.filterEnabled
 			}
+			return false
 		},
 	}
 
@@ -525,7 +522,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.sources[feedback.options.source]?.inputMuted
+			return !!this.sources[feedback.options.source as string]?.inputMuted
 		},
 	}
 
@@ -566,7 +563,7 @@ export function getFeedbacks() {
 			} else {
 				monitorType = 'OBS_MONITORING_TYPE_NONE'
 			}
-			return this.sources[feedback.options.source]?.monitorType == monitorType
+			return this.sources[feedback.options.source as string]?.monitorType === monitorType
 		},
 	}
 
@@ -597,7 +594,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.sources[feedback.options.source]?.inputVolume == feedback.options.volume
+			return this.sources[feedback.options.source as string]?.inputVolume == feedback.options.volume
 		},
 	}
 
@@ -619,7 +616,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.mediaSources[feedback.options.source]?.mediaState == 'OBS_MEDIA_STATE_PLAYING'
+			return this.mediaSources[feedback.options.source as string]?.mediaState == 'OBS_MEDIA_STATE_PLAYING'
 		},
 	}
 
@@ -668,36 +665,33 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			let remainingTime // remaining time in seconds
-			let mediaState
-			if (this.mediaSources[feedback.options.source]) {
-				remainingTime = Math.round(
-					(this.mediaSources[feedback.options.source].mediaDuration -
-						this.mediaSources[feedback.options.source].mediaCursor) /
-						1000,
-				)
-				mediaState = this.mediaSources[feedback.options.source].mediaState
-			}
-			if (remainingTime === undefined) return false
+			const sourceName = feedback.options.source as string
+			const mediaSource = this.mediaSources[sourceName]
+			if (mediaSource) {
+				const remainingTime = Math.round((mediaSource.mediaDuration - mediaSource.mediaCursor) / 1000)
+				const mediaState = mediaSource.mediaState
 
-			if (feedback.options.onlyIfSourceIsOnProgram && !this.sources[feedback.options.source].active) {
-				return false
-			}
-
-			if (feedback.options.onlyIfSourceIsPlaying && mediaState !== 'OBS_MEDIA_STATE_PLAYING') {
-				return false
-			}
-
-			if (remainingTime <= feedback.options.rtThreshold) {
-				if (feedback.options.blinkingEnabled && mediaState === 'OBS_MEDIA_STATE_PLAYING') {
-					// TODO: implement a better button blinking, or wait for https://github.com/bitfocus/companion/issues/674
-					if (remainingTime % 2 != 0) {
-						// flash in seconds interval (checkFeedbacks interval = media poller interval)
-						return false
-					}
+				if (feedback.options.onlyIfSourceIsOnProgram && !this.sources[sourceName]?.active) {
+					return false
 				}
-				return true
+
+				if (feedback.options.onlyIfSourceIsPlaying && mediaState !== 'OBS_MEDIA_STATE_PLAYING') {
+					return false
+				}
+
+				if (mediaState === 'OBS_MEDIA_STATE_ENDED') {
+					return false
+				}
+
+				const threshold = feedback.options.rtThreshold as number
+				if (remainingTime <= threshold) {
+					if (feedback.options.blinkingEnabled && mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+						return !!(Math.floor(Date.now() / 500) % 2)
+					}
+					return true
+				}
 			}
+			return false
 		},
 	}
 
@@ -711,7 +705,7 @@ export function getFeedbacks() {
 		},
 		options: [],
 		callback: () => {
-			return this.states.studioMode
+			return !!this.states.studioMode
 		},
 	}
 
@@ -747,14 +741,14 @@ export function getFeedbacks() {
 		],
 		callback: (feedback) => {
 			if (this.states.streaming === false) {
-				return { bgcolor: feedback.options.colorNoStream }
+				return { bgcolor: feedback.options.colorNoStream as number }
 			} else {
-				if (this.states.streamCongestion > 0.8) {
-					return { bgcolor: feedback.options.colorHigh }
-				} else if (this.states.congestion > 0.4) {
-					return { bgcolor: feedback.options.colorMedium }
+				if ((this.states.streamCongestion as number) > 0.8) {
+					return { bgcolor: feedback.options.colorHigh as number }
+				} else if ((this.states.congestion as number) > 0.4) {
+					return { bgcolor: feedback.options.colorMedium as number }
 				} else {
-					return { bgcolor: feedback.options.colorLow }
+					return { bgcolor: feedback.options.colorLow as number }
 				}
 			}
 		},
@@ -775,11 +769,12 @@ export function getFeedbacks() {
 				id: 'diskSpace',
 				default: 10000,
 				min: 0,
+				max: 1000000,
 				range: false,
 			},
 		],
 		callback: (feedback) => {
-			return this.states.stats?.availableDiskSpace < feedback.options.diskSpace
+			return (this.states.stats?.availableDiskSpace ?? 1000000) < (feedback.options.diskSpace as number)
 		},
 	}
 
@@ -810,7 +805,7 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			return this.audioPeak?.[feedback.options.source] > feedback.options.peak
+			return (this.audioPeak?.[feedback.options.source as string] ?? -100) > (feedback.options.peak as number)
 		},
 	}
 
@@ -838,8 +833,8 @@ export function getFeedbacks() {
 			},
 		],
 		callback: (feedback) => {
-			let peak = this.audioPeak?.[feedback.options.source]
-			const threshold = feedback.options.threshold ?? -60
+			const peak = this.audioPeak?.[feedback.options.source as string] ?? -100
+			const threshold = (feedback.options.threshold as number) ?? -60
 			if (peak > -9) {
 				return { bgcolor: ColorRed }
 			} else if (peak > -20) {
@@ -856,6 +851,10 @@ export function getFeedbacks() {
 		type: 'boolean',
 		name: 'Vendor Event',
 		description: 'Change the style of the button based on third party vendor events',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
 		options: [
 			{
 				type: 'textinput',
@@ -887,7 +886,7 @@ export function getFeedbacks() {
 				if (this.vendorEvent.vendorName == feedback.options.vendorName) {
 					if (this.vendorEvent.eventType == feedback.options.eventType) {
 						if (this.vendorEvent.eventData) {
-							let key = this.vendorEvent.eventData[feedback.options.eventDataKey]
+							const key = this.vendorEvent.eventData[feedback.options.eventDataKey as string]
 							if (key && key == feedback.options.eventDataValue) {
 								return true
 							}
@@ -895,6 +894,7 @@ export function getFeedbacks() {
 					}
 				}
 			}
+			return false
 		},
 	}
 
