@@ -71,6 +71,58 @@ export function getVariables() {
 		},
 	)
 
+	//Source Specific Variables
+	for (let s in this.sources) {
+		let source = this.sources[s]
+		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+		if (source.inputKind) {
+			switch (source.inputKind) {
+				case 'text_ft2_source_v2':
+				case 'text_gdiplus_v2':
+				case 'text_gdiplus_v3':
+					variables.push({ variableId: `current_text_${sourceName}`, name: `${sourceName} - Current text` })
+					break
+				case 'ffmpeg_source':
+				case 'vlc_source': {
+					variables.push(
+						{ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` },
+						{ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` },
+						{ variableId: `media_time_elapsed_${sourceName}`, name: `${sourceName} - Time elapsed` },
+						{ variableId: `media_time_remaining_${sourceName}`, name: `${sourceName} - Time remaining` },
+					)
+					break
+				}
+				case 'image_source':
+					variables.push({
+						variableId: `image_file_name_${sourceName}`,
+						name: `${sourceName} - Image file name`,
+					})
+					break
+				default:
+					break
+			}
+		}
+		if (source.inputAudioTracks) {
+			variables.push(
+				{ variableId: `volume_${sourceName}`, name: `${sourceName} - Volume` },
+				{ variableId: `mute_${sourceName}`, name: `${sourceName} - Mute status` },
+				{ variableId: `monitor_${sourceName}`, name: `${sourceName} - Audio monitor` },
+				{ variableId: `sync_offset_${sourceName}`, name: `${sourceName} - Sync offset` },
+				{ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` },
+			)
+		}
+	}
+
+	//Scene Variables
+	let sceneIndex = 0
+	for (let s = this.scenes?.length - 1; s >= 0; s--) {
+		let index = ++sceneIndex
+		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
+	}
+	return variables
+}
+
+export function updateVariableValues() {
 	//Defaults
 	this.setVariableValues({
 		current_media_name: 'None',
@@ -93,25 +145,18 @@ export function getVariables() {
 				case 'text_ft2_source_v2':
 				case 'text_gdiplus_v2':
 				case 'text_gdiplus_v3':
-					variables.push({ variableId: `current_text_${sourceName}`, name: `${sourceName} - Current text` })
 					if (inputSettings?.from_file || inputSettings?.read_from_file) {
 						this.setVariableValues({
 							[`current_text_${sourceName}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
 						})
-					} else if (inputSettings?.text) {
+					} else {
 						this.setVariableValues({
-							[`current_text_${sourceName}`]: inputSettings.text ?? '',
+							[`current_text_${sourceName}`]: inputSettings?.text ?? '',
 						})
 					}
 					break
 				case 'ffmpeg_source':
 				case 'vlc_source': {
-					variables.push(
-						{ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` },
-						{ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` },
-						{ variableId: `media_time_elapsed_${sourceName}`, name: `${sourceName} - Time elapsed` },
-						{ variableId: `media_time_remaining_${sourceName}`, name: `${sourceName} - Time remaining` },
-					)
 					let file = ''
 					if (inputSettings?.playlist) {
 						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
@@ -119,18 +164,19 @@ export function getVariables() {
 					} else if (inputSettings?.local_file) {
 						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
-					this.setVariableValues({ [`media_file_name_${sourceName}`]: file })
+					this.setVariableValues({
+						[`media_status_${sourceName}`]: 'Stopped',
+						[`media_file_name_${sourceName}`]: file,
+						[`media_time_elapsed_${sourceName}`]: '--:--:--',
+						[`media_time_remaining_${sourceName}`]: '--:--:--',
+					})
 
 					break
 				}
 				case 'image_source':
-					variables.push({
-						variableId: `image_file_name_${sourceName}`,
-						name: `${sourceName} - Image file name`,
-					})
 					this.setVariableValues({
-						[`image_file_name_${sourceName}`]: source.inputSettings?.file
-							? source.inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)
+						[`image_file_name_${sourceName}`]: inputSettings?.file
+							? (inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '')
 							: '',
 					})
 					break
@@ -140,13 +186,23 @@ export function getVariables() {
 		}
 
 		if (source.inputAudioTracks) {
-			variables.push(
-				{ variableId: `volume_${sourceName}`, name: `${sourceName} - Volume` },
-				{ variableId: `mute_${sourceName}`, name: `${sourceName} - Mute status` },
-				{ variableId: `monitor_${sourceName}`, name: `${sourceName} - Audio monitor` },
-				{ variableId: `sync_offset_${sourceName}`, name: `${sourceName} - Sync offset` },
-				{ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` },
-			)
+			let monitorType
+			if (source.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+				monitorType = 'Monitor / Output'
+			} else if (source.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+				monitorType = 'Monitor Only'
+			} else {
+				monitorType = 'Off'
+			}
+
+			this.setVariableValues({
+				[`volume_${sourceName}`]: source.inputVolume !== undefined ? source.inputVolume + ' dB' : '',
+				[`mute_${sourceName}`]: source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : '',
+				[`monitor_${sourceName}`]: monitorType,
+				[`sync_offset_${sourceName}`]:
+					source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : '',
+				[`balance_${sourceName}`]: source.inputAudioBalance !== undefined ? source.inputAudioBalance : '',
+			})
 		}
 	}
 
@@ -156,10 +212,8 @@ export function getVariables() {
 		let index = ++sceneIndex
 
 		let sceneName = this.scenes[s].sceneName
-		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
 		this.setVariableValues({
 			[`scene_${index}`]: sceneName,
 		})
 	}
-	return variables
 }

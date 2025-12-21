@@ -8,6 +8,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.15.1
+
+- Fix
+  - Possible timeouts when using a scene collection that creates a large number of variables
+  - Set Source Visibility action and feedback not working when a source is in multiple scenes
+
 ### v3.15.0
 
 - New
