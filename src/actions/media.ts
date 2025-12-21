@@ -1,0 +1,228 @@
+import { CompanionActionDefinitions } from '@companion-module/base'
+import type { OBSInstance } from '../main.js'
+
+export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
+	const actions: CompanionActionDefinitions = {}
+
+	actions['play_pause_media'] = {
+		name: 'Media - Play / Pause',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+			{
+				type: 'dropdown',
+				label: 'Action',
+				id: 'playPause',
+				default: 'toggle',
+				choices: [
+					{ id: 'toggle', label: 'Toggle Play/Pause' },
+					{ id: 'play', label: 'Play' },
+					{ id: 'pause', label: 'Pause' },
+				],
+			},
+		],
+		callback: async (action) => {
+			const media =
+				action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string)
+			let playPause = action.options.playPause as string
+			if (playPause === 'toggle') {
+				playPause =
+					self.states.mediaSources.get(media)?.mediaState === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+						? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
+						: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+			} else {
+				playPause =
+					playPause === 'pause' ? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE' : 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+			}
+			await self.obs.sendRequest('TriggerMediaInputAction', {
+				inputName: media,
+				mediaAction: playPause,
+			})
+		},
+	}
+	actions['restart_media'] = {
+		name: 'Media - Restart',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('TriggerMediaInputAction', {
+				inputName:
+					action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string),
+				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART',
+			})
+		},
+	}
+	actions['stop_media'] = {
+		name: 'Media - Stop',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('TriggerMediaInputAction', {
+				inputName:
+					action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string),
+				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP',
+			})
+		},
+	}
+	actions['next_media'] = {
+		name: 'Media - Next',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('TriggerMediaInputAction', {
+				inputName:
+					action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string),
+				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT',
+			})
+		},
+	}
+	actions['previous_media'] = {
+		name: 'Media - Previous',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('TriggerMediaInputAction', {
+				inputName:
+					action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string),
+				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS',
+			})
+		},
+	}
+
+	actions['set_media_time'] = {
+		name: 'Media - Set Time',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+			{
+				type: 'number',
+				label: 'Time (in ms)',
+				id: 'mediaTime',
+				default: 0,
+				min: 0,
+				max: 100 * 60 * 60 * 1000,
+				range: false,
+			},
+		],
+		callback: async (action) => {
+			const inputName =
+				action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string)
+			const mediaTime = action.options.mediaTime as number
+			await self.obs.sendRequest('SetMediaInputCursor', {
+				inputName: inputName,
+				mediaCursor: mediaTime,
+			})
+		},
+	}
+
+	actions['scrub_media'] = {
+		name: 'Media - Scrub',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+			{
+				type: 'number',
+				label: 'Scrub Amount (in seconds, can be negative)',
+				id: 'scrubAmount',
+				default: 1,
+				min: -3600,
+				max: 3600,
+				range: false,
+			},
+		],
+		callback: async (action) => {
+			const inputName =
+				action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string)
+			const scrubAmount = action.options.scrubAmount as number
+			await self.obs.sendRequest('OffsetMediaInputCursor', {
+				inputName: inputName,
+				mediaCursorOffset: scrubAmount * 1000,
+			})
+		},
+	}
+
+	actions['set_media_source_file'] = {
+		name: 'Media - Set Source File',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Media Source',
+				id: 'source',
+				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+				choices: [{ id: 'currentMedia', label: 'Currently Playing' }, ...self.obsState.mediaSourceList],
+			},
+			{
+				type: 'textinput',
+				label: 'File Path',
+				id: 'path',
+				default: '',
+				useVariables: true,
+			},
+		],
+		callback: async (action) => {
+			const inputName =
+				action.options.source === 'currentMedia' ? self.states.currentMedia : (action.options.source as string)
+			const mediaFilePath = action.options.path as string
+			try {
+				const input = await self.obs.sendRequest('GetInputSettings', {
+					inputName: inputName,
+				})
+				if (input?.inputSettings?.local_file) {
+					await self.obs.sendRequest('SetInputSettings', {
+						inputName: inputName,
+						inputSettings: {
+							local_file: mediaFilePath,
+						},
+					})
+				}
+			} catch (e: any) {
+				self.log('error', `Set Media Source File Error: ${e.message}`)
+			}
+		},
+	}
+
+	return actions
+}

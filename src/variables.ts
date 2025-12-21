@@ -1,5 +1,6 @@
 import { CompanionVariableDefinition } from '@companion-module/base'
 import { OBSInstance } from './main.js'
+import * as utils from './utils.js'
 
 export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	const variables: CompanionVariableDefinition[] = []
@@ -75,8 +76,8 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	)
 
 	//Source Specific Variables
-	for (const source of this.sources.values()) {
-		const sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+	for (const source of this.states.sources.values()) {
+		const sourceName = source.validName ? source.validName : utils.validName(this, source.sourceName)
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
@@ -117,7 +118,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 
 	//Scene Variables
 	let sceneIndex = 0
-	const sceneList = Array.from(this.scenes.values())
+	const sceneList = Array.from(this.states.scenes.values())
 	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
 		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
@@ -139,8 +140,8 @@ export function updateVariableValues(this: OBSInstance): void {
 	})
 
 	//Source Specific Variables
-	for (const source of this.sources.values()) {
-		const sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+	for (const source of this.states.sources.values()) {
+		const sourceName = source.validName ? source.validName : utils.validName(this, source.sourceName)
 		const inputSettings = source.settings
 		if (source.inputKind) {
 			switch (source.inputKind) {
@@ -210,7 +211,7 @@ export function updateVariableValues(this: OBSInstance): void {
 
 	//Scene Variables
 	let sceneIndex = 0
-	const sceneList = Array.from(this.scenes.values())
+	const sceneList = Array.from(this.states.scenes.values())
 	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
 

@@ -9,7 +9,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 	const ColorGreen = combineRgb(0, 200, 0)
 	const ColorYellow = combineRgb(212, 174, 0)
 
-	for (const scene of this.sceneChoices) {
+	for (const scene of this.obsState.sceneChoices) {
 		presets[`toProgram_${scene.id}`] = {
 			type: 'button',
 			category: 'Scene to Program',
@@ -118,7 +118,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		],
 	}
 
-	for (const transition of this.transitionList) {
+	for (const transition of this.obsState.transitionList) {
 		presets[`quickTransition_${transition.id}`] = {
 			type: 'button',
 			category: 'Transitions',
@@ -326,7 +326,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		],
 	}
 
-	for (const output of this.outputList) {
+	for (const output of this.obsState.outputList) {
 		presets[`toggleOutput_${output.id}`] = {
 			type: 'button',
 			category: 'Outputs',
@@ -365,7 +365,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		}
 	}
 
-	for (const source of this.sourceChoices) {
+	for (const source of this.obsState.sourceChoices) {
 		presets[`sourceStatus_${source.id}`] = {
 			type: 'button',
 			category: 'Sources',
@@ -549,7 +549,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		feedbacks: [],
 	}
 
-	for (const mediaSource of this.mediaSourceList) {
+	for (const mediaSource of this.obsState.mediaSourceList) {
 		const sourceName = mediaSource.label.replace(/[\W]/gi, '_')
 		presets[`toggleMedia_${mediaSource.id}`] = {
 			type: 'button',

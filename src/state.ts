@@ -167,6 +167,10 @@ export class OBSState {
 		return (this.profileChoices[0]?.id as string) ?? ''
 	}
 
+	public get mediaSourceListDefault(): string {
+		return (this.mediaSourceList[0]?.id as string) ?? ''
+	}
+
 	// Special Choices
 	public get sceneChoicesProgramPreview(): Choice[] {
 		return [

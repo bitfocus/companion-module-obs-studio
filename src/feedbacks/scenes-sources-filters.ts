@@ -1,0 +1,312 @@
+import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import type { OBSInstance } from '../main.js'
+
+export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
+	const feedbacks: CompanionFeedbackDefinitions = {}
+
+	const ColorWhite = combineRgb(255, 255, 255)
+	const ColorRed = combineRgb(200, 0, 0)
+	const ColorGreen = combineRgb(0, 200, 0)
+
+	feedbacks['scene_active'] = {
+		type: 'advanced',
+		name: 'Scene in Preview / Program',
+		description: 'If a scene is in preview or program, change colors of the button',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Mode',
+				id: 'mode',
+				default: 'programAndPreview',
+				choices: [
+					{ id: 'programAndPreview', label: 'Program and Preview' },
+					{ id: 'program', label: 'Program Only' },
+					{ id: 'preview', label: 'Preview Only' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				allowCustom: true,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Foreground color (Program)',
+				id: 'fg',
+				default: ColorWhite,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Program)',
+				id: 'bg',
+				default: ColorRed,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Foreground color (Preview)',
+				id: 'fg_preview',
+				default: ColorWhite,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color (Preview)',
+				id: 'bg_preview',
+				default: ColorGreen,
+			},
+		],
+		callback: (feedback) => {
+			let mode = feedback.options.mode
+			const scene = feedback.options.scene as string
+			if (!mode) {
+				mode = 'programAndPreview'
+			}
+			if (self.states.programScene === scene && (mode === 'programAndPreview' || mode === 'program')) {
+				return { color: feedback.options.fg as number, bgcolor: feedback.options.bg as number }
+			} else if (
+				self.states.previewScene === scene &&
+				self.states.studioMode === true &&
+				(mode === 'programAndPreview' || mode === 'preview')
+			) {
+				return { color: feedback.options.fg_preview as number, bgcolor: feedback.options.bg_preview as number }
+			} else {
+				return {}
+			}
+		},
+	}
+
+	feedbacks['sceneProgram'] = {
+		type: 'boolean',
+		name: 'Scene in Program',
+		description: 'If a scene is in program, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorRed,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				allowCustom: true,
+			},
+		],
+		callback: (feedback) => {
+			const scene = feedback.options.scene as string
+			return self.states.programScene === scene
+		},
+	}
+
+	feedbacks['scenePreview'] = {
+		type: 'boolean',
+		name: 'Scene in Preview',
+		description: 'If a scene is in preview, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				allowCustom: true,
+			},
+		],
+		callback: (feedback) => {
+			const scene = feedback.options.scene as string
+			return self.states.previewScene === scene
+		},
+	}
+
+	feedbacks['scenePrevious'] = {
+		type: 'boolean',
+		name: 'Previous Scene Active',
+		description: 'If a scene was the last scene previously active, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+			},
+		],
+		callback: (feedback) => {
+			return self.states.previousScene === (feedback.options.scene as string)
+		},
+	}
+
+	feedbacks['scene_item_active'] = {
+		type: 'boolean',
+		name: 'Source Visible in Program',
+		description: 'If a source is visible in the program, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorRed,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: 'anyScene',
+				choices: self.obsState.sceneChoicesAnyScene,
+			},
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: (feedback) => {
+			if (self.states.sources.get(feedback.options.source as string)?.active && feedback.options.scene === 'anyScene') {
+				return true
+			} else if (
+				self.states.sources.get(feedback.options.source as string)?.active &&
+				feedback.options.scene === self.states.programScene
+			) {
+				return true
+			}
+			return false
+		},
+	}
+
+	feedbacks['scene_item_previewed'] = {
+		type: 'boolean',
+		name: 'Source Active in Preview',
+		description: 'If a source is enabled in the preview scene, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source name',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: (feedback) => {
+			return !!self.states.sources.get(feedback.options.source as string)?.videoShowing
+		},
+	}
+
+	feedbacks['scene_item_active_in_scene'] = {
+		type: 'boolean',
+		name: 'Source Enabled in Scene',
+		description: 'If a source is enabled in a specific scene, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				allowCustom: true,
+			},
+			{
+				type: 'checkbox',
+				label: 'Any Source',
+				id: 'any',
+				default: false,
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+				allowCustom: true,
+				isVisible: (options) => !options.any,
+			},
+		],
+		callback: (feedback) => {
+			const sceneName = feedback.options.scene as string
+			const sourceName = feedback.options.source as string
+
+			if (feedback.options.any) {
+				const scene = self.states.sceneItems.get(sceneName)
+
+				if (scene) {
+					const enabled = scene.find((item: any) => item.sceneItemEnabled === true)
+					if (enabled) {
+						return true
+					}
+				}
+			} else {
+				const source = self.states.sources.get(sourceName)
+				if (source?.groupedSource) {
+					const groupName = source.groupName
+					const group = self.states.groups.get(groupName)
+					const sceneItem = group?.find((item: any) => item.sourceName === sourceName)
+					if (sceneItem) {
+						return sceneItem.sceneItemEnabled
+					}
+				} else {
+					const scene = self.states.sceneItems.get(sceneName)
+					if (scene) {
+						const sceneItem = scene.find((item: any) => item.sourceName === sourceName)
+						if (sceneItem) {
+							return sceneItem.sceneItemEnabled
+						}
+					}
+				}
+			}
+		},
+	}
+
+	feedbacks['filter_enabled'] = {
+		type: 'boolean',
+		name: 'Filter Enabled',
+		description: 'If a filter is enabled, change the style of the button',
+		defaultStyle: {
+			color: ColorWhite,
+			bgcolor: ColorGreen,
+		},
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoicesWithScenes,
+			},
+			{
+				type: 'dropdown',
+				label: 'Filter',
+				id: 'filter',
+				default: self.obsState.filterListDefault,
+				choices: self.obsState.filterList,
+			},
+		],
+		callback: (feedback) => {
+			const sourceFilters = self.states.sourceFilters.get(feedback.options.source as string)
+			if (sourceFilters) {
+				const filter = sourceFilters.find((item) => item.filterName === (feedback.options.filter as string))
+				return !!filter?.filterEnabled
+			}
+			return false
+		},
+	}
+
+	return feedbacks
+}
