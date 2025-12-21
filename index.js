@@ -53,7 +53,7 @@ class OBSInstance extends InstanceBase {
 		]
 	}
 
-	configUpdated(config) {
+	async configUpdated(config) {
 		this.config = config
 		this.init(config)
 	}
