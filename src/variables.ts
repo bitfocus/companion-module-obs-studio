@@ -75,8 +75,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	)
 
 	//Source Specific Variables
-	for (const s in this.sources) {
-		const source = this.sources[s]
+	for (const source of this.sources.values()) {
 		const sourceName = source.validName ? source.validName : this.validName(source.sourceName)
 		if (source.inputKind) {
 			switch (source.inputKind) {
@@ -118,7 +117,8 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 
 	//Scene Variables
 	let sceneIndex = 0
-	for (let s = this.scenes?.length - 1; s >= 0; s--) {
+	const sceneList = Array.from(this.scenes.values())
+	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
 		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
 	}
@@ -139,8 +139,7 @@ export function updateVariableValues(this: OBSInstance): void {
 	})
 
 	//Source Specific Variables
-	for (const s in this.sources) {
-		const source = this.sources[s]
+	for (const source of this.sources.values()) {
 		const sourceName = source.validName ? source.validName : this.validName(source.sourceName)
 		const inputSettings = source.settings
 		if (source.inputKind) {
@@ -211,10 +210,11 @@ export function updateVariableValues(this: OBSInstance): void {
 
 	//Scene Variables
 	let sceneIndex = 0
-	for (let s = this.scenes?.length - 1; s >= 0; s--) {
+	const sceneList = Array.from(this.scenes.values())
+	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
 
-		const sceneName = this.scenes[s].sceneName
+		const sceneName = sceneList[s].sceneName
 		this.setVariableValues({
 			[`scene_${index}`]: sceneName,
 		})

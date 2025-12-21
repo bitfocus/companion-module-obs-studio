@@ -259,7 +259,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			if (this.states.previewSceneIndex !== undefined) {
 				const previewSceneIndex = this.states.previewSceneIndex
 				const previousIndex = previewSceneIndex + 1 // Assuming higher index means "previous" in the list order
-				const previousScene = this.states.scenes.find((s: any) => s.sceneIndex === previousIndex)
+				const previousScene = Array.from(this.states.scenes.values()).find((s) => s.sceneIndex === previousIndex)
 				if (previousScene) {
 					await this.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
 				} else {
@@ -277,7 +277,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			if (this.states.previewSceneIndex !== undefined) {
 				const previewSceneIndex = this.states.previewSceneIndex
 				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
-				const nextScene = this.states.scenes.find((s: any) => s.sceneIndex === nextIndex)
+				const nextScene = Array.from(this.states.scenes.values()).find((s) => s.sceneIndex === nextIndex)
 				if (nextScene) {
 					await this.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
 				} else {
@@ -338,7 +338,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			} else {
 				const revertTransition = this.states.currentTransition ?? 'Cut'
 				const revertTransitionDuration =
-					(this.states.transitionDuration ?? 0) > 0 ? (this.states.transitionDuration as number) : 500
+					(this.states.transitionDuration ?? 0) > 0 ? this.states.transitionDuration : 500
 				let transitionWaitTime: number
 				let transitionDuration: number
 
@@ -430,11 +430,13 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		callback: async (action) => {
 			const currentTransitionIndex = this.transitionList.findIndex((item) => item.id === this.states.currentTransition)
 			if (action.options.adjust === 'next') {
-				const nextTransition = this.transitionList[currentTransitionIndex + 1]?.id ?? this.transitionList[0].id
+				const nextTransition =
+					this.transitionList[currentTransitionIndex + 1]?.id ?? (this.transitionList[0]?.id as string)
 				await this.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition })
 			} else if (action.options.adjust === 'previous') {
 				const previousTransition =
-					this.transitionList[currentTransitionIndex - 1]?.id ?? this.transitionList[this.transitionList.length - 1].id
+					(this.transitionList[currentTransitionIndex - 1]?.id as string) ??
+					(this.transitionList[this.transitionList.length - 1]?.id as string)
 				await this.sendRequest('SetCurrentSceneTransition', { transitionName: previousTransition })
 			}
 		},
@@ -792,7 +794,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			const sourceName = action.options.source as string
-			const currentVolume = this.sources[sourceName]?.inputVolume ?? 0
+			const currentVolume = this.sources.get(sourceName)?.inputVolume ?? 0
 			let newVolume = currentVolume + (action.options.volume as number)
 			if (newVolume > 26) {
 				newVolume = 26
@@ -833,7 +835,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			const LOG_RANGE_VAL = Number('-2.00860017176191756')
 
 			//Calculate current "percent" of volume slider in OBS
-			const dB = this.sources[sourceName]?.inputVolume ?? 0
+			const dB = this.sources.get(sourceName)?.inputVolume ?? 0
 			let currentPercent = 0.0
 			if (dB >= 0.0) {
 				currentPercent = 100.0
@@ -899,7 +901,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			const sourceName = action.options.source as string
-			const currentVolume = this.sources[sourceName]?.inputVolume ?? 0
+			const currentVolume = this.sources.get(sourceName)?.inputVolume ?? 0
 			const targetVolume = action.options.volume as number
 			const fadeDuration = action.options.duration as number
 			const fadeSteps = 25
@@ -920,15 +922,16 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 				)
 			}
 
-			if (this.sources[sourceName]?.audioFadeActive) {
+			if (this.sources.get(sourceName)?.audioFadeActive) {
 				return
 			} else {
-				if (this.sources[sourceName]) {
-					this.sources[sourceName].audioFadeActive = true
+				const source = this.sources.get(sourceName)
+				if (source) {
+					source.audioFadeActive = true
 				}
 				await this.sendBatch(fadeBatch)
-				if (this.sources[sourceName]) {
-					this.sources[sourceName].audioFadeActive = false
+				if (source) {
+					source.audioFadeActive = false
 				}
 			}
 		},
@@ -981,7 +984,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			const sourceName = action.options.source as string
-			const current = this.sources[sourceName]?.inputAudioSyncOffset ?? 0
+			const current = this.sources.get(sourceName)?.inputAudioSyncOffset ?? 0
 			const offset = parseInt(action.options.offset as string)
 			let newOffset = current + offset
 			if (newOffset > 20000) {
@@ -1044,7 +1047,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			const sourceName = action.options.source as string
-			const current = this.sources[sourceName]?.inputAudioBalance ?? 0
+			const current = this.sources.get(sourceName)?.inputAudioBalance ?? 0
 			const offset = parseFloat(action.options.offset as string)
 			let newOffset = current + offset
 			if (newOffset > 1.0) {
@@ -1111,10 +1114,10 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 				sceneName = this.states.previewScene ?? ''
 			}
 
-			if (this.sources[sourceName]?.groupedSource) {
-				const group = this.sources[sourceName]?.groupName
+			if (this.sources.get(sourceName)?.groupedSource) {
+				const group = this.sources.get(sourceName)?.groupName
 				if (group) {
-					const source = this.groups[group]?.find((item) => item.sourceName === sourceName)
+					const source = this.groups.get(group)?.find((item: any) => item.sourceName === sourceName)
 					if (source) {
 						if (action.options.visible === 'toggle') {
 							enabled = !source.sceneItemEnabled
@@ -1129,7 +1132,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 					}
 				}
 			}
-			const targetScene = this.sceneItems[sceneName]
+			const targetScene = this.sceneItems.get(sceneName)
 			if (targetScene) {
 				targetScene.forEach((source) => {
 					if (action.options.all || source.sourceName === sourceName) {
@@ -1148,11 +1151,12 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 						})
 
 						if (source.isGroup && action.options.all) {
-							if (this.groups[source.sourceName]) {
-								for (const groupItem of this.groups[source.sourceName]) {
+							const group = this.groups.get(source.sourceName)
+							if (group) {
+								for (const groupItem of group) {
 									let groupEnabled: boolean
 									if (action.options.visible === 'toggle') {
-										groupEnabled = !this.sources[groupItem.sourceName]?.sceneItemEnabled
+										groupEnabled = !this.sources.get(groupItem.sourceName)?.sceneItemEnabled
 									} else {
 										groupEnabled = action.options.visible == 'true' ? true : false
 									}
@@ -1182,7 +1186,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: this.textSourceList?.[0] ? this.textSourceList[0].id : 'None',
+				default: this.textSourceList[0]?.id ?? 'None',
 				choices: this.textSourceList,
 			},
 			{
@@ -1443,13 +1447,13 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		callback: async (action) => {
 			const source = action.options.source as string
 			const props = (action.options.props as string[]) || []
-			const existingSettings = { ...(this.sources[source]?.settings || {}) }
+			const existingSettings = { ...(this.sources.get(source)?.settings || {}) }
 
 			// Start with all existing settings, then overlay changes
 			const inputSettings: Record<string, any> = { ...existingSettings }
 			// Always copy font if it exists, as object, even if not changing
 			const existingFont = existingSettings.font ? { ...existingSettings.font } : {}
-			const kind = this.sources[source]?.inputKind || ''
+			const kind = this.sources.get(source)?.inputKind || ''
 			for (const prop of props) {
 				if (prop === 'text') {
 					let val = action.options.text as string
@@ -1597,7 +1601,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			if (this.sources[action.options.source as string]?.inputKind) {
+			if (this.sources.get(action.options.source as string)?.inputKind) {
 				await this.sendRequest('SetInputSettings', {
 					inputName: action.options.source as string,
 					inputSettings: {},
@@ -1780,7 +1784,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			const sourceName = action.options.source as string
-			if (this.sources[sourceName]?.inputKind == 'browser_source') {
+			if (this.sources.get(sourceName)?.inputKind == 'browser_source') {
 				await this.sendRequest('PressInputPropertiesButton', {
 					inputName: sourceName,
 					propertyName: 'refreshnocache',
@@ -1953,10 +1957,10 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			const source = action.options.source as string
 			const filterName = action.options.filter as string
 
-			const sourceFilterList = this.sourceFilters[source]
+			const sourceFilterList = this.sourceFilters.get(source)
 			if (action.options.all) {
 				const requests: any[] = []
-				sourceFilterList.forEach((filter) => {
+				sourceFilterList?.forEach((filter: any) => {
 					const name = filter.filterName
 					let filterVisibility
 					if (action.options.visible !== 'toggle') {
@@ -2060,7 +2064,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 			const media =
 				action.options.source === 'currentMedia' ? this.states.currentMedia : (action.options.source as string)
 			if (action.options.playPause === 'toggle' && media) {
-				if (this.mediaSources[media]?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
+				if (this.mediaSources.get(media)?.mediaState == 'OBS_MEDIA_STATE_PLAYING') {
 					playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
 				} else {
 					playPause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
@@ -2281,7 +2285,7 @@ export function getActions(this: OBSInstance): CompanionActionDefinitions {
 				label: 'Display',
 				id: 'display',
 				default: 0,
-				choices: this.monitors,
+				choices: this.states.monitors,
 				isVisible: (options): boolean => options.window === 'fullscreen',
 			},
 			{

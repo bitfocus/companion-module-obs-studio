@@ -230,10 +230,10 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			if (this.sources[feedback.options.source as string]?.active && feedback.options.scene === 'anyScene') {
+			if (this.sources.get(feedback.options.source as string)?.active && feedback.options.scene === 'anyScene') {
 				return true
 			} else if (
-				this.sources[feedback.options.source as string]?.active &&
+				this.sources.get(feedback.options.source as string)?.active &&
 				feedback.options.scene === this.states.programScene
 			) {
 				return true
@@ -260,7 +260,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			return !!this.sources[feedback.options.source as string]?.videoShowing
+			return !!this.sources.get(feedback.options.source as string)?.videoShowing
 		},
 	}
 
@@ -346,25 +346,30 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			const sourceName = feedback.options.source as string
 
 			if (feedback.options.any) {
-				const scene = this.sceneItems[sceneName]
+				const scene = this.sceneItems.get(sceneName)
 
 				if (scene) {
-					const enabled = this.sceneItems[sceneName].find((item) => item.sceneItemEnabled === true)
+					const enabled = scene.find((item: any) => item.sceneItemEnabled === true)
 					if (enabled) {
 						return true
 					}
 				}
 			} else {
-				if (this.sources[sourceName]?.groupedSource) {
-					const group = this.sources[sourceName].groupName
-					const sceneItem = this.groups[group].find((item) => item.sourceName === sourceName)
+				const source = this.sources.get(sourceName)
+				if (source?.groupedSource) {
+					const groupName = source.groupName
+					const group = this.groups.get(groupName)
+					const sceneItem = group?.find((item: any) => item.sourceName === sourceName)
 					if (sceneItem) {
 						return sceneItem.sceneItemEnabled
 					}
-				} else if (this.sceneItems[sceneName]) {
-					const sceneItem = this.sceneItems[sceneName].find((item) => item.sourceName === sourceName)
-					if (sceneItem) {
-						return sceneItem.sceneItemEnabled
+				} else {
+					const scene = this.sceneItems.get(sceneName)
+					if (scene) {
+						const sceneItem = scene.find((item: any) => item.sourceName === sourceName)
+						if (sceneItem) {
+							return sceneItem.sceneItemEnabled
+						}
 					}
 				}
 			}
@@ -389,7 +394,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			return !!this.states.outputActive[feedback.options.output as string]
+			return !!this.outputs.get(feedback.options.output as string)?.outputActive
 		},
 	}
 
@@ -403,7 +408,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 		},
 		options: [],
 		callback: () => {
-			return !!this.states.replayBufferActive
+			return !!this.states.replayBuffer
 		},
 	}
 
@@ -495,7 +500,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			const sourceFilters = this.sourceFilters[feedback.options.source as string]
+			const sourceFilters = this.sourceFilters.get(feedback.options.source as string)
 			if (sourceFilters) {
 				const filter = sourceFilters.find((item) => item.filterName === (feedback.options.filter as string))
 				return !!filter?.filterEnabled
@@ -522,7 +527,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			return !!this.sources[feedback.options.source as string]?.inputMuted
+			return !!this.sources.get(feedback.options.source as string)?.inputMuted
 		},
 	}
 
@@ -563,7 +568,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			} else {
 				monitorType = 'OBS_MONITORING_TYPE_NONE'
 			}
-			return this.sources[feedback.options.source as string]?.monitorType === monitorType
+			return this.sources.get(feedback.options.source as string)?.monitorType === monitorType
 		},
 	}
 
@@ -594,7 +599,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			return this.sources[feedback.options.source as string]?.inputVolume == feedback.options.volume
+			return this.sources.get(feedback.options.source as string)?.inputVolume == feedback.options.volume
 		},
 	}
 
@@ -616,7 +621,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			return this.mediaSources[feedback.options.source as string]?.mediaState == 'OBS_MEDIA_STATE_PLAYING'
+			return this.mediaSources.get(feedback.options.source as string)?.mediaState == 'OBS_MEDIA_STATE_PLAYING'
 		},
 	}
 
@@ -666,12 +671,12 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 		],
 		callback: (feedback) => {
 			const sourceName = feedback.options.source as string
-			const mediaSource = this.mediaSources[sourceName]
+			const mediaSource = this.mediaSources.get(sourceName)
 			if (mediaSource) {
 				const remainingTime = Math.round((mediaSource.mediaDuration - mediaSource.mediaCursor) / 1000)
 				const mediaState = mediaSource.mediaState
 
-				if (feedback.options.onlyIfSourceIsOnProgram && !this.sources[sourceName]?.active) {
+				if (feedback.options.onlyIfSourceIsOnProgram && !this.sources.get(sourceName)?.active) {
 					return false
 				}
 
@@ -743,9 +748,9 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			if (this.states.streaming === false) {
 				return { bgcolor: feedback.options.colorNoStream as number }
 			} else {
-				if ((this.states.streamCongestion as number) > 0.8) {
+				if (this.states.streamCongestion > 0.8) {
 					return { bgcolor: feedback.options.colorHigh as number }
-				} else if ((this.states.congestion as number) > 0.4) {
+				} else if (this.states.congestion > 0.4) {
 					return { bgcolor: feedback.options.colorMedium as number }
 				} else {
 					return { bgcolor: feedback.options.colorLow as number }
@@ -805,7 +810,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			return (this.audioPeak?.[feedback.options.source as string] ?? -100) > (feedback.options.peak as number)
+			return (this.audioPeak.get(feedback.options.source as string) ?? -100) > (feedback.options.peak as number)
 		},
 	}
 
@@ -833,7 +838,7 @@ export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 			},
 		],
 		callback: (feedback) => {
-			const peak = this.audioPeak?.[feedback.options.source as string] ?? -100
+			const peak = this.audioPeak.get(feedback.options.source as string) ?? -100
 			const threshold = (feedback.options.threshold as number) ?? -60
 			if (peak > -9) {
 				return { bgcolor: ColorRed }

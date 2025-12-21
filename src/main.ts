@@ -4,60 +4,148 @@ import { getPresets } from './presets.js'
 import { getVariables, updateVariableValues } from './variables.js'
 import { getFeedbacks } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
-import { ModuleConfig, OBSState, OBSSource, OBSScene, OBSOutput } from './types.js'
+import { ModuleConfig, Choice, OBSNormalizedState, OBSSource, OBSScene, OBSOutput } from './types.js'
+import { OBSState } from './state.js'
 
-import { OBSWebSocket, EventSubscription } from 'obs-websocket-js'
+import OBSWebSocket, { EventSubscription } from 'obs-websocket-js'
 
 export class OBSInstance extends InstanceBase<ModuleConfig> {
 	public obs!: OBSWebSocket
-	public states!: OBSState
+	public obsState!: OBSState
 	public config!: ModuleConfig
-	public sources!: Record<string, OBSSource>
-	public scenes!: OBSScene[]
-	public transitions!: Record<string, any>
-	public profiles!: Record<string, any>
-	public sceneCollections!: Record<string, any>
-	public outputs!: Record<string, OBSOutput>
-	public sceneItems!: Record<string, any[]>
-	public groups!: Record<string, any[]>
-	public inputKindList!: Record<string, any>
-	public mediaSources!: Record<string, any>
-	public imageSources!: Record<string, any>
-	public textSources!: Record<string, any>
-	public sourceFilters!: Record<string, any[]>
-	public vendorEvent!: any
-	public audioPeak!: Record<string, number>
-
-	public sceneChoices!: any[]
-	public sourceChoices!: any[]
-	public profileChoices!: any[]
-	public sceneCollectionList!: any[]
-	public textSourceList!: any[]
-	public mediaSourceList!: any[]
-	public imageSourceList!: any[]
-	public hotkeyNames!: any[]
-	public imageFormats!: any[]
-	public transitionList!: any[]
-	public monitors!: any[]
-	public outputList!: any[]
-	public filterList!: any[]
-	public audioSourceList!: any[]
-
-	public sceneChoicesProgramPreview!: any[]
-	public sceneChoicesAnyScene!: any[]
-	public sceneChoicesCustomScene!: any[]
-	public sourceChoicesWithScenes!: any[]
-	public mediaSourceListCurrentMedia!: any[]
-
-	public sourceListDefault!: string
-	public sceneListDefault!: string
-	public filterListDefault!: string
-	public audioSourceListDefault!: string
-	public profileChoicesDefault!: string
 
 	private reconnectionPoll?: NodeJS.Timeout
 	private statsPoll?: NodeJS.Timeout
 	private mediaPoll?: NodeJS.Timeout | null
+
+	public get states(): OBSNormalizedState {
+		return this.obsState.state
+	}
+
+	// Derived Choices
+	public get sceneChoices(): Choice[] {
+		return this.obsState.sceneChoices
+	}
+	public get sourceChoices(): Choice[] {
+		return this.obsState.sourceChoices
+	}
+	public get audioSourceList(): Choice[] {
+		return this.obsState.audioSourceList
+	}
+	public get mediaSourceList(): Choice[] {
+		return this.obsState.mediaSourceList
+	}
+	public get filterList(): Choice[] {
+		return this.obsState.filterList
+	}
+	public get transitionList(): Choice[] {
+		return this.obsState.transitionList
+	}
+	public get profileChoices(): Choice[] {
+		return this.obsState.profileChoices
+	}
+	public get sceneCollectionList(): Choice[] {
+		return this.obsState.sceneCollectionList
+	}
+	public get outputList(): Choice[] {
+		return this.obsState.outputList
+	}
+	public get textSourceList(): Choice[] {
+		return this.obsState.textSourceList
+	}
+	public get imageSourceList(): Choice[] {
+		return this.obsState.imageSourceList
+	}
+
+	// Choice Defaults
+	public get sceneListDefault(): string {
+		return this.obsState.sceneListDefault
+	}
+	public get sourceListDefault(): string {
+		return this.obsState.sourceListDefault
+	}
+	public get audioSourceListDefault(): string {
+		return this.obsState.audioSourceListDefault
+	}
+	public get filterListDefault(): string {
+		return this.obsState.filterListDefault
+	}
+	public get profileChoicesDefault(): string {
+		return this.obsState.profileChoicesDefault
+	}
+
+	// Special Choices
+	public get sceneChoicesProgramPreview(): Choice[] {
+		return this.obsState.sceneChoicesProgramPreview
+	}
+	public get sceneChoicesAnyScene(): Choice[] {
+		return this.obsState.sceneChoicesAnyScene
+	}
+	public get sceneChoicesCustomScene(): Choice[] {
+		return this.obsState.sceneChoicesCustomScene
+	}
+	public get sourceChoicesWithScenes(): Choice[] {
+		return this.obsState.sourceChoicesWithScenes
+	}
+	public get mediaSourceListCurrentMedia(): Choice[] {
+		return this.obsState.mediaSourceListCurrentMedia
+	}
+
+	// Legacy access for old parts of the code
+	public get sources(): Map<string, OBSSource> {
+		return this.obsState.state.sources
+	}
+	public get scenes(): Map<string, OBSScene> {
+		return this.obsState.state.scenes
+	}
+	public get transitions(): Map<string, any> {
+		return this.obsState.state.transitions
+	}
+	public get profiles(): Map<string, any> {
+		return this.obsState.state.profiles
+	}
+	public get sceneCollections(): Map<string, any> {
+		return this.obsState.state.sceneCollections
+	}
+	public get outputs(): Map<string, OBSOutput> {
+		return this.obsState.state.outputs
+	}
+	public get sceneItems(): Map<string, any[]> {
+		return this.obsState.state.sceneItems
+	}
+	public get groups(): Map<string, any[]> {
+		return this.obsState.state.groups
+	}
+	public get inputKindList(): Map<string, any> {
+		return this.obsState.state.inputKindList
+	}
+	public get mediaSources(): Map<string, any> {
+		return this.obsState.state.mediaSources
+	}
+	public get imageSources(): Map<string, any> {
+		return this.obsState.state.imageSources
+	}
+	public get textSources(): Map<string, any> {
+		return this.obsState.state.textSources
+	}
+	public get sourceFilters(): Map<string, any[]> {
+		return this.obsState.state.sourceFilters
+	}
+	public get audioPeak(): Map<string, number> {
+		return this.obsState.state.audioPeak
+	}
+	public get hotkeyNames(): any[] {
+		return this.obsState.state.hotkeyNames
+	}
+	public get imageFormats(): any[] {
+		return this.obsState.state.imageFormats
+	}
+	public get monitors(): any[] {
+		return this.obsState.state.monitors
+	}
+	public get vendorEvent(): any {
+		return this.obsState.state.vendorEvent
+	}
 	constructor(internal: unknown) {
 		super(internal)
 	}
@@ -66,6 +154,8 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	async init(config: ModuleConfig): Promise<void> {
 		this.updateStatus(InstanceStatus.Connecting)
 		this.config = config
+		this.obsState = new OBSState()
+
 		if (this.config?.host && this.config?.port) {
 			void this.connectOBS()
 		} else if (this.config?.host && !this.config?.port) {
@@ -184,29 +274,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	organizeChoices(): void {
-		//Sort choices alphabetically
-		this.sourceChoices?.sort((a, b) => a.id.localeCompare(b.id))
-		this.sceneChoices?.sort((a, b) => a.id.localeCompare(b.id))
-		this.textSourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.mediaSourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.filterList?.sort((a, b) => a.id.localeCompare(b.id))
-		this.audioSourceList?.sort((a, b) => a.id.localeCompare(b.id))
-		//Special Choices - Scenes
-		this.sceneChoicesProgramPreview = [
-			{ id: 'Current Scene', label: 'Current Scene' },
-			{ id: 'Preview Scene', label: 'Preview Scene' },
-		].concat(this.sceneChoices)
-		this.sceneChoicesAnyScene = [{ id: 'anyScene', label: '<ANY SCENE>' }].concat(this.sceneChoices)
-		this.sceneChoicesCustomScene = [{ id: 'customSceneName', label: '<CUSTOM SCENE NAME>' }].concat(this.sceneChoices)
-		//Special Choices - Sources
-		this.sourceChoicesWithScenes = this.sourceChoices.concat(this.sceneChoices)
-		this.mediaSourceListCurrentMedia = [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }].concat(this.mediaSourceList)
-		//Default Choices
-		this.sourceListDefault = this.sourceChoices?.[0] ? this.sourceChoices?.[0]?.id : ''
-		this.sceneListDefault = this.sceneChoices?.[0] ? this.sceneChoices?.[0]?.id : ''
-		this.filterListDefault = this.filterList?.[0] ? this.filterList?.[0]?.id : ''
-		this.audioSourceListDefault = this.audioSourceList?.[0] ? this.audioSourceList?.[0]?.id : ''
-		this.profileChoicesDefault = this.profileChoices?.[0] ? this.profileChoices[0].id : ''
+		// Choices are now derived via getters in OBSState
 	}
 
 	async updateActionsFeedbacksVariables(): Promise<void> {
@@ -220,58 +288,9 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	initializeStates(): void {
-		//Basic Info
-		this.scenes = []
-		this.sources = {}
-		this.states = {}
-		this.transitions = {}
-		this.profiles = {}
-		this.sceneCollections = {}
-		this.outputs = {}
-		this.sceneItems = {}
-		this.groups = {}
-		this.inputKindList = {}
-		//Source Types
-		this.mediaSources = {}
-		this.imageSources = {}
-		this.textSources = {}
-		this.sourceFilters = {}
-		//Choices
-		this.sceneChoices = []
-		this.sourceChoices = []
-		this.profileChoices = []
-		this.sceneCollectionList = []
-		this.textSourceList = []
-		this.mediaSourceList = []
-		this.imageSourceList = []
-		this.hotkeyNames = []
-		this.imageFormats = []
-		this.transitionList = []
-		this.monitors = []
-		this.outputList = []
-		this.filterList = []
-		this.audioSourceList = []
-		//Set Initial States
-		this.vendorEvent = {}
+		this.obsState.resetSceneSourceStates()
+		// Basic Info
 		this.states.sceneCollectionChanging = false
-	}
-
-	resetSceneSourceStates(): void {
-		this.scenes = []
-		this.sources = {}
-		this.mediaSources = {}
-		this.imageSources = {}
-		this.textSources = {}
-		this.sourceFilters = {}
-		this.groups = {}
-
-		this.sceneChoices = []
-		this.sourceChoices = []
-		this.filterList = []
-		this.audioSourceList = []
-		this.mediaSourceList = []
-		this.textSourceList = []
-		this.imageSourceList = []
 	}
 
 	//OBS Websocket Connection
@@ -404,7 +423,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			void this.connectionLost()
 		})
 		this.obs.on('VendorEvent', (data) => {
-			this.vendorEvent = data
+			this.states.vendorEvent = data
 			let eventData = ''
 			try {
 				eventData = JSON.stringify(data.eventData)
@@ -428,7 +447,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			void this.checkFeedbacks('scene_collection_active')
 			this.setVariableValues({ scene_collection: this.states.currentSceneCollection })
 			this.states.sceneCollectionChanging = false
-			this.resetSceneSourceStates()
+			this.obsState.resetSceneSourceStates()
 			void this.buildSceneList()
 			void this.buildSceneTransitionList()
 			void this.obsInfo()
@@ -458,14 +477,11 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			}
 		})
 		this.obs.on('SceneNameChanged', (data) => {
-			if (this.sceneItems[data.oldSceneName]) {
-				this.sceneItems[data.sceneName] = this.sceneItems[data.oldSceneName]
-				delete this.sceneItems[data.oldSceneName]
+			const sceneItems = this.states.sceneItems.get(data.oldSceneName)
+			if (sceneItems) {
+				this.states.sceneItems.set(data.sceneName, sceneItems)
+				this.states.sceneItems.delete(data.oldSceneName)
 			}
-			const scene = this.sceneChoices.findIndex((item) => item.id === data.oldSceneName)
-			this.sceneChoices.splice(scene, 1)
-			this.sceneChoices.push({ id: data.sceneName, label: data.sceneName })
-
 			void this.updateActionsFeedbacksVariables()
 		})
 		this.obs.on('CurrentProgramSceneChanged', (data) => {
@@ -480,71 +496,87 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			this.checkFeedbacks('scene_active', 'scenePreview')
 		})
 		this.obs.on('SceneListChanged', (data) => {
-			this.scenes = data.scenes as any as OBSScene[]
+			this.states.scenes.clear()
+			for (const scene of data.scenes as any[]) {
+				this.states.scenes.set(scene.sceneName, scene)
+			}
 		})
 		//Inputs
 		this.obs.on('InputCreated', () => {})
 		this.obs.on('InputRemoved', (data) => {
-			const source = this.sourceChoices.findIndex((item) => item.id == data.inputName)
-			if (source > -1) {
-				this.sourceChoices.splice(source, 1)
-			}
-			delete this.sources[data.inputName]
+			this.states.sources.delete(data.inputName)
 			void this.updateActionsFeedbacksVariables()
 		})
 		this.obs.on('InputNameChanged', () => {})
 		this.obs.on('InputActiveStateChanged', (data) => {
-			if (this.sources[data.inputName]) {
-				this.sources[data.inputName].active = data.videoActive
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.active = data.videoActive
 				this.checkFeedbacks('scene_item_active')
 			}
 		})
 		this.obs.on('InputShowStateChanged', (data) => {
-			if (this.sources[data.inputName]) {
-				this.sources[data.inputName].videoShowing = data.videoShowing
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.videoShowing = data.videoShowing
 				this.checkFeedbacks('scene_item_previewed')
 			}
 		})
 		this.obs.on('InputMuteStateChanged', (data) => {
-			this.sources[data.inputName].inputMuted = data.inputMuted
-			const name = this.sources[data.inputName].validName
-			this.setVariableValues({
-				[`mute_${name}`]: this.sources[data.inputName].inputMuted ? 'Muted' : 'Unmuted',
-			})
-			this.checkFeedbacks('audio_muted')
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.inputMuted = data.inputMuted
+				const name = source.validName ?? data.inputName
+				this.setVariableValues({
+					[`mute_${name}`]: source.inputMuted ? 'Muted' : 'Unmuted',
+				})
+				this.checkFeedbacks('audio_muted')
+			}
 		})
 		this.obs.on('InputVolumeChanged', (data) => {
-			this.sources[data.inputName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
-			const name = this.sources[data.inputName].validName
-			this.setVariableValues({ [`volume_${name}`]: this.sources[data.inputName].inputVolume + 'db' })
-			this.checkFeedbacks('volume')
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.inputVolume = this.roundNumber(data.inputVolumeDb, 1)
+				const name = source.validName ?? data.inputName
+				this.setVariableValues({ [`volume_${name}`]: source.inputVolume + 'db' })
+				this.checkFeedbacks('volume')
+			}
 		})
 		this.obs.on('InputAudioBalanceChanged', (data) => {
-			this.sources[data.inputName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
-			const name = this.sources[data.inputName].validName
-			this.setVariableValues({ [`balance_${name}`]: this.sources[data.inputName].inputAudioBalance })
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
+				const name = source.validName ?? data.inputName
+				this.setVariableValues({ [`balance_${name}`]: source.inputAudioBalance })
+			}
 		})
 		this.obs.on('InputAudioSyncOffsetChanged', (data) => {
-			this.sources[data.inputName].inputAudioSyncOffset = data.inputAudioSyncOffset
-			const name = this.sources[data.inputName].validName
-			this.setVariableValues({
-				[`sync_offset_${name}`]: this.sources[data.inputName].inputAudioSyncOffset + 'ms',
-			})
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.inputAudioSyncOffset = data.inputAudioSyncOffset
+				const name = source.validName ?? data.inputName
+				this.setVariableValues({
+					[`sync_offset_${name}`]: source.inputAudioSyncOffset + 'ms',
+				})
+			}
 		})
 		this.obs.on('InputAudioTracksChanged', () => {})
 		this.obs.on('InputAudioMonitorTypeChanged', (data) => {
-			this.sources[data.inputName].monitorType = data.monitorType
-			const name = this.sources[data.inputName].validName
-			let monitorType
-			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-				monitorType = 'Monitor / Output'
-			} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-				monitorType = 'Monitor Only'
-			} else {
-				monitorType = 'Off'
+			const source = this.states.sources.get(data.inputName)
+			if (source) {
+				source.monitorType = data.monitorType
+				const name = source.validName ?? data.inputName
+				let monitorType
+				if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+					monitorType = 'Monitor / Output'
+				} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+					monitorType = 'Monitor Only'
+				} else {
+					monitorType = 'Off'
+				}
+				this.setVariableValues({ [`monitor_${name}`]: monitorType })
+				this.checkFeedbacks('audio_monitor_type')
 			}
-			this.setVariableValues({ [`monitor_${name}`]: monitorType })
-			this.checkFeedbacks('audio_monitor_type')
 		})
 		this.obs.on('InputVolumeMeters', (data) => {
 			this.updateAudioPeak(data)
@@ -601,10 +633,11 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		})
 		this.obs.on('SourceFilterNameChanged', () => {})
 		this.obs.on('SourceFilterEnableStateChanged', (data) => {
-			if (this.sourceFilters[data.sourceName]) {
-				const filter = this.sourceFilters[data.sourceName].findIndex((item) => item.filterName == data.filterName)
-				if (filter !== undefined) {
-					this.sourceFilters[data.sourceName][filter].filterEnabled = data.filterEnabled
+			const sourceFilters = this.states.sourceFilters.get(data.sourceName)
+			if (sourceFilters) {
+				const filter = sourceFilters.find((item) => item.filterName == data.filterName)
+				if (filter) {
+					filter.filterEnabled = data.filterEnabled
 					this.checkFeedbacks('filter_enabled')
 				}
 			}
@@ -617,31 +650,35 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		})
 		this.obs.on('SceneItemRemoved', (data) => {
 			if (this.states.sceneCollectionChanging === false) {
-				if (this.sceneItems[data.sceneName]) {
-					const item = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-					if (item > -1) {
-						this.sceneItems[data.sceneName].splice(item, 1)
+				const sceneItems = this.states.sceneItems.get(data.sceneName)
+				if (sceneItems) {
+					const itemIndex = sceneItems.findIndex((item) => item.sceneItemId === data.sceneItemId)
+					if (itemIndex > -1) {
+						sceneItems.splice(itemIndex, 1)
 					}
 				}
-				if (this.groups[data.sceneName]) {
-					const item = this.groups[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-					if (item > -1) {
-						this.groups[data.sceneName].splice(item, 1)
+				const groups = this.states.groups.get(data.sceneName)
+				if (groups) {
+					const itemIndex = groups.findIndex((item) => item.sceneItemId === data.sceneItemId)
+					if (itemIndex > -1) {
+						groups.splice(itemIndex, 1)
 					}
 				}
 			}
 		})
 		this.obs.on('SceneItemListReindexed', () => {})
 		this.obs.on('SceneItemEnableStateChanged', (data) => {
-			if (this.groups[data.sceneName]) {
-				const sceneItem = this.groups[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-				if (sceneItem > -1) {
-					this.groups[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			const groups = this.states.groups.get(data.sceneName)
+			const sceneItems = this.states.sceneItems.get(data.sceneName)
+			if (groups) {
+				const sceneItem = groups.find((item) => item.sceneItemId === data.sceneItemId)
+				if (sceneItem) {
+					sceneItem.sceneItemEnabled = data.sceneItemEnabled
 				}
-			} else if (this.sceneItems[data.sceneName]) {
-				const sceneItem = this.sceneItems[data.sceneName].findIndex((item) => item.sceneItemId === data.sceneItemId)
-				if (sceneItem > -1) {
-					this.sceneItems[data.sceneName][sceneItem].sceneItemEnabled = data.sceneItemEnabled
+			} else if (sceneItems) {
+				const sceneItem = sceneItems.find((item) => item.sceneItemId === data.sceneItemId)
+				if (sceneItem) {
+					sceneItem.sceneItemEnabled = data.sceneItemEnabled
 				}
 			}
 			this.checkFeedbacks('scene_item_active_in_scene')
@@ -700,8 +737,11 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			}
 		})
 		this.obs.on('VirtualcamStateChanged', (data) => {
-			this.outputs['virtualcam_output'].outputActive = data.outputActive
-			this.checkFeedbacks('output_active')
+			const virtualCam = this.states.outputs.get('virtualcam_output')
+			if (virtualCam) {
+				virtualCam.outputActive = data.outputActive
+				this.checkFeedbacks('output_active')
+			}
 		})
 		this.obs.on('ReplayBufferSaved', (data) => {
 			this.setVariableValues({ replay_buffer_path: data.savedReplayPath })
@@ -710,14 +750,16 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		this.obs.on('MediaInputPlaybackStarted', (data) => {
 			this.states.currentMedia = data.inputName
 
-			const name = this.sources[data.inputName].validName
+			const source = this.states.sources.get(data.inputName)
+			const name = source?.validName ?? data.inputName
 			this.setVariableValues({
 				[`media_status_${name}`]: 'Playing',
 			})
 		})
 		this.obs.on('MediaInputPlaybackEnded', (data) => {
 			if (this.states.currentMedia == data.inputName) {
-				const name = this.sources[data.inputName].validName
+				const source = this.states.sources.get(data.inputName)
+				const name = source?.validName ?? data.inputName
 				this.setVariableValues({
 					[`media_status_${name}`]: 'Stopped',
 				})
@@ -725,7 +767,8 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		})
 		this.obs.on('MediaInputActionTriggered', (data) => {
 			if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				const name = this.sources[data.inputName].validName
+				const source = this.states.sources.get(data.inputName)
+				const name = source?.validName ?? data.inputName
 				this.setVariableValues({ [`media_status_${name}`]: 'Paused' })
 			}
 		})
@@ -869,6 +912,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 				'debug',
 				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
 			)
+			this.states.imageFormats = []
 			version.supportedImageFormats.forEach((format: string) => {
 				this.imageFormats.push({ id: format, label: format })
 			})
@@ -892,6 +936,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 
 	async buildHotkeyList(): Promise<void> {
 		const hotkeyList = await this.sendRequest('GetHotkeyList')
+		this.states.hotkeyNames = []
 		hotkeyList?.hotkeys?.forEach((hotkey: any) => {
 			this.hotkeyNames.push({ id: hotkey, label: hotkey })
 		})
@@ -902,21 +947,21 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		const inputKindList = await this.sendRequest('GetInputKindList')
 		await Promise.all(
 			inputKindList?.inputKinds?.map(async (inputKind: any) => {
-				this.inputKindList[inputKind] = {}
+				this.states.inputKindList.set(inputKind, {})
 				const defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
-				this.inputKindList[inputKind] = defaultSettings
+				this.states.inputKindList.set(inputKind, defaultSettings)
 			}) ?? [],
 		)
 	}
 
 	async buildProfileList(): Promise<void> {
 		const profiles = await this.sendRequest('GetProfileList')
-		this.profileChoices = []
+		this.states.profiles.clear()
 
 		this.states.currentProfile = profiles?.currentProfileName
 
 		profiles?.profiles.forEach((profile: any) => {
-			this.profileChoices.push({ id: profile, label: profile })
+			this.states.profiles.set(profile, {})
 		})
 
 		this.checkFeedbacks('profile_active')
@@ -926,11 +971,11 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 
 	async buildSceneCollectionList(): Promise<void> {
 		const collections = await this.sendRequest('GetSceneCollectionList')
-		this.sceneCollectionList = []
+		this.states.sceneCollections.clear()
 
 		this.states.currentSceneCollection = collections?.currentSceneCollectionName
 		collections?.sceneCollections.forEach((sceneCollection: any) => {
-			this.sceneCollectionList.push({ id: sceneCollection, label: sceneCollection })
+			this.states.sceneCollections.set(sceneCollection, {})
 		})
 
 		this.checkFeedbacks('scene_collection_active')
@@ -946,14 +991,11 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 				Object.values(specialInputs).map(async (input) => {
 					if (input) {
 						const inputName = input as string
-						this.sources[inputName] = {
+						this.states.sources.set(inputName, {
 							sourceName: inputName,
 							validName: this.validName(inputName),
-						}
+						})
 
-						if (!this.sourceChoices.find((item) => item.id === inputName)) {
-							this.sourceChoices.push({ id: inputName, label: inputName })
-						}
 						await this.getAudioSources(inputName)
 					}
 				}),
@@ -962,25 +1004,14 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	async buildOutputList(): Promise<void> {
-		this.outputs = {}
-		this.outputList = []
+		this.states.outputs.clear()
 
 		const outputData = await this.sendRequest('GetOutputList')
 
 		if (outputData) {
 			outputData.outputs?.forEach((output: any) => {
-				const outputKind = output.outputKind
-				if (outputKind === 'virtualcam_output') {
-					this.outputList.push({ id: 'virtualcam_output', label: 'Virtual Camera' })
-				} else if (
-					outputKind != 'ffmpeg_muxer' &&
-					outputKind != 'ffmpeg_output' &&
-					outputKind != 'replay_buffer' &&
-					outputKind != 'rtmp_output'
-				) {
-					//The above outputKinds are handled separately by other actions, so they are omitted
-					this.outputList.push({ id: output.outputName, label: output.outputName })
-				}
+				this.states.outputs.set(output.outputName, output)
+
 				void this.getOutputStatus(output.outputName)
 			})
 			void this.updateActionsFeedbacksVariables()
@@ -989,16 +1020,15 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 
 	async buildMonitorList(): Promise<void> {
 		const monitorList = await this.sendRequest('GetMonitorList')
-		this.states.monitors = monitorList
 
-		if (monitorList) {
-			monitorList.monitors?.forEach((monitor: any) => {
+		if (monitorList && Array.isArray(monitorList.monitors)) {
+			this.states.monitors = monitorList.monitors.map((monitor: any) => {
 				const monitorName = monitor.monitorName ?? `Display ${monitor.monitorIndex}`
 
-				this.monitors.push({
+				return {
 					id: monitor.monitorIndex,
 					label: `${monitorName} (${monitor.monitorWidth}x${monitor.monitorHeight})`,
-				})
+				}
 			})
 		}
 	}
@@ -1122,7 +1152,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	async getOutputStatus(outputName: string): Promise<void> {
 		if (!this.states.sceneCollectionChanging) {
 			const outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
-			this.outputs[outputName] = outputStatus
+			this.states.outputs.set(outputName, outputStatus)
 			this.checkFeedbacks('output_active')
 		}
 	}
@@ -1138,13 +1168,16 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 
 	//Scene Collection Specific Info
 	async buildSceneList(): Promise<void> {
-		this.scenes = []
-		this.sceneChoices = []
+		this.states.scenes.clear()
 
 		const sceneList = await this.sendRequest('GetSceneList')
 
 		if (sceneList) {
-			this.scenes = sceneList.scenes
+			if (Array.isArray(sceneList.scenes)) {
+				for (const scene of sceneList.scenes) {
+					this.states.scenes.set(scene.sceneName, scene)
+				}
+			}
 			this.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
 			this.states.programScene = sceneList.currentProgramSceneName
 
@@ -1154,9 +1187,8 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			})
 
 			await Promise.all(
-				this.scenes.map(async (scene: any) => {
+				Array.from(this.states.scenes.values()).map(async (scene: any) => {
 					const sceneName = scene.sceneName
-					this.sceneChoices.push({ id: sceneName, label: sceneName })
 					await this.buildSourceList(sceneName)
 
 					await this.getSourceFilters(sceneName)
@@ -1170,22 +1202,18 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		const data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
 
 		if (data) {
-			this.sceneItems[sceneName] = data.sceneItems
+			this.states.sceneItems.set(sceneName, data.sceneItems)
 
 			const batch = []
 			for (const sceneItem of data.sceneItems as any[]) {
 				const sourceName = sceneItem.sourceName
-				if (!this.sources[sourceName]) {
-					this.sources[sourceName] = {
+				if (!this.states.sources.has(sourceName)) {
+					this.states.sources.set(sourceName, {
 						sourceName: sourceName,
 						validName: this.validName(sourceName),
 						isGroup: sceneItem.isGroup,
 						inputKind: sceneItem.inputKind,
-					}
-				}
-
-				if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-					this.sourceChoices.push({ id: sourceName, label: sourceName })
+					})
 				}
 
 				if (sceneItem.isGroup) {
@@ -1222,33 +1250,27 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 						const sourceName = response.requestId
 						const type = response.requestType
 						const data = response.responseData
+						const source = this.states.sources.get(sourceName)
 
-						switch (type) {
-							case 'GetSourceActive':
-								this.sources[sourceName].active = data.videoActive
-								this.sources[sourceName].videoShowing = data.videoShowing
-								break
-							case 'GetSourceFilterList':
-								this.sourceFilters[sourceName] = data.filters
-								if (data?.filters) {
-									this.sourceFilters[sourceName] = data.filters
-									data.filters.forEach((filter: any) => {
-										if (!this.filterList.find((item) => item.id === filter.filterName)) {
-											this.filterList.push({ id: filter.filterName, label: filter.filterName })
-										}
-									})
-								}
-								break
-							case 'GetInputSettings':
-								this.buildInputSettings(sourceName, data.inputKind, data.inputSettings)
-								break
-							default:
-								break
+						if (source) {
+							switch (type) {
+								case 'GetSourceActive':
+									source.active = data.videoActive
+									source.videoShowing = data.videoShowing
+									break
+								case 'GetSourceFilterList':
+									this.states.sourceFilters.set(sourceName, data.filters)
+									break
+								case 'GetInputSettings':
+									this.buildInputSettings(sourceName, data.inputKind, data.inputSettings)
+									break
+								default:
+									break
+							}
 						}
 					}
 				}
 				this.checkFeedbacks('scene_item_active')
-				//this.updateActionsFeedbacksVariables()
 			}
 		}
 	}
@@ -1256,25 +1278,23 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	async getGroupInfo(groupName: string): Promise<void> {
 		const data = await this.sendRequest('GetGroupSceneItemList', { sceneName: groupName })
 		if (data) {
-			this.groups[groupName] = data.sceneItems
+			this.states.groups.set(groupName, data.sceneItems)
 			await Promise.all(
 				data.sceneItems?.map(async (sceneItem: any) => {
 					const sourceName = sceneItem.sourceName
-					if (!this.sources[sourceName]) {
-						this.sources[sourceName] = {
+					let source = this.states.sources.get(sourceName)
+					if (!source) {
+						source = {
 							sourceName: sourceName,
 							validName: this.validName(sourceName),
 							inputKind: sceneItem.inputKind,
 						}
+						this.states.sources.set(sourceName, source)
 					}
 
 					//Flag that this source is part of a group
-					this.sources[sourceName].groupedSource = true
-					this.sources[sourceName].groupName = groupName
-
-					if (!this.sourceChoices.find((item) => item.id === sourceName)) {
-						this.sourceChoices.push({ id: sourceName, label: sourceName })
-					}
+					source.groupedSource = true
+					source.groupName = groupName
 
 					await this.getSourceFilters(sourceName)
 					await this.getAudioSources(sourceName)
@@ -1292,20 +1312,17 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	async buildSceneTransitionList(): Promise<void> {
-		this.transitionList = []
+		this.states.transitions.clear()
 
 		const sceneTransitionList = await this.sendRequest('GetSceneTransitionList')
 		const currentTransition = await this.sendRequest('GetCurrentSceneTransition')
 
 		if (sceneTransitionList) {
 			if (Array.isArray(sceneTransitionList.transitions)) {
-				//Match the OBS dropdown order
-				sceneTransitionList.transitions.reverse()
+				for (const item of sceneTransitionList.transitions) {
+					this.states.transitions.set(item.transitionName, item)
+				}
 			}
-			this.transitionList = sceneTransitionList.transitions.map((item: any) => ({
-				id: item.transitionName,
-				label: item.transitionName,
-			}))
 
 			const transitionListVariable = this.transitionList?.map((item) => item.id) ?? []
 
@@ -1324,17 +1341,14 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 
 	//Scene and Source Actions
 	async addScene(sceneName: string): Promise<void> {
-		this.sceneChoices.push({ id: sceneName, label: sceneName })
+		this.states.scenes.set(sceneName, { sceneName: sceneName, sceneIndex: this.states.scenes.size })
 		await this.buildSourceList(sceneName)
 		void this.updateActionsFeedbacksVariables()
 	}
 
 	async removeScene(sceneName: string): Promise<void> {
-		const scene = this.sceneChoices.findIndex((item) => item.id === sceneName)
-		if (scene !== -1) {
-			this.sceneChoices.splice(scene, 1)
-		}
-		delete this.sceneItems[sceneName]
+		this.states.scenes.delete(sceneName)
+		this.states.sceneItems.delete(sceneName)
 		void this.updateActionsFeedbacksVariables()
 	}
 
@@ -1357,10 +1371,10 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 			for (const response of data) {
 				if (response.requestStatus.result) {
 					const sourceName = response.requestId
-					const validName = this.sources[sourceName].validName ?? sourceName
+					const validName = this.sources.get(sourceName)?.validName ?? sourceName
 					const data = response.responseData
 
-					this.mediaSources[sourceName] = data
+					this.states.mediaSources.set(sourceName, data)
 
 					const remainingValue = (data?.mediaDuration ?? 0) - (data?.mediaCursor ?? 0)
 					let remaining: string
@@ -1370,17 +1384,21 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 						remaining = '--:--:--'
 					}
 
-					this.mediaSources[sourceName].timeElapsed = this.formatTimecode(data.mediaCursor)
-					this.mediaSources[sourceName].timeRemaining = remaining
+					let mediaSource = this.states.mediaSources.get(sourceName)
+					if (mediaSource) {
+						mediaSource.timeElapsed = this.formatTimecode(data.mediaCursor)
+						mediaSource.timeRemaining = remaining
+					}
 
 					if (data?.mediaState) {
 						switch (data?.mediaState) {
 							case 'OBS_MEDIA_STATE_PLAYING':
-								if (this.sources[sourceName]?.active == true) {
+								if (this.sources.get(sourceName)?.active == true) {
+									mediaSource = this.states.mediaSources.get(sourceName)
 									currentMedia.push({
 										name: sourceName,
-										elapsed: this.mediaSources[sourceName].timeElapsed,
-										remaining: this.mediaSources[sourceName].timeRemaining,
+										elapsed: mediaSource?.timeElapsed,
+										remaining: mediaSource?.timeRemaining,
 									})
 								}
 								this.setVariableValues({
@@ -1388,11 +1406,12 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 								})
 								break
 							case 'OBS_MEDIA_STATE_PAUSED':
-								if (this.sources[sourceName]?.active == true) {
+								if (this.sources.get(sourceName)?.active == true) {
+									mediaSource = this.states.mediaSources.get(sourceName)
 									currentMedia.push({
 										name: sourceName,
-										elapsed: this.mediaSources[sourceName].timeElapsed,
-										remaining: this.mediaSources[sourceName].timeRemaining,
+										elapsed: mediaSource?.timeElapsed,
+										remaining: mediaSource?.timeRemaining,
 									})
 								}
 								this.setVariableValues({ [`media_status_${validName}`]: 'Paused' })
@@ -1402,8 +1421,9 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 								break
 						}
 					}
+					mediaSource = this.states.mediaSources.get(sourceName)
 					this.setVariableValues({
-						[`media_time_elapsed_${validName}`]: this.mediaSources[sourceName].timeElapsed,
+						[`media_time_elapsed_${validName}`]: mediaSource?.timeElapsed,
 						[`media_time_remaining_${validName}`]: remaining,
 					})
 					this.checkFeedbacks('media_playing', 'media_source_time_remaining')
@@ -1424,13 +1444,15 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	buildInputSettings(sourceName: string, inputKind: string, inputSettings: unknown): void {
-		const name = this.sources[sourceName].validName ?? sourceName
+		const source = this.states.sources.get(sourceName)
+		const name = source?.validName ?? sourceName
 
-		if (this.inputKindList[inputKind]?.defaultInputSettings) {
-			inputSettings = { ...this.inputKindList[inputKind].defaultInputSettings, ...(inputSettings as any) }
-			this.sources[sourceName].settings = inputSettings
+		const kindList = this.states.inputKindList.get(inputKind)
+		if (kindList?.defaultInputSettings) {
+			inputSettings = { ...kindList.defaultInputSettings, ...(inputSettings as any) }
+			if (source) source.settings = inputSettings
 		} else {
-			this.sources[sourceName].settings = inputSettings
+			if (source) source.settings = inputSettings
 		}
 
 		const settings = inputSettings as any
@@ -1444,9 +1466,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 						[`current_text_${name}`]: `Text from file: ${settings.text_file ?? settings.file}`,
 					})
 				} else {
-					if (!this.textSourceList.find((item) => item.id === sourceName)) {
-						this.textSourceList.push({ id: sourceName, label: sourceName })
-					}
+					this.states.textSources.set(sourceName, {})
 					this.setVariableValues({
 						[`current_text_${name}`]: settings.text ?? '',
 					})
@@ -1454,17 +1474,13 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 				break
 			case 'ffmpeg_source':
 			case 'vlc_source':
-				if (!this.mediaSourceList.find((item) => item.id === sourceName)) {
-					this.mediaSourceList.push({ id: sourceName, label: sourceName })
-				}
+				this.states.mediaSources.set(sourceName, {})
 				if (!this.mediaPoll) {
 					void this.startMediaPoll()
 				}
 				break
 			case 'image_source':
-				if (!this.imageSourceList.find((item) => item.id === sourceName)) {
-					this.imageSourceList.push({ id: sourceName, label: sourceName })
-				}
+				this.states.imageSources.set(sourceName, {})
 				break
 			default:
 				break
@@ -1472,13 +1488,14 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	updateInputSettings(sourceName: string, inputSettings: unknown): void {
-		if (this.sources[sourceName]) {
-			this.sources[sourceName].settings = {
-				...(this.sources[sourceName].settings || {}),
+		const source = this.states.sources.get(sourceName)
+		if (source) {
+			source.settings = {
+				...(source.settings || {}),
 				...((inputSettings as any) || {}),
 			}
-			const name = this.sources[sourceName].validName ?? sourceName
-			const inputKind = this.sources[sourceName].inputKind
+			const name = source.validName ?? sourceName
+			const inputKind = source.inputKind
 			const settings = inputSettings as any
 
 			switch (inputKind) {
@@ -1524,12 +1541,7 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		const data = await this.sendRequest('GetSourceFilterList', { sourceName: sourceName })
 
 		if (data?.filters) {
-			this.sourceFilters[sourceName] = data.filters
-			data.filters.forEach((filter: any) => {
-				if (!this.filterList.find((item) => item.id === filter.filterName)) {
-					this.filterList.push({ id: filter.filterName, label: filter.filterName })
-				}
-			})
+			this.states.sourceFilters.set(sourceName, data.filters)
 		}
 	}
 
@@ -1538,7 +1550,6 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		try {
 			await this.obs.call('GetInputAudioTracks', { inputName: sourceName })
 			if (!this.audioSourceList.find((item) => item.id === sourceName)) {
-				this.audioSourceList.push({ id: sourceName, label: sourceName })
 				await this.getSourceAudio(sourceName)
 			}
 		} catch {
@@ -1547,7 +1558,8 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	async getSourceAudio(sourceName: string): Promise<void> {
-		const validName = this.validName(sourceName)
+		const source = this.states.sources.get(sourceName)
+		const validName = source?.validName ?? this.validName(sourceName)
 
 		const batch = [
 			{
@@ -1580,73 +1592,80 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 				requestType: 'GetInputAudioTracks',
 				requestData: { inputName: sourceName },
 			},
-		]
+		] as any[]
 
 		const data = await this.sendBatch(batch)
 
-		for (const response of data) {
-			if (response.requestStatus.result && response.responseData) {
-				const sourceName = response.requestId
-				const type = response.requestType
-				const data = response.responseData
+		if (data) {
+			for (const response of data) {
+				if (response.requestStatus.result && response.responseData) {
+					const sourceName = response.requestId
+					const type = response.requestType
+					const responseData = response.responseData
+					const source = this.states.sources.get(sourceName)
 
-				switch (type) {
-					case 'GetInputMute':
-						this.sources[sourceName].inputMuted = data.inputMuted
-						this.setVariableValues({ [`mute_${validName}`]: data.inputMuted ? 'Muted' : 'Unmuted' })
-						break
-					case 'GetInputVolume':
-						this.sources[sourceName].inputVolume = this.roundNumber(data.inputVolumeDb, 1)
-						this.setVariableValues({ [`volume_${validName}`]: this.sources[sourceName].inputVolume + ' dB' })
-						break
-					case 'GetInputAudioBalance':
-						this.sources[sourceName].inputAudioBalance = this.roundNumber(data.inputAudioBalance, 1)
-						this.setVariableValues({ [`balance_${validName}`]: this.sources[sourceName].inputAudioBalance })
-						break
-					case 'GetInputAudioSyncOffset':
-						this.sources[sourceName].inputAudioSyncOffset = data.inputAudioSyncOffset
-						this.setVariableValues({ [`sync_offset_${validName}`]: data.inputAudioSyncOffset + 'ms' })
-						break
-					case 'GetInputAudioMonitorType': {
-						this.sources[sourceName].monitorType = data.monitorType
-						let monitorType
-						if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-							monitorType = 'Monitor / Output'
-						} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-							monitorType = 'Monitor Only'
-						} else {
-							monitorType = 'Off'
+					if (source) {
+						switch (type) {
+							case 'GetInputMute':
+								source.inputMuted = responseData.inputMuted
+								this.setVariableValues({ [`mute_${validName}`]: responseData.inputMuted ? 'Muted' : 'Unmuted' })
+								break
+							case 'GetInputVolume':
+								source.inputVolume = this.roundNumber(responseData.inputVolumeDb, 1)
+								this.setVariableValues({ [`volume_${validName}`]: source.inputVolume + ' dB' })
+								break
+							case 'GetInputAudioBalance':
+								source.inputAudioBalance = this.roundNumber(responseData.inputAudioBalance, 1)
+								this.setVariableValues({ [`balance_${validName}`]: source.inputAudioBalance })
+								break
+							case 'GetInputAudioSyncOffset':
+								source.inputAudioSyncOffset = responseData.inputAudioSyncOffset
+								this.setVariableValues({ [`sync_offset_${validName}`]: responseData.inputAudioSyncOffset + 'ms' })
+								break
+							case 'GetInputAudioMonitorType': {
+								source.monitorType = responseData.monitorType
+								let monitorType
+								if (responseData.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+									monitorType = 'Monitor / Output'
+								} else if (responseData.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+									monitorType = 'Monitor Only'
+								} else {
+									monitorType = 'Off'
+								}
+								this.setVariableValues({ [`monitor_${validName}`]: monitorType })
+								break
+							}
+							case 'GetInputAudioTracks':
+								source.inputAudioTracks = responseData.inputAudioTracks
+								break
+							default:
+								break
 						}
-						this.setVariableValues({ [`monitor_${validName}`]: monitorType })
-						break
 					}
-					case 'GetInputAudioTracks':
-						this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
-						break
-					default:
-						break
 				}
 			}
-		}
 
-		this.setVariableValues({
-			[`mute_${validName}`]: this.sources[sourceName].inputMuted ? 'Muted' : 'Unmuted',
-			[`volume_${validName}`]: this.sources[sourceName].inputVolume + 'dB',
-			[`balance_${validName}`]: this.sources[sourceName].inputAudioBalance,
-			[`sync_offset_${validName}`]: this.sources[sourceName].inputAudioSyncOffset + 'ms',
-		})
-		this.checkFeedbacks('audio_muted', 'volume', 'audio_monitor_type')
+			if (source) {
+				this.setVariableValues({
+					[`mute_${validName}`]: source.inputMuted ? 'Muted' : 'Unmuted',
+					[`volume_${validName}`]: source.inputVolume + 'dB',
+					[`balance_${validName}`]: source.inputAudioBalance,
+					[`sync_offset_${validName}`]: source.inputAudioSyncOffset + 'ms',
+				})
+			}
+			this.checkFeedbacks('audio_muted', 'volume', 'audio_monitor_type')
+		}
 	}
 
 	updateAudioPeak(data: unknown): void {
-		this.audioPeak = {}
+		this.states.audioPeak.clear()
 		;(data as any).inputs.forEach((input: any) => {
 			const channel = input.inputLevelsMul[0]
 			if (channel) {
 				const channelPeak = channel?.[1]
 				const dbPeak = Math.round(20.0 * Math.log10(channelPeak))
-				if (this.audioPeak && dbPeak) {
-					this.audioPeak[input.inputName] = dbPeak
+				if (dbPeak) {
+					this.states.audioPeak.set(input.inputName, dbPeak)
 					this.checkFeedbacks('audioPeaking', 'audioMeter')
 				}
 			}
