@@ -8,6 +8,15 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v4.0.0
+
+Note: This is a major rewrite of the module with the focus on performance and stability.
+
+- New
+  - Use unique IDs for sources and scenes to prevent issues with duplicate names
+  - Batch more communication with obs-websocket, wherever possible, to improve performance
+  - Rewritten using TypeScript to improve code quality and stability
+
 ### v3.15.1
 
 - Fix
