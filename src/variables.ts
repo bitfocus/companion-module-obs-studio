@@ -126,8 +126,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 }
 
 export function updateVariableValues(this: OBSInstance): void {
-	//Defaults
-	this.setVariableValues({
+	const updates: any = {
 		current_media_name: 'None',
 		recording_file_name: 'None',
 		replay_buffer_path: 'None',
@@ -136,7 +135,7 @@ export function updateVariableValues(this: OBSInstance): void {
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
 		scene_previous: this.states.previousScene ?? 'None',
-	})
+	}
 
 	//Source Specific Variables
 	for (const source of this.states.sources.values()) {
@@ -148,13 +147,9 @@ export function updateVariableValues(this: OBSInstance): void {
 				case 'text_gdiplus_v2':
 				case 'text_gdiplus_v3':
 					if (inputSettings?.from_file || inputSettings?.read_from_file) {
-						this.setVariableValues({
-							[`current_text_${sourceName}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
-						})
+						updates[`current_text_${sourceName}`] = `Text from file: ${inputSettings.text_file ?? inputSettings.file}`
 					} else {
-						this.setVariableValues({
-							[`current_text_${sourceName}`]: inputSettings?.text ?? '',
-						})
+						updates[`current_text_${sourceName}`] = inputSettings?.text ?? ''
 					}
 					break
 				case 'ffmpeg_source':
@@ -166,21 +161,17 @@ export function updateVariableValues(this: OBSInstance): void {
 					} else if (inputSettings?.local_file) {
 						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
-					this.setVariableValues({
-						[`media_status_${sourceName}`]: 'Stopped',
-						[`media_file_name_${sourceName}`]: file,
-						[`media_time_elapsed_${sourceName}`]: '--:--:--',
-						[`media_time_remaining_${sourceName}`]: '--:--:--',
-					})
+					updates[`media_status_${sourceName}`] = 'Stopped'
+					updates[`media_file_name_${sourceName}`] = file
+					updates[`media_time_elapsed_${sourceName}`] = '--:--:--'
+					updates[`media_time_remaining_${sourceName}`] = '--:--:--'
 
 					break
 				}
 				case 'image_source':
-					this.setVariableValues({
-						[`image_file_name_${sourceName}`]: inputSettings?.file
-							? (inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '')
-							: '',
-					})
+					updates[`image_file_name_${sourceName}`] = inputSettings?.file
+						? (inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '')
+						: ''
 					break
 				default:
 					break
@@ -197,14 +188,12 @@ export function updateVariableValues(this: OBSInstance): void {
 				monitorType = 'Off'
 			}
 
-			this.setVariableValues({
-				[`volume_${sourceName}`]: source.inputVolume !== undefined ? source.inputVolume + ' dB' : '',
-				[`mute_${sourceName}`]: source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : '',
-				[`monitor_${sourceName}`]: monitorType,
-				[`sync_offset_${sourceName}`]:
-					source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : '',
-				[`balance_${sourceName}`]: source.inputAudioBalance !== undefined ? source.inputAudioBalance : '',
-			})
+			updates[`volume_${sourceName}`] = source.inputVolume !== undefined ? source.inputVolume + ' dB' : ''
+			updates[`mute_${sourceName}`] = source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : ''
+			updates[`monitor_${sourceName}`] = monitorType
+			updates[`sync_offset_${sourceName}`] =
+				source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : ''
+			updates[`balance_${sourceName}`] = source.inputAudioBalance !== undefined ? source.inputAudioBalance : ''
 		}
 	}
 
@@ -215,8 +204,8 @@ export function updateVariableValues(this: OBSInstance): void {
 		const index = ++sceneIndex
 
 		const sceneName = sceneList[s].sceneName
-		this.setVariableValues({
-			[`scene_${index}`]: sceneName,
-		})
+		updates[`scene_${index}`] = sceneName
 	}
+
+	this.setVariableValues(updates)
 }

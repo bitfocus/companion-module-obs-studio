@@ -412,9 +412,9 @@ export class OBSApi {
 	}
 
 	public async getStats(): Promise<void> {
-		this.self.socket
-			.call('GetStats')
-			.then((data) => {
+		try {
+			const data = await this.sendRequest('GetStats')
+			if (data) {
 				this.self.states.stats = data
 
 				const freeSpaceMB = utils.roundNumber(this.self, data.availableDiskSpace, 0)
@@ -438,12 +438,12 @@ export class OBSApi {
 					free_disk_space_mb: freeSpaceMB,
 				})
 				this.self.checkFeedbacks('freeDiskSpaceRemaining')
-			})
-			.catch((error) => {
-				if (error?.message.match(/(Not connected)/i)) {
-					void this.connectionLost()
-				}
-			})
+			}
+		} catch (error: any) {
+			if (error?.message.match(/(Not connected)/i)) {
+				void this.connectionLost()
+			}
+		}
 	}
 
 	public async getVideoSettings(): Promise<void> {
@@ -463,67 +463,81 @@ export class OBSApi {
 
 	// Outputs, Streams, Recordings
 	public async getStreamStatus(): Promise<void> {
-		const streamStatus = await this.sendRequest('GetStreamStatus')
-		const streamService = await this.sendRequest('GetStreamServiceSettings')
+		const batch = [
+			{ requestType: 'GetStreamStatus', requestId: 'status' },
+			{ requestType: 'GetStreamServiceSettings', requestId: 'settings' },
+		]
+		const data = await this.sendBatch(batch)
 
-		if (streamStatus) {
-			this.self.states.streaming = streamStatus.outputActive
-			this.self.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+		if (data) {
+			const streamStatus = data.find((res: any) => res.requestId === 'status')?.responseData
+			const streamService = data.find((res: any) => res.requestId === 'settings')?.responseData
 
-			const timecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-			this.self.states.streamingTimecode = timecode
-			const streamingTimecodeSplit = String(timecode)?.split(':')
+			if (streamStatus) {
+				const timecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				this.self.states.streaming = streamStatus.outputActive
+				this.self.states.streamingTimecode = timecode
+				const streamingTimecodeSplit = String(timecode)?.split(':')
 
-			this.self.states.streamCongestion = streamStatus.outputCongestion
+				this.self.states.streamCongestion = streamStatus.outputCongestion
 
-			let kbits = 0
-			if (streamStatus.outputBytes > this.self.states.outputBytes) {
-				kbits = Math.round(((streamStatus.outputBytes - this.self.states.outputBytes) * 8) / 1000)
-				this.self.states.outputBytes = streamStatus.outputBytes
-			} else {
-				this.self.states.outputBytes = streamStatus.outputBytes
+				let kbits = 0
+				if (streamStatus.outputBytes > this.self.states.outputBytes) {
+					kbits = Math.round(((streamStatus.outputBytes - this.self.states.outputBytes) * 8) / 1000)
+					this.self.states.outputBytes = streamStatus.outputBytes
+				} else {
+					this.self.states.outputBytes = streamStatus.outputBytes
+				}
+
+				this.self.checkFeedbacks('streaming', 'streamCongestion')
+				this.self.setVariableValues({
+					streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
+					stream_timecode: String(this.self.states.streamingTimecode),
+					stream_timecode_hh: streamingTimecodeSplit[0],
+					stream_timecode_mm: streamingTimecodeSplit[1],
+					stream_timecode_ss: streamingTimecodeSplit[2],
+					output_skipped_frames: streamStatus.outputSkippedFrames,
+					output_total_frames: streamStatus.outputTotalFrames,
+					kbits_per_sec: kbits,
+					stream_service: streamService?.streamServiceSettings?.service ?? 'Custom',
+				})
 			}
-
-			this.self.checkFeedbacks('streaming', 'streamCongestion')
-			this.self.setVariableValues({
-				streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
-				stream_timecode: String(this.self.states.streamingTimecode),
-				stream_timecode_hh: streamingTimecodeSplit[0],
-				stream_timecode_mm: streamingTimecodeSplit[1],
-				stream_timecode_ss: streamingTimecodeSplit[2],
-				output_skipped_frames: streamStatus.outputSkippedFrames,
-				output_total_frames: streamStatus.outputTotalFrames,
-				kbits_per_sec: kbits,
-				stream_service: streamService?.streamServiceSettings?.service ?? 'Custom',
-			})
 		}
 	}
 
 	public async getRecordStatus(): Promise<void> {
-		const recordStatus = await this.sendRequest('GetRecordStatus')
-		const recordDirectory = await this.sendRequest('GetRecordDirectory')
+		const batch = [
+			{ requestType: 'GetRecordStatus', requestId: 'status' },
+			{ requestType: 'GetRecordDirectory', requestId: 'directory' },
+		]
+		const data = await this.sendBatch(batch)
 
-		if (recordStatus) {
-			if (recordStatus.outputActive === true) {
-				this.self.states.recording = 'Recording'
-			} else {
-				this.self.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
+		if (data) {
+			const recordStatus = data.find((res: any) => res.requestId === 'status')?.responseData
+			const recordDirectory = data.find((res: any) => res.requestId === 'directory')?.responseData
+
+			if (recordStatus) {
+				if (recordStatus.outputActive === true) {
+					this.self.states.recording = 'Recording'
+				} else {
+					this.self.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
+				}
+
+				const timecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				this.self.states.recordingTimecode = timecode
+				const recordingTimecodeSplit = String(timecode)?.split(':')
+				this.self.states.recordDirectory = recordDirectory?.recordDirectory
+
+				this.self.checkFeedbacks('recording')
+				this.self.setVariableValues({
+					recording: this.self.states.recording,
+					recording_timecode: String(this.self.states.recordingTimecode),
+					recording_timecode_hh: recordingTimecodeSplit[0],
+					recording_timecode_mm: recordingTimecodeSplit[1],
+					recording_timecode_ss: recordingTimecodeSplit[2],
+					recording_path: this.self.states.recordDirectory,
+				})
 			}
-
-			const timecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-			this.self.states.recordingTimecode = timecode
-			const recordingTimecodeSplit = String(timecode)?.split(':')
-			this.self.states.recordDirectory = recordDirectory.recordDirectory
-
-			this.self.checkFeedbacks('recording')
-			this.self.setVariableValues({
-				recording: this.self.states.recording,
-				recording_timecode: String(this.self.states.recordingTimecode),
-				recording_timecode_hh: recordingTimecodeSplit[0],
-				recording_timecode_mm: recordingTimecodeSplit[1],
-				recording_timecode_ss: recordingTimecodeSplit[2],
-				recording_path: this.self.states.recordDirectory,
-			})
 		}
 	}
 
@@ -544,7 +558,6 @@ export class OBSApi {
 		}
 	}
 
-	// Scene Collection Specific Info
 	// Scene Collection Specific Info
 	public async buildSceneList(): Promise<void> {
 		this.self.states.scenes.clear()
@@ -877,6 +890,7 @@ export class OBSApi {
 
 		const data = await this.sendBatch(batch)
 		if (data) {
+			const allValues: any = {}
 			const currentMedia = []
 			for (const response of data) {
 				if (response.requestStatus.result) {
@@ -910,27 +924,23 @@ export class OBSApi {
 					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') status = 'Playing'
 					else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') status = 'Paused'
 
-					this.self.setVariableValues({
-						[`media_status_${validName}`]: status,
-						[`media_time_elapsed_${validName}`]: source.timeElapsed,
-						[`media_time_remaining_${validName}`]: source.timeRemaining,
-					})
+					allValues[`media_status_${validName}`] = status
+					allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
+					allValues[`media_time_remaining_${validName}`] = source.timeRemaining
 				}
 			}
 
 			if (currentMedia.length > 0) {
-				this.self.setVariableValues({
-					current_media_name: currentMedia.map((v) => v.name).join('\n'),
-					current_media_time_elapsed: currentMedia.map((v) => v.elapsed).join('\n'),
-					current_media_time_remaining: currentMedia.map((v) => v.remaining).join('\n'),
-				})
+				allValues.current_media_name = currentMedia.map((v) => v.name).join('\n')
+				allValues.current_media_time_elapsed = currentMedia.map((v) => v.elapsed).join('\n')
+				allValues.current_media_time_remaining = currentMedia.map((v) => v.remaining).join('\n')
 			} else {
-				this.self.setVariableValues({
-					current_media_name: 'None',
-					current_media_time_elapsed: '--:--:--',
-					current_media_time_remaining: '--:--:--',
-				})
+				allValues.current_media_name = 'None'
+				allValues.current_media_time_elapsed = '--:--:--'
+				allValues.current_media_time_remaining = '--:--:--'
 			}
+
+			this.self.setVariableValues(allValues)
 			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining')
 		}
 	}
