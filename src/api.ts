@@ -677,42 +677,42 @@ export class OBSApi {
 					requestData: { inputUuid: uuid },
 					requestId: `${uuid}:settings`,
 				})
-			}
 
-			// Optimistically try to get audio info for all sources
-			// OBS-WS v5 will return an error if it's not an audio source, which we handle
-			batch.push(
-				{
-					requestType: 'GetInputMute',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:mute`,
-				},
-				{
-					requestType: 'GetInputVolume',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:volume`,
-				},
-				{
-					requestType: 'GetInputAudioBalance',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:balance`,
-				},
-				{
-					requestType: 'GetInputAudioSyncOffset',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:sync_offset`,
-				},
-				{
-					requestType: 'GetInputAudioMonitorType',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:monitor`,
-				},
-				{
-					requestType: 'GetInputAudioTracks',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:tracks`,
-				},
-			)
+				// Optimistically try to get audio info for all inputs
+				// OBS-WS v5 will return an error if it's not an audio source, which we handle
+				batch.push(
+					{
+						requestType: 'GetInputMute',
+						requestData: { inputUuid: uuid },
+						requestId: `${uuid}:mute`,
+					},
+					{
+						requestType: 'GetInputVolume',
+						requestData: { inputUuid: uuid },
+						requestId: `${uuid}:volume`,
+					},
+					{
+						requestType: 'GetInputAudioBalance',
+						requestData: { inputUuid: uuid },
+						requestId: `${uuid}:balance`,
+					},
+					{
+						requestType: 'GetInputAudioSyncOffset',
+						requestData: { inputUuid: uuid },
+						requestId: `${uuid}:sync_offset`,
+					},
+					{
+						requestType: 'GetInputAudioMonitorType',
+						requestData: { inputUuid: uuid },
+						requestId: `${uuid}:monitor`,
+					},
+					{
+						requestType: 'GetInputAudioTracks',
+						requestData: { inputUuid: uuid },
+						requestId: `${uuid}:tracks`,
+					},
+				)
+			}
 		}
 
 		const responses = await this.sendBatch(batch)
