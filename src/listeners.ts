@@ -1,4 +1,5 @@
 import type { OBSInstance } from './main.js'
+import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
 
@@ -103,7 +104,13 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.programScene = data.sceneName
 		self.states.programSceneUuid = data.sceneUuid
 		self.setVariableValues({ scene_active: self.states.programScene, scene_previous: self.states.previousScene })
-		self.checkFeedbacks('scene_active', 'sceneProgram', 'scenePrevious')
+		self.checkFeedbacks(
+			'scene_active',
+			'sceneProgram',
+			'scenePrevious',
+			'scene_item_active',
+			'scene_item_active_in_scene',
+		)
 	})
 	obs.on('CurrentPreviewSceneChanged', (data) => {
 		self.states.previewScene = data.sceneName ?? 'None'
@@ -114,7 +121,11 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneListChanged', (data) => {
 		self.states.scenes.clear()
 		for (const scene of data.scenes as any[]) {
-			self.states.scenes.set(scene.sceneUuid, scene)
+			self.states.scenes.set(scene.sceneUuid, {
+				sceneName: scene.sceneName,
+				sceneUuid: scene.sceneUuid,
+				sceneIndex: scene.sceneIndex,
+			})
 		}
 	})
 }
@@ -134,24 +145,16 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		void self.updateActionsFeedbacksVariables()
 	})
 	obs.on('InputActiveStateChanged', (data) => {
-		const source = self.states.sources.get(data.inputUuid)
-		if (source) {
-			source.active = data.videoActive
-			self.checkFeedbacks('scene_item_active')
-		}
+		updateSourceProperty(self, data.inputUuid, 'active', data.videoActive, 'scene_item_active')
 	})
 	obs.on('InputShowStateChanged', (data) => {
-		const source = self.states.sources.get(data.inputUuid)
-		if (source) {
-			source.videoShowing = data.videoShowing
-			self.checkFeedbacks('scene_item_previewed')
-		}
+		updateSourceProperty(self, data.inputUuid, 'videoShowing', data.videoShowing, 'scene_item_previewed')
 	})
 	obs.on('InputMuteStateChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputMuted = data.inputMuted
-			const name = source.validName ?? source.sourceName ?? data.inputUuid
+			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({
 				[`mute_${name}`]: source.inputMuted ? 'Muted' : 'Unmuted',
 			})
@@ -162,7 +165,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputVolume = utils.roundNumber(self, data.inputVolumeDb, 1)
-			const name = source.validName ?? source.sourceName ?? data.inputUuid
+			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`volume_${name}`]: source.inputVolume + 'db' })
 			self.checkFeedbacks('volume')
 		}
@@ -171,7 +174,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputAudioBalance = utils.roundNumber(self, data.inputAudioBalance, 1)
-			const name = source.validName ?? source.sourceName ?? data.inputUuid
+			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`balance_${name}`]: source.inputAudioBalance })
 		}
 	})
@@ -179,7 +182,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputAudioSyncOffset = data.inputAudioSyncOffset
-			const name = source.validName ?? source.sourceName ?? data.inputUuid
+			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({
 				[`sync_offset_${name}`]: source.inputAudioSyncOffset + 'ms',
 			})
@@ -190,7 +193,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.monitorType = data.monitorType
-			const name = source.validName ?? source.sourceName ?? data.inputUuid
+			const name = source.validName ?? data.inputUuid
 			let monitorType
 			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
 				monitorType = 'Monitor / Output'
@@ -212,6 +215,26 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		self.obs.updateInputSettings(sourceUuid, settings)
 	})
+}
+
+function updateSourceProperty(
+	self: OBSInstance,
+	uuid: string,
+	property: keyof OBSSource,
+	value: any,
+	feedback?: string | string[],
+): void {
+	const source = self.states.sources.get(uuid)
+	if (source) {
+		;(source as any)[property] = value
+		if (feedback) {
+			if (Array.isArray(feedback)) {
+				self.checkFeedbacks(...feedback)
+			} else {
+				self.checkFeedbacks(feedback)
+			}
+		}
+	}
 }
 
 function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
@@ -255,19 +278,24 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
-		void self.obs.getSourceFilters((data as any).sourceUuid)
+		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+		if (source) void self.obs.getSourceFilters(source.sourceUuid)
 	})
 	obs.on('SourceFilterRemoved', (data) => {
-		void self.obs.getSourceFilters((data as any).sourceUuid)
+		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+		if (source) void self.obs.getSourceFilters(source.sourceUuid)
 	})
 	obs.on('SourceFilterNameChanged', () => {})
 	obs.on('SourceFilterEnableStateChanged', (data) => {
-		const sourceFilters = self.states.sourceFilters.get((data as any).sourceUuid)
-		if (sourceFilters) {
-			const filter = sourceFilters.find((item) => item.filterName == data.filterName)
-			if (filter) {
-				filter.filterEnabled = data.filterEnabled
-				self.checkFeedbacks('filter_enabled')
+		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+		if (source) {
+			const sourceFilters = self.states.sourceFilters.get(source.sourceUuid)
+			if (sourceFilters) {
+				const filter = sourceFilters.find((item) => item.filterName == data.filterName)
+				if (filter) {
+					filter.filterEnabled = data.filterEnabled
+					self.checkFeedbacks('filter_enabled')
+				}
 			}
 		}
 	})
@@ -388,9 +416,8 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.mediaStatus = 'OBS_MEDIA_STATE_PLAYING'
-			const name = source.validName ?? source.sourceName
 			self.setVariableValues({
-				[`media_status_${name}`]: 'Playing',
+				[`media_status_${source.validName}`]: 'Playing',
 			})
 		}
 	})
@@ -398,9 +425,8 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.mediaStatus = 'OBS_MEDIA_STATE_ENDED'
-			const name = source.validName ?? source.sourceName
 			self.setVariableValues({
-				[`media_status_${name}`]: 'Stopped',
+				[`media_status_${source.validName}`]: 'Stopped',
 			})
 		}
 	})
@@ -409,12 +435,10 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (source) {
 			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
 				source.mediaStatus = 'OBS_MEDIA_STATE_PAUSED'
-				const name = source.validName ?? source.sourceName
-				self.setVariableValues({ [`media_status_${name}`]: 'Paused' })
+				self.setVariableValues({ [`media_status_${source.validName}`]: 'Paused' })
 			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
 				source.mediaStatus = 'OBS_MEDIA_STATE_PLAYING'
-				const name = source.validName ?? source.sourceName
-				self.setVariableValues({ [`media_status_${name}`]: 'Playing' })
+				self.setVariableValues({ [`media_status_${source.validName}`]: 'Playing' })
 			}
 		}
 	})

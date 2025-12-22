@@ -679,7 +679,6 @@ export class OBSApi {
 				})
 
 				// Optimistically try to get audio info for all inputs
-				// OBS-WS v5 will return an error if it's not an audio source, which we handle
 				batch.push(
 					{
 						requestType: 'GetInputMute',
@@ -726,6 +725,7 @@ export class OBSApi {
 
 				const data = res.responseData
 				const validName = source.validName ?? utils.validName(this.self, source.sourceName)
+				if (!source.validName) source.validName = validName
 
 				switch (type) {
 					case 'active':

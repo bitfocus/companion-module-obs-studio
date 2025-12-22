@@ -1,6 +1,5 @@
 import { CompanionVariableDefinition } from '@companion-module/base'
 import { OBSInstance } from './main.js'
-import * as utils from './utils.js'
 
 export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	const variables: CompanionVariableDefinition[] = []
@@ -77,7 +76,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 
 	//Source Specific Variables
 	for (const source of this.states.sources.values()) {
-		const sourceName = source.validName ? source.validName : utils.validName(this, source.sourceName)
+		const sourceName = source.validName ?? source.sourceName
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
@@ -141,7 +140,7 @@ export function updateVariableValues(this: OBSInstance): void {
 
 	//Source Specific Variables
 	for (const source of this.states.sources.values()) {
-		const sourceName = source.validName ? source.validName : utils.validName(this, source.sourceName)
+		const sourceName = source.validName ?? source.sourceName
 		const inputSettings = source.settings
 		if (source.inputKind) {
 			switch (source.inputKind) {
