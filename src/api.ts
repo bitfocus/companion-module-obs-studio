@@ -140,8 +140,25 @@ export class OBSApi {
 	// OBS Websocket Commands
 	public async sendRequest(requestType: string, requestData?: unknown): Promise<any> {
 		try {
-			const data = await this.self.socket.call(requestType as any, requestData)
-			return data
+			const data = requestData as any
+			// Backward Compatibility: If sceneName or inputName is provided but we have a UUID, prioritize UUID
+			if (data) {
+				if (data.sceneName && !data.sceneUuid) {
+					const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === data.sceneName)
+					if (scene) data.sceneUuid = scene.sceneUuid
+				}
+				if (data.inputName && !data.inputUuid) {
+					const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.inputName)
+					if (source) data.inputUuid = source.sourceUuid
+				}
+				if (data.sourceName && !data.sourceUuid) {
+					const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+					if (source) data.sourceUuid = source.sourceUuid
+				}
+			}
+
+			const result = await this.self.socket.call(requestType as any, data)
+			return result
 		} catch (error) {
 			this.self.log('debug', `Request ${requestType ?? ''} failed (${error})`)
 			return
@@ -182,7 +199,12 @@ export class OBSApi {
 	public async sendBatch(batch: any[]): Promise<any> {
 		try {
 			const data = await this.self.socket.callBatch(batch)
-			const errors = data.filter((request: any) => request.requestStatus.result === false)
+			const errors = data.filter(
+				(request: any) =>
+					request.requestStatus.result === false &&
+					request.requestStatus.comment !== 'The specified source is not an input.' &&
+					request.requestStatus.comment !== 'The specified input does not support audio.',
+			)
 			if (errors.length > 0) {
 				const errorMessages = errors.map((error: any) => error.requestStatus.comment).join(' // ')
 				this.self.log('debug', `Partial batch request failure (${errorMessages})`)
@@ -334,19 +356,28 @@ export class OBSApi {
 	public async buildSpecialInputs(): Promise<void> {
 		const specialInputs = await this.sendRequest('GetSpecialInputs')
 		if (specialInputs) {
-			await Promise.all(
-				Object.values(specialInputs).map(async (input) => {
-					if (input) {
-						const inputName = input as string
-						this.self.states.sources.set(inputName, {
-							sourceName: inputName,
-							validName: utils.validName(this.self, inputName),
-						})
+			const inputs = await this.sendRequest('GetInputList')
+			const inputMap = new Map<string, any>()
+			inputs?.inputs?.forEach((input: any) => {
+				inputMap.set(input.inputName, input)
+			})
 
-						await this.getAudioSources(inputName)
-					}
-				}),
-			)
+			const specialUuids = []
+			for (const input of Object.values(specialInputs)) {
+				if (input) {
+					const inputName = input as string
+					const inputInfo = inputMap.get(inputName)
+					const inputUuid = inputInfo?.inputUuid ?? inputName
+
+					this.self.states.sources.set(inputUuid, {
+						sourceName: inputName,
+						sourceUuid: inputUuid,
+						validName: utils.validName(this.self, inputName),
+					})
+					specialUuids.push(inputUuid)
+				}
+			}
+			await this.fetchSourcesData(specialUuids)
 		}
 	}
 
@@ -456,7 +487,7 @@ export class OBSApi {
 			this.self.checkFeedbacks('streaming', 'streamCongestion')
 			this.self.setVariableValues({
 				streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
-				stream_timecode: this.self.states.streamingTimecode,
+				stream_timecode: String(this.self.states.streamingTimecode),
 				stream_timecode_hh: streamingTimecodeSplit[0],
 				stream_timecode_mm: streamingTimecodeSplit[1],
 				stream_timecode_ss: streamingTimecodeSplit[2],
@@ -487,7 +518,7 @@ export class OBSApi {
 			this.self.checkFeedbacks('recording')
 			this.self.setVariableValues({
 				recording: this.self.states.recording,
-				recording_timecode: this.self.states.recordingTimecode,
+				recording_timecode: String(this.self.states.recordingTimecode),
 				recording_timecode_hh: recordingTimecodeSplit[0],
 				recording_timecode_mm: recordingTimecodeSplit[1],
 				recording_timecode_ss: recordingTimecodeSplit[2],
@@ -514,147 +545,274 @@ export class OBSApi {
 	}
 
 	// Scene Collection Specific Info
+	// Scene Collection Specific Info
 	public async buildSceneList(): Promise<void> {
 		this.self.states.scenes.clear()
+		this.self.states.sources.clear()
+		this.self.states.sceneItems.clear()
+		this.self.states.groups.clear()
 
 		const sceneList = await this.sendRequest('GetSceneList')
+		if (!sceneList) return
 
-		if (sceneList) {
-			if (Array.isArray(sceneList.scenes)) {
-				for (const scene of sceneList.scenes) {
-					this.self.states.scenes.set(scene.sceneName, scene)
-				}
+		if (Array.isArray(sceneList.scenes)) {
+			for (const scene of sceneList.scenes) {
+				this.self.states.scenes.set(scene.sceneUuid, scene)
 			}
-			this.self.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
-			this.self.states.programScene = sceneList.currentProgramSceneName
-
-			this.self.setVariableValues({
-				scene_preview: this.self.states.previewScene,
-				scene_active: this.self.states.programScene,
-			})
-
-			await Promise.all(
-				Array.from(this.self.states.scenes.values()).map(async (scene: any) => {
-					const sceneName = scene.sceneName
-					await this.buildSourceList(sceneName)
-
-					await this.getSourceFilters(sceneName)
-				}),
-			)
-			void this.self.updateActionsFeedbacksVariables()
 		}
-	}
 
-	public async buildSourceList(sceneName: string): Promise<void> {
-		const data = await this.sendRequest('GetSceneItemList', { sceneName: sceneName })
+		this.self.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
+		this.self.states.previewSceneUuid = sceneList.currentPreviewSceneUuid ?? ''
+		this.self.states.programScene = sceneList.currentProgramSceneName
+		this.self.states.programSceneUuid = sceneList.currentProgramSceneUuid ?? ''
 
-		if (data) {
-			this.self.states.sceneItems.set(sceneName, data.sceneItems)
+		this.self.setVariableValues({
+			scene_preview: this.self.states.previewScene,
+			scene_active: this.self.states.programScene,
+		})
 
-			const batch = []
-			for (const sceneItem of data.sceneItems as any[]) {
-				const sourceName = sceneItem.sourceName
-				if (!this.self.states.sources.has(sourceName)) {
-					this.self.states.sources.set(sourceName, {
-						sourceName: sourceName,
-						validName: utils.validName(this.self, sourceName),
-						isGroup: sceneItem.isGroup,
-						inputKind: sceneItem.inputKind,
-					})
+		// Fetch all scene items for all scenes
+		const sceneUuids = Array.from(this.self.states.scenes.keys())
+		const batch = sceneUuids.map((uuid) => ({
+			requestType: 'GetSceneItemList',
+			requestData: { sceneUuid: uuid },
+			requestId: uuid,
+		}))
+
+		const response = await this.sendBatch(batch)
+		const allSourceUuids = new Set<string>()
+
+		if (response) {
+			for (const res of response) {
+				if (res.requestStatus.result) {
+					const sceneUuid = res.requestId
+					const items = res.responseData.sceneItems as any[]
+					this.self.states.sceneItems.set(sceneUuid, items)
+
+					for (const item of items) {
+						allSourceUuids.add(item.sourceUuid)
+						if (!this.self.states.sources.has(item.sourceUuid)) {
+							this.self.states.sources.set(item.sourceUuid, {
+								sourceName: item.sourceName,
+								sourceUuid: item.sourceUuid,
+								validName: utils.validName(this.self, item.sourceName),
+								isGroup: item.isGroup,
+								inputKind: item.inputKind,
+							})
+						}
+					}
 				}
-
-				if (sceneItem.isGroup) {
-					await this.getGroupInfo(sourceName)
-				}
-
-				batch.push(
-					{
-						requestId: sourceName,
-						requestType: 'GetSourceActive',
-						requestData: { sourceName: sourceName },
-					},
-					{
-						requestId: sourceName,
-						requestType: 'GetSourceFilterList',
-						requestData: { sourceName: sourceName },
-					},
-				)
-				if (sceneItem.inputKind) {
-					batch.push({
-						requestId: sourceName,
-						requestType: 'GetInputSettings',
-						requestData: { inputName: sourceName },
-					})
-				}
-				await this.getAudioSources(sourceName)
 			}
+		}
 
-			const sourceBatch = await this.sendBatch(batch)
+		// Handle Groups separately as they contain sources not directly in scenes
+		const groupUuids = Array.from(this.self.states.sources.values())
+			.filter((s) => s.isGroup)
+			.map((s) => s.sourceUuid)
 
-			if (sourceBatch) {
-				for (const response of sourceBatch) {
-					if (response.requestStatus.result) {
-						const sourceName = response.requestId
-						const type = response.requestType
-						const data = response.responseData
-						const source = this.self.states.sources.get(sourceName)
-
-						if (source) {
-							switch (type) {
-								case 'GetSourceActive':
-									source.active = data.videoActive
-									source.videoShowing = data.videoShowing
-									break
-								case 'GetSourceFilterList':
-									this.self.states.sourceFilters.set(sourceName, data.filters)
-									break
-								case 'GetInputSettings':
-									this.buildInputSettings(sourceName, data.inputKind, data.inputSettings)
-									break
-								default:
-									break
+		if (groupUuids.length > 0) {
+			const groupBatch = groupUuids.map((uuid) => ({
+				requestType: 'GetGroupSceneItemList',
+				requestData: { sceneUuid: uuid },
+				requestId: uuid,
+			}))
+			const groupResponse = await this.sendBatch(groupBatch)
+			if (groupResponse) {
+				for (const res of groupResponse) {
+					if (res.requestStatus.result) {
+						const groupUuid = res.requestId
+						const items = res.responseData.sceneItems as any[]
+						this.self.states.groups.set(groupUuid, items)
+						for (const item of items) {
+							allSourceUuids.add(item.sourceUuid)
+							if (!this.self.states.sources.has(item.sourceUuid)) {
+								this.self.states.sources.set(item.sourceUuid, {
+									sourceName: item.sourceName,
+									sourceUuid: item.sourceUuid,
+									validName: utils.validName(this.self, item.sourceName),
+									inputKind: item.inputKind,
+									groupedSource: true,
+									groupName: groupUuid,
+								})
+							} else {
+								const source = this.self.states.sources.get(item.sourceUuid)
+								if (source) {
+									source.groupedSource = true
+									source.groupName = groupUuid
+								}
 							}
 						}
 					}
 				}
-				this.self.checkFeedbacks('scene_item_active')
 			}
+		}
+
+		await this.fetchSourcesData(Array.from(allSourceUuids))
+
+		void this.self.updateActionsFeedbacksVariables()
+	}
+
+	private async fetchSourcesData(sourceUuids: string[]): Promise<void> {
+		if (sourceUuids.length === 0) return
+
+		const batch: any[] = []
+		for (const uuid of sourceUuids) {
+			batch.push(
+				{
+					requestType: 'GetSourceActive',
+					requestData: { sourceUuid: uuid },
+					requestId: `${uuid}:active`,
+				},
+				{
+					requestType: 'GetSourceFilterList',
+					requestData: { sourceUuid: uuid },
+					requestId: `${uuid}:filters`,
+				},
+			)
+
+			const source = this.self.states.sources.get(uuid)
+			if (source?.inputKind) {
+				batch.push({
+					requestType: 'GetInputSettings',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:settings`,
+				})
+			}
+
+			// Optimistically try to get audio info for all sources
+			// OBS-WS v5 will return an error if it's not an audio source, which we handle
+			batch.push(
+				{
+					requestType: 'GetInputMute',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:mute`,
+				},
+				{
+					requestType: 'GetInputVolume',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:volume`,
+				},
+				{
+					requestType: 'GetInputAudioBalance',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:balance`,
+				},
+				{
+					requestType: 'GetInputAudioSyncOffset',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:sync_offset`,
+				},
+				{
+					requestType: 'GetInputAudioMonitorType',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:monitor`,
+				},
+				{
+					requestType: 'GetInputAudioTracks',
+					requestData: { inputUuid: uuid },
+					requestId: `${uuid}:tracks`,
+				},
+			)
+		}
+
+		const responses = await this.sendBatch(batch)
+		if (responses) {
+			for (const res of responses) {
+				if (!res.requestStatus.result) continue
+
+				const [uuid, type] = res.requestId.split(':')
+				const source = this.self.states.sources.get(uuid)
+				if (!source) continue
+
+				const data = res.responseData
+				const validName = source.validName ?? utils.validName(this.self, source.sourceName)
+
+				switch (type) {
+					case 'active':
+						source.active = data.videoActive
+						source.videoShowing = data.videoShowing
+						break
+					case 'filters':
+						this.self.states.sourceFilters.set(uuid, data.filters)
+						break
+					case 'settings':
+						this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
+						break
+					case 'mute':
+						source.inputMuted = data.inputMuted
+						this.self.setVariableValues({ [`mute_${validName}`]: data.inputMuted ? 'Muted' : 'Unmuted' })
+						break
+					case 'volume':
+						source.inputVolume = utils.roundNumber(this.self, data.inputVolumeDb, 1)
+						this.self.setVariableValues({ [`volume_${validName}`]: source.inputVolume + ' dB' })
+						break
+					case 'balance':
+						source.inputAudioBalance = utils.roundNumber(this.self, data.inputAudioBalance, 1)
+						this.self.setVariableValues({ [`balance_${validName}`]: source.inputAudioBalance })
+						break
+					case 'sync_offset':
+						source.inputAudioSyncOffset = data.inputAudioSyncOffset
+						this.self.setVariableValues({ [`sync_offset_${validName}`]: data.inputAudioSyncOffset + 'ms' })
+						break
+					case 'monitor': {
+						source.monitorType = data.monitorType
+						let monitorType = 'Off'
+						if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+							monitorType = 'Monitor / Output'
+						} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+							monitorType = 'Monitor Only'
+						}
+						this.self.setVariableValues({ [`monitor_${validName}`]: monitorType })
+						break
+					}
+					case 'tracks':
+						source.inputAudioTracks = data.inputAudioTracks
+						break
+				}
+			}
+		}
+
+		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
+	}
+
+	public async buildSourceList(sceneUuid: string): Promise<void> {
+		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
+		if (data) {
+			this.self.states.sceneItems.set(sceneUuid, data.sceneItems)
+			const sourceUuids = (data.sceneItems as any[]).map((item) => item.sourceUuid)
+			for (const item of data.sceneItems as any[]) {
+				if (!this.self.states.sources.has(item.sourceUuid)) {
+					this.self.states.sources.set(item.sourceUuid, {
+						sourceName: item.sourceName,
+						sourceUuid: item.sourceUuid,
+						validName: utils.validName(this.self, item.sourceName),
+						isGroup: item.isGroup,
+						inputKind: item.inputKind,
+					})
+				}
+			}
+			await this.fetchSourcesData(sourceUuids)
 		}
 	}
 
-	public async getGroupInfo(groupName: string): Promise<void> {
-		const data = await this.sendRequest('GetGroupSceneItemList', { sceneName: groupName })
+	public async getGroupInfo(groupUuid: string): Promise<void> {
+		const data = await this.sendRequest('GetGroupSceneItemList', { sceneUuid: groupUuid })
 		if (data) {
-			this.self.states.groups.set(groupName, data.sceneItems)
-			await Promise.all(
-				data.sceneItems?.map(async (sceneItem: any) => {
-					const sourceName = sceneItem.sourceName
-					let source = this.self.states.sources.get(sourceName)
-					if (!source) {
-						source = {
-							sourceName: sourceName,
-							validName: utils.validName(this.self, sourceName),
-							inputKind: sceneItem.inputKind,
-						}
-						this.self.states.sources.set(sourceName, source)
-					}
-
-					//Flag that this source is part of a group
-					source.groupedSource = true
-					source.groupName = groupName
-
-					await this.getSourceFilters(sourceName)
-					await this.getAudioSources(sourceName)
-
-					if (sceneItem.inputKind) {
-						const input = await this.sendRequest('GetInputSettings', { inputName: sourceName })
-
-						if (input.inputSettings) {
-							this.buildInputSettings(sourceName, sceneItem.inputKind, input.inputSettings)
-						}
-					}
-				}) ?? [],
-			)
+			this.self.states.groups.set(groupUuid, data.sceneItems)
+			const sourceUuids = (data.sceneItems as any[]).map((item) => item.sourceUuid)
+			for (const item of data.sceneItems as any[]) {
+				if (!this.self.states.sources.has(item.sourceUuid)) {
+					this.self.states.sources.set(item.sourceUuid, {
+						sourceName: item.sourceName,
+						sourceUuid: item.sourceUuid,
+						validName: utils.validName(this.self, item.sourceName),
+						inputKind: item.inputKind,
+						groupedSource: true,
+						groupName: groupUuid,
+					})
+				}
+			}
+			await this.fetchSourcesData(sourceUuids)
 		}
 	}
 
@@ -688,319 +846,134 @@ export class OBSApi {
 
 	// Scene and Source Actions
 	public async addScene(sceneName: string): Promise<void> {
-		this.self.states.scenes.set(sceneName, { sceneName: sceneName, sceneIndex: this.self.states.scenes.size })
-		await this.buildSourceList(sceneName)
-		void this.self.updateActionsFeedbacksVariables()
+		const scene = await this.sendRequest('CreateScene', { sceneName: sceneName })
+		if (scene) {
+			this.self.states.scenes.set(scene.sceneUuid, {
+				sceneName: sceneName,
+				sceneUuid: scene.sceneUuid,
+				sceneIndex: this.self.states.scenes.size,
+			})
+			await this.buildSourceList(scene.sceneUuid)
+			void this.self.updateActionsFeedbacksVariables()
+		}
 	}
 
-	public async removeScene(sceneName: string): Promise<void> {
-		this.self.states.scenes.delete(sceneName)
-		this.self.states.sceneItems.delete(sceneName)
+	public async removeScene(sceneUuid: string): Promise<void> {
+		this.self.states.scenes.delete(sceneUuid)
+		this.self.states.sceneItems.delete(sceneUuid)
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
 	// Source Info
 	public async getMediaStatus(): Promise<void> {
-		const batch = []
-		for (const source of this.self.obsState.mediaSourceList) {
-			const sourceName = source.id
-			batch.push({
-				requestId: sourceName,
-				requestType: 'GetMediaInputStatus',
-				requestData: { inputName: sourceName },
-			})
-		}
+		const mediaSourceList = this.self.obsState.mediaSourceList
+		if (mediaSourceList.length === 0) return
+
+		const batch = mediaSourceList.map((source) => ({
+			requestId: source.id as string,
+			requestType: 'GetMediaInputStatus',
+			requestData: { inputUuid: source.id },
+		}))
 
 		const data = await this.sendBatch(batch)
-
 		if (data) {
 			const currentMedia = []
 			for (const response of data) {
 				if (response.requestStatus.result) {
-					const sourceName = response.requestId
-					const validName = this.self.states.sources.get(sourceName)?.validName ?? sourceName
+					const sourceUuid = response.requestId
+					const source = this.self.states.sources.get(sourceUuid)
+					if (!source) continue
+
+					const sourceName = source.sourceName
+					const validName = source.validName ?? sourceName
 					const data = response.responseData
 
-					this.self.states.mediaSources.set(sourceName, data)
+					source.mediaStatus = data.mediaState
+					source.mediaCursor = data.mediaCursor
+					source.mediaDuration = data.mediaDuration
 
-					const remainingValue = (data?.mediaDuration ?? 0) - (data?.mediaCursor ?? 0)
-					let remaining: string
-					if (remainingValue > 0) {
-						remaining = utils.formatTimecode(this.self, remainingValue)
-					} else {
-						remaining = '--:--:--'
-					}
+					const remainingValue = (data.mediaDuration ?? 0) - (data.mediaCursor ?? 0)
+					source.timeElapsed = utils.formatTimecode(this.self, data.mediaCursor)
+					source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(this.self, remainingValue) : '--:--:--'
 
-					let mediaSource = this.self.states.mediaSources.get(sourceName)
-					if (mediaSource) {
-						mediaSource.timeElapsed = utils.formatTimecode(this.self, data.mediaCursor)
-						mediaSource.timeRemaining = remaining
-					}
-
-					if (data?.mediaState) {
-						switch (data?.mediaState) {
-							case 'OBS_MEDIA_STATE_PLAYING':
-								if (this.self.states.sources.get(sourceName)?.active == true) {
-									mediaSource = this.self.states.mediaSources.get(sourceName)
-									currentMedia.push({
-										name: sourceName,
-										elapsed: mediaSource?.timeElapsed,
-										remaining: mediaSource?.timeRemaining,
-									})
-								}
-								this.self.setVariableValues({
-									[`media_status_${validName}`]: 'Playing',
-								})
-								break
-							case 'OBS_MEDIA_STATE_PAUSED':
-								if (this.self.states.sources.get(sourceName)?.active == true) {
-									mediaSource = this.self.states.mediaSources.get(sourceName)
-									currentMedia.push({
-										name: sourceName,
-										elapsed: mediaSource?.timeElapsed,
-										remaining: mediaSource?.timeRemaining,
-									})
-								}
-								this.self.setVariableValues({ [`media_status_${validName}`]: 'Paused' })
-								break
-							default:
-								this.self.setVariableValues({ [`media_status_${validName}`]: 'Stopped' })
-								break
+					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING' || data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+						if (source.active) {
+							currentMedia.push({
+								name: sourceName,
+								elapsed: source.timeElapsed,
+								remaining: source.timeRemaining,
+							})
 						}
 					}
-					mediaSource = this.self.states.mediaSources.get(sourceName)
+
+					let status = 'Stopped'
+					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') status = 'Playing'
+					else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') status = 'Paused'
+
 					this.self.setVariableValues({
-						[`media_time_elapsed_${validName}`]: mediaSource?.timeElapsed,
-						[`media_time_remaining_${validName}`]: remaining,
+						[`media_status_${validName}`]: status,
+						[`media_time_elapsed_${validName}`]: source.timeElapsed,
+						[`media_time_remaining_${validName}`]: source.timeRemaining,
 					})
-					this.self.checkFeedbacks('media_playing', 'media_source_time_remaining')
 				}
 			}
-			if (currentMedia) {
-				const names = currentMedia.map((value) => value.name)
-				const elapsed = currentMedia.map((value) => value.elapsed)
-				const remaining = currentMedia.map((value) => value.remaining)
 
+			if (currentMedia.length > 0) {
 				this.self.setVariableValues({
-					current_media_name: names.length > 0 ? names.join('\n') : 'None',
-					current_media_time_elapsed: elapsed.length > 0 ? elapsed.join('\n') : '--:--:--',
-					current_media_time_remaining: remaining.length > 0 ? remaining.join('\n') : '--:--:--',
+					current_media_name: currentMedia.map((v) => v.name).join('\n'),
+					current_media_time_elapsed: currentMedia.map((v) => v.elapsed).join('\n'),
+					current_media_time_remaining: currentMedia.map((v) => v.remaining).join('\n'),
+				})
+			} else {
+				this.self.setVariableValues({
+					current_media_name: 'None',
+					current_media_time_elapsed: '--:--:--',
+					current_media_time_remaining: '--:--:--',
 				})
 			}
+			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining')
 		}
 	}
 
-	public buildInputSettings(sourceName: string, inputKind: string, inputSettings: unknown): void {
-		const source = this.self.states.sources.get(sourceName)
-		const name = source?.validName ?? sourceName
+	public buildInputSettings(sourceUuid: string, inputKind: string, inputSettings: unknown): void {
+		const source = this.self.states.sources.get(sourceUuid)
+		if (!source) return
 
 		const kindList = this.self.states.inputKindList.get(inputKind)
-		if (kindList?.defaultInputSettings) {
-			inputSettings = { ...kindList.defaultInputSettings, ...(inputSettings as any) }
-			if (source) source.settings = inputSettings
-		} else {
-			if (source) source.settings = inputSettings
-		}
+		source.settings = kindList?.defaultInputSettings
+			? { ...kindList.defaultInputSettings, ...(inputSettings as any) }
+			: inputSettings
 
-		const settings = inputSettings as any
-		switch (inputKind) {
-			case 'text_ft2_source_v2':
-			case 'text_gdiplus_v2':
-			case 'text_gdiplus_v3':
-				//Exclude text sources that read from file, as there is no way to edit or read the text value
-				if (settings?.from_file || settings?.read_from_file) {
-					this.self.setVariableValues({
-						[`current_text_${name}`]: `Text from file: ${settings.text_file ?? settings.file}`,
-					})
-				} else {
-					this.self.states.textSources.set(sourceName, {})
-					this.self.setVariableValues({
-						[`current_text_${name}`]: settings.text ?? '',
-					})
-				}
-				break
-			case 'ffmpeg_source':
-			case 'vlc_source':
-				this.self.states.mediaSources.set(sourceName, {})
-				if (!this.self.mediaPoll) {
-					void this.startMediaPoll()
-				}
-				break
-			case 'image_source':
-				this.self.states.imageSources.set(sourceName, {})
-				break
-			default:
-				break
+		const name = source.validName ?? source.sourceName
+		const settings = source.settings
+
+		if (inputKind.startsWith('text_')) {
+			if (settings?.from_file || settings?.read_from_file) {
+				source.text = `Text from file: ${settings.text_file ?? settings.file}`
+			} else {
+				source.text = settings.text ?? ''
+			}
+			this.self.setVariableValues({ [`current_text_${name}`]: source.text })
+		} else if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
+			if (!this.self.mediaPoll) void this.startMediaPoll()
+		} else if (inputKind === 'image_source') {
+			source.imageFile = settings?.file ? (settings.file.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '') : ''
+			this.self.setVariableValues({ [`image_file_name_${name}`]: source.imageFile })
 		}
 	}
 
-	public updateInputSettings(sourceName: string, inputSettings: unknown): void {
-		const source = this.self.states.sources.get(sourceName)
+	public updateInputSettings(sourceUuid: string, inputSettings: unknown): void {
+		const source = this.self.states.sources.get(sourceUuid)
 		if (source) {
-			source.settings = {
-				...(source.settings || {}),
-				...((inputSettings as any) || {}),
-			}
-			const name = source.validName ?? sourceName
-			const inputKind = source.inputKind
-			const settings = inputSettings as any
-
-			switch (inputKind) {
-				case 'text_ft2_source_v2':
-				case 'text_gdiplus_v2':
-				case 'text_gdiplus_v3':
-					//Exclude text sources that read from file, as there is no way to edit or read the text value
-					if (settings?.from_file || settings?.read_from_file) {
-						this.self.setVariableValues({
-							[`current_text_${name}`]: `Text from file: ${settings.text_file ?? settings.file}`,
-						})
-					} else if (settings?.text) {
-						this.self.setVariableValues({
-							[`current_text_${name}`]: settings.text ?? '',
-						})
-					}
-					break
-				case 'ffmpeg_source':
-				case 'vlc_source': {
-					let file = ''
-					if (settings?.playlist) {
-						file = settings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
-						//Use first value in playlist until support for determining currently playing cue
-					} else if (settings?.local_file) {
-						file = settings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
-					}
-					this.self.setVariableValues({ [`media_file_name_${name}`]: file })
-
-					break
-				}
-				case 'image_source':
-					this.self.setVariableValues({
-						[`image_file_name_${name}`]: settings?.file ? settings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/) : '',
-					})
-					break
-				default:
-					break
-			}
+			source.settings = { ...(source.settings || {}), ...(inputSettings as any) }
+			this.buildInputSettings(sourceUuid, source.inputKind ?? '', source.settings)
 		}
 	}
 
-	public async getSourceFilters(sourceName: string): Promise<void> {
-		const data = await this.sendRequest('GetSourceFilterList', { sourceName: sourceName })
-
+	public async getSourceFilters(sourceUuid: string): Promise<void> {
+		const data = await this.sendRequest('GetSourceFilterList', { sourceUuid: sourceUuid })
 		if (data?.filters) {
-			this.self.states.sourceFilters.set(sourceName, data.filters)
-		}
-	}
-
-	// Audio Sources
-	public async getAudioSources(sourceName: string): Promise<void> {
-		try {
-			await this.self.socket.call('GetInputAudioTracks', { inputName: sourceName })
-			if (!this.self.obsState.audioSourceList.find((item) => item.id === sourceName)) {
-				await this.getSourceAudio(sourceName)
-			}
-		} catch {
-			//Ignore, this source is not an audio source
-		}
-	}
-
-	public async getSourceAudio(sourceName: string): Promise<void> {
-		const source = this.self.states.sources.get(sourceName)
-		const validName = source?.validName ?? utils.validName(this.self, sourceName)
-
-		const batch = [
-			{
-				requestId: sourceName,
-				requestType: 'GetInputMute',
-				requestData: { inputName: sourceName },
-			},
-			{
-				requestId: sourceName,
-				requestType: 'GetInputVolume',
-				requestData: { inputName: sourceName },
-			},
-			{
-				requestId: sourceName,
-				requestType: 'GetInputAudioBalance',
-				requestData: { inputName: sourceName },
-			},
-			{
-				requestId: sourceName,
-				requestType: 'GetInputAudioSyncOffset',
-				requestData: { inputName: sourceName },
-			},
-			{
-				requestId: sourceName,
-				requestType: 'GetInputAudioMonitorType',
-				requestData: { inputName: sourceName },
-			},
-			{
-				requestId: sourceName,
-				requestType: 'GetInputAudioTracks',
-				requestData: { inputName: sourceName },
-			},
-		] as any[]
-
-		const data = await this.sendBatch(batch)
-
-		if (data) {
-			for (const response of data) {
-				if (response.requestStatus.result && response.responseData) {
-					const sourceName = response.requestId
-					const type = response.requestType
-					const responseData = response.responseData
-					const source = this.self.states.sources.get(sourceName)
-
-					if (source) {
-						switch (type) {
-							case 'GetInputMute':
-								source.inputMuted = responseData.inputMuted
-								this.self.setVariableValues({ [`mute_${validName}`]: responseData.inputMuted ? 'Muted' : 'Unmuted' })
-								break
-							case 'GetInputVolume':
-								source.inputVolume = utils.roundNumber(this.self, responseData.inputVolumeDb, 1)
-								this.self.setVariableValues({ [`volume_${validName}`]: source.inputVolume + ' dB' })
-								break
-							case 'GetInputAudioBalance':
-								source.inputAudioBalance = utils.roundNumber(this.self, responseData.inputAudioBalance, 1)
-								this.self.setVariableValues({ [`balance_${validName}`]: source.inputAudioBalance })
-								break
-							case 'GetInputAudioSyncOffset':
-								source.inputAudioSyncOffset = responseData.inputAudioSyncOffset
-								this.self.setVariableValues({ [`sync_offset_${validName}`]: responseData.inputAudioSyncOffset + 'ms' })
-								break
-							case 'GetInputAudioMonitorType': {
-								source.monitorType = responseData.monitorType
-								let monitorType
-								if (responseData.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-									monitorType = 'Monitor / Output'
-								} else if (responseData.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-									monitorType = 'Monitor Only'
-								} else {
-									monitorType = 'Off'
-								}
-								this.self.setVariableValues({ [`monitor_${validName}`]: monitorType })
-								break
-							}
-							case 'GetInputAudioTracks':
-								source.inputAudioTracks = responseData.inputAudioTracks
-								break
-							default:
-								break
-						}
-					}
-				}
-			}
-
-			if (source) {
-				this.self.setVariableValues({
-					[`mute_${validName}`]: source.inputMuted ? 'Muted' : 'Unmuted',
-					[`volume_${validName}`]: source.inputVolume + 'dB',
-					[`balance_${validName}`]: source.inputAudioBalance,
-					[`sync_offset_${validName}`]: source.inputAudioSyncOffset + 'ms',
-				})
-			}
-			this.self.checkFeedbacks('audio_muted', 'volume', 'audio_monitor_type')
+			this.self.states.sourceFilters.set(sourceUuid, data.filters)
 		}
 	}
 
@@ -1012,7 +985,7 @@ export class OBSApi {
 				const channelPeak = channel?.[1]
 				const dbPeak = Math.round(20.0 * Math.log10(channelPeak))
 				if (dbPeak) {
-					this.self.states.audioPeak.set(input.inputName, dbPeak)
+					this.self.states.audioPeak.set(input.inputUuid, dbPeak)
 					this.self.checkFeedbacks('audioPeaking', 'audioMeter')
 				}
 			}

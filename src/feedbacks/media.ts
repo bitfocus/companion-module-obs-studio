@@ -27,7 +27,8 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			return self.states.mediaSources.get(feedback.options.source as string)?.mediaState == 'OBS_MEDIA_STATE_PLAYING'
+			const sourceUuid = feedback.options.source as string
+			return self.states.sources.get(sourceUuid)?.mediaStatus == 'OBS_MEDIA_STATE_PLAYING'
 		},
 	}
 
@@ -76,27 +77,27 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceName = feedback.options.source as string
-			const mediaSource = self.states.mediaSources.get(sourceName)
-			if (mediaSource) {
-				const remainingTime = Math.round((mediaSource.mediaDuration - mediaSource.mediaCursor) / 1000)
-				const mediaState = mediaSource.mediaState
+			const sourceUuid = feedback.options.source as string
+			const source = self.states.sources.get(sourceUuid)
+			if (source) {
+				const remainingTime = Math.round(((source.mediaDuration ?? 0) - (source.mediaCursor ?? 0)) / 1000)
+				const mediaStatus = source.mediaStatus
 
-				if (feedback.options.onlyIfSourceIsOnProgram && !self.states.sources.get(sourceName)?.active) {
+				if (feedback.options.onlyIfSourceIsOnProgram && !source.active) {
 					return false
 				}
 
-				if (feedback.options.onlyIfSourceIsPlaying && mediaState !== 'OBS_MEDIA_STATE_PLAYING') {
+				if (feedback.options.onlyIfSourceIsPlaying && mediaStatus !== 'OBS_MEDIA_STATE_PLAYING') {
 					return false
 				}
 
-				if (mediaState === 'OBS_MEDIA_STATE_ENDED') {
+				if (mediaStatus === 'OBS_MEDIA_STATE_ENDED') {
 					return false
 				}
 
 				const threshold = feedback.options.rtThreshold as number
 				if (remainingTime <= threshold) {
-					if (feedback.options.blinkingEnabled && mediaState === 'OBS_MEDIA_STATE_PLAYING') {
+					if (feedback.options.blinkingEnabled && mediaStatus === 'OBS_MEDIA_STATE_PLAYING') {
 						return !!(Math.floor(Date.now() / 500) % 2)
 					}
 					return true

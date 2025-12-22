@@ -27,7 +27,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			return !!self.states.sources.get(feedback.options.source as string)?.inputMuted
+			const sourceUuid = feedback.options.source as string
+			return !!self.states.sources.get(sourceUuid)?.inputMuted
 		},
 	}
 
@@ -60,6 +61,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
+			const sourceUuid = feedback.options.source as string
 			let monitorType: any
 			if (feedback.options.monitor === 'monitorAndOutput') {
 				monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
@@ -68,7 +70,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			} else {
 				monitorType = 'OBS_MONITORING_TYPE_NONE'
 			}
-			return self.states.sources.get(feedback.options.source as string)?.monitorType === monitorType
+			return self.states.sources.get(sourceUuid)?.monitorType === monitorType
 		},
 	}
 
@@ -99,7 +101,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			return self.states.sources.get(feedback.options.source as string)?.inputVolume == feedback.options.volume
+			const sourceUuid = feedback.options.source as string
+			return self.states.sources.get(sourceUuid)?.inputVolume == feedback.options.volume
 		},
 	}
 
@@ -130,7 +133,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const source = self.states.sources.get(feedback.options.source as string)
+			const sourceUuid = feedback.options.source as string
+			const source = self.states.sources.get(sourceUuid)
 			if (source?.peak && source.peak > (feedback.options.threshold as number)) {
 				return true
 			}

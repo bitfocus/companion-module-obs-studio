@@ -16,8 +16,11 @@ export interface OBSNormalizedState {
 	replayBuffer: boolean
 	studioMode: boolean
 	programScene: string
+	programSceneUuid: string
 	previewScene: string
+	previewSceneUuid: string
 	previousScene: string
+	previousSceneUuid: string
 	currentTransition: string
 	transitionDuration: number
 	transitionActive: boolean
@@ -49,19 +52,16 @@ export interface OBSNormalizedState {
 	custom_command_response: string
 
 	// Entities
-	sources: Map<string, OBSSource>
-	scenes: Map<string, OBSScene>
+	sources: Map<string, OBSSource> // Keyed by sourceUuid
+	scenes: Map<string, OBSScene> // Keyed by sceneUuid
 	outputs: Map<string, OBSOutput>
 	transitions: Map<string, any>
 	profiles: Map<string, any>
 	sceneCollections: Map<string, any>
-	sceneItems: Map<string, any[]>
-	groups: Map<string, any[]>
+	sceneItems: Map<string, any[]> // Keyed by sceneUuid
+	groups: Map<string, any[]> // Keyed by groupUuid
 	inputKindList: Map<string, any>
-	mediaSources: Map<string, any>
-	imageSources: Map<string, any>
-	textSources: Map<string, any>
-	sourceFilters: Map<string, any[]>
+	sourceFilters: Map<string, any[]> // Keyed by sourceUuid
 	audioPeak: Map<string, number>
 	monitors: any[]
 	imageFormats: any[]
@@ -78,11 +78,25 @@ export interface OBSSource {
 	monitorType?: string
 	validName?: string
 	sourceName: string
+	sourceUuid: string
+	isGroup?: boolean
+	inputKind?: string
+	groupedSource?: boolean
+	groupName?: string
+	settings?: any
+	mediaStatus?: string
+	mediaCursor?: number
+	mediaDuration?: number
+	timeElapsed?: string
+	timeRemaining?: string
+	text?: string
+	imageFile?: string
 	[key: string]: any
 }
 
 export interface OBSScene {
 	sceneName: string
+	sceneUuid: string
 	sceneIndex: number
 }
 

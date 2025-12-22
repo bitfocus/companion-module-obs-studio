@@ -59,14 +59,14 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		],
 		callback: (feedback) => {
 			let mode = feedback.options.mode
-			const scene = feedback.options.scene as string
+			const sceneUuid = feedback.options.scene as string
 			if (!mode) {
 				mode = 'programAndPreview'
 			}
-			if (self.states.programScene === scene && (mode === 'programAndPreview' || mode === 'program')) {
+			if (self.states.programSceneUuid === sceneUuid && (mode === 'programAndPreview' || mode === 'program')) {
 				return { color: feedback.options.fg as number, bgcolor: feedback.options.bg as number }
 			} else if (
-				self.states.previewScene === scene &&
+				self.states.previewSceneUuid === sceneUuid &&
 				self.states.studioMode === true &&
 				(mode === 'programAndPreview' || mode === 'preview')
 			) {
@@ -96,8 +96,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 			},
 		],
 		callback: (feedback) => {
-			const scene = feedback.options.scene as string
-			return self.states.programScene === scene
+			const sceneUuid = feedback.options.scene as string
+			return self.states.programSceneUuid === sceneUuid
 		},
 	}
 
@@ -120,8 +120,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 			},
 		],
 		callback: (feedback) => {
-			const scene = feedback.options.scene as string
-			return self.states.previewScene === scene
+			const sceneUuid = feedback.options.scene as string
+			return self.states.previewSceneUuid === sceneUuid
 		},
 	}
 
@@ -143,7 +143,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 			},
 		],
 		callback: (feedback) => {
-			return self.states.previousScene === (feedback.options.scene as string)
+			return self.states.previousSceneUuid === (feedback.options.scene as string)
 		},
 	}
 
@@ -157,30 +157,47 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		},
 		options: [
 			{
-				type: 'dropdown',
-				label: 'Scene',
-				id: 'scene',
-				default: 'anyScene',
-				choices: self.obsState.sceneChoicesAnyScene,
+				type: 'checkbox',
+				label: 'All Scenes',
+				id: 'anyScene',
+				default: true,
+			},
+			{
+				type: 'checkbox',
+				label: 'Current Scene',
+				id: 'useCurrentScene',
+				default: false,
+				isVisible: (options) => !options.anyScene,
 			},
 			{
 				type: 'dropdown',
-				label: 'Source name',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				isVisible: (options) => !options.anyScene && !options.useCurrentScene,
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
 				choices: self.obsState.sourceChoices,
 			},
 		],
 		callback: (feedback) => {
-			if (self.states.sources.get(feedback.options.source as string)?.active && feedback.options.scene === 'anyScene') {
+			const sourceUuid = feedback.options.source as string
+			const source = self.states.sources.get(sourceUuid)
+			if (!source?.active) return false
+
+			if (feedback.options.anyScene) {
 				return true
-			} else if (
-				self.states.sources.get(feedback.options.source as string)?.active &&
-				feedback.options.scene === self.states.programScene
-			) {
-				return true
+			} else {
+				const sceneUuid = feedback.options.useCurrentScene
+					? self.states.programSceneUuid
+					: (feedback.options.scene as string)
+				return sceneUuid === self.states.programSceneUuid
 			}
-			return false
 		},
 	}
 
@@ -240,11 +257,11 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 			},
 		],
 		callback: (feedback) => {
-			const sceneName = feedback.options.scene as string
-			const sourceName = feedback.options.source as string
+			const sceneUuid = feedback.options.scene as string
+			const sourceUuid = feedback.options.source as string
 
 			if (feedback.options.any) {
-				const scene = self.states.sceneItems.get(sceneName)
+				const scene = self.states.sceneItems.get(sceneUuid)
 
 				if (scene) {
 					const enabled = scene.find((item: any) => item.sceneItemEnabled === true)
@@ -253,24 +270,27 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 					}
 				}
 			} else {
-				const source = self.states.sources.get(sourceName)
+				const source = self.states.sources.get(sourceUuid)
 				if (source?.groupedSource) {
-					const groupName = source.groupName
-					const group = self.states.groups.get(groupName)
-					const sceneItem = group?.find((item: any) => item.sourceName === sourceName)
-					if (sceneItem) {
-						return sceneItem.sceneItemEnabled
+					const groupUuid = source.groupName // groupName is now groupUuid
+					if (groupUuid) {
+						const group = self.states.groups.get(groupUuid)
+						const sceneItem = group?.find((item: any) => item.sourceUuid === sourceUuid)
+						if (sceneItem) {
+							return sceneItem.sceneItemEnabled
+						}
 					}
 				} else {
-					const scene = self.states.sceneItems.get(sceneName)
+					const scene = self.states.sceneItems.get(sceneUuid)
 					if (scene) {
-						const sceneItem = scene.find((item: any) => item.sourceName === sourceName)
+						const sceneItem = scene.find((item: any) => item.sourceUuid === sourceUuid)
 						if (sceneItem) {
 							return sceneItem.sceneItemEnabled
 						}
 					}
 				}
 			}
+			return false
 		},
 	}
 
@@ -299,7 +319,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 			},
 		],
 		callback: (feedback) => {
-			const sourceFilters = self.states.sourceFilters.get(feedback.options.source as string)
+			const sourceUuid = feedback.options.source as string
+			const sourceFilters = self.states.sourceFilters.get(sourceUuid)
 			if (sourceFilters) {
 				const filter = sourceFilters.find((item) => item.filterName === (feedback.options.filter as string))
 				return !!filter?.filterEnabled

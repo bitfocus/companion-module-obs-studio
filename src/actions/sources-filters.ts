@@ -28,7 +28,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				newText = newText.replace(/\\n/g, '\n')
 			}
 			await self.obs.sendRequest('SetInputSettings', {
-				inputName: action.options.source as string,
+				inputUuid: action.options.source as string,
 				inputSettings: { text: newText },
 			})
 		},
@@ -96,7 +96,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const source = action.options.source as string
+			const sourceUuid = action.options.source as string
 			const inputSettings: any = {}
 
 			if (action.options.text) {
@@ -114,7 +114,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				inputSettings.read_from_file = false
 			}
 
-			const existingFont = self.states.sources.get(source)?.settings?.font
+			const existingFont = self.states.sources.get(sourceUuid)?.settings?.font
 			if (action.options.updateFont) {
 				inputSettings.font = {
 					face: action.options.font as string,
@@ -130,7 +130,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				inputSettings.font = existingFont
 			}
 			await self.obs.sendRequest('SetInputSettings', {
-				inputName: source,
+				inputUuid: sourceUuid,
 				inputSettings: inputSettings,
 			})
 		},
@@ -140,11 +140,18 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 		name: 'Set Filter Visibility',
 		options: [
 			{
+				type: 'checkbox',
+				label: 'All Sources',
+				id: 'allSources',
+				default: false,
+			},
+			{
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
 				choices: self.obsState.sourceChoicesWithScenes,
+				isVisible: (options) => !options.allSources,
 			},
 			{
 				type: 'dropdown',
@@ -166,15 +173,14 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const source = action.options.source as string
 			const filterName = action.options.filter as string
 
-			if (source === 'allSources') {
+			if (action.options.allSources) {
 				const requests: any[] = []
-				self.states.sourceFilters.forEach((filters, sourceName) => {
+				self.states.sourceFilters.forEach((filters, sourceUuid) => {
 					const filter = filters.find((f: any) => f.filterName === filterName)
 					if (filter) {
-						let filterVisibility
+						let filterVisibility: boolean
 						if (action.options.visible === 'toggle') {
 							filterVisibility = !filter.filterEnabled
 						} else {
@@ -183,7 +189,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 						requests.push({
 							requestType: 'SetSourceFilterEnabled',
 							requestData: {
-								sourceName: sourceName,
+								sourceUuid: sourceUuid,
 								filterName: filterName,
 								filterEnabled: filterVisibility,
 							},
@@ -193,9 +199,10 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 				await self.obs.sendBatch(requests)
 			} else {
-				let filterVisibility
+				const sourceUuid = action.options.source as string
+				let filterVisibility: boolean
 				if (action.options.visible === 'toggle') {
-					const filters = self.states.sourceFilters.get(source)
+					const filters = self.states.sourceFilters.get(sourceUuid)
 					const filter = filters?.find((f) => f.filterName === filterName)
 					if (filter) {
 						filterVisibility = !filter.filterEnabled
@@ -207,7 +214,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				}
 
 				await self.obs.sendRequest('SetSourceFilterEnabled', {
-					sourceName: source,
+					sourceUuid: sourceUuid,
 					filterName: filterName,
 					filterEnabled: filterVisibility,
 				})
@@ -245,8 +252,8 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				const settings = action.options.settings as string
 				const settingsJSON = JSON.parse(settings)
 				await self.obs.sendRequest('SetSourceFilterSettings', {
-					sourceName: action.options.source,
-					filterName: action.options.filter,
+					sourceUuid: action.options.source as string,
+					filterName: action.options.filter as string,
 					filterSettings: settingsJSON,
 				})
 			} catch (e: any) {
@@ -267,10 +274,10 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const sourceName = action.options.source as string
-			if (self.states.sources.get(sourceName)?.inputKind == 'browser_source') {
+			const sourceUuid = action.options.source as string
+			if (self.states.sources.get(sourceUuid)?.inputKind == 'browser_source') {
 				await self.obs.sendRequest('PressInputPropertiesButton', {
-					inputName: sourceName,
+					inputUuid: sourceUuid,
 					propertyName: 'refreshnocache',
 				})
 			}
@@ -281,15 +288,25 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 		name: 'Take Screenshot',
 		options: [
 			{
+				type: 'checkbox',
+				label: 'Current Program Scene',
+				id: 'useProgramScene',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Current Preview Scene',
+				id: 'usePreviewScene',
+				default: false,
+				isVisible: (options) => !options.useProgramScene,
+			},
+			{
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: 'programScene',
-				choices: [
-					{ id: 'programScene', label: 'Current Program Scene' },
-					{ id: 'previewScene', label: 'Current Preview Scene' },
-					...self.obsState.sourceChoices,
-				],
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+				isVisible: (options) => !options.useProgramScene && !options.usePreviewScene,
 			},
 			{
 				type: 'dropdown',
@@ -332,11 +349,13 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			let sourceName: any = action.options.source
-			if (sourceName === 'programScene') {
-				sourceName = self.states.programScene
-			} else if (sourceName === 'previewScene') {
-				sourceName = self.states.previewScene
+			let sourceUuid: string
+			if (action.options.useProgramScene) {
+				sourceUuid = self.states.programSceneUuid
+			} else if (action.options.usePreviewScene) {
+				sourceUuid = self.states.previewSceneUuid
+			} else {
+				sourceUuid = action.options.source as string
 			}
 
 			let filePath
@@ -350,7 +369,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			const quality = action.options.compression == 0 ? -1 : action.options.compression
 
 			await self.obs.sendRequest('SaveSourceScreenshot', {
-				sourceName: sourceName,
+				sourceUuid: sourceUuid,
 				imageFormat: action.options.format as string,
 				imageFilePath: filePath,
 				imageCompressionQuality: quality as number,
@@ -362,11 +381,18 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 		name: 'Set Scene Item Properties',
 		options: [
 			{
+				type: 'checkbox',
+				label: 'Current Program Scene',
+				id: 'useProgramScene',
+				default: true,
+			},
+			{
 				type: 'dropdown',
-				label: 'Scene (optional)',
+				label: 'Scene',
 				id: 'scene',
-				default: 'current',
-				choices: [{ id: 'current', label: 'Current Program Scene' }, ...self.obsState.sceneChoices],
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				isVisible: (options) => !options.useProgramScene,
 			},
 			{
 				type: 'dropdown',
@@ -412,32 +438,32 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			let sourceScene = action.options.scene as string
-			if (sourceScene === 'current') {
-				sourceScene = self.states.programScene ?? ''
-			}
+			const sourceSceneUuid = action.options.useProgramScene
+				? self.states.programSceneUuid
+				: (action.options.scene as string)
+			const sourceUuid = action.options.source as string
 
 			const transform: { [key: string]: number } = {}
-			if (action.options.positionX) transform.positionX = Number(action.options.positionX)
-			if (action.options.positionY) transform.positionY = Number(action.options.positionY)
-			if (action.options.scaleX) transform.scaleX = Number(action.options.scaleX)
-			if (action.options.scaleY) transform.scaleY = Number(action.options.scaleY)
-			if (action.options.rotation) transform.rotation = Number(action.options.rotation)
+			if (action.options.positionX) transform.positionX = Number(action.options.positionX as string)
+			if (action.options.positionY) transform.positionY = Number(action.options.positionY as string)
+			if (action.options.scaleX) transform.scaleX = Number(action.options.scaleX as string)
+			if (action.options.scaleY) transform.scaleY = Number(action.options.scaleY as string)
+			if (action.options.rotation) transform.rotation = Number(action.options.rotation as string)
 
 			try {
 				const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
-					sceneName: sourceScene,
-					sourceName: action.options.source as string,
+					sceneUuid: sourceSceneUuid,
+					sourceUuid: sourceUuid,
 				})
 
 				if (sceneItem?.sceneItemId) {
 					await self.obs.sendRequest('SetSceneItemTransform', {
-						sceneName: sourceScene,
+						sceneUuid: sourceSceneUuid,
 						sceneItemId: sceneItem?.sceneItemId,
 						sceneItemTransform: transform,
 					})
 				} else {
-					self.log('warn', `Scene item not found for source: ${action.options.source} in scene: ${sourceScene}`)
+					self.log('warn', `Scene item not found for source: ${sourceUuid} in scene: ${sourceSceneUuid}`)
 					return
 				}
 			} catch (e: any) {

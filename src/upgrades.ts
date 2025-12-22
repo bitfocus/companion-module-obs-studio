@@ -237,4 +237,78 @@ export default [
 		}
 		return changes
 	},
+	function v4_0_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+	): CompanionStaticUpgradeResult<ModuleConfig> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		for (const action of props.actions) {
+			let actionChanged = false
+			if (action.actionId === 'set_scene' || action.actionId === 'preview_scene') {
+				if (action.options.scene === 'currentScene') {
+					action.options.useCurrentScene = true
+					actionChanged = true
+				} else if (action.options.scene === 'previewScene') {
+					action.options.usePreviewScene = true
+					actionChanged = true
+				}
+			} else if (action.actionId === 'smart_preview_scene') {
+				if (action.options.scene === 'currentScene' || action.options.scene === 'programScene') {
+					action.options.useProgramScene = true
+					actionChanged = true
+				}
+			} else if (action.actionId === 'set_source_visible') {
+				if (action.options.scene === 'anyScene') {
+					action.options.anyScene = true
+					actionChanged = true
+				} else if (action.options.scene === 'currentScene') {
+					action.options.useCurrentScene = true
+					actionChanged = true
+				}
+			} else if (action.actionId === 'set_filter_visible') {
+				if (action.options.source === 'allSources') {
+					action.options.allSources = true
+					actionChanged = true
+				}
+			} else if (action.actionId === 'take_screenshot') {
+				if (action.options.source === 'programScene') {
+					action.options.useProgramScene = true
+					actionChanged = true
+				} else if (action.options.source === 'previewScene') {
+					action.options.usePreviewScene = true
+					actionChanged = true
+				}
+			} else if (action.actionId === 'set_scene_item_properties') {
+				if (action.options.scene === 'current') {
+					action.options.useProgramScene = true
+					actionChanged = true
+				}
+			}
+
+			if (actionChanged) {
+				changes.updatedActions.push(action)
+			}
+		}
+
+		for (const feedback of props.feedbacks) {
+			let feedbackChanged = false
+			if (feedback.feedbackId === 'scene_item_active') {
+				if (feedback.options.scene === 'anyScene') {
+					feedback.options.anyScene = true
+					feedbackChanged = true
+				}
+			}
+
+			if (feedbackChanged) {
+				changes.updatedFeedbacks.push(feedback)
+			}
+		}
+
+		return changes
+	},
 ]

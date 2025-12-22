@@ -74,37 +74,47 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneCreated', (data) => {
 		if (data?.isGroup === false && self.states.sceneCollectionChanging === false) {
-			void self.obs.addScene(data.sceneName)
+			const sceneName = data.sceneName
+			const sceneUuid = data.sceneUuid
+			self.states.scenes.set(sceneUuid, {
+				sceneName: sceneName,
+				sceneUuid: sceneUuid,
+				sceneIndex: self.states.scenes.size,
+			})
+			void self.obs.buildSourceList(sceneUuid)
+			void self.updateActionsFeedbacksVariables()
 		}
 	})
 	obs.on('SceneRemoved', (data) => {
 		if (data?.isGroup === false && self.states.sceneCollectionChanging === false) {
-			void self.obs.removeScene(data.sceneName)
+			void self.obs.removeScene(data.sceneUuid)
 		}
 	})
 	obs.on('SceneNameChanged', (data) => {
-		const sceneItems = self.states.sceneItems.get(data.oldSceneName)
-		if (sceneItems) {
-			self.states.sceneItems.set(data.sceneName, sceneItems)
-			self.states.sceneItems.delete(data.oldSceneName)
+		const scene = self.states.scenes.get(data.sceneUuid)
+		if (scene) {
+			scene.sceneName = data.sceneName
 		}
 		void self.updateActionsFeedbacksVariables()
 	})
 	obs.on('CurrentProgramSceneChanged', (data) => {
 		self.states.previousScene = self.states.programScene
+		self.states.previousSceneUuid = self.states.programSceneUuid
 		self.states.programScene = data.sceneName
+		self.states.programSceneUuid = data.sceneUuid
 		self.setVariableValues({ scene_active: self.states.programScene, scene_previous: self.states.previousScene })
 		self.checkFeedbacks('scene_active', 'sceneProgram', 'scenePrevious')
 	})
 	obs.on('CurrentPreviewSceneChanged', (data) => {
 		self.states.previewScene = data.sceneName ?? 'None'
+		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
 		self.checkFeedbacks('scene_active', 'scenePreview')
 	})
 	obs.on('SceneListChanged', (data) => {
 		self.states.scenes.clear()
 		for (const scene of data.scenes as any[]) {
-			self.states.scenes.set(scene.sceneName, scene)
+			self.states.scenes.set(scene.sceneUuid, scene)
 		}
 	})
 }
@@ -112,29 +122,36 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputCreated', () => {})
 	obs.on('InputRemoved', (data) => {
-		self.states.sources.delete(data.inputName)
+		self.states.sources.delete(data.inputUuid)
 		void self.updateActionsFeedbacksVariables()
 	})
-	obs.on('InputNameChanged', () => {})
+	obs.on('InputNameChanged', (data) => {
+		const source = self.states.sources.get(data.inputUuid)
+		if (source) {
+			source.sourceName = data.inputName
+			source.validName = utils.validName(self, data.inputName)
+		}
+		void self.updateActionsFeedbacksVariables()
+	})
 	obs.on('InputActiveStateChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.active = data.videoActive
 			self.checkFeedbacks('scene_item_active')
 		}
 	})
 	obs.on('InputShowStateChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.videoShowing = data.videoShowing
 			self.checkFeedbacks('scene_item_previewed')
 		}
 	})
 	obs.on('InputMuteStateChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputMuted = data.inputMuted
-			const name = source.validName ?? data.inputName
+			const name = source.validName ?? source.sourceName ?? data.inputUuid
 			self.setVariableValues({
 				[`mute_${name}`]: source.inputMuted ? 'Muted' : 'Unmuted',
 			})
@@ -142,27 +159,27 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		}
 	})
 	obs.on('InputVolumeChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputVolume = utils.roundNumber(self, data.inputVolumeDb, 1)
-			const name = source.validName ?? data.inputName
+			const name = source.validName ?? source.sourceName ?? data.inputUuid
 			self.setVariableValues({ [`volume_${name}`]: source.inputVolume + 'db' })
 			self.checkFeedbacks('volume')
 		}
 	})
 	obs.on('InputAudioBalanceChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputAudioBalance = utils.roundNumber(self, data.inputAudioBalance, 1)
-			const name = source.validName ?? data.inputName
+			const name = source.validName ?? source.sourceName ?? data.inputUuid
 			self.setVariableValues({ [`balance_${name}`]: source.inputAudioBalance })
 		}
 	})
 	obs.on('InputAudioSyncOffsetChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputAudioSyncOffset = data.inputAudioSyncOffset
-			const name = source.validName ?? data.inputName
+			const name = source.validName ?? source.sourceName ?? data.inputUuid
 			self.setVariableValues({
 				[`sync_offset_${name}`]: source.inputAudioSyncOffset + 'ms',
 			})
@@ -170,10 +187,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('InputAudioTracksChanged', () => {})
 	obs.on('InputAudioMonitorTypeChanged', (data) => {
-		const source = self.states.sources.get(data.inputName)
+		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.monitorType = data.monitorType
-			const name = source.validName ?? data.inputName
+			const name = source.validName ?? source.sourceName ?? data.inputUuid
 			let monitorType
 			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
 				monitorType = 'Monitor / Output'
@@ -190,10 +207,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.obs.updateAudioPeak(data)
 	})
 	obs.on('InputSettingsChanged', (data) => {
-		const source = data.inputName
+		const sourceUuid = data.inputUuid
 		const settings = data.inputSettings
 
-		self.obs.updateInputSettings(source, settings)
+		self.obs.updateInputSettings(sourceUuid, settings)
 	})
 }
 
@@ -238,14 +255,14 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
-		void self.obs.getSourceFilters(data.sourceName)
+		void self.obs.getSourceFilters((data as any).sourceUuid)
 	})
 	obs.on('SourceFilterRemoved', (data) => {
-		void self.obs.getSourceFilters(data.sourceName)
+		void self.obs.getSourceFilters((data as any).sourceUuid)
 	})
 	obs.on('SourceFilterNameChanged', () => {})
 	obs.on('SourceFilterEnableStateChanged', (data) => {
-		const sourceFilters = self.states.sourceFilters.get(data.sourceName)
+		const sourceFilters = self.states.sourceFilters.get((data as any).sourceUuid)
 		if (sourceFilters) {
 			const filter = sourceFilters.find((item) => item.filterName == data.filterName)
 			if (filter) {
@@ -259,19 +276,19 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemCreated', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
-			void self.obs.buildSourceList(data.sceneName)
+			void self.obs.buildSourceList(data.sceneUuid)
 		}
 	})
 	obs.on('SceneItemRemoved', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
-			const sceneItems = self.states.sceneItems.get(data.sceneName)
+			const sceneItems = self.states.sceneItems.get(data.sceneUuid)
 			if (sceneItems) {
 				const itemIndex = sceneItems.findIndex((item) => item.sceneItemId === data.sceneItemId)
 				if (itemIndex > -1) {
 					sceneItems.splice(itemIndex, 1)
 				}
 			}
-			const groups = self.states.groups.get(data.sceneName)
+			const groups = self.states.groups.get(data.sceneUuid)
 			if (groups) {
 				const itemIndex = groups.findIndex((item) => item.sceneItemId === data.sceneItemId)
 				if (itemIndex > -1) {
@@ -282,8 +299,8 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('SceneItemListReindexed', () => {})
 	obs.on('SceneItemEnableStateChanged', (data) => {
-		const groups = self.states.groups.get(data.sceneName)
-		const sceneItems = self.states.sceneItems.get(data.sceneName)
+		const groups = self.states.groups.get(data.sceneUuid)
+		const sceneItems = self.states.sceneItems.get(data.sceneUuid)
 		if (groups) {
 			const sceneItem = groups.find((item) => item.sceneItemId === data.sceneItemId)
 			if (sceneItem) {
@@ -366,28 +383,39 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('MediaInputPlaybackStarted', (data) => {
-		self.states.currentMedia = data.inputName
+		self.states.currentMedia = data.inputUuid
 
-		const source = self.states.sources.get(data.inputName)
-		const name = source?.validName ?? data.inputName
-		self.setVariableValues({
-			[`media_status_${name}`]: 'Playing',
-		})
+		const source = self.states.sources.get(data.inputUuid)
+		if (source) {
+			source.mediaStatus = 'OBS_MEDIA_STATE_PLAYING'
+			const name = source.validName ?? source.sourceName
+			self.setVariableValues({
+				[`media_status_${name}`]: 'Playing',
+			})
+		}
 	})
 	obs.on('MediaInputPlaybackEnded', (data) => {
-		if (self.states.currentMedia == data.inputName) {
-			const source = self.states.sources.get(data.inputName)
-			const name = source?.validName ?? data.inputName
+		const source = self.states.sources.get(data.inputUuid)
+		if (source) {
+			source.mediaStatus = 'OBS_MEDIA_STATE_ENDED'
+			const name = source.validName ?? source.sourceName
 			self.setVariableValues({
 				[`media_status_${name}`]: 'Stopped',
 			})
 		}
 	})
 	obs.on('MediaInputActionTriggered', (data) => {
-		if (data.mediaAction == 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-			const source = self.states.sources.get(data.inputName)
-			const name = source?.validName ?? data.inputName
-			self.setVariableValues({ [`media_status_${name}`]: 'Paused' })
+		const source = self.states.sources.get(data.inputUuid)
+		if (source) {
+			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
+				source.mediaStatus = 'OBS_MEDIA_STATE_PAUSED'
+				const name = source.validName ?? source.sourceName
+				self.setVariableValues({ [`media_status_${name}`]: 'Paused' })
+			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
+				source.mediaStatus = 'OBS_MEDIA_STATE_PLAYING'
+				const name = source.validName ?? source.sourceName
+				self.setVariableValues({ [`media_status_${name}`]: 'Playing' })
+			}
 		}
 	})
 }
@@ -401,8 +429,10 @@ function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			if (self.states.studioMode) {
 				const preview = await self.obs.sendRequest('GetCurrentPreviewScene')
 				self.states.previewScene = preview?.sceneName ?? 'None'
+				self.states.previewSceneUuid = preview?.sceneUuid ?? ''
 			} else {
 				self.states.previewScene = 'None'
+				self.states.previewSceneUuid = ''
 			}
 			self.checkFeedbacks('studioMode', 'scenePreview')
 			self.setVariableValues({ scene_preview: self.states.previewScene })

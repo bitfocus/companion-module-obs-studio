@@ -16,20 +16,26 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				allowCustom: true,
 			},
 			{
+				type: 'checkbox',
+				label: 'Use Custom Name',
+				id: 'custom',
+				default: false,
+			},
+			{
 				type: 'textinput',
 				label: 'Custom Scene Name',
 				id: 'customSceneName',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.scene === 'custom',
+				isVisibleExpression: '$(options.custom)',
 			},
 		],
 		callback: async (action) => {
-			if (action.options.scene === 'custom') {
+			if (action.options.custom) {
 				const scene = action.options.customSceneName as string
 				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: scene })
 			} else {
-				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
+				await self.obs.sendRequest('SetCurrentProgramScene', { sceneUuid: action.options.scene as string })
 			}
 		},
 	}
@@ -46,12 +52,18 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				allowCustom: true,
 			},
 			{
+				type: 'checkbox',
+				label: 'Use Custom Name',
+				id: 'custom',
+				default: false,
+			},
+			{
 				type: 'textinput',
 				label: 'Custom Scene Name',
 				id: 'customSceneName',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.scene === 'custom',
+				isVisibleExpression: '$(options.custom)',
 			},
 			{
 				type: 'checkbox',
@@ -61,20 +73,20 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 			},
 		],
 		callback: async (action) => {
-			if (action.options.scene === 'custom') {
+			if (action.options.custom) {
 				const scene = action.options.customSceneName as string
 				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
-				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: action.options.scene })
+				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: action.options.scene as string })
 			}
 
-			if (action.options.revert && self.states.programScene !== undefined) {
+			if (action.options.revert && self.states.programSceneUuid !== undefined) {
 				const revertTransitionDuration =
 					self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0
 
 				setTimeout(
 					() => {
-						void self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: self.states.programScene })
+						void self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: self.states.programSceneUuid })
 					},
 					(revertTransitionDuration ?? 0) + 50,
 				)
@@ -95,12 +107,12 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 			},
 		],
 		callback: async (action) => {
-			const scene = action.options.scene as string
+			const sceneUuid = action.options.scene as string
 
-			if (self.states.previewScene == scene && self.states.programScene != scene) {
+			if (self.states.previewSceneUuid == sceneUuid && self.states.programSceneUuid != sceneUuid) {
 				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
-				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
+				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: sceneUuid })
 			}
 		},
 	}
@@ -120,14 +132,14 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 			},
 		],
 		callback: async (action) => {
-			const previewScene = self.states.previewScene
-			const previewSceneIndex = self.states.scenes.get(previewScene)?.sceneIndex ?? 0
+			const previewSceneUuid = self.states.previewSceneUuid
+			const previewSceneIndex = self.states.scenes.get(previewSceneUuid)?.sceneIndex ?? 0
 
 			if (action.options.adjust === 'previous') {
 				const previousIndex = previewSceneIndex + 1 // Assuming higher index means "previous" in the list order
 				const previousScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === previousIndex)
 				if (previousScene) {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: previousScene.sceneUuid })
 				} else {
 					self.log('debug', 'No previous scene found or already at the end of the list.')
 				}
@@ -135,7 +147,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
 				const nextScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === nextIndex)
 				if (nextScene) {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: nextScene.sceneUuid })
 				} else {
 					self.log('debug', 'No next scene found or already at the beginning of the list.')
 				}
@@ -166,7 +178,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputMute', {
-				inputName: action.options.source as string,
+				inputUuid: action.options.source as string,
 				inputMuted: action.options.mute == 'true' ? true : false,
 			})
 		},
@@ -201,7 +213,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetSceneItemIndex', {
-				sceneName: action.options.scene as string,
+				sceneUuid: action.options.scene as string,
 				sceneItemId: action.options.source as number,
 				sceneItemIndex: action.options.pos as number,
 			})
@@ -212,11 +224,25 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 		name: 'Set Source Visibility',
 		options: [
 			{
+				type: 'checkbox',
+				label: 'All Scenes',
+				id: 'anyScene',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Current Scene',
+				id: 'useCurrentScene',
+				default: false,
+				isVisible: (options) => !options.anyScene,
+			},
+			{
 				type: 'dropdown',
 				label: 'Scene',
 				id: 'scene',
-				default: 'anyScene',
-				choices: self.obsState.sceneChoicesAnyScene,
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				isVisible: (options) => !options.anyScene && !options.useCurrentScene,
 			},
 			{
 				type: 'dropdown',
@@ -238,46 +264,46 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 			},
 		],
 		callback: async (action) => {
-			const sourceName = action.options.source as string
-			const sources = []
-			if (action.options.scene === 'anyScene') {
-				for (const [sceneName, sceneItems] of self.states.sceneItems) {
-					const item = sceneItems.find((i: any) => i.sourceName === sourceName)
+			const sourceUuid = action.options.source as string
+			const sources: any[] = []
+
+			if (action.options.anyScene) {
+				for (const [sceneUuid, sceneItems] of self.states.sceneItems) {
+					const item = sceneItems.find((i: any) => i.sourceUuid === sourceUuid)
 					if (item) {
 						sources.push({
-							sceneName: sceneName,
+							sceneUuid: sceneUuid,
 							sceneItemId: item.sceneItemId,
-							groupName: sceneName,
 						})
 					}
 				}
-				for (const [groupName, groupItems] of self.states.groups) {
-					const item = groupItems.find((i: any) => i.sourceName === sourceName)
+				for (const [groupUuid, groupItems] of self.states.groups) {
+					const item = groupItems.find((i: any) => i.sourceUuid === sourceUuid)
 					if (item) {
 						sources.push({
-							sceneName: groupName,
+							sceneUuid: groupUuid,
 							sceneItemId: item.sceneItemId,
-							groupName: groupName,
 						})
 					}
 				}
 			} else {
-				const sceneItems = self.states.sceneItems.get(action.options.scene as string)
-				const item = sceneItems?.find((i: any) => i.sourceName === sourceName)
+				const sceneUuid = action.options.useCurrentScene
+					? self.states.programSceneUuid
+					: (action.options.scene as string)
+				const sceneItems = self.states.sceneItems.get(sceneUuid)
+				const item = sceneItems?.find((i: any) => i.sourceUuid === sourceUuid)
 				if (item) {
 					sources.push({
-						sceneName: action.options.scene as string,
+						sceneUuid: sceneUuid,
 						sceneItemId: item.sceneItemId,
-						groupName: action.options.scene as string,
 					})
 				} else {
-					const groups = self.states.groups.get(action.options.scene as string)
-					const item = groups?.find((i: any) => i.sourceName === sourceName)
+					const groups = self.states.groups.get(sceneUuid)
+					const item = groups?.find((i: any) => i.sourceUuid === sourceUuid)
 					if (item) {
 						sources.push({
-							sceneName: action.options.scene as string,
+							sceneUuid: sceneUuid,
 							sceneItemId: item.sceneItemId,
-							groupName: action.options.scene as string,
 						})
 					}
 				}
@@ -288,12 +314,12 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				sources.forEach((source) => {
 					let enabled: boolean
 					if (action.options.visible === 'toggle') {
-						const sceneItems = self.states.sceneItems.get(source.sceneName)
+						const sceneItems = self.states.sceneItems.get(source.sceneUuid)
 						const item = sceneItems?.find((i: any) => i.sceneItemId === source.sceneItemId)
 						if (item) {
 							enabled = !item.sceneItemEnabled
 						} else {
-							const groups = self.states.groups.get(source.groupName)
+							const groups = self.states.groups.get(source.sceneUuid)
 							const item = groups?.find((i: any) => i.sceneItemId === source.sceneItemId)
 							if (item) {
 								enabled = !item.sceneItemEnabled
@@ -307,7 +333,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 					requests.push({
 						requestType: 'SetSceneItemEnabled',
 						requestData: {
-							sceneName: source.groupName,
+							sceneUuid: source.sceneUuid,
 							sceneItemId: source.sceneItemId,
 							sceneItemEnabled: enabled,
 						},
