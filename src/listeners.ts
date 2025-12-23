@@ -2,6 +2,7 @@ import type { OBSInstance } from './main.js'
 import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
+import { MediaStatus, RecordingState, StreamingState, ObsAudioMonitorType } from './types.js'
 
 export function initOBSListeners(self: OBSInstance): void {
 	const obs = self.socket
@@ -192,22 +193,14 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputAudioMonitorTypeChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.monitorType = data.monitorType
+			source.monitorType = data.monitorType as ObsAudioMonitorType
 			const name = source.validName ?? data.inputUuid
-			let monitorType
-			if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-				monitorType = 'Monitor / Output'
-			} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-				monitorType = 'Monitor Only'
-			} else {
-				monitorType = 'Off'
-			}
-			self.setVariableValues({ [`monitor_${name}`]: monitorType })
+			self.setVariableValues({ [`monitor_${name}`]: utils.getMonitorTypeLabel(data.monitorType) })
 			self.checkFeedbacks('audio_monitor_type')
 		}
 	})
 	obs.on('InputVolumeMeters', (data) => {
-		self.obs.updateAudioPeak(data)
+		self.obs.updateAudioPeak(data as any)
 	})
 	obs.on('InputSettingsChanged', (data) => {
 		const sourceUuid = data.inputUuid
@@ -351,7 +344,9 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StreamStateChanged', (data) => {
 		self.states.streaming = data.outputActive
 
-		self.setVariableValues({ streaming: self.states.streaming ? 'Live' : 'Off-Air' })
+		self.setVariableValues({
+			streaming: utils.getStreamingStateLabel(self.states.streaming ? StreamingState.Streaming : StreamingState.OffAir),
+		})
 		self.checkFeedbacks('streaming', 'streamCongestion')
 		if (self.states.streaming === false) {
 			self.setVariableValues({
@@ -364,12 +359,12 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('RecordStateChanged', (data) => {
 		if (data.outputActive === true) {
-			self.states.recording = 'Recording '
+			self.states.recording = RecordingState.Recording
 		} else {
 			if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
-				self.states.recording = 'Paused'
+				self.states.recording = RecordingState.Paused
 			} else {
-				self.states.recording = 'Stopped'
+				self.states.recording = RecordingState.Stopped
 				self.setVariableValues({
 					recording_timecode: '00:00:00',
 					recording_timecode_hh: '00',
@@ -383,7 +378,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				recording_file_name: data.outputPath.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '',
 			})
 		}
-		self.setVariableValues({ recording: self.states.recording })
+		self.setVariableValues({ recording: utils.getRecordingStateLabel(self.states.recording) })
 		self.checkFeedbacks('recording')
 	})
 	obs.on('ReplayBufferStateChanged', (data) => {
@@ -415,18 +410,18 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.mediaStatus = 'OBS_MEDIA_STATE_PLAYING'
+			source.mediaStatus = MediaStatus.Playing
 			self.setVariableValues({
-				[`media_status_${source.validName}`]: 'Playing',
+				[`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus),
 			})
 		}
 	})
 	obs.on('MediaInputPlaybackEnded', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.mediaStatus = 'OBS_MEDIA_STATE_ENDED'
+			source.mediaStatus = MediaStatus.Ended
 			self.setVariableValues({
-				[`media_status_${source.validName}`]: 'Stopped',
+				[`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus),
 			})
 		}
 	})
@@ -434,11 +429,11 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				source.mediaStatus = 'OBS_MEDIA_STATE_PAUSED'
-				self.setVariableValues({ [`media_status_${source.validName}`]: 'Paused' })
+				source.mediaStatus = MediaStatus.Paused
+				self.setVariableValues({ [`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus) })
 			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
-				source.mediaStatus = 'OBS_MEDIA_STATE_PLAYING'
-				self.setVariableValues({ [`media_status_${source.validName}`]: 'Playing' })
+				source.mediaStatus = MediaStatus.Playing
+				self.setVariableValues({ [`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus) })
 			}
 		}
 	})

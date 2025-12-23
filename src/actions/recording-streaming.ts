@@ -6,6 +6,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 
 	actions['start_recording'] = {
 		name: 'Start Recording',
+		description: 'Starts recording the current program output',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('StartRecord')
@@ -13,6 +14,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['stop_recording'] = {
 		name: 'Stop Recording',
+		description: 'Stops the current recording',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('StopRecord')
@@ -20,6 +22,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['pause_recording'] = {
 		name: 'Pause Recording',
+		description: 'Pauses the current recording (requires a recording format that supports pausing)',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('PauseRecord')
@@ -27,6 +30,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['resume_recording'] = {
 		name: 'Resume Recording',
+		description: 'Resumes a paused recording',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('ResumeRecord')
@@ -34,6 +38,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['ToggleRecordPause'] = {
 		name: 'Toggle Recording Pause',
+		description: 'Toggles between paused and recording states',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('ToggleRecordPause')
@@ -41,6 +46,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['toggle_recording'] = {
 		name: 'Toggle Recording',
+		description: 'Toggles between recording and stopped states',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('ToggleRecord')
@@ -48,7 +54,8 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['SplitRecordFile'] = {
 		name: 'Split Recording File',
-		description: 'Requires using the Advanced output mode, and enabling file splitting in the Records settings',
+		description:
+			'Splits the current recording into a new file (requires Advanced output mode and file splitting enabled)',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('SplitRecordFile')
@@ -56,7 +63,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['CreateRecordChapter'] = {
 		name: 'Create Recording Chapter',
-		description: 'Requires using the Advanced output mode, and a format supporting chapters',
+		description: 'Adds a chapter marker to the current recording (requires a format that supports chapters)',
 		options: [
 			{
 				type: 'textinput',
@@ -73,6 +80,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['start_streaming'] = {
 		name: 'Start Streaming',
+		description: 'Starts streaming to the currently configured service',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('StartStream')
@@ -80,6 +88,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['stop_streaming'] = {
 		name: 'Stop Streaming',
+		description: 'Stops the current stream',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('StopStream')
@@ -87,6 +96,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['StartStopStreaming'] = {
 		name: 'Toggle Streaming',
+		description: 'Toggles between streaming and off-air states',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('ToggleStream')
@@ -94,6 +104,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['start_replay_buffer'] = {
 		name: 'Start Replay Buffer',
+		description: 'Starts the replay buffer output',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('StartReplayBuffer')
@@ -101,6 +112,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['stop_replay_buffer'] = {
 		name: 'Stop Replay Buffer',
+		description: 'Stops the replay buffer output',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('StopReplayBuffer')
@@ -108,6 +120,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['save_replay_buffer'] = {
 		name: 'Save Replay Buffer',
+		description: 'Saves the current contents of the replay buffer to disk',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('SaveReplayBuffer')
@@ -115,6 +128,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 	}
 	actions['ToggleReplayBuffer'] = {
 		name: 'Toggle Replay Buffer',
+		description: 'Toggles the replay buffer output state',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('ToggleReplayBuffer')

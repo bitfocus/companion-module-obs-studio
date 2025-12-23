@@ -1,5 +1,6 @@
 import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import { MediaStatus } from '../types.js'
 
 export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -12,7 +13,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 	feedbacks['media_playing'] = {
 		type: 'boolean',
 		name: 'Media Playing',
-		description: 'If a media source is playing, change the style of the button',
+		description: 'If a specific media source is currently playing, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -28,7 +29,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		],
 		callback: (feedback) => {
 			const sourceUuid = feedback.options.source as string
-			return self.states.sources.get(sourceUuid)?.mediaStatus == 'OBS_MEDIA_STATE_PLAYING'
+			return self.states.sources.get(sourceUuid)?.mediaStatus === MediaStatus.Playing
 		},
 	}
 
@@ -87,17 +88,17 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					return false
 				}
 
-				if (feedback.options.onlyIfSourceIsPlaying && mediaStatus !== 'OBS_MEDIA_STATE_PLAYING') {
+				if (feedback.options.onlyIfSourceIsPlaying && mediaStatus !== MediaStatus.Playing) {
 					return false
 				}
 
-				if (mediaStatus === 'OBS_MEDIA_STATE_ENDED') {
+				if (mediaStatus === MediaStatus.Stopped) {
 					return false
 				}
 
 				const threshold = feedback.options.rtThreshold as number
 				if (remainingTime <= threshold) {
-					if (feedback.options.blinkingEnabled && mediaStatus === 'OBS_MEDIA_STATE_PLAYING') {
+					if (feedback.options.blinkingEnabled && mediaStatus === MediaStatus.Playing) {
 						return !!(Math.floor(Date.now() / 500) % 2)
 					}
 					return true

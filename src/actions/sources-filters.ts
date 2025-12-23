@@ -6,6 +6,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['set_source_settings'] = {
 		name: 'Set Source Settings',
+		description: 'Sets the settings for a specific source (e.g., text for a text source)',
 		options: [
 			{
 				type: 'dropdown',
@@ -36,6 +37,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['setTextGDIPlus'] = {
 		name: 'Set Source Settings (Text GDI+)',
+		description: 'Detailed settings for Text (GDI+) sources, including font and file support',
 		options: [
 			{
 				type: 'dropdown',
@@ -138,6 +140,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['set_filter_visible'] = {
 		name: 'Set Filter Visibility',
+		description: 'Shows, hides, or toggles the enabled state of a filter on a source',
 		options: [
 			{
 				type: 'checkbox',
@@ -224,6 +227,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['set_filter_settings'] = {
 		name: 'Set Filter Settings',
+		description: 'Sets the settings for a filter using a JSON object',
 		options: [
 			{
 				type: 'dropdown',
@@ -264,6 +268,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['refresh_browser_source'] = {
 		name: 'Refresh Browser Source',
+		description: 'Refreshes the cache of a specific browser source',
 		options: [
 			{
 				type: 'dropdown',
@@ -286,6 +291,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['take_screenshot'] = {
 		name: 'Take Screenshot',
+		description: 'Saves a screenshot of a specific source or scene to disk',
 		options: [
 			{
 				type: 'checkbox',
@@ -379,6 +385,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 
 	actions['set_scene_item_properties'] = {
 		name: 'Set Scene Item Properties',
+		description: 'Sets the transform properties (position, scale, rotation) of a scene item',
 		options: [
 			{
 				type: 'checkbox',

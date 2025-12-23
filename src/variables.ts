@@ -1,5 +1,6 @@
 import { CompanionVariableDefinition } from '@companion-module/base'
-import { OBSInstance } from './main.js'
+import type { OBSInstance } from './main.js'
+import * as utils from './utils.js'
 
 export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	const variables: CompanionVariableDefinition[] = []
@@ -130,8 +131,8 @@ export function updateVariableValues(this: OBSInstance): void {
 		current_media_name: 'None',
 		recording_file_name: 'None',
 		replay_buffer_path: 'None',
-		current_media_time_elapsed: '--:--:--',
-		current_media_time_remaining: '--:--:--',
+		current_media_time_elapsed: '00:00:00',
+		current_media_time_remaining: '00:00:00',
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
 		scene_previous: this.states.previousScene ?? 'None',
@@ -161,10 +162,10 @@ export function updateVariableValues(this: OBSInstance): void {
 					} else if (inputSettings?.local_file) {
 						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
-					updates[`media_status_${sourceName}`] = 'Stopped'
+					updates[`media_status_${sourceName}`] = utils.getMediaStatusLabel(source.mediaStatus)
 					updates[`media_file_name_${sourceName}`] = file
-					updates[`media_time_elapsed_${sourceName}`] = '--:--:--'
-					updates[`media_time_remaining_${sourceName}`] = '--:--:--'
+					updates[`media_time_elapsed_${sourceName}`] = source.timeElapsed ?? '00:00:00'
+					updates[`media_time_remaining_${sourceName}`] = source.timeRemaining ?? '00:00:00'
 
 					break
 				}
@@ -179,18 +180,9 @@ export function updateVariableValues(this: OBSInstance): void {
 		}
 
 		if (source.inputAudioTracks) {
-			let monitorType
-			if (source.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-				monitorType = 'Monitor / Output'
-			} else if (source.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-				monitorType = 'Monitor Only'
-			} else {
-				monitorType = 'Off'
-			}
-
 			updates[`volume_${sourceName}`] = source.inputVolume !== undefined ? source.inputVolume + ' dB' : ''
 			updates[`mute_${sourceName}`] = source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : ''
-			updates[`monitor_${sourceName}`] = monitorType
+			updates[`monitor_${sourceName}`] = utils.getMonitorTypeLabel(source.monitorType)
 			updates[`sync_offset_${sourceName}`] =
 				source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : ''
 			updates[`balance_${sourceName}`] = source.inputAudioBalance !== undefined ? source.inputAudioBalance : ''
@@ -204,7 +196,7 @@ export function updateVariableValues(this: OBSInstance): void {
 		const index = ++sceneIndex
 
 		const sceneName = sceneList[s].sceneName
-		updates[`scene_${index}`] = sceneName
+		updates[`scene_${index} `] = sceneName
 	}
 
 	this.setVariableValues(updates)

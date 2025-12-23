@@ -1,4 +1,4 @@
-import { Choice, OBSNormalizedState } from './types.js'
+import { Choice, OBSNormalizedState, RecordingState } from './types.js'
 
 export class OBSState {
 	public readonly state: OBSNormalizedState
@@ -6,7 +6,7 @@ export class OBSState {
 	constructor() {
 		this.state = {
 			streaming: false,
-			recording: 'Stopped',
+			recording: RecordingState.Stopped,
 			replayBuffer: false,
 			studioMode: false,
 			programScene: '',
@@ -67,6 +67,7 @@ export class OBSState {
 		this.state.sources.clear()
 		this.state.sourceFilters.clear()
 		this.state.groups.clear()
+		this.state.sceneItems.clear()
 	}
 
 	// Derived Choices
@@ -123,8 +124,8 @@ export class OBSState {
 	}
 
 	public get transitionList(): Choice[] {
-		return Array.from(this.state.transitions.keys())
-			.map((name) => ({ id: name, label: name }))
+		return Array.from(this.state.transitions.values())
+			.map((t) => ({ id: t.transitionName, label: t.transitionName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 

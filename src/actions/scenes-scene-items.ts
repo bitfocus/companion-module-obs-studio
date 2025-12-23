@@ -6,6 +6,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 
 	actions['set_scene'] = {
 		name: 'Set Program Scene',
+		description: 'Switches the current program output to the specified scene',
 		options: [
 			{
 				type: 'dropdown',
@@ -42,6 +43,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 
 	actions['preview_scene'] = {
 		name: 'Set Preview Scene',
+		description: 'Sets the specified scene as the current preview scene (Studio Mode only)',
 		options: [
 			{
 				type: 'dropdown',
@@ -119,6 +121,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 
 	actions['adjust_preview_scene'] = {
 		name: 'Adjust Preview Scene',
+		description: 'Moves the preview selection to the next or previous scene in the list',
 		options: [
 			{
 				type: 'dropdown',
@@ -157,6 +160,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 
 	actions['set_source_mute'] = {
 		name: 'Set Source Mute',
+		description: 'Sets the mute state of a specific audio source (deprecated, use audio actions instead)',
 		options: [
 			{
 				type: 'dropdown',
@@ -186,6 +190,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 
 	actions['reorder_scene_item'] = {
 		name: 'Reorder Scene Item',
+		description: 'Changes the position (layering) of an item within a scene',
 		options: [
 			{
 				type: 'dropdown',
@@ -222,6 +227,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 
 	actions['set_source_visible'] = {
 		name: 'Set Source Visibility',
+		description: 'Shows, hides, or toggles the visibility of an item in the specified scene(s)',
 		options: [
 			{
 				type: 'checkbox',

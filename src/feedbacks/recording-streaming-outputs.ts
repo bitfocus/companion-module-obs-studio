@@ -1,5 +1,6 @@
 import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import { RecordingState } from '../types.js'
 
 export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -55,9 +56,9 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 			},
 		],
 		callback: (feedback) => {
-			if (self.states.recording === 'Recording') {
+			if (self.states.recording === RecordingState.Recording) {
 				return { color: feedback.options.fg as number, bgcolor: feedback.options.bg as number }
-			} else if (self.states.recording === 'Paused') {
+			} else if (self.states.recording === RecordingState.Paused) {
 				return { color: feedback.options.fg_paused as number, bgcolor: feedback.options.bg_paused as number }
 			} else {
 				return {}

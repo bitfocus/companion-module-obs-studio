@@ -3,6 +3,7 @@ import OBSWebSocket, { EventSubscription } from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
 import type { OBSInstance } from './main.js'
 import * as utils from './utils.js'
+import { MediaStatus, RecordingState, StreamingState, OBSSceneItem } from './types.js'
 
 export class OBSApi {
 	private self: OBSInstance
@@ -239,7 +240,7 @@ export class OBSApi {
 				if (this.self.states.streaming) {
 					void this.getStreamStatus()
 				}
-				if (this.self.states.recording === 'Recording') {
+				if (this.self.states.recording === RecordingState.Recording) {
 					void this.getRecordStatus()
 				}
 				if (this.self.states.outputs) {
@@ -491,7 +492,9 @@ export class OBSApi {
 
 				this.self.checkFeedbacks('streaming', 'streamCongestion')
 				this.self.setVariableValues({
-					streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
+					streaming: utils.getStreamingStateLabel(
+						this.self.states.streaming ? StreamingState.Streaming : StreamingState.OffAir,
+					),
 					stream_timecode: String(this.self.states.streamingTimecode),
 					stream_timecode_hh: streamingTimecodeSplit[0],
 					stream_timecode_mm: streamingTimecodeSplit[1],
@@ -518,26 +521,31 @@ export class OBSApi {
 
 			if (recordStatus) {
 				if (recordStatus.outputActive === true) {
-					this.self.states.recording = 'Recording'
+					this.self.states.recording = RecordingState.Recording
 				} else {
-					this.self.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
+					this.self.states.recording = recordStatus.outputPaused ? RecordingState.Paused : RecordingState.Stopped
 				}
 
-				const timecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-				this.self.states.recordingTimecode = timecode
-				const recordingTimecodeSplit = String(timecode)?.split(':')
 				this.self.states.recordDirectory = recordDirectory?.recordDirectory
 
 				this.self.checkFeedbacks('recording')
-				this.self.setVariableValues({
-					recording: this.self.states.recording,
-					recording_timecode: String(this.self.states.recordingTimecode),
-					recording_timecode_hh: recordingTimecodeSplit[0],
-					recording_timecode_mm: recordingTimecodeSplit[1],
-					recording_timecode_ss: recordingTimecodeSplit[2],
-					recording_path: this.self.states.recordDirectory,
-				})
+				this.self.setVariableValues({ recording: utils.getRecordingStateLabel(this.self.states.recording) })
 			}
+		}
+	}
+
+	public updateRecordingTimecode(data: unknown): void {
+		if (this.self.states.recording === RecordingState.Recording) {
+			const timecode = (data as any).recordingTimecode
+			this.self.states.recordingTimecode = timecode
+			const recordingTimecodeSplit = timecode.split(':')
+			this.self.setVariableValues({
+				recording: utils.getRecordingStateLabel(this.self.states.recording),
+				recording_timecode: String(this.self.states.recordingTimecode),
+				recording_timecode_hh: recordingTimecodeSplit[0],
+				recording_timecode_mm: recordingTimecodeSplit[1],
+				recording_timecode_ss: recordingTimecodeSplit[2],
+			})
 		}
 	}
 
@@ -599,7 +607,7 @@ export class OBSApi {
 			for (const res of response) {
 				if (res.requestStatus.result) {
 					const sceneUuid = res.requestId
-					const items = res.responseData.sceneItems as any[]
+					const items = res.responseData.sceneItems as OBSSceneItem[]
 					this.self.states.sceneItems.set(sceneUuid, items)
 
 					for (const item of items) {
@@ -610,7 +618,7 @@ export class OBSApi {
 								sourceUuid: item.sourceUuid,
 								validName: utils.validName(this.self, item.sourceName),
 								isGroup: item.isGroup,
-								inputKind: item.inputKind,
+								inputKind: item.inputKind ?? undefined,
 							})
 						}
 					}
@@ -792,15 +800,16 @@ export class OBSApi {
 		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
 		if (data) {
 			this.self.states.sceneItems.set(sceneUuid, data.sceneItems)
-			const sourceUuids = (data.sceneItems as any[]).map((item) => item.sourceUuid)
-			for (const item of data.sceneItems as any[]) {
+			const sceneItems = data.sceneItems as OBSSceneItem[]
+			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
+			for (const item of sceneItems) {
 				if (!this.self.states.sources.has(item.sourceUuid)) {
 					this.self.states.sources.set(item.sourceUuid, {
 						sourceName: item.sourceName,
 						sourceUuid: item.sourceUuid,
 						validName: utils.validName(this.self, item.sourceName),
 						isGroup: item.isGroup,
-						inputKind: item.inputKind,
+						inputKind: item.inputKind ?? '',
 					})
 				}
 			}
@@ -812,14 +821,15 @@ export class OBSApi {
 		const data = await this.sendRequest('GetGroupSceneItemList', { sceneUuid: groupUuid })
 		if (data) {
 			this.self.states.groups.set(groupUuid, data.sceneItems)
-			const sourceUuids = (data.sceneItems as any[]).map((item) => item.sourceUuid)
-			for (const item of data.sceneItems as any[]) {
+			const sceneItems = data.sceneItems as OBSSceneItem[]
+			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
+			for (const item of sceneItems) {
 				if (!this.self.states.sources.has(item.sourceUuid)) {
 					this.self.states.sources.set(item.sourceUuid, {
 						sourceName: item.sourceName,
 						sourceUuid: item.sourceUuid,
 						validName: utils.validName(this.self, item.sourceName),
-						inputKind: item.inputKind,
+						inputKind: item.inputKind ?? '',
 						groupedSource: true,
 						groupName: groupUuid,
 					})
@@ -920,11 +930,11 @@ export class OBSApi {
 						}
 					}
 
-					let status = 'Stopped'
-					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') status = 'Playing'
-					else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') status = 'Paused'
+					let status = MediaStatus.Stopped
+					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') status = MediaStatus.Playing
+					else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') status = MediaStatus.Paused
 
-					allValues[`media_status_${validName}`] = status
+					allValues[`media_status_${validName}`] = utils.getMediaStatusLabel(status)
 					allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
 					allValues[`media_time_remaining_${validName}`] = source.timeRemaining
 				}
@@ -987,9 +997,11 @@ export class OBSApi {
 		}
 	}
 
-	public updateAudioPeak(data: unknown): void {
+	public updateAudioPeak(data: {
+		inputs: Array<{ inputUuid: string; inputLevelsMul: Array<[number, number, number]> }>
+	}): void {
 		this.self.states.audioPeak.clear()
-		;(data as any).inputs.forEach((input: any) => {
+		data.inputs.forEach((input) => {
 			const channel = input.inputLevelsMul[0]
 			if (channel) {
 				const channelPeak = channel?.[1]

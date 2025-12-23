@@ -6,6 +6,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 
 	actions['set_profile'] = {
 		name: 'Set Profile',
+		description: 'Switches the current OBS profile',
 		options: [
 			{
 				type: 'dropdown',
@@ -16,11 +17,12 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('SetCurrentProfile', { profileName: action.options.profile })
+			await self.obs.sendRequest('SetCurrentProfile', { profileName: action.options.profile as string })
 		},
 	}
 	actions['set_scene_collection'] = {
 		name: 'Set Scene Collection',
+		description: 'Switches the current OBS scene collection',
 		options: [
 			{
 				type: 'dropdown',
@@ -31,11 +33,14 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('SetCurrentSceneCollection', { sceneCollectionName: action.options.scene_collection })
+			await self.obs.sendRequest('SetCurrentSceneCollection', {
+				sceneCollectionName: action.options.scene_collection as string,
+			})
 		},
 	}
 	actions['start_output'] = {
 		name: 'Start Output',
+		description: 'Starts a specific output (e.g., Virtual Cam, Decklink)',
 		options: [
 			{
 				type: 'dropdown',
@@ -50,13 +55,14 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				await self.obs.sendRequest('StartVirtualCam')
 			} else {
 				await self.obs.sendRequest('StartOutput', {
-					outputName: action.options.output,
+					outputName: action.options.output as string,
 				})
 			}
 		},
 	}
 	actions['stop_output'] = {
 		name: 'Stop Output',
+		description: 'Stops a specific output',
 		options: [
 			{
 				type: 'dropdown',
@@ -71,13 +77,14 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				await self.obs.sendRequest('StopVirtualCam')
 			} else {
 				await self.obs.sendRequest('StopOutput', {
-					outputName: action.options.output,
+					outputName: action.options.output as string,
 				})
 			}
 		},
 	}
 	actions['start_stop_output'] = {
 		name: 'Toggle Output',
+		description: 'Toggles the state of a specific output',
 		options: [
 			{
 				type: 'dropdown',
@@ -92,7 +99,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				await self.obs.sendRequest('ToggleVirtualCam')
 			} else {
 				await self.obs.sendRequest('ToggleOutput', {
-					outputName: action.options.output,
+					outputName: action.options.output as string,
 				})
 			}
 		},
@@ -100,6 +107,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 
 	actions['trigger-hotkey'] = {
 		name: 'Trigger Hotkey (by ID)',
+		description: 'Triggers a hotkey by its internal name in OBS',
 		options: [
 			{
 				type: 'dropdown',
@@ -116,6 +124,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 	}
 	actions['trigger-hotkey-sequence'] = {
 		name: 'Trigger Hotkey (Key Sequence)',
+		description: 'Triggers a hotkey by specifying the key and optional modifiers',
 		options: [
 			{
 				type: 'textinput',
@@ -150,14 +159,14 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		],
 		callback: async (action) => {
 			const keyModifiers = {
-				shift: action.options.keyShift,
-				alt: action.options.keyAlt,
-				control: action.options.keyControl,
-				command: action.options.keyCommand,
+				shift: action.options.keyShift as boolean,
+				alt: action.options.keyAlt as boolean,
+				control: action.options.keyControl as boolean,
+				command: action.options.keyCommand as boolean,
 			}
 
 			await self.obs.sendRequest('TriggerHotkeyByKeySequence', {
-				keyId: action.options.keyId,
+				keyId: action.options.keyId as string,
 				keyModifiers: keyModifiers,
 			})
 		},
@@ -165,6 +174,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 
 	actions['custom_command'] = {
 		name: 'Custom Command',
+		description: 'Sends a custom raw request to OBS WebSocket',
 		options: [
 			{
 				type: 'textinput',
@@ -212,6 +222,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 
 	actions['vendorRequest'] = {
 		name: 'Custom Vendor Request',
+		description: 'Sends a request to a specific OBS vendor plugin',
 		options: [
 			{
 				type: 'textinput',
@@ -238,7 +249,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		callback: async (action) => {
 			const vendorName = action.options.vendorName as string
 			const requestType = action.options.requestType as string
-			let requestData = ''
+			let requestData: any = ''
 			try {
 				vendorName.replace(/ /g, '')
 				requestType.replace(/ /g, '')
@@ -267,6 +278,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 
 	actions['openInputPropertiesDialog'] = {
 		name: 'Open Source Properties Window',
+		description: 'Opens the properties dialog for a source within the OBS UI',
 		options: [
 			{
 				type: 'dropdown',
@@ -282,6 +294,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 	}
 	actions['openInputFiltersDialog'] = {
 		name: 'Open Source Filters Window',
+		description: 'Opens the filters dialog for a source within the OBS UI',
 		options: [
 			{
 				type: 'dropdown',
@@ -297,6 +310,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 	}
 	actions['openInputInteractDialog'] = {
 		name: 'Open Source Interact Window',
+		description: 'Opens the interact dialog for a source (e.g., browser source) within the OBS UI',
 		options: [
 			{
 				type: 'dropdown',
@@ -312,6 +326,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 	}
 	actions['triggerInputActivateState'] = {
 		name: 'Trigger Input Activate State',
+		description: 'Triggers the activate state for a source (as if it was seen by program)',
 		options: [
 			{
 				type: 'dropdown',

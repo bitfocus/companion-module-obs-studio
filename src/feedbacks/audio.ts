@@ -1,5 +1,6 @@
 import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import { ObsAudioMonitorType } from '../types.js'
 
 export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -52,24 +53,17 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				type: 'dropdown',
 				label: 'Monitor',
 				id: 'monitor',
-				default: 'none',
+				default: ObsAudioMonitorType.None,
 				choices: [
-					{ id: 'none', label: 'None' },
-					{ id: 'monitorOnly', label: 'Monitor Only' },
-					{ id: 'monitorAndOutput', label: 'Monitor and Output' },
+					{ id: ObsAudioMonitorType.None, label: 'Off' },
+					{ id: ObsAudioMonitorType.MonitorOnly, label: 'Monitor Only' },
+					{ id: ObsAudioMonitorType.MonitorAndOutput, label: 'Monitor / Output' },
 				],
 			},
 		],
 		callback: (feedback) => {
 			const sourceUuid = feedback.options.source as string
-			let monitorType: any
-			if (feedback.options.monitor === 'monitorAndOutput') {
-				monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
-			} else if (feedback.options.monitor === 'monitorOnly') {
-				monitorType = 'OBS_MONITORING_TYPE_MONITOR_ONLY'
-			} else {
-				monitorType = 'OBS_MONITORING_TYPE_NONE'
-			}
+			const monitorType = feedback.options.monitor as ObsAudioMonitorType
 			return self.states.sources.get(sourceUuid)?.monitorType === monitorType
 		},
 	}

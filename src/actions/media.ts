@@ -1,11 +1,13 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import { MediaStatus } from '../types.js'
 
 export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
 	actions['play_pause_media'] = {
 		name: 'Media - Play / Pause',
+		description: 'Plays, pauses, or toggles the playback state of a media source',
 		options: [
 			{
 				type: 'checkbox',
@@ -38,7 +40,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			let playPause = action.options.playPause as string
 			if (playPause === 'toggle') {
 				playPause =
-					self.states.sources.get(mediaUuid)?.mediaStatus === 'OBS_MEDIA_STATE_PLAYING'
+					self.states.sources.get(mediaUuid)?.mediaStatus === MediaStatus.Playing
 						? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
 						: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
 			} else {
@@ -53,6 +55,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['restart_media'] = {
 		name: 'Media - Restart',
+		description: 'Restarts playback of a media source from the beginning',
 		options: [
 			{
 				type: 'checkbox',
@@ -79,6 +82,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['stop_media'] = {
 		name: 'Media - Stop',
+		description: 'Stops playback of a media source',
 		options: [
 			{
 				type: 'checkbox',
@@ -105,6 +109,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['next_media'] = {
 		name: 'Media - Next',
+		description: 'Skips to the next item in a media source playlist (if supported)',
 		options: [
 			{
 				type: 'checkbox',
@@ -131,6 +136,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['previous_media'] = {
 		name: 'Media - Previous',
+		description: 'Skips to the previous item in a media source playlist (if supported)',
 		options: [
 			{
 				type: 'checkbox',
@@ -158,6 +164,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['set_media_time'] = {
 		name: 'Media - Set Time',
+		description: 'Sets the playback cursor of a media source to a specific time',
 		options: [
 			{
 				type: 'checkbox',
@@ -195,6 +202,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['scrub_media'] = {
 		name: 'Media - Scrub',
+		description: 'Moves the playback cursor of a media source by a specific offset',
 		options: [
 			{
 				type: 'checkbox',
@@ -232,6 +240,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['set_media_source_file'] = {
 		name: 'Media - Set Source File',
+		description: 'Changes the file associated with a media source',
 		options: [
 			{
 				type: 'checkbox',

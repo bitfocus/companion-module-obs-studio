@@ -6,6 +6,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 
 	actions['enable_studio_mode'] = {
 		name: 'Enable Studio Mode',
+		description: 'Enables Studio Mode, which allows for previewing changes before they go live',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: true })
@@ -13,6 +14,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 	}
 	actions['disable_studio_mode'] = {
 		name: 'Disable Studio Mode',
+		description: 'Disables Studio Mode, making all changes go directly to program',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: false })
@@ -20,6 +22,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 	}
 	actions['toggle_studio_mode'] = {
 		name: 'Toggle Studio Mode',
+		description: 'Toggles Studio Mode between on and off',
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: self.states.studioMode ? false : true })
@@ -28,6 +31,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 
 	actions['do_transition'] = {
 		name: 'Transition Preview to Program',
+		description: 'Transitions the current preview scene to program using the current transition',
 		options: [],
 		callback: async () => {
 			if (self.states.studioMode) {
@@ -43,6 +47,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 
 	actions['quick_transition'] = {
 		name: 'Quick Transition',
+		description: 'Performs a quick transition using a specific transition type and optional custom duration',
 		options: [
 			{
 				type: 'dropdown',
@@ -117,6 +122,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 
 	actions['set_transition_type'] = {
 		name: 'Set Transition Type',
+		description: 'Sets the current transition type used for Studio Mode transitions',
 		options: [
 			{
 				type: 'dropdown',
@@ -133,6 +139,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 	}
 	actions['adjustTransitionType'] = {
 		name: 'Adjust Transition Type',
+		description: 'Cycles through the list of transitions',
 		options: [
 			{
 				type: 'dropdown',
@@ -165,6 +172,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 
 	actions['set_transition_duration'] = {
 		name: 'Set Transition Duration',
+		description: 'Sets the duration for current transitions in milliseconds',
 		options: [
 			{
 				type: 'number',
@@ -186,6 +194,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 
 	actions['adjust_transition_duration'] = {
 		name: 'Adjust Transition Duration',
+		description: 'Adjusts the current transition duration by a specific amount of milliseconds',
 		options: [
 			{
 				type: 'number',

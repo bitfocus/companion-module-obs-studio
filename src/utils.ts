@@ -1,4 +1,5 @@
 import type { OBSInstance } from './main.js'
+import { RecordingState, StreamingState, MediaStatus, ObsAudioMonitorType } from './types.js'
 
 export function validName(self: OBSInstance, name: string): string {
 	//Generate a valid name for use as a variable ID
@@ -47,4 +48,64 @@ export function rgbaToObsColor(rgbaString: string): number {
 	const a = match[4] ? Math.round(parseFloat(match[4]) * 255) : 255
 
 	return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0
+}
+
+export function getRecordingStateLabel(state: RecordingState): string {
+	switch (state) {
+		case RecordingState.Recording:
+			return 'Recording'
+		case RecordingState.Paused:
+			return 'Paused'
+		case RecordingState.Stopped:
+			return 'Stopped'
+		case RecordingState.Starting:
+			return 'Starting'
+		case RecordingState.Stopping:
+			return 'Stopping'
+		default:
+			return 'Unknown'
+	}
+}
+
+export function getStreamingStateLabel(state: StreamingState): string {
+	switch (state) {
+		case StreamingState.Streaming:
+			return 'Live'
+		case StreamingState.Starting:
+			return 'Starting'
+		case StreamingState.Stopping:
+			return 'Stopping'
+		default:
+			return 'Off-Air'
+	}
+}
+
+export function getMediaStatusLabel(status: MediaStatus | undefined): string {
+	switch (status) {
+		case MediaStatus.Playing:
+			return 'Playing'
+		case MediaStatus.Paused:
+			return 'Paused'
+		case MediaStatus.Stopped:
+			return 'Stopped'
+		case MediaStatus.Ended:
+			return 'Ended'
+		case MediaStatus.Buffering:
+			return 'Buffering'
+		case MediaStatus.Error:
+			return 'Error'
+		default:
+			return 'Stopped'
+	}
+}
+
+export function getMonitorTypeLabel(type: ObsAudioMonitorType | string | undefined): string {
+	switch (type) {
+		case ObsAudioMonitorType.MonitorAndOutput:
+			return 'Monitor / Output'
+		case ObsAudioMonitorType.MonitorOnly:
+			return 'Monitor Only'
+		default:
+			return 'Off'
+	}
 }

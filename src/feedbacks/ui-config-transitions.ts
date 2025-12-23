@@ -11,7 +11,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['profile_active'] = {
 		type: 'boolean',
 		name: 'Profile Active',
-		description: 'If a profile is active, change the style of the button',
+		description: 'If a specific OBS profile is currently active, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -33,7 +33,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['scene_collection_active'] = {
 		type: 'boolean',
 		name: 'Scene Collection Active',
-		description: 'If a scene collection is active, change the style of the button',
+		description: 'If a specific scene collection is currently active, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -55,7 +55,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['transition_active'] = {
 		type: 'boolean',
 		name: 'Transition in Progress',
-		description: 'If a transition is in progress, change the style of the button',
+		description: 'If an OBS transition is currently in progress, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -69,7 +69,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['current_transition'] = {
 		type: 'boolean',
 		name: 'Current Transition Type',
-		description: 'If a transition type is selected, change the style of the button',
+		description:
+			'If a specific transition type is currently selected as the active transition, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -94,7 +95,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['transition_duration'] = {
 		type: 'boolean',
 		name: 'Transition Duration',
-		description: 'If the transition duration is matched, change the style of the button',
+		description: 'If the current transition duration matches a specific time, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -118,7 +119,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['studioMode'] = {
 		type: 'boolean',
 		name: 'Studio Mode Active',
-		description: 'If Studio Mode is active, change the style of the button',
+		description: 'If Studio Mode is currently enabled, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorGreen,
@@ -132,7 +133,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 	feedbacks['freeDiskSpaceRemaining'] = {
 		type: 'boolean',
 		name: 'Disk Space Remaining',
-		description: 'Change the style of the button if remaining disk space is below a certain value',
+		description:
+			'If the remaining disk space on the drive OBS is recording to is below a certain threshold, change the style of the button',
 		defaultStyle: {
 			color: ColorWhite,
 			bgcolor: ColorRed,

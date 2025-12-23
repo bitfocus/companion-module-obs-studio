@@ -1,12 +1,14 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 import * as utils from '../utils.js'
+import { ObsAudioMonitorType } from '../types.js'
 
 export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
 	actions['toggle_source_mute'] = {
 		name: 'Toggle Source Mute',
+		description: 'Toggles the mute state of a specific audio source',
 		options: [
 			{
 				type: 'dropdown',
@@ -22,6 +24,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['set_volume'] = {
 		name: 'Set Source Volume',
+		description: 'Sets the volume of a specific audio source in decibels',
 		options: [
 			{
 				type: 'dropdown',
@@ -50,6 +53,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['adjust_volume'] = {
 		name: 'Adjust Source Volume',
+		description: 'Increases or decreases the volume of a specific audio source by a set amount of decibels',
 		options: [
 			{
 				type: 'dropdown',
@@ -83,6 +87,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['adjust_volume_percent'] = {
 		name: 'Adjust Source Volume (Percentage)',
+		description: 'Increases or decreases the volume of a specific audio source by a percentage of its range',
 		options: [
 			{
 				type: 'dropdown',
@@ -95,7 +100,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				type: 'number',
 				label: 'Amount in Percentage',
 				id: 'volume',
-				default: 1,
+				default: 5,
 				min: -100,
 				max: 100,
 				range: false,
@@ -105,10 +110,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			const sourceUuid = action.options.source as string
 			const currentVolume = self.states.sources.get(sourceUuid)?.inputVolume ?? -100
 
-			const LOG_OFFSET_DB = 0 // Define LOG_OFFSET_DB or get it from somewhere if needed.
-			// In original it was used: let currentPercentage = Math.pow(10, (currentVolume - LOG_OFFSET_DB) / 20) * 100
-			// Let's assume LOG_OFFSET_DB is 0 for now as it wasn't defined in the snippet I saw.
-
+			const LOG_OFFSET_DB = 0
 			const currentPercentage = Math.pow(10, (currentVolume - LOG_OFFSET_DB) / 20) * 100
 			let newPercentage = currentPercentage + (action.options.volume as number)
 
@@ -128,6 +130,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 	actions['fadeVolume'] = {
 		name: 'Fade Source Volume',
+		description: 'Fades the volume of a source to a target value over a specific duration',
 		options: [
 			{
 				type: 'dropdown',
@@ -191,6 +194,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['set_audio_offset'] = {
 		name: 'Set Source Audio Offset',
+		description: 'Sets the audio sync offset for a specific source in milliseconds',
 		options: [
 			{
 				type: 'dropdown',
@@ -219,6 +223,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['adjust_audio_offset'] = {
 		name: 'Adjust Source Audio Offset',
+		description: 'Increases or decreases the audio sync offset of a specific source by a set amount of milliseconds',
 		options: [
 			{
 				type: 'dropdown',
@@ -231,7 +236,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				type: 'number',
 				label: 'Amount in ms',
 				id: 'amount',
-				default: 1,
+				default: 50,
 				min: -20000,
 				max: 20000,
 				range: false,
@@ -255,6 +260,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['set_audio_balance'] = {
 		name: 'Set Source Audio Balance',
+		description: 'Sets the audio balance for a specific source (0.0 for Left, 0.5 for Center, 1.0 for Right)',
 		options: [
 			{
 				type: 'dropdown',
@@ -284,6 +290,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['adjust_audio_balance'] = {
 		name: 'Adjust Source Audio Balance',
+		description: 'Increases or decreases the audio balance of a specific source by a set percentage',
 		options: [
 			{
 				type: 'dropdown',
@@ -320,6 +327,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 
 	actions['set_audio_monitor'] = {
 		name: 'Set Audio Monitor Type',
+		description: 'Sets the audio monitoring type for a specific source',
 		options: [
 			{
 				type: 'dropdown',
@@ -332,23 +340,16 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				type: 'dropdown',
 				label: 'Monitor',
 				id: 'monitor',
-				default: 'none',
+				default: ObsAudioMonitorType.None,
 				choices: [
-					{ id: 'none', label: 'None' },
-					{ id: 'monitorOnly', label: 'Monitor Only' },
-					{ id: 'monitorAndOutput', label: 'Monitor and Output' },
+					{ id: ObsAudioMonitorType.None, label: 'Off' },
+					{ id: ObsAudioMonitorType.MonitorOnly, label: 'Monitor Only' },
+					{ id: ObsAudioMonitorType.MonitorAndOutput, label: 'Monitor / Output' },
 				],
 			},
 		],
 		callback: async (action) => {
-			let monitorType: any
-			if (action.options.monitor === 'monitorAndOutput') {
-				monitorType = 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT'
-			} else if (action.options.monitor === 'monitorOnly') {
-				monitorType = 'OBS_MONITORING_TYPE_MONITOR_ONLY'
-			} else {
-				monitorType = 'OBS_MONITORING_TYPE_NONE'
-			}
+			const monitorType = action.options.monitor as ObsAudioMonitorType
 			await self.obs.sendRequest('SetInputAudioMonitorType', {
 				inputUuid: action.options.source as string,
 				monitorType: monitorType,
