@@ -5,17 +5,18 @@ import { getPresets } from './presets.js'
 import { getVariables, updateVariableValues } from './variables.js'
 import { getFeedbacks } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
-import { ModuleConfig, OBSNormalizedState } from './types.js'
+import { ModuleConfig, ModuleSecrets, OBSNormalizedState } from './types.js'
 import { OBSState } from './state.js'
 
 import OBSWebSocket from 'obs-websocket-js'
 import { OBSApi } from './api.js'
 
-export class OBSInstance extends InstanceBase<ModuleConfig> {
+export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
 	public socket!: OBSWebSocket
 	public obs!: OBSApi
 	public obsState!: OBSState
 	public config!: ModuleConfig
+	public secrets!: ModuleSecrets
 
 	public reconnectionPoll?: NodeJS.Timeout
 	public statsPoll?: NodeJS.Timeout
@@ -30,9 +31,10 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	//Companion Internal and Configuration
-	async init(config: ModuleConfig): Promise<void> {
+	async init(config: ModuleConfig, _isFirstInit: boolean, secrets: ModuleSecrets): Promise<void> {
 		this.updateStatus(InstanceStatus.Connecting)
 		this.config = config
+		this.secrets = secrets
 		this.obs = new OBSApi(this)
 		this.obsState = new OBSState()
 
@@ -51,9 +53,10 @@ export class OBSInstance extends InstanceBase<ModuleConfig> {
 		return GetConfigFields()
 	}
 
-	async configUpdated(config: ModuleConfig): Promise<void> {
+	async configUpdated(config: ModuleConfig, secrets: ModuleSecrets): Promise<void> {
 		this.config = config
-		void this.init(config)
+		this.secrets = secrets
+		void this.init(config, false, secrets)
 	}
 
 	async destroy(): Promise<void> {

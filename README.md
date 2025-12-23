@@ -16,6 +16,7 @@ Note: This is a major rewrite of the module with the focus on performance and st
   - Use unique IDs for sources and scenes to prevent issues with duplicate names
   - Batch more communication with obs-websocket, wherever possible, to improve performance
   - Rewritten using TypeScript to improve code quality and stability
+  - Password is now securly stored and hidden by default
 
 ### v3.15.1
 

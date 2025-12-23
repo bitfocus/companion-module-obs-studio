@@ -1,6 +1,9 @@
 export interface ModuleConfig {
 	host: string
 	port: number
+}
+
+export interface ModuleSecrets {
 	pass: string
 }
 

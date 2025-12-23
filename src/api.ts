@@ -28,7 +28,7 @@ export class OBSApi {
 		try {
 			const { obsWebSocketVersion } = await this.self.socket.connect(
 				`ws://${this.self.config.host}:${this.self.config.port}`,
-				this.self.config.pass,
+				this.self.secrets.pass,
 				{
 					eventSubscriptions:
 						EventSubscription.All |

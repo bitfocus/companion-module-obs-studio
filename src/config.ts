@@ -17,7 +17,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			regex: Regex.PORT,
 		},
 		{
-			type: 'textinput',
+			type: 'secret-text',
 			id: 'pass',
 			label: 'Server Password',
 			width: 4,
