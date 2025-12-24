@@ -127,7 +127,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 }
 
 export function updateVariableValues(this: OBSInstance): void {
-	const updates: any = {
+	const updates: Record<string, string | number | boolean | undefined> = {
 		current_media_name: 'None',
 		recording_file_name: 'None',
 		replay_buffer_path: 'None',

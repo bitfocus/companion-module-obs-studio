@@ -148,7 +148,6 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 			},
 		],
 		callback: (feedback) => {
-			console.log(self.states.stats?.availableDiskSpace)
 			return (self.states.stats?.availableDiskSpace ?? 1000000) < (feedback.options.diskSpace as number)
 		},
 	}

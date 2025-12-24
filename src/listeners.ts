@@ -214,12 +214,12 @@ function updateSourceProperty(
 	self: OBSInstance,
 	uuid: string,
 	property: keyof OBSSource,
-	value: any,
+	value: unknown,
 	feedback?: string | string[],
 ): void {
 	const source = self.states.sources.get(uuid)
 	if (source) {
-		;(source as any)[property] = value
+		;(source as unknown as Record<string, unknown>)[property as string] = value
 		if (feedback) {
 			if (Array.isArray(feedback)) {
 				self.checkFeedbacks(...feedback)

@@ -102,7 +102,7 @@ export interface OBSNormalizedState {
 	recordingTimecode: string
 	recordDirectory: string
 	previewSceneIndex: number | undefined
-	vendorEvent: any
+	vendorEvent: Record<string, unknown>
 	currentMedia: string
 	custom_command_request: string
 	custom_command_response: string
@@ -112,11 +112,11 @@ export interface OBSNormalizedState {
 	scenes: Map<string, OBSScene> // Keyed by sceneUuid
 	outputs: Map<string, OBSOutput>
 	transitions: Map<string, OBSTransition>
-	profiles: Map<string, any>
-	sceneCollections: Map<string, any>
+	profiles: Map<string, Record<string, unknown>>
+	sceneCollections: Map<string, Record<string, unknown>>
 	sceneItems: Map<string, OBSSceneItem[]> // Keyed by sceneUuid
 	groups: Map<string, OBSSceneItem[]> // Keyed by groupUuid
-	inputKindList: Map<string, any>
+	inputKindList: Map<string, Record<string, unknown>>
 	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid
 	audioPeak: Map<string, number>
 	monitors: ModuleChoice[]
@@ -139,7 +139,7 @@ export interface OBSSource {
 	inputKind?: string
 	groupedSource?: boolean
 	groupName?: string
-	settings?: any
+	settings?: Record<string, any>
 	OBSMediaStatus?: OBSMediaStatus
 	mediaCursor?: number
 	mediaDuration?: number
@@ -147,8 +147,26 @@ export interface OBSSource {
 	timeRemaining?: string
 	text?: string
 	imageFile?: string
-	inputAudioTracks?: any
-	[key: string]: any
+	inputAudioTracks?: Record<string, unknown>
+	audioFadeActive?: boolean
+	peak?: number
+}
+
+export type OBSBatchRequest = {
+	requestType: string
+	requestData?: Record<string, unknown>
+	requestId?: string
+}
+
+export type OBSBatchResponse = {
+	requestType: string
+	requestId: string
+	requestStatus: {
+		result: boolean
+		code: number
+		comment?: string
+	}
+	responseData: any
 }
 
 export interface OBSScene {
@@ -159,7 +177,9 @@ export interface OBSScene {
 
 export interface OBSOutput {
 	outputActive: boolean
-	[key: string]: any
+	outputName: string
+	outputSettings?: Record<string, unknown>
+	[key: string]: unknown
 }
 
 export interface OBSSceneItem {
@@ -172,7 +192,7 @@ export interface OBSSceneItem {
 	isGroup: boolean
 	inputKind: string | null
 	sourceType: string
-	[key: string]: any
+	[key: string]: unknown
 }
 
 export interface OBSTransition {
@@ -189,7 +209,7 @@ export interface OBSFilter {
 	filterEnabled: boolean
 	filterIndex: number
 	filterKind: string
-	filterSettings: any
+	filterSettings: Record<string, any>
 }
 
 export interface OBSVersion {
