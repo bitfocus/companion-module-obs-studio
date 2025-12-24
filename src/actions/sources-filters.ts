@@ -1,133 +1,393 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import * as utils from '../utils.js'
 
 export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
-	actions['set_source_settings'] = {
-		name: 'Set Source Settings',
-		description: 'Sets the settings for a specific source (e.g., text for a text source)',
+	actions['setText'] = {
+		name: 'Set Source Text',
 		options: [
 			{
 				type: 'dropdown',
 				label: 'Source',
 				id: 'source',
-				default: self.obsState.sourceListDefault,
-				choices: self.obsState.sourceChoices,
+				default: self.obsState.textSourceList?.[0] ? self.obsState.textSourceList[0].id : 'None',
+				choices: self.obsState.textSourceList,
 			},
 			{
 				type: 'textinput',
-				label: 'New Text',
-				id: 'text',
-				default: '',
 				useVariables: true,
-			},
-		],
-		callback: async (action) => {
-			let newText = action.options.text as string
-			if (typeof newText === 'string') {
-				newText = newText.replace(/\\n/g, '\n')
-			}
-			await self.obs.sendRequest('SetInputSettings', {
-				inputUuid: action.options.source as string,
-				inputSettings: { text: newText },
-			})
-		},
-	}
-
-	actions['setTextGDIPlus'] = {
-		name: 'Set Source Settings (Text GDI+)',
-		description: 'Detailed settings for Text (GDI+) sources, including font and file support',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.sourceListDefault,
-				choices: self.obsState.sourceChoices,
-			},
-			{
-				type: 'textinput',
 				label: 'Text',
 				id: 'text',
-				default: '',
-				useVariables: true,
-			},
-			{
-				type: 'checkbox',
-				label: 'Use File',
-				id: 'useFile',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				label: 'File Path',
-				id: 'file',
-				default: '',
-				useVariables: true,
-				isVisibleExpression: `$(options:useFile)`,
-			},
-			{
-				type: 'textinput',
-				label: 'Font',
-				id: 'font',
-				default: '',
-				useVariables: true,
-			},
-			{
-				type: 'number',
-				label: 'Font Size',
-				id: 'size',
-				default: 12,
-				min: 1,
-				max: 1000,
-				range: false,
-			},
-			{
-				type: 'textinput',
-				label: 'Font Style',
-				id: 'style',
-				default: '',
-				useVariables: true,
-			},
-			{
-				type: 'checkbox',
-				label: 'Update Font',
-				id: 'updateFont',
-				default: false,
 			},
 		],
 		callback: async (action) => {
 			const sourceUuid = action.options.source as string
-			const inputSettings: any = {}
+			let newText = action.options.text as string
+			if (typeof newText === 'string') {
+				newText = newText.replace(/\\n/g, '\n')
+			}
+			await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: { text: newText } })
+		},
+	}
+	actions['setTextProperties'] = {
+		name: 'Set Text Properties',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.textSourceList?.[0]?.id ?? 'None',
+				choices: self.obsState.textSourceList,
+			},
+			{
+				type: 'multidropdown',
+				label: 'Properties',
+				id: 'props',
+				default: [],
+				choices: [
+					{ id: 'fontSize', label: 'Font Size' },
+					{ id: 'fontFace', label: 'Font Face' },
+					{ id: 'fontStyle', label: 'Font Style' },
+					{ id: 'text', label: 'Text' },
+					{ id: 'textTransform', label: 'Text Transform' },
+					{ id: 'color1', label: 'Color 1' },
+					{ id: 'color2', label: 'Color 2 / Gradient Color' },
+					{ id: 'gradient', label: 'Gradient' },
+					{ id: 'backgroundColor', label: 'Background Color' },
+					{ id: 'backgroundOpacity', label: 'Background Opacity' },
+					{ id: 'outline', label: 'Outline' },
+					{ id: 'outlineSize', label: 'Outline Size' },
+					{ id: 'outlineColor', label: 'Outline Color' },
+					{ id: 'dropShadow', label: 'Drop Shadow' },
+					{ id: 'alignment', label: 'Alignment' },
+					{ id: 'verticalAlignment', label: 'Vertical Alignment' },
+					{ id: 'extents', label: 'Use Custom Text Extents' },
+					{ id: 'extentsWidth', label: 'Text Extents Width' },
+					{ id: 'extentsHeight', label: 'Text Extents Height' },
+					{ id: 'wrap', label: 'Wrap' },
+					{ id: 'vertical', label: 'Vertical' },
+				],
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Text',
+				id: 'text',
+				isVisibleExpression: `arrayIncludes($(options:props), 'text')`,
+			},
+			{
+				type: 'dropdown',
+				label: 'Text Transform',
+				id: 'textTransform',
+				default: 0,
+				choices: [
+					{ id: 0, label: 'None' },
+					{ id: 1, label: 'Uppercase' },
+					{ id: 2, label: 'Lowercase' },
+					{ id: 3, label: 'Start Case' },
+				],
+				isVisibleExpression: `arrayIncludes($(options:props), 'textTransform')`,
+				description: 'GDI+ Text Sources Only',
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Font Size',
+				id: 'fontSize',
+				isVisibleExpression: `arrayIncludes($(options:props), 'fontSize')`,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Font Face',
+				id: 'fontFace',
+				isVisibleExpression: `arrayIncludes($(options:props), 'fontFace')`,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Font Style',
+				id: 'fontStyle',
+				isVisibleExpression: `arrayIncludes($(options:props), 'fontStyle')`,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Color 1',
+				id: 'color1',
+				default: '#000000',
+				enableAlpha: true,
+				returnType: 'string',
+				isVisibleExpression: `arrayIncludes($(options:props), 'color1')`,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Color 2 / Gradient Color',
+				id: 'color2',
+				default: '#000000',
+				enableAlpha: true,
+				returnType: 'string',
+				isVisibleExpression: `arrayIncludes($(options:props), 'color2')`,
+			},
+			{
+				type: 'checkbox',
+				label: 'Gradient',
+				id: 'gradient',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'gradient')`,
+			},
+			{
+				type: 'checkbox',
+				label: 'Outline',
+				id: 'outline',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'outline')`,
+			},
+			{
+				type: 'textinput',
+				label: 'Outline Size',
+				id: 'outlineSize',
+				default: '1',
+				isVisibleExpression: `arrayIncludes($(options:props), 'outlineSize')`,
+				description: 'GDI+ Text Sources Only',
+				useVariables: true,
+			},
+			{
+				type: 'colorpicker',
+				label: 'Outline Color',
+				id: 'outlineColor',
+				default: '#000000',
+				enableAlpha: true,
+				returnType: 'string',
+				isVisibleExpression: `arrayIncludes($(options:props), 'outlineColor')`,
+				description: 'GDI+ Text Sources Only',
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background Color',
+				id: 'backgroundColor',
+				default: '#000000',
+				enableAlpha: true,
+				returnType: 'string',
+				isVisibleExpression: `arrayIncludes($(options:props), 'backgroundColor')`,
+				description: 'GDI+ Text Sources Only',
+			},
+			{
+				type: 'textinput',
+				label: 'Background Opacity',
+				id: 'backgroundOpacity',
+				default: '100',
+				isVisibleExpression: `arrayIncludes($(options:props), 'backgroundOpacity')`,
+				description: 'GDI+ Text Sources Only',
+				useVariables: true,
+			},
+			{
+				type: 'checkbox',
+				label: 'Drop Shadow',
+				id: 'dropShadow',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'dropShadow')`,
+				description: 'FreeType Text Sources Only',
+			},
+			{
+				type: 'checkbox',
+				label: 'Wrap',
+				id: 'wrap',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'wrap')`,
+			},
+			{
+				type: 'dropdown',
+				label: 'Alignment',
+				id: 'alignment',
+				default: 'left',
+				choices: [
+					{ id: 'left', label: 'Left' },
+					{ id: 'center', label: 'Center' },
+					{ id: 'right', label: 'Right' },
+				],
+				description: 'GDI+ Text Sources Only',
+				isVisibleExpression: `arrayIncludes($(options:props), 'alignment')`,
+			},
+			{
+				type: 'dropdown',
+				label: 'Vertical Alignment',
+				id: 'verticalAlignment',
+				default: 'top',
+				choices: [
+					{ id: 'top', label: 'Top' },
+					{ id: 'center', label: 'Center' },
+					{ id: 'bottom', label: 'Bottom' },
+				],
+				description: 'GDI+ Text Sources Only',
+				isVisibleExpression: `arrayIncludes($(options:props), 'verticalAlignment')`,
+			},
+			{
+				type: 'checkbox',
+				label: 'Vertical',
+				id: 'vertical',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'vertical')`,
+				description: 'GDI+ Text Sources Only',
+			},
+			{
+				type: 'checkbox',
+				label: 'Use Custom Text Extents',
+				id: 'extents',
+				default: false,
+				isVisibleExpression: `arrayIncludes($(options:props), 'extents')`,
+				description: 'GDI+ Text Sources Only',
+			},
+			{
+				type: 'textinput',
+				label: 'Text Extents Width',
+				id: 'extentsWidth',
+				default: '100',
+				isVisibleExpression: `arrayIncludes($(options:props), 'extentsWidth')`,
+				useVariables: true,
+				description: 'GDI+ Text Sources Only',
+			},
+			{
+				type: 'textinput',
+				label: 'Text Extents Height',
+				id: 'extentsHeight',
+				default: '100',
+				isVisibleExpression: `arrayIncludes($(options:props), 'extentsHeight')`,
+				useVariables: true,
+				description: 'GDI+ Text Sources Only',
+			},
+		],
+		callback: async (action) => {
+			const sourceUuid = action.options.source as string
+			const props = (action.options.props as string[]) || []
+			const source = self.states.sources.get(sourceUuid)
+			const existingSettings = { ...(source?.settings || {}) }
 
-			if (action.options.text) {
-				let newText = action.options.text as string
-				if (typeof newText === 'string') {
-					newText = newText.replace(/\\n/g, '\n')
+			// Start with all existing settings, then overlay changes
+			const inputSettings: Record<string, any> = { ...existingSettings }
+			// Always copy font if it exists, as object, even if not changing
+			const existingFont = existingSettings.font ? { ...existingSettings.font } : {}
+			const kind = source?.inputKind || ''
+
+			for (const prop of props) {
+				if (prop === 'text') {
+					let val = action.options.text as string
+					// Unescape \n for newlines
+					if (typeof val === 'string') {
+						val = val.replace(/\\n/g, '\n')
+					}
+					inputSettings.text = val
 				}
-				inputSettings.text = newText
+				if (prop === 'textTransform' && kind.includes('text_gdiplus')) {
+					inputSettings.transform = action.options.textTransform
+				}
+				if (prop === 'fontSize') {
+					const size = action.options.fontSize as string
+					const sizeNumber = parseInt(size)
+					if (!isNaN(sizeNumber)) {
+						existingFont.size = sizeNumber
+					}
+				}
+				if (prop === 'fontFace') {
+					const face = action.options.fontFace as string
+					if (face) {
+						existingFont.face = face
+					}
+				}
+				if (prop === 'fontStyle') {
+					const style = action.options.fontStyle as string
+					if (style) {
+						existingFont.style = style
+					}
+				}
+				if (prop === 'color1') {
+					const colorValue = utils.rgbaToObsColor(action.options.color1 as string)
+					if (kind.includes('text_gdiplus')) {
+						inputSettings.color = colorValue
+					} else {
+						inputSettings.color1 = colorValue
+					}
+				}
+				if (prop === 'color2') {
+					const colorValue = utils.rgbaToObsColor(action.options.color2 as string)
+					if (kind.includes('text_gdiplus')) {
+						inputSettings.gradient_color = colorValue
+					} else {
+						inputSettings.color2 = colorValue
+					}
+				}
+				if (prop === 'outline') {
+					inputSettings.outline = action.options.outline
+				}
+				if (prop === 'outlineSize' && kind.includes('text_gdiplus')) {
+					const outlineSize = action.options.outlineSize as string
+					const size = parseInt(outlineSize)
+					if (!isNaN(size)) {
+						inputSettings.outline_size = size
+					}
+				}
+				if (prop === 'outlineColor' && kind.includes('text_gdiplus')) {
+					const colorValue = utils.rgbaToObsColor(action.options.outlineColor as string)
+					inputSettings.outline_color = colorValue
+				}
+				if (prop === 'backgroundColor' && kind.includes('text_gdiplus')) {
+					const colorValue = utils.rgbaToObsColor(action.options.backgroundColor as string)
+					inputSettings.bk_color = colorValue
+				}
+				if (prop === 'backgroundOpacity' && kind.includes('text_gdiplus')) {
+					const backgroundOpacity = action.options.backgroundOpacity as string
+					const opacity = parseInt(backgroundOpacity)
+					if (!isNaN(opacity)) {
+						inputSettings.bk_opacity = opacity
+					}
+				}
+				if (prop === 'gradient') {
+					inputSettings.gradient = action.options.gradient
+				}
+
+				if (prop === 'dropShadow') {
+					inputSettings.drop_shadow = action.options.dropShadow
+				}
+				if (prop === 'wrap') {
+					if (kind.includes('text_gdiplus')) {
+						inputSettings.extents_wrap = action.options.wrap
+					} else {
+						inputSettings.word_wrap = action.options.wrap
+					}
+				}
+				if (prop === 'alignment' && kind.includes('text_gdiplus')) {
+					inputSettings.align = action.options.alignment
+				}
+				if (prop === 'verticalAlignment' && kind.includes('text_gdiplus')) {
+					inputSettings.valign = action.options.verticalAlignment
+				}
+				if (prop === 'extents' && kind.includes('text_gdiplus')) {
+					inputSettings.extents = action.options.extents
+				}
+				if (prop === 'extentsWidth' && kind.includes('text_gdiplus')) {
+					const extentsWidth = action.options.extentsWidth as string
+					const width = parseInt(extentsWidth)
+					if (!isNaN(width)) {
+						inputSettings.extents_cx = width
+					}
+				}
+				if (prop === 'extentsHeight' && kind.includes('text_gdiplus')) {
+					const extentsHeight = action.options.extentsHeight as string
+					const height = parseInt(extentsHeight)
+					if (!isNaN(height)) {
+						inputSettings.extents_cy = height
+					}
+				}
+				if (prop === 'vertical' && kind.includes('text_gdiplus')) {
+					inputSettings.vertical = action.options.vertical
+				}
 			}
 
-			if (action.options.useFile) {
-				inputSettings.read_from_file = true
-				inputSettings.file = action.options.file as string
-			} else {
-				inputSettings.read_from_file = false
-			}
-
-			const existingFont = self.states.sources.get(sourceUuid)?.settings?.font
-			if (action.options.updateFont) {
-				inputSettings.font = {
-					face: action.options.font as string,
-					size: action.options.size as number,
-					style: action.options.style as string,
-				}
-			} else if (
-				existingFont &&
-				existingFont.face !== undefined &&
-				existingFont.size !== undefined &&
-				existingFont.style !== undefined
+			// If editing any font property, always send font object including existing settings
+			if (
+				props.some((prop) => ['fontSize', 'fontFace', 'fontStyle'].includes(prop)) &&
+				Object.keys(existingFont).length > 0
 			) {
 				inputSettings.font = existingFont
 			}
@@ -135,6 +395,29 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				inputUuid: sourceUuid,
 				inputSettings: inputSettings,
 			})
+		},
+	}
+	actions['resetCaptureDevice'] = {
+		name: 'Reset Video Capture Device',
+		description: 'Deactivates and Reactivates a Video Capture Source to reset it',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.states.sources.get(sourceUuid)
+			if (source?.inputKind) {
+				await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: {} })
+			} else {
+				self.log('warn', 'The selected source is not an input.')
+				return
+			}
 		},
 	}
 
@@ -399,7 +682,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: `!$(options:useProgramScene)`,
+				isVisible: (options) => !options.useProgramScene,
 			},
 			{
 				type: 'dropdown',

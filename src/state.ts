@@ -74,7 +74,7 @@ export class OBSState {
 	public get sceneChoices(): ModuleChoice[] {
 		return Array.from(this.state.scenes.values())
 			.map((s) => ({ id: s.sceneUuid, label: s.sceneName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+			.reverse()
 	}
 
 	public get sourceChoices(): ModuleChoice[] {

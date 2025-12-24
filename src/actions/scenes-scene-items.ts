@@ -14,7 +14,6 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				allowCustom: true,
 			},
 			{
 				type: 'checkbox',
@@ -51,7 +50,6 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				allowCustom: true,
 			},
 			{
 				type: 'checkbox',
