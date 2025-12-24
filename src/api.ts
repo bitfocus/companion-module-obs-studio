@@ -3,7 +3,16 @@ import OBSWebSocket, { EventSubscription } from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
 import type { OBSInstance } from './main.js'
 import * as utils from './utils.js'
-import { OBSMediaStatus, OBSRecordingState, OBSStreamingState, OBSSceneItem, ObsAudioMonitorType } from './types.js'
+import {
+	OBSMediaStatus,
+	OBSRecordingState,
+	OBSStreamingState,
+	OBSSceneItem,
+	ObsAudioMonitorType,
+	OBSSource,
+	OBSBatchRequest,
+	OBSBatchResponse,
+} from './types.js'
 
 export class OBSApi {
 	private self: OBSInstance
@@ -139,82 +148,99 @@ export class OBSApi {
 	}
 
 	// OBS Websocket Commands
-	public async sendRequest(requestType: string, requestData?: unknown): Promise<any> {
+	private async _call(requestType: string, requestData?: Record<string, any>): Promise<any> {
 		try {
-			const data = requestData as any
-			// Backward Compatibility: If sceneName or inputName is provided but we have a UUID, prioritize UUID
-			if (data) {
-				if (data.sceneName && !data.sceneUuid) {
-					const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === data.sceneName)
-					if (scene) data.sceneUuid = scene.sceneUuid
-				}
-				if (data.inputName && !data.inputUuid) {
-					const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.inputName)
-					if (source) data.inputUuid = source.sourceUuid
-				}
-				if (data.sourceName && !data.sourceUuid) {
-					const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
-					if (source) data.sourceUuid = source.sourceUuid
-				}
-			}
-
-			const result = await this.self.socket.call(requestType as any, data)
-			return result
-		} catch (error) {
-			this.self.log('debug', `Request ${requestType ?? ''} failed (${error})`)
-			return
+			return await this.self.socket.call(requestType as any, requestData)
+		} catch (error: any) {
+			this.self.log('debug', `Request ${requestType} failed (${error?.message ?? error})`)
+			return undefined
 		}
 	}
 
-	public async sendCustomRequest(requestType: string, requestData?: unknown): Promise<any> {
-		try {
-			const data = await this.self.socket.call(requestType as any, requestData)
-			if (data) {
-				this.self.log(
-					'debug',
-					`Custom Command Response: Request ${requestType ?? ''} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
+	public async sendRequest(requestType: string, requestData?: Record<string, any>): Promise<any> {
+		// Backward Compatibility: If sceneName or inputName is provided but we have a UUID, prioritize UUID
+		if (requestData) {
+			if (requestData.sceneName && !requestData.sceneUuid) {
+				const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === requestData.sceneName)
+				if (scene) requestData.sceneUuid = scene.sceneUuid
+			}
+			if (requestData.inputName && !requestData.inputUuid) {
+				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === requestData.inputName)
+				if (source) requestData.inputUuid = source.sourceUuid
+			}
+			if (requestData.sourceName && !requestData.sourceUuid) {
+				const source = Array.from(this.self.states.sources.values()).find(
+					(s) => s.sourceName === requestData.sourceName,
 				)
-				this.self.setVariableValues({
-					custom_command_type: requestType,
-					custom_command_request: requestData ? JSON.stringify(requestData) : '',
-					custom_command_response: JSON.stringify(data),
-				})
-			} else {
-				this.self.states.custom_command_request = ''
-				this.self.states.custom_command_response = ''
-				this.self.setVariableValues({
-					custom_command_request: '',
-					custom_command_response: '',
-				})
+				if (source) requestData.sourceUuid = source.sourceUuid
 			}
-			return data
-		} catch (error) {
-			this.self.log(
-				'warn',
-				`Custom Command Failed: Request ${requestType ?? ''} with data ${requestData ? JSON.stringify(requestData) : 'none'} failed (${error})`,
-			)
-			return
 		}
+
+		return this._call(requestType, requestData)
 	}
 
-	public async sendBatch(batch: any[]): Promise<any> {
+	public async sendCustomRequest(requestType: string, requestData?: Record<string, any>): Promise<any> {
+		const data = await this._call(requestType, requestData)
+		if (data) {
+			this.self.log(
+				'debug',
+				`Custom Command Response: Request ${requestType} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
+			)
+			this.self.setVariableValues({
+				custom_command_type: requestType,
+				custom_command_request: requestData ? JSON.stringify(requestData) : '',
+				custom_command_response: JSON.stringify(data),
+			})
+		} else {
+			this.self.setVariableValues({
+				custom_command_request: '',
+				custom_command_response: '',
+			})
+		}
+		return data
+	}
+
+	public async sendBatch(batch: OBSBatchRequest[]): Promise<OBSBatchResponse[] | undefined> {
 		try {
-			const data = await this.self.socket.callBatch(batch)
+			const data = (await this.self.socket.callBatch(batch as any)) as unknown as OBSBatchResponse[]
 			const errors = data.filter(
-				(request: any) =>
+				(request) =>
 					request.requestStatus.result === false &&
 					request.requestStatus.comment !== 'The specified source is not an input.' &&
 					request.requestStatus.comment !== 'The specified input does not support audio.',
 			)
 			if (errors.length > 0) {
-				const errorMessages = errors.map((error: any) => error.requestStatus.comment).join(' // ')
+				const errorMessages = errors.map((error) => error.requestStatus.comment).join(' // ')
 				this.self.log('debug', `Partial batch request failure (${errorMessages})`)
 			}
 			return data
-		} catch (error) {
-			this.self.log('debug', `Request GetStats failed (${error as any})`)
-			return
+		} catch (error: any) {
+			this.self.log('debug', `Batch request failed (${error?.message ?? error})`)
+			return undefined
 		}
+	}
+
+	private _addSource(sourceUuid: string, sourceName: string, inputKind?: string | null, isGroup?: boolean): OBSSource {
+		let source = this.self.states.sources.get(sourceUuid)
+		if (!source) {
+			source = {
+				sourceName,
+				sourceUuid,
+				validName: utils.validName(this.self, sourceName),
+				isGroup: !!isGroup,
+				inputKind: inputKind ?? undefined,
+			}
+			this.self.states.sources.set(sourceUuid, source)
+		}
+		return source
+	}
+
+	private _addScene(sceneUuid: string, sceneName: string, sceneIndex?: number): void {
+		this.self.states.scenes.set(sceneUuid, {
+			sceneName,
+			sceneUuid,
+			sceneIndex: sceneIndex ?? this.self.states.scenes.size,
+		})
 	}
 
 	// Polls
@@ -369,12 +395,7 @@ export class OBSApi {
 					const inputName = input as string
 					const inputInfo = inputMap.get(inputName)
 					const inputUuid = inputInfo?.inputUuid ?? inputName
-
-					this.self.states.sources.set(inputUuid, {
-						sourceName: inputName,
-						sourceUuid: inputUuid,
-						validName: utils.validName(this.self, inputName),
-					})
+					this._addSource(inputUuid, inputName)
 					specialUuids.push(inputUuid)
 				}
 			}
@@ -578,7 +599,7 @@ export class OBSApi {
 
 		if (Array.isArray(sceneList.scenes)) {
 			for (const scene of sceneList.scenes) {
-				this.self.states.scenes.set(scene.sceneUuid, scene)
+				this._addScene(scene.sceneUuid, scene.sceneName, scene.sceneIndex)
 			}
 		}
 
@@ -612,15 +633,7 @@ export class OBSApi {
 
 					for (const item of items) {
 						allSourceUuids.add(item.sourceUuid)
-						if (!this.self.states.sources.has(item.sourceUuid)) {
-							this.self.states.sources.set(item.sourceUuid, {
-								sourceName: item.sourceName,
-								sourceUuid: item.sourceUuid,
-								validName: utils.validName(this.self, item.sourceName),
-								isGroup: item.isGroup,
-								inputKind: item.inputKind ?? undefined,
-							})
-						}
+						this._addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
 					}
 				}
 			}
@@ -646,22 +659,9 @@ export class OBSApi {
 						this.self.states.groups.set(groupUuid, items)
 						for (const item of items) {
 							allSourceUuids.add(item.sourceUuid)
-							if (!this.self.states.sources.has(item.sourceUuid)) {
-								this.self.states.sources.set(item.sourceUuid, {
-									sourceName: item.sourceName,
-									sourceUuid: item.sourceUuid,
-									validName: utils.validName(this.self, item.sourceName),
-									inputKind: item.inputKind,
-									groupedSource: true,
-									groupName: groupUuid,
-								})
-							} else {
-								const source = this.self.states.sources.get(item.sourceUuid)
-								if (source) {
-									source.groupedSource = true
-									source.groupName = groupUuid
-								}
-							}
+							const source = this._addSource(item.sourceUuid, item.sourceName, item.inputKind)
+							source.groupedSource = true
+							source.groupName = groupUuid
 						}
 					}
 				}
@@ -760,32 +760,20 @@ export class OBSApi {
 						this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
 						break
 					case 'mute':
-						source.inputMuted = data.inputMuted
-						this.self.setVariableValues({ [`mute_${validName}`]: data.inputMuted ? 'Muted' : 'Unmuted' })
+						this._updateSourceMute(source, data.inputMuted)
 						break
 					case 'volume':
-						source.inputVolume = utils.roundNumber(this.self, data.inputVolumeDb, 1)
-						this.self.setVariableValues({ [`volume_${validName}`]: source.inputVolume + ' dB' })
+						this._updateSourceVolume(source, data.inputVolumeDb)
 						break
 					case 'balance':
-						source.inputAudioBalance = utils.roundNumber(this.self, data.inputAudioBalance, 1)
-						this.self.setVariableValues({ [`balance_${validName}`]: source.inputAudioBalance })
+						this._updateSourceBalance(source, data.inputAudioBalance)
 						break
 					case 'sync_offset':
-						source.inputAudioSyncOffset = data.inputAudioSyncOffset
-						this.self.setVariableValues({ [`sync_offset_${validName}`]: data.inputAudioSyncOffset + 'ms' })
+						this._updateSourceSyncOffset(source, data.inputAudioSyncOffset)
 						break
-					case 'monitor': {
-						source.monitorType = data.monitorType
-						let monitorType = 'Off'
-						if (data.monitorType === ObsAudioMonitorType.MonitorAndOutput) {
-							monitorType = 'Monitor / Output'
-						} else if (data.monitorType === ObsAudioMonitorType.MonitorOnly) {
-							monitorType = 'Monitor Only'
-						}
-						this.self.setVariableValues({ [`monitor_${validName}`]: monitorType })
+					case 'monitor':
+						this._updateSourceMonitorType(source, data.monitorType)
 						break
-					}
 					case 'tracks':
 						source.inputAudioTracks = data.inputAudioTracks
 						break
@@ -796,6 +784,37 @@ export class OBSApi {
 		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
 	}
 
+	private _updateSourceMute(source: OBSSource, muted: boolean): void {
+		source.inputMuted = muted
+		this.self.setVariableValues({ [`mute_${source.validName}`]: muted ? 'Muted' : 'Unmuted' })
+	}
+
+	private _updateSourceVolume(source: OBSSource, volumeDb: number): void {
+		source.inputVolume = utils.roundNumber(this.self, volumeDb, 1)
+		this.self.setVariableValues({ [`volume_${source.validName}`]: source.inputVolume + ' dB' })
+	}
+
+	private _updateSourceBalance(source: OBSSource, balance: number): void {
+		source.inputAudioBalance = utils.roundNumber(this.self, balance, 1)
+		this.self.setVariableValues({ [`balance_${source.validName}`]: source.inputAudioBalance })
+	}
+
+	private _updateSourceSyncOffset(source: OBSSource, offset: number): void {
+		source.inputAudioSyncOffset = offset
+		this.self.setVariableValues({ [`sync_offset_${source.validName}`]: offset + 'ms' })
+	}
+
+	private _updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
+		source.monitorType = monitorType
+		let label = 'Off'
+		if (monitorType === ObsAudioMonitorType.MonitorAndOutput) {
+			label = 'Monitor / Output'
+		} else if (monitorType === ObsAudioMonitorType.MonitorOnly) {
+			label = 'Monitor Only'
+		}
+		this.self.setVariableValues({ [`monitor_${source.validName}`]: label })
+	}
+
 	public async buildSourceList(sceneUuid: string): Promise<void> {
 		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
 		if (data) {
@@ -803,15 +822,7 @@ export class OBSApi {
 			const sceneItems = data.sceneItems as OBSSceneItem[]
 			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
 			for (const item of sceneItems) {
-				if (!this.self.states.sources.has(item.sourceUuid)) {
-					this.self.states.sources.set(item.sourceUuid, {
-						sourceName: item.sourceName,
-						sourceUuid: item.sourceUuid,
-						validName: utils.validName(this.self, item.sourceName),
-						isGroup: item.isGroup,
-						inputKind: item.inputKind ?? '',
-					})
-				}
+				this._addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
 			}
 			await this.fetchSourcesData(sourceUuids)
 		}
@@ -824,16 +835,9 @@ export class OBSApi {
 			const sceneItems = data.sceneItems as OBSSceneItem[]
 			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
 			for (const item of sceneItems) {
-				if (!this.self.states.sources.has(item.sourceUuid)) {
-					this.self.states.sources.set(item.sourceUuid, {
-						sourceName: item.sourceName,
-						sourceUuid: item.sourceUuid,
-						validName: utils.validName(this.self, item.sourceName),
-						inputKind: item.inputKind ?? '',
-						groupedSource: true,
-						groupName: groupUuid,
-					})
-				}
+				const source = this._addSource(item.sourceUuid, item.sourceName, item.inputKind)
+				source.groupedSource = true
+				source.groupName = groupUuid
 			}
 			await this.fetchSourcesData(sourceUuids)
 		}
@@ -871,11 +875,7 @@ export class OBSApi {
 	public async addScene(sceneName: string): Promise<void> {
 		const scene = await this.sendRequest('CreateScene', { sceneName: sceneName })
 		if (scene) {
-			this.self.states.scenes.set(scene.sceneUuid, {
-				sceneName: sceneName,
-				sceneUuid: scene.sceneUuid,
-				sceneIndex: this.self.states.scenes.size,
-			})
+			this._addScene(scene.sceneUuid, sceneName)
 			await this.buildSourceList(scene.sceneUuid)
 			void this.self.updateActionsFeedbacksVariables()
 		}
@@ -900,8 +900,8 @@ export class OBSApi {
 
 		const data = await this.sendBatch(batch)
 		if (data) {
-			const allValues: any = {}
-			const currentMedia = []
+			const allValues: Record<string, string | number | boolean | undefined> = {}
+			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
 			for (const response of data) {
 				if (response.requestStatus.result) {
 					const sourceUuid = response.requestId
@@ -910,17 +910,17 @@ export class OBSApi {
 
 					const sourceName = source.sourceName
 					const validName = source.validName ?? sourceName
-					const data = response.responseData
+					const responseData = response.responseData
 
-					source.OBSMediaStatus = data.mediaState
-					source.mediaCursor = data.mediaCursor
-					source.mediaDuration = data.mediaDuration
+					source.OBSMediaStatus = responseData.mediaState
+					source.mediaCursor = responseData.mediaCursor
+					source.mediaDuration = responseData.mediaDuration
 
-					const remainingValue = (data.mediaDuration ?? 0) - (data.mediaCursor ?? 0)
-					source.timeElapsed = utils.formatTimecode(this.self, data.mediaCursor)
+					const remainingValue = (responseData.mediaDuration ?? 0) - (responseData.mediaCursor ?? 0)
+					source.timeElapsed = utils.formatTimecode(this.self, responseData.mediaCursor)
 					source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(this.self, remainingValue) : '--:--:--'
 
-					if (data.mediaState === OBSMediaStatus.Playing || data.mediaState === OBSMediaStatus.Paused) {
+					if (responseData.mediaState === OBSMediaStatus.Playing || responseData.mediaState === OBSMediaStatus.Paused) {
 						if (source.active) {
 							currentMedia.push({
 								name: sourceName,
@@ -931,8 +931,8 @@ export class OBSApi {
 					}
 
 					let status = OBSMediaStatus.Stopped
-					if (data.mediaState === OBSMediaStatus.Playing) status = OBSMediaStatus.Playing
-					else if (data.mediaState === OBSMediaStatus.Paused) status = OBSMediaStatus.Paused
+					if (responseData.mediaState === OBSMediaStatus.Playing) status = OBSMediaStatus.Playing
+					else if (responseData.mediaState === OBSMediaStatus.Paused) status = OBSMediaStatus.Paused
 
 					allValues[`media_status_${validName}`] = utils.getOBSMediaStatusLabel(status)
 					allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
@@ -955,16 +955,17 @@ export class OBSApi {
 		}
 	}
 
-	public buildInputSettings(sourceUuid: string, inputKind: string, inputSettings: unknown): void {
+	public buildInputSettings(sourceUuid: string, inputKind: string, inputSettings: Record<string, any>): void {
 		const source = this.self.states.sources.get(sourceUuid)
 		if (!source) return
 
 		const kindList = this.self.states.inputKindList.get(inputKind)
 		source.settings = kindList?.defaultInputSettings
-			? { ...kindList.defaultInputSettings, ...(inputSettings as any) }
+			? { ...(kindList.defaultInputSettings as Record<string, any>), ...inputSettings }
 			: inputSettings
 
 		const name = source.validName ?? source.sourceName
+		if (!source.settings) source.settings = {}
 		const settings = source.settings
 
 		if (inputKind.startsWith('text_')) {
@@ -985,7 +986,8 @@ export class OBSApi {
 	public updateInputSettings(sourceUuid: string, inputSettings: unknown): void {
 		const source = this.self.states.sources.get(sourceUuid)
 		if (source) {
-			source.settings = { ...(source.settings || {}), ...(inputSettings as any) }
+			if (!source.settings) source.settings = {}
+			source.settings = { ...source.settings, ...(inputSettings as Record<string, unknown>) }
 			this.buildInputSettings(sourceUuid, source.inputKind ?? '', source.settings)
 		}
 	}
