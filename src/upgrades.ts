@@ -5,7 +5,7 @@ import {
 	CompanionStaticUpgradeResult,
 	CreateConvertToBooleanFeedbackUpgradeScript,
 } from '@companion-module/base'
-import { ModuleConfig } from './types.js'
+import { ModuleConfig, ModuleSecrets } from './types.js'
 
 export default [
 	CreateConvertToBooleanFeedbackUpgradeScript({
@@ -240,11 +240,21 @@ export default [
 	function v4_0_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
+			updatedSecrets: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
+		}
+		if (props.config) {
+			if (props.config.pass) {
+				changes.updatedSecrets = {
+					pass: props.config.pass,
+				}
+				delete props.config.pass
+				changes.updatedConfig = props.config
+			}
 		}
 
 		for (const action of props.actions) {
