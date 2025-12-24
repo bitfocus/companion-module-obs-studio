@@ -228,7 +228,7 @@ export class OBSApi {
 		}
 	}
 
-	private _addSource(sourceUuid: string, sourceName: string, inputKind?: string | null, isGroup?: boolean): OBSSource {
+	public addSource(sourceUuid: string, sourceName: string, inputKind?: string | null, isGroup?: boolean): OBSSource {
 		let source = this.self.states.sources.get(sourceUuid)
 		if (!source) {
 			source = {
@@ -414,7 +414,7 @@ export class OBSApi {
 					const inputName = input
 					const inputInfo = inputMap.get(inputName)
 					const inputUuid = inputInfo?.inputUuid ?? inputName
-					this._addSource(inputUuid, inputName)
+					this.addSource(inputUuid, inputName)
 					specialUuids.push(inputUuid)
 				}
 			}
@@ -662,7 +662,7 @@ export class OBSApi {
 
 					for (const item of items) {
 						allSourceUuids.add(item.sourceUuid)
-						this._addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
+						this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
 					}
 				}
 			}
@@ -688,7 +688,7 @@ export class OBSApi {
 						this.self.states.groups.set(groupUuid, items)
 						for (const item of items) {
 							allSourceUuids.add(item.sourceUuid)
-							const source = this._addSource(item.sourceUuid, item.sourceName, item.inputKind)
+							const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind)
 							source.groupedSource = true
 							source.groupName = groupUuid
 						}
@@ -702,7 +702,7 @@ export class OBSApi {
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
-	private async fetchSourcesData(sourceUuids: string[]): Promise<void> {
+	public async fetchSourcesData(sourceUuids: string[]): Promise<void> {
 		if (sourceUuids.length === 0) return
 
 		const batch: any[] = []
@@ -861,7 +861,7 @@ export class OBSApi {
 			const sceneItems = data.sceneItems as any[]
 			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
 			for (const item of sceneItems) {
-				this._addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
+				this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
 			}
 			await this.fetchSourcesData(sourceUuids)
 		}
@@ -874,7 +874,7 @@ export class OBSApi {
 			const sceneItems = data.sceneItems as any[]
 			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
 			for (const item of sceneItems) {
-				const source = this._addSource(item.sourceUuid, item.sourceName, item.inputKind)
+				const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind)
 				source.groupedSource = true
 				source.groupName = groupUuid
 			}

@@ -132,7 +132,12 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 }
 
 function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
-	obs.on('InputCreated', () => {})
+	obs.on('InputCreated', (data) => {
+		self.obs.addSource(data.inputUuid, data.inputName, data.inputKind)
+		void self.obs.fetchSourcesData([data.inputUuid]).then(() => {
+			void self.updateActionsFeedbacksVariables()
+		})
+	})
 	obs.on('InputRemoved', (data) => {
 		self.states.sources.delete(data.inputUuid)
 		void self.updateActionsFeedbacksVariables()
@@ -272,13 +277,28 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
 		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
-		if (source) void self.obs.getSourceFilters(source.sourceUuid)
+		if (source) {
+			void self.obs.getSourceFilters(source.sourceUuid).then(() => {
+				void self.updateActionsFeedbacksVariables()
+			})
+		}
 	})
 	obs.on('SourceFilterRemoved', (data) => {
 		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
-		if (source) void self.obs.getSourceFilters(source.sourceUuid)
+		if (source) {
+			void self.obs.getSourceFilters(source.sourceUuid).then(() => {
+				void self.updateActionsFeedbacksVariables()
+			})
+		}
 	})
-	obs.on('SourceFilterNameChanged', () => {})
+	obs.on('SourceFilterNameChanged', (data) => {
+		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+		if (source) {
+			void self.obs.getSourceFilters(source.sourceUuid).then(() => {
+				void self.updateActionsFeedbacksVariables()
+			})
+		}
+	})
 	obs.on('SourceFilterEnableStateChanged', (data) => {
 		const source = Array.from(self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
 		if (source) {
@@ -297,7 +317,9 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemCreated', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
-			void self.obs.buildSourceList(data.sceneUuid)
+			void self.obs.buildSourceList(data.sceneUuid).then(() => {
+				void self.updateActionsFeedbacksVariables()
+			})
 		}
 	})
 	obs.on('SceneItemRemoved', (data) => {
@@ -316,6 +338,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 					groups.splice(itemIndex, 1)
 				}
 			}
+			void self.updateActionsFeedbacksVariables()
 		}
 	})
 	obs.on('SceneItemListReindexed', () => {})
