@@ -165,7 +165,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 				const nextTransition =
 					self.obsState.transitionList[currentTransitionIndex + 1]?.id ??
 					(self.obsState.transitionList[0]?.id as string)
-				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition })
+				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition as string })
 			} else if (action.options.adjust === 'previous') {
 				const previousTransition =
 					(self.obsState.transitionList[currentTransitionIndex - 1]?.id as string) ??

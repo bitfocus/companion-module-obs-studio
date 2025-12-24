@@ -338,7 +338,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		],
 		callback: async (action) => {
 			const source = action.options.source as string
-			await self.obs.sendRequest('TriggerInputActivateState', { inputName: source })
+			await self.obs.sendRequest('TriggerInputActivateState' as any, { inputName: source })
 		},
 	}
 

@@ -458,9 +458,10 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 			if (action.options.rotation) transform.rotation = Number(action.options.rotation as string)
 
 			try {
+				const sourceName = self.states.sources.get(sourceUuid)?.sourceName || sourceUuid
 				const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
 					sceneUuid: sourceSceneUuid,
-					sourceUuid: sourceUuid,
+					sourceName: sourceName,
 				})
 
 				if (sceneItem?.sceneItemId) {

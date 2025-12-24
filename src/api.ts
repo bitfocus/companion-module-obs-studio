@@ -1,5 +1,5 @@
 import { InstanceStatus } from '@companion-module/base'
-import OBSWebSocket, { EventSubscription } from 'obs-websocket-js'
+import OBSWebSocket, { EventSubscription, OBSRequestTypes, OBSResponseTypes } from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
 import type { OBSInstance } from './main.js'
 import * as utils from './utils.js'
@@ -148,38 +148,46 @@ export class OBSApi {
 	}
 
 	// OBS Websocket Commands
-	private async _call(requestType: string, requestData?: Record<string, any>): Promise<any> {
+	private async _call<T extends keyof OBSRequestTypes>(
+		requestType: T,
+		requestData?: OBSRequestTypes[T],
+	): Promise<OBSResponseTypes[T] | undefined> {
 		try {
-			return await this.self.socket.call(requestType as any, requestData)
+			return (await this.self.socket.call(requestType as any, requestData)) as OBSResponseTypes[T]
 		} catch (error: any) {
 			this.self.log('debug', `Request ${requestType} failed (${error?.message ?? error})`)
 			return undefined
 		}
 	}
 
-	public async sendRequest(requestType: string, requestData?: Record<string, any>): Promise<any> {
+	public async sendRequest<T extends keyof OBSRequestTypes>(
+		requestType: T,
+		requestData?: OBSRequestTypes[T],
+	): Promise<OBSResponseTypes[T] | undefined> {
 		// Backward Compatibility: If sceneName or inputName is provided but we have a UUID, prioritize UUID
 		if (requestData) {
-			if (requestData.sceneName && !requestData.sceneUuid) {
-				const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === requestData.sceneName)
-				if (scene) requestData.sceneUuid = scene.sceneUuid
+			const data = requestData as any
+			if (data.sceneName && !data.sceneUuid) {
+				const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === data.sceneName)
+				if (scene) data.sceneUuid = scene.sceneUuid
 			}
-			if (requestData.inputName && !requestData.inputUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === requestData.inputName)
-				if (source) requestData.inputUuid = source.sourceUuid
+			if (data.inputName && !data.inputUuid) {
+				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.inputName)
+				if (source) data.inputUuid = source.sourceUuid
 			}
-			if (requestData.sourceName && !requestData.sourceUuid) {
-				const source = Array.from(this.self.states.sources.values()).find(
-					(s) => s.sourceName === requestData.sourceName,
-				)
-				if (source) requestData.sourceUuid = source.sourceUuid
+			if (data.sourceName && !data.sourceUuid) {
+				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+				if (source) data.sourceUuid = source.sourceUuid
 			}
 		}
 
 		return this._call(requestType, requestData)
 	}
 
-	public async sendCustomRequest(requestType: string, requestData?: Record<string, any>): Promise<any> {
+	public async sendCustomRequest<T extends keyof OBSRequestTypes>(
+		requestType: T,
+		requestData?: OBSRequestTypes[T],
+	): Promise<OBSResponseTypes[T] | undefined> {
 		const data = await this._call(requestType, requestData)
 		if (data) {
 			this.self.log(
@@ -237,9 +245,9 @@ export class OBSApi {
 
 	private _addScene(sceneUuid: string, sceneName: string, sceneIndex?: number): void {
 		this.self.states.scenes.set(sceneUuid, {
-			sceneName,
-			sceneUuid,
-			sceneIndex: sceneIndex ?? this.self.states.scenes.size,
+			sceneName: sceneName,
+			sceneUuid: sceneUuid,
+			sceneIndex: sceneIndex ?? Number(this.self.states.scenes.size),
 		})
 	}
 
@@ -303,7 +311,9 @@ export class OBSApi {
 	public async obsInfo(): Promise<boolean> {
 		try {
 			const version = await this.sendRequest('GetVersion')
-			this.self.states.version = version
+			if (!version) return false
+
+			this.self.states.version = version as any
 			this.self.log(
 				'debug',
 				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
@@ -314,7 +324,9 @@ export class OBSApi {
 			})
 
 			const studioMode = await this.sendRequest('GetStudioModeEnabled')
-			this.self.states.studioMode = studioMode.studioModeEnabled ? true : false
+			if (studioMode) {
+				this.self.states.studioMode = studioMode.studioModeEnabled ? true : false
+			}
 
 			await this.buildHotkeyList()
 			await this.buildOutputList()
@@ -341,20 +353,27 @@ export class OBSApi {
 
 	public async getInputKindList(): Promise<void> {
 		const inputKindList = await this.sendRequest('GetInputKindList')
-		await Promise.all(
-			inputKindList?.inputKinds?.map(async (inputKind: any) => {
-				this.self.states.inputKindList.set(inputKind, {})
-				const defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
-				this.self.states.inputKindList.set(inputKind, defaultSettings)
-			}) ?? [],
-		)
+		if (inputKindList && inputKindList.inputKinds) {
+			await Promise.all(
+				inputKindList.inputKinds.map(async (inputKind: any) => {
+					this.self.states.inputKindList.set(inputKind, {})
+					const defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
+					if (defaultSettings) {
+						this.self.states.inputKindList.set(
+							inputKind,
+							defaultSettings.defaultInputSettings as Record<string, unknown>,
+						)
+					}
+				}),
+			)
+		}
 	}
 
 	public async buildProfileList(): Promise<void> {
 		const profiles = await this.sendRequest('GetProfileList')
 		this.self.states.profiles.clear()
 
-		this.self.states.currentProfile = profiles?.currentProfileName
+		this.self.states.currentProfile = profiles?.currentProfileName ?? 'None'
 
 		profiles?.profiles.forEach((profile: any) => {
 			this.self.states.profiles.set(profile, {})
@@ -369,7 +388,7 @@ export class OBSApi {
 		const collections = await this.sendRequest('GetSceneCollectionList')
 		this.self.states.sceneCollections.clear()
 
-		this.self.states.currentSceneCollection = collections?.currentSceneCollectionName
+		this.self.states.currentSceneCollection = collections?.currentSceneCollectionName ?? 'None'
 		collections?.sceneCollections.forEach((sceneCollection: any) => {
 			this.self.states.sceneCollections.set(sceneCollection, {})
 		})
@@ -392,7 +411,7 @@ export class OBSApi {
 			const specialUuids = []
 			for (const input of Object.values(specialInputs)) {
 				if (input) {
-					const inputName = input as string
+					const inputName = input
 					const inputInfo = inputMap.get(inputName)
 					const inputUuid = inputInfo?.inputUuid ?? inputName
 					this._addSource(inputUuid, inputName)
@@ -410,8 +429,7 @@ export class OBSApi {
 
 		if (outputData) {
 			outputData.outputs?.forEach((output: any) => {
-				this.self.states.outputs.set(output.outputName, output)
-
+				if (output) this.self.states.outputs.set(output.outputName, output)
 				void this.getOutputStatus(output.outputName)
 			})
 			void this.self.updateActionsFeedbacksVariables()
@@ -437,7 +455,7 @@ export class OBSApi {
 		try {
 			const data = await this.sendRequest('GetStats')
 			if (data) {
-				this.self.states.stats = data
+				this.self.states.stats = data as any
 
 				const freeSpaceMB = utils.roundNumber(this.self, data.availableDiskSpace, 0)
 				let freeSpace: number | string = freeSpaceMB
@@ -474,7 +492,11 @@ export class OBSApi {
 		if (videoSettings) {
 			this.self.states.resolution = `${videoSettings.baseWidth}x${videoSettings.baseHeight}`
 			this.self.states.outputResolution = `${videoSettings.outputWidth}x${videoSettings.outputHeight}`
-			this.self.states.framerate = `${utils.roundNumber(this.self, videoSettings.fpsNumerator / videoSettings.fpsDenominator, 2)} fps`
+			this.self.states.framerate = `${utils.roundNumber(
+				this.self,
+				videoSettings.fpsNumerator / videoSettings.fpsDenominator,
+				2,
+			)} fps`
 			this.self.setVariableValues({
 				base_resolution: this.self.states.resolution,
 				output_resolution: this.self.states.outputResolution,
@@ -573,8 +595,10 @@ export class OBSApi {
 	public async getOutputStatus(outputName: string): Promise<void> {
 		if (!this.self.states.sceneCollectionChanging) {
 			const outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
-			this.self.states.outputs.set(outputName, outputStatus)
-			this.self.checkFeedbacks('output_active')
+			if (outputStatus) {
+				this.self.states.outputs.set(outputName, outputStatus as any)
+				this.self.checkFeedbacks('output_active')
+			}
 		}
 	}
 
@@ -599,13 +623,18 @@ export class OBSApi {
 
 		if (Array.isArray(sceneList.scenes)) {
 			for (const scene of sceneList.scenes) {
-				this._addScene(scene.sceneUuid, scene.sceneName, scene.sceneIndex)
+				this._addScene(scene.sceneUuid as string, scene.sceneName as string, scene.sceneIndex as number)
 			}
 		}
 
 		this.self.states.previewScene = sceneList.currentPreviewSceneName ?? 'None'
 		this.self.states.previewSceneUuid = sceneList.currentPreviewSceneUuid ?? ''
-		this.self.states.programScene = sceneList.currentProgramSceneName
+		if (sceneList.currentProgramSceneName) {
+			this.self.states.programScene = sceneList.currentProgramSceneName ?? 'None'
+		}
+		if (sceneList.currentPreviewSceneName) {
+			this.self.states.previewScene = sceneList.currentPreviewSceneName
+		}
 		this.self.states.programSceneUuid = sceneList.currentProgramSceneUuid ?? ''
 
 		this.self.setVariableValues({
@@ -758,6 +787,16 @@ export class OBSApi {
 						break
 					case 'settings':
 						this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
+						if (source.inputKind && this.self.states.inputKindList.has(source.inputKind)) {
+							const kindList = this.self.states.inputKindList.get(source.inputKind)
+							if (kindList?.defaultInputSettings) {
+								this.buildInputSettings(
+									source.sourceUuid,
+									source.inputKind,
+									kindList.defaultInputSettings as Record<string, unknown>,
+								)
+							}
+						}
 						break
 					case 'mute':
 						this._updateSourceMute(source, data.inputMuted)
@@ -818,8 +857,8 @@ export class OBSApi {
 	public async buildSourceList(sceneUuid: string): Promise<void> {
 		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
 		if (data) {
-			this.self.states.sceneItems.set(sceneUuid, data.sceneItems)
-			const sceneItems = data.sceneItems as OBSSceneItem[]
+			this.self.states.sceneItems.set(sceneUuid, data.sceneItems as any)
+			const sceneItems = data.sceneItems as any[]
 			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
 			for (const item of sceneItems) {
 				this._addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
@@ -831,8 +870,8 @@ export class OBSApi {
 	public async getGroupInfo(groupUuid: string): Promise<void> {
 		const data = await this.sendRequest('GetGroupSceneItemList', { sceneUuid: groupUuid })
 		if (data) {
-			this.self.states.groups.set(groupUuid, data.sceneItems)
-			const sceneItems = data.sceneItems as OBSSceneItem[]
+			this.self.states.sceneItems.set(groupUuid, data.sceneItems as any)
+			const sceneItems = data.sceneItems as any[]
 			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
 			for (const item of sceneItems) {
 				const source = this._addSource(item.sourceUuid, item.sourceName, item.inputKind)
@@ -852,14 +891,20 @@ export class OBSApi {
 		if (sceneTransitionList) {
 			if (Array.isArray(sceneTransitionList.transitions)) {
 				for (const item of sceneTransitionList.transitions) {
-					this.self.states.transitions.set(item.transitionName, item)
+					if (item.transitionName) {
+						this.self.states.transitions.set(item.transitionName as string, item as any)
+					}
 				}
 			}
 
 			const transitionListVariable = this.self.obsState.transitionList?.map((item) => item.id) ?? []
 
+			if (currentTransition) {
+				const currentTransitionName = currentTransition.transitionName
+				if (currentTransitionName) this.self.states.currentTransition = currentTransitionName
+			}
 			this.self.states.currentTransition = currentTransition?.transitionName ?? 'None'
-			this.self.states.transitionDuration = currentTransition?.transitionDuration ?? '0'
+			this.self.states.transitionDuration = currentTransition?.transitionDuration ?? 0
 
 			this.self.checkFeedbacks('transition_duration', 'current_transition')
 			this.self.setVariableValues({
@@ -994,8 +1039,8 @@ export class OBSApi {
 
 	public async getSourceFilters(sourceUuid: string): Promise<void> {
 		const data = await this.sendRequest('GetSourceFilterList', { sourceUuid: sourceUuid })
-		if (data?.filters) {
-			this.self.states.sourceFilters.set(sourceUuid, data.filters)
+		if (data) {
+			this.self.states.sourceFilters.set(sourceUuid, data.filters as any)
 		}
 	}
 

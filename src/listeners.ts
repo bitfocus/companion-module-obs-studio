@@ -236,7 +236,7 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			const transition = await self.obs.sendRequest('GetCurrentSceneTransition')
 
 			self.states.currentTransition = data.transitionName
-			self.states.transitionDuration = transition?.transitionDuration ?? '0'
+			self.states.transitionDuration = transition?.transitionDuration ?? 0
 
 			self.checkFeedbacks('transition_duration', 'current_transition')
 			self.setVariableValues({
