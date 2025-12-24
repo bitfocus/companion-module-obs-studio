@@ -1,13 +1,9 @@
-import { CompanionPresetDefinitions, combineRgb } from '@companion-module/base'
+import { CompanionPresetDefinitions } from '@companion-module/base'
+import { Color } from './utils.js'
 import type { OBSInstance } from './main.js'
 
 export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
-
-	const ColorWhite = combineRgb(255, 255, 255)
-	const ColorRed = combineRgb(200, 0, 0)
-	const ColorGreen = combineRgb(0, 200, 0)
-	const ColorYellow = combineRgb(212, 174, 0)
 
 	for (const scene of this.obsState.sceneChoices) {
 		presets[`toProgram_${scene.id}`] = {
@@ -17,8 +13,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			style: {
 				text: scene.label,
 				size: 'auto',
-				color: ColorWhite,
-				bgcolor: 0,
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
 			},
 			steps: [
 				{
@@ -40,8 +37,8 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 						scene: scene.id,
 					},
 					style: {
-						bgcolor: ColorRed,
-						color: ColorWhite,
+						bgcolor: Color.Red,
+						color: Color.White,
 					},
 				},
 			],
@@ -54,8 +51,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			style: {
 				text: scene.label,
 				size: 'auto',
-				color: ColorWhite,
-				bgcolor: 0,
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
 			},
 			steps: [
 				{
@@ -77,23 +75,30 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 						scene: scene.id,
 					},
 					style: {
-						bgcolor: ColorGreen,
-						color: ColorWhite,
+						bgcolor: Color.Green,
+						color: Color.White,
 					},
 				},
 			],
 		}
 	}
 
+	presets['transitionAutoHeader'] = {
+		type: 'text',
+		category: 'Transitions',
+		name: 'Transition Controls',
+		text: '',
+	}
 	presets['transitionAuto'] = {
 		type: 'button',
 		category: 'Transitions',
 		name: 'Send previewed scene to program',
 		style: {
 			text: 'AUTO',
-			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -111,13 +116,161 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 				feedbackId: 'transition_active',
 				options: {},
 				style: {
-					bgcolor: ColorGreen,
-					color: ColorWhite,
+					bgcolor: Color.Green,
+					color: Color.White,
 				},
 			},
 		],
 	}
+	presets['transitionPrevious'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Previous Transition',
+		style: {
+			text: 'Previous Transition',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjustTransitionType',
+						options: {
+							adjust: 'previous',
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionCurrent'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Current Transition',
+		style: {
+			text: 'Current Transition $(obs:current_transition)',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionNext'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Next Transition',
+		style: {
+			text: 'Next Transition',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjustTransitionType',
+						options: {
+							adjust: 'next',
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionDecreaseDuration'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Decrease transition time',
+		style: {
+			text: 'Adjust Duration\\n-100ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjust_transition_duration',
+						options: {
+							amount: -100,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionDuration'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Current Duration',
+		style: {
+			text: 'Current Duration $(obs:transition_duration)ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionIncreaseDuration'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Increase transition time',
+		style: {
+			text: 'Adjust Duration\\n+100ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjust_transition_duration',
+						options: {
+							amount: 100,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
 
+	presets['quickTransitionsHeader'] = {
+		type: 'text',
+		category: 'Transitions',
+		name: 'Quick Transitions',
+		text: 'Quickly toggle a specific transition, and then revert back to the previous transition',
+	}
 	for (const transition of this.obsState.transitionList) {
 		presets[`quickTransition_${transition.id}`] = {
 			type: 'button',
@@ -126,8 +279,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			style: {
 				text: transition.label,
 				size: 14,
-				color: ColorWhite,
-				bgcolor: 0,
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
 			},
 			steps: [
 				{
@@ -149,8 +303,8 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 					feedbackId: 'transition_active',
 					options: {},
 					style: {
-						bgcolor: ColorGreen,
-						color: ColorWhite,
+						bgcolor: Color.Green,
+						color: Color.White,
 					},
 				},
 			],
@@ -163,10 +317,11 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		category: 'Streaming',
 		name: 'OBS Streaming',
 		style: {
-			text: 'OBS STREAM',
+			text: 'OBS START STREAM',
 			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -184,8 +339,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 				feedbackId: 'streaming',
 				options: {},
 				style: {
-					bgcolor: ColorGreen,
-					color: ColorWhite,
+					bgcolor: Color.Green,
+					color: Color.White,
+					text: 'OBS STOP STREAM',
 				},
 			},
 		],
@@ -196,10 +352,11 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		category: 'Streaming',
 		name: 'Streaming Status / Timecode',
 		style: {
-			text: 'Streaming:\\n$(obs:streaming)\\n$(obs:stream_timecode)',
+			text: 'STREAM STATUS\\n$(obs:streaming)\\n$(obs:stream_timecode)',
 			size: 14,
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -217,8 +374,8 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 				feedbackId: 'streaming',
 				options: {},
 				style: {
-					bgcolor: ColorGreen,
-					color: ColorWhite,
+					bgcolor: Color.Green,
+					color: Color.White,
 				},
 			},
 		],
@@ -229,10 +386,11 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		category: 'Streaming',
 		name: 'Streaming Service Info',
 		style: {
-			text: '$(obs:stream_service)\\n$(obs:streaming)',
+			text: 'STREAM DEST\\n$(obs:stream_service)\\n$(obs:streaming)',
 			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -250,29 +408,29 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 				feedbackId: 'streaming',
 				options: {},
 				style: {
-					bgcolor: ColorGreen,
-					color: ColorWhite,
+					bgcolor: Color.Green,
+					color: Color.White,
 				},
 			},
 		],
 	}
 
-	// Preset for Start Recording button with colors indicating recording status
 	presets['recording'] = {
 		type: 'button',
 		category: 'Recording',
 		name: 'OBS Recording',
 		style: {
-			text: 'OBS RECORD',
-			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			text: 'OBS START RECORD',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
 				down: [
 					{
-						actionId: 'StartStopRecording',
+						actionId: 'toggle_recording',
 						options: {},
 					},
 				],
@@ -283,10 +441,10 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			{
 				feedbackId: 'recording',
 				options: {
-					bg: ColorRed,
-					fg: ColorWhite,
-					bg_paused: ColorYellow,
-					fg_paused: ColorWhite,
+					bg: Color.Red,
+					fg: Color.White,
+					bg_paused: Color.Yellow,
+					fg_paused: Color.White,
 				},
 			},
 		],
@@ -297,19 +455,19 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		category: 'Recording',
 		name: 'Recording Status / Timecode',
 		style: {
-			text: 'Recording:\\n$(obs:recording)\\n$(obs:recording_timecode)',
-			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			text: 'REC STATUS\\n$(obs:recording)\\n$(obs:recording_timecode)',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		previewStyle: {
+			text: 'REC STATUS\n$(obs:recording)\n00:00:00',
+			size: '14',
 		},
 		steps: [
 			{
-				down: [
-					{
-						actionId: 'StartStopRecording',
-						options: {},
-					},
-				],
+				down: [],
 				up: [],
 			},
 		],
@@ -317,16 +475,114 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			{
 				feedbackId: 'recording',
 				options: {
-					bg: ColorRed,
-					fg: ColorWhite,
-					bg_paused: ColorYellow,
-					fg_paused: ColorWhite,
+					bg: Color.Red,
+					fg: Color.White,
+					bg_paused: Color.Yellow,
+					fg_paused: Color.White,
 				},
 			},
 		],
 	}
 
+	presets['recordingTimecodeHH'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'Recording Timecode HH',
+		style: {
+			text: '$(obs:recording_timecode_hh)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		previewStyle: {
+			text: 'REC Time: Hours',
+			size: '14',
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['recordingTimecodeMM'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'Recording Timecode MM',
+		style: {
+			text: '$(obs:recording_timecode_mm)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		previewStyle: {
+			text: 'REC Time: Mins',
+			size: '14',
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['recordingTimecodeSS'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'Recording Timecode SS',
+		style: {
+			text: '$(obs:recording_timecode_ss)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		previewStyle: {
+			text: 'REC Time: Seconds',
+			size: '14',
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['recordingFilePath'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'Recording File Path',
+		style: {
+			text: 'REC PATH:\\n$(obs:recording_path)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
 	for (const output of this.obsState.outputList) {
+		presets[`output${output.id}Header`] = {
+			type: 'text',
+			category: 'Outputs',
+			name: output.label,
+			text: '',
+		}
 		presets[`toggleOutput_${output.id}`] = {
 			type: 'button',
 			category: 'Outputs',
@@ -334,8 +590,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			style: {
 				text: `OBS ${output.label}`,
 				size: 'auto',
-				color: ColorWhite,
-				bgcolor: 0,
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
 			},
 			steps: [
 				{
@@ -357,66 +614,288 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 						output: output.id,
 					},
 					style: {
-						bgcolor: ColorGreen,
-						color: ColorWhite,
+						bgcolor: Color.Green,
+						color: Color.White,
 					},
 				},
 			],
 		}
 	}
 
-	for (const source of this.obsState.sourceChoices) {
-		presets[`sourceStatus_${source.id}`] = {
-			type: 'button',
+	const processedSources = new Set<string>()
+
+	for (const scene of this.obsState.sceneChoices) {
+		const sceneUuid = scene.id as string
+		const sceneItems = this.obsState.state.sceneItems.get(sceneUuid) ?? []
+
+		if (sceneItems.length > 0) {
+			presets[`sceneSourcesHeader_${sceneUuid}`] = {
+				type: 'text',
+				category: 'Sources',
+				name: scene.label,
+				text: '',
+			}
+
+			for (const item of sceneItems) {
+				const sourcesToProcess = []
+				if (item.isGroup) {
+					const groupItems = this.obsState.state.groups.get(item.sourceUuid) ?? []
+					sourcesToProcess.push(...groupItems)
+				} else {
+					sourcesToProcess.push(item)
+				}
+
+				for (const sourceItem of sourcesToProcess) {
+					processedSources.add(sourceItem.sourceUuid)
+					presets[`sourceStatus_${sceneUuid}_${sourceItem.sourceUuid}`] = {
+						type: 'button',
+						category: 'Sources',
+						name: `${sourceItem.sourceName} Status (${scene.label})`,
+						style: {
+							text: sourceItem.sourceName,
+							size: 'auto',
+							color: Color.White,
+							bgcolor: Color.Black,
+							show_topbar: false,
+						},
+						steps: [
+							{
+								down: [],
+								up: [],
+							},
+						],
+						feedbacks: [
+							{
+								feedbackId: 'scene_item_previewed',
+								options: {
+									source: sourceItem.sourceUuid,
+								},
+								style: {
+									bgcolor: Color.Green,
+									color: Color.White,
+								},
+							},
+							{
+								feedbackId: 'scene_item_active',
+								options: {
+									scene: 'anyScene',
+									source: sourceItem.sourceUuid,
+								},
+								style: {
+									bgcolor: Color.Red,
+									color: Color.White,
+								},
+							},
+						],
+					}
+				}
+			}
+		}
+	}
+
+	const otherSources = this.obsState.sourceChoices.filter((s) => !processedSources.has(s.id as string))
+	if (otherSources.length > 0) {
+		presets[`otherSourcesHeader`] = {
+			type: 'text',
 			category: 'Sources',
-			name: `${source.label} Status`,
-			style: {
-				text: source.label,
-				size: 'auto',
-				color: ColorWhite,
-				bgcolor: 0,
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
+			name: 'Other Sources',
+			text: '',
+		}
+
+		for (const source of otherSources) {
+			presets[`sourceStatus_other_${source.id}`] = {
+				type: 'button',
+				category: 'Sources',
+				name: `${source.label} Status`,
+				style: {
+					text: source.label,
+					size: 'auto',
+					color: Color.White,
+					bgcolor: Color.Black,
 				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'scene_item_previewed',
-					options: {
-						source: source.id,
+				steps: [
+					{
+						down: [],
+						up: [],
 					},
-					style: {
-						bgcolor: ColorGreen,
-						color: ColorWhite,
+				],
+				feedbacks: [
+					{
+						feedbackId: 'scene_item_previewed',
+						options: {
+							source: source.id,
+						},
+						style: {
+							bgcolor: Color.Green,
+							color: Color.White,
+						},
 					},
-				},
-				{
-					feedbackId: 'scene_item_active',
-					options: {
-						scene: 'anyScene',
-						source: source.id,
+					{
+						feedbackId: 'scene_item_active',
+						options: {
+							scene: 'anyScene',
+							source: source.id,
+						},
+						style: {
+							bgcolor: Color.Red,
+							color: Color.White,
+						},
 					},
-					style: {
-						bgcolor: ColorRed,
-						color: ColorWhite,
-					},
-				},
-			],
+				],
+			}
 		}
 	}
 
-	presets['computerStats'] = {
+	presets['statsHeader'] = {
+		type: 'text',
+		category: 'General',
+		name: 'Stats',
+		text: '',
+	}
+	presets['cpuRamUsage'] = {
 		type: 'button',
 		category: 'General',
-		name: 'Computer Stats',
+		name: 'CPU/RAM Usage',
 		style: {
 			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
 			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['cpuUsage'] = {
+		type: 'button',
+		category: 'General',
+		name: 'CPU Usage',
+		style: {
+			text: 'CPU:\\n$(obs:cpu_usage)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['ramUsage'] = {
+		type: 'button',
+		category: 'General',
+		name: 'RAM Usage',
+		style: {
+			text: 'RAM:\n$(obs:memory_usage)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['renderTotalFrames'] = {
+		type: 'button',
+		category: 'General',
+		name: 'Render Total Frames',
+		style: {
+			text: 'Render Total Frames:\\n$(obs:render_total_frames)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['renderMissedFrames'] = {
+		type: 'button',
+		category: 'General',
+		name: 'Render Missed Frames',
+		style: {
+			text: 'Render Missed Frames:\\n$(obs:render_missed_frames)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['outputTotalFrames'] = {
+		type: 'button',
+		category: 'General',
+		name: 'Output Total Frames',
+		style: {
+			text: 'Output Total Frames:\\n$(obs:output_total_frames)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['outputSkippedFrames'] = {
+		type: 'button',
+		category: 'General',
+		name: 'Output Skipped Frames',
+		style: {
+			text: 'Output Skipped Frames:\n$(obs:output_skipped_frames)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['averageFrameTime'] = {
+		type: 'button',
+		category: 'General',
+		name: 'Average Frame Time',
+		style: {
+			text: 'Average Frame Time:\n$(obs:average_frame_time)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -434,8 +913,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		style: {
 			text: 'Disk Space Remaining:\\n$(obs:free_disk_space)',
 			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -450,8 +930,8 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 					diskSpace: 50000,
 				},
 				style: {
-					bgcolor: ColorYellow,
-					color: ColorWhite,
+					bgcolor: Color.Yellow,
+					color: Color.White,
 				},
 			},
 			{
@@ -460,11 +940,17 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 					diskSpace: 10000,
 				},
 				style: {
-					bgcolor: ColorRed,
-					color: ColorWhite,
+					bgcolor: Color.Red,
+					color: Color.White,
 				},
 			},
 		],
+	}
+	presets['uiHeader'] = {
+		type: 'text',
+		category: 'General',
+		name: 'UI',
+		text: '',
 	}
 
 	presets['toggleStudioMode'] = {
@@ -474,8 +960,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		style: {
 			text: 'Toggle Studio Mode',
 			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -498,8 +985,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		style: {
 			text: 'Take Screenshot',
 			size: 12,
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -529,8 +1017,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		style: {
 			text: 'Play/\\nPause:\\n$(obs:current_media_name)',
 			size: 'auto',
-			color: ColorWhite,
-			bgcolor: 0,
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
 		},
 		steps: [
 			{
@@ -558,8 +1047,9 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			style: {
 				text: `${mediaSource.label}\\n$(obs:media_status_${sourceName})`,
 				size: 'auto',
-				color: ColorWhite,
-				bgcolor: 0,
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
 			},
 			steps: [
 				{
@@ -582,8 +1072,89 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 						source: mediaSource.id,
 					},
 					style: {
-						bgcolor: ColorGreen,
-						color: ColorWhite,
+						bgcolor: Color.Green,
+						color: Color.White,
+					},
+				},
+			],
+		}
+	}
+
+	for (const profile of this.obsState.profileChoices) {
+		const profileName = profile.label.replace(/[^\w]/gi, '_')
+		presets[`profile_${profileName}`] = {
+			type: 'button',
+			category: 'Profiles',
+			name: profile.label,
+			style: {
+				text: profile.label,
+				size: 'auto',
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'set_profile',
+							options: {
+								profile: profile.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'profile_active',
+					options: {
+						profile: profile.id,
+					},
+					style: {
+						bgcolor: Color.Green,
+						color: Color.White,
+					},
+				},
+			],
+		}
+	}
+	for (const sceneCollection of this.obsState.sceneCollectionList) {
+		const sceneCollectionName = sceneCollection.label.replace(/[^\w]/gi, '_')
+		presets[`sceneCollection_${sceneCollectionName}`] = {
+			type: 'button',
+			category: 'Scene Collections',
+			name: sceneCollection.label,
+			style: {
+				text: sceneCollection.label,
+				size: 'auto',
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'set_scene_collection',
+							options: {
+								scene_collection: sceneCollection.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'scene_collection_active',
+					options: {
+						scene_collection: sceneCollection.id,
+					},
+					style: {
+						bgcolor: Color.Green,
+						color: Color.White,
 					},
 				},
 			],
