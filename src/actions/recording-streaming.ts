@@ -155,7 +155,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 				id: 'streamURL',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType !== 'rtmp_common',
+				isVisibleExpression: `$(options:streamType) !== 'rtmp_common'`,
 			},
 			{
 				type: 'textinput',
@@ -163,14 +163,14 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 				id: 'streamKey',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType !== 'whip_custom',
+				isVisibleExpression: `$(options:streamType) !== 'whip_custom'`,
 			},
 			{
 				type: 'checkbox',
 				label: 'Use Authentication',
 				id: 'useAuth',
 				default: false,
-				isVisible: (options) => options.streamType === 'rtmp_custom',
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom'`,
 			},
 			{
 				type: 'textinput',
@@ -178,7 +178,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 				id: 'username',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType === 'rtmp_custom' && options.useAuth === true,
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:useAuth) === true`,
 			},
 			{
 				type: 'textinput',
@@ -186,7 +186,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 				id: 'password',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType === 'rtmp_custom' && options.useAuth === true,
+				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:useAuth) === true`,
 			},
 			{
 				type: 'textinput',
@@ -194,7 +194,7 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 				id: 'bearerToken',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.streamType === 'whip_custom',
+				isVisibleExpression: `$(options:streamType) === 'whip_custom'`,
 			},
 		],
 		callback: async (action) => {

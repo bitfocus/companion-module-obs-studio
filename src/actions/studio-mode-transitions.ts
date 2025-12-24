@@ -70,7 +70,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 				min: 0,
 				max: 60 * 1000, //max is required by api
 				range: false,
-				isVisible: (options) => options.customDuration === true,
+				isVisibleExpression: `$(options:customDuration)`,
 			},
 		],
 		callback: async (action) => {

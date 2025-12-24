@@ -65,7 +65,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'file',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.useFile === true,
+				isVisibleExpression: `$(options:useFile)`,
 			},
 			{
 				type: 'textinput',
@@ -154,7 +154,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'source',
 				default: self.obsState.sourceListDefault,
 				choices: self.obsState.sourceChoicesWithScenes,
-				isVisible: (options) => !options.allSources,
+				isVisibleExpression: `!$(options:allSources)`,
 			},
 			{
 				type: 'dropdown',
@@ -304,7 +304,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				label: 'Current Preview Scene',
 				id: 'usePreviewScene',
 				default: false,
-				isVisible: (options) => !options.useProgramScene,
+				isVisibleExpression: `!$(options:useProgramScene)`,
 			},
 			{
 				type: 'dropdown',
@@ -312,7 +312,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'source',
 				default: self.obsState.sourceListDefault,
 				choices: self.obsState.sourceChoices,
-				isVisible: (options) => !options.useProgramScene && !options.usePreviewScene,
+				isVisibleExpression: `!$(options:useProgramScene) && !$(options:usePreviewScene)`,
 			},
 			{
 				type: 'dropdown',
@@ -343,7 +343,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'path',
 				default: '',
 				useVariables: true,
-				isVisible: (options) => options.customName === true,
+				isVisibleExpression: `$(options:customName)`,
 			},
 			{
 				type: 'textinput',
@@ -351,7 +351,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'prefix',
 				default: 'Screenshot ',
 				useVariables: true,
-				isVisible: (options) => options.customName === false,
+				isVisibleExpression: `!$(options:customName)`,
 			},
 		],
 		callback: async (action) => {
@@ -399,7 +399,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisible: (options) => !options.useProgramScene,
+				isVisibleExpression: `!$(options:useProgramScene)`,
 			},
 			{
 				type: 'dropdown',

@@ -21,7 +21,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 			{
 				type: 'dropdown',
@@ -68,7 +68,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 		],
 		callback: async (action) => {
@@ -95,7 +95,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 		],
 		callback: async (action) => {
@@ -122,7 +122,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 		],
 		callback: async (action) => {
@@ -149,7 +149,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 		],
 		callback: async (action) => {
@@ -177,7 +177,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 			{
 				type: 'number',
@@ -215,7 +215,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 			{
 				type: 'number',
@@ -253,7 +253,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
 				choices: self.obsState.mediaSourceList,
-				isVisible: (options) => !options.useCurrentMedia,
+				isVisibleExpression: `!$(options:useCurrentMedia)`,
 			},
 			{
 				type: 'textinput',

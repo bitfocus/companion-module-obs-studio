@@ -165,7 +165,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 				label: 'Current Scene',
 				id: 'useCurrentScene',
 				default: false,
-				isVisible: (options) => !options.anyScene,
+				isVisibleExpression: `!$(options:anyScene)`,
 			},
 			{
 				type: 'dropdown',
@@ -173,7 +173,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisible: (options) => !options.anyScene && !options.useCurrentScene,
+				isVisibleExpression: `!$(options:anyScene) && !$(options:useCurrentScene)`,
 			},
 			{
 				type: 'dropdown',
@@ -251,7 +251,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 				default: self.obsState.sourceListDefault,
 				choices: self.obsState.sourceChoices,
 				allowCustom: true,
-				isVisible: (options) => !options.any,
+				isVisibleExpression: `!$(options:any)`,
 			},
 		],
 		callback: (feedback) => {

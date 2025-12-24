@@ -28,7 +28,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				id: 'customSceneName',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: '$(options.custom)',
+				isVisibleExpression: '$(options:custom)',
 			},
 		],
 		callback: async (action) => {
@@ -65,13 +65,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				id: 'customSceneName',
 				default: '',
 				useVariables: true,
-				isVisibleExpression: '$(options.custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Revert to previous scene after transition',
-				id: 'revert',
-				default: false,
+				isVisibleExpression: '$(options:custom)',
 			},
 		],
 		callback: async (action) => {
@@ -80,18 +74,6 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
 				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: action.options.scene as string })
-			}
-
-			if (action.options.revert && self.states.programSceneUuid !== undefined) {
-				const revertTransitionDuration =
-					self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0
-
-				setTimeout(
-					() => {
-						void self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: self.states.programSceneUuid })
-					},
-					(revertTransitionDuration ?? 0) + 50,
-				)
 			}
 		},
 	}
@@ -233,14 +215,14 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				type: 'checkbox',
 				label: 'All Scenes',
 				id: 'anyScene',
-				default: false,
+				default: true,
 			},
 			{
 				type: 'checkbox',
 				label: 'Current Scene',
 				id: 'useCurrentScene',
 				default: false,
-				isVisible: (options) => !options.anyScene,
+				isVisibleExpression: '!$(options:anyScene)',
 			},
 			{
 				type: 'dropdown',
@@ -248,7 +230,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisible: (options) => !options.anyScene && !options.useCurrentScene,
+				isVisibleExpression: '!$(options:anyScene) &&!$(options:useCurrentScene)',
 			},
 			{
 				type: 'dropdown',
