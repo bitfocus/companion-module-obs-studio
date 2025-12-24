@@ -121,7 +121,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	const sceneList = Array.from(this.states.scenes.values())
 	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
-		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
+		variables.push({ variableId: `scene_${index}`, name: `Scene Position ${index} - Name` })
 	}
 	return variables
 }
@@ -194,9 +194,8 @@ export function updateVariableValues(this: OBSInstance): void {
 	const sceneList = Array.from(this.states.scenes.values())
 	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
-
 		const sceneName = sceneList[s].sceneName
-		updates[`scene_${index} `] = sceneName
+		updates[`scene_${index}`] = sceneName
 	}
 
 	this.setVariableValues(updates)
