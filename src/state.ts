@@ -143,7 +143,8 @@ export class OBSState {
 
 	public get outputList(): ModuleChoice[] {
 		return Array.from(this.state.outputs.keys())
-			.map((name) => ({ id: name, label: name }))
+			.map((name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Camera' : name }))
+			.filter((item) => item.id !== 'simple_file_output')
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
