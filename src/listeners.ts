@@ -2,7 +2,7 @@ import type { OBSInstance } from './main.js'
 import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
-import { MediaStatus, RecordingState, StreamingState, ObsAudioMonitorType } from './types.js'
+import { OBSMediaStatus, OBSRecordingState, OBSStreamingState, ObsAudioMonitorType } from './types.js'
 
 export function initOBSListeners(self: OBSInstance): void {
 	const obs = self.socket
@@ -345,7 +345,9 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.streaming = data.outputActive
 
 		self.setVariableValues({
-			streaming: utils.getStreamingStateLabel(self.states.streaming ? StreamingState.Streaming : StreamingState.OffAir),
+			streaming: utils.getOBSStreamingStateLabel(
+				self.states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir,
+			),
 		})
 		self.checkFeedbacks('streaming', 'streamCongestion')
 		if (self.states.streaming === false) {
@@ -359,12 +361,12 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('RecordStateChanged', (data) => {
 		if (data.outputActive === true) {
-			self.states.recording = RecordingState.Recording
+			self.states.recording = OBSRecordingState.Recording
 		} else {
 			if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
-				self.states.recording = RecordingState.Paused
+				self.states.recording = OBSRecordingState.Paused
 			} else {
-				self.states.recording = RecordingState.Stopped
+				self.states.recording = OBSRecordingState.Stopped
 				self.setVariableValues({
 					recording_timecode: '00:00:00',
 					recording_timecode_hh: '00',
@@ -378,7 +380,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				recording_file_name: data.outputPath.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '',
 			})
 		}
-		self.setVariableValues({ recording: utils.getRecordingStateLabel(self.states.recording) })
+		self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(self.states.recording) })
 		self.checkFeedbacks('recording')
 	})
 	obs.on('ReplayBufferStateChanged', (data) => {
@@ -410,18 +412,18 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.mediaStatus = MediaStatus.Playing
+			source.OBSMediaStatus = OBSMediaStatus.Playing
 			self.setVariableValues({
-				[`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus),
+				[`media_status_${source.validName}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
 			})
 		}
 	})
 	obs.on('MediaInputPlaybackEnded', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.mediaStatus = MediaStatus.Ended
+			source.OBSMediaStatus = OBSMediaStatus.Ended
 			self.setVariableValues({
-				[`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus),
+				[`media_status_${source.validName}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
 			})
 		}
 	})
@@ -429,11 +431,15 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				source.mediaStatus = MediaStatus.Paused
-				self.setVariableValues({ [`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus) })
+				source.OBSMediaStatus = OBSMediaStatus.Paused
+				self.setVariableValues({
+					[`media_status_${source.validName}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
+				})
 			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
-				source.mediaStatus = MediaStatus.Playing
-				self.setVariableValues({ [`media_status_${source.validName}`]: utils.getMediaStatusLabel(source.mediaStatus) })
+				source.OBSMediaStatus = OBSMediaStatus.Playing
+				self.setVariableValues({
+					[`media_status_${source.validName}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
+				})
 			}
 		}
 	})

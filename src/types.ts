@@ -7,12 +7,12 @@ export interface ModuleSecrets {
 	pass: string
 }
 
-export interface Choice {
+export interface ModuleChoice {
 	id: string | number
 	label: string
 }
 
-export enum RecordingState {
+export enum OBSRecordingState {
 	Stopped = 'OBS_WEBSOCKET_OUTPUT_STOPPED',
 	Recording = 'OBS_WEBSOCKET_OUTPUT_STARTED',
 	Paused = 'OBS_WEBSOCKET_OUTPUT_PAUSED',
@@ -20,14 +20,14 @@ export enum RecordingState {
 	Stopping = 'OBS_WEBSOCKET_OUTPUT_STOPPING',
 }
 
-export enum StreamingState {
+export enum OBSStreamingState {
 	OffAir = 'OBS_WEBSOCKET_OUTPUT_STOPPED',
 	Streaming = 'OBS_WEBSOCKET_OUTPUT_STARTED',
 	Starting = 'OBS_WEBSOCKET_OUTPUT_STARTING',
 	Stopping = 'OBS_WEBSOCKET_OUTPUT_STOPPING',
 }
 
-export enum MediaStatus {
+export enum OBSMediaStatus {
 	Stopped = 'OBS_MEDIA_STATE_STOPPED',
 	Playing = 'OBS_MEDIA_STATE_PLAYING',
 	Paused = 'OBS_MEDIA_STATE_PAUSED',
@@ -37,7 +37,7 @@ export enum MediaStatus {
 	Unknown = 'OBS_MEDIA_STATE_UNKNOWN',
 }
 
-export enum ObsOutputState {
+export enum OBSOutputState {
 	Unknown = 'OBS_WEBSOCKET_OUTPUT_UNKNOWN',
 	Starting = 'OBS_WEBSOCKET_OUTPUT_STARTING',
 	Started = 'OBS_WEBSOCKET_OUTPUT_STARTED',
@@ -49,7 +49,7 @@ export enum ObsOutputState {
 	Resumed = 'OBS_WEBSOCKET_OUTPUT_RESUMED',
 }
 
-export enum ObsMediaInputAction {
+export enum OBSMediaInputAction {
 	None = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NONE',
 	Play = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY',
 	Pause = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE',
@@ -68,7 +68,7 @@ export enum ObsAudioMonitorType {
 export interface OBSNormalizedState {
 	// Hot state
 	streaming: boolean
-	recording: RecordingState
+	recording: OBSRecordingState
 	replayBuffer: boolean
 	studioMode: boolean
 	programScene: string
@@ -119,9 +119,9 @@ export interface OBSNormalizedState {
 	inputKindList: Map<string, any>
 	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid
 	audioPeak: Map<string, number>
-	monitors: Choice[]
-	imageFormats: Choice[]
-	hotkeyNames: Choice[]
+	monitors: ModuleChoice[]
+	imageFormats: ModuleChoice[]
+	hotkeyNames: ModuleChoice[]
 }
 
 export interface OBSSource {
@@ -140,7 +140,7 @@ export interface OBSSource {
 	groupedSource?: boolean
 	groupName?: string
 	settings?: any
-	mediaStatus?: MediaStatus
+	OBSMediaStatus?: OBSMediaStatus
 	mediaCursor?: number
 	mediaDuration?: number
 	timeElapsed?: string

@@ -1,6 +1,6 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
-import { MediaStatus } from '../types.js'
+import { OBSMediaStatus, OBSMediaInputAction } from '../types.js'
 
 export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -40,12 +40,11 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			let playPause = action.options.playPause as string
 			if (playPause === 'toggle') {
 				playPause =
-					self.states.sources.get(mediaUuid)?.mediaStatus === MediaStatus.Playing
-						? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE'
-						: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+					self.states.sources.get(mediaUuid)?.OBSMediaStatus === OBSMediaStatus.Playing
+						? OBSMediaInputAction.Pause
+						: OBSMediaInputAction.Play
 			} else {
-				playPause =
-					playPause === 'pause' ? 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE' : 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY'
+				playPause = playPause === 'pause' ? OBSMediaInputAction.Pause : OBSMediaInputAction.Play
 			}
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
@@ -76,7 +75,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
-				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART',
+				mediaAction: OBSMediaInputAction.Restart,
 			})
 		},
 	}
@@ -103,7 +102,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
-				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP',
+				mediaAction: OBSMediaInputAction.Stop,
 			})
 		},
 	}
@@ -130,7 +129,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
-				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT',
+				mediaAction: OBSMediaInputAction.Next,
 			})
 		},
 	}
@@ -157,7 +156,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
-				mediaAction: 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS',
+				mediaAction: OBSMediaInputAction.Previous,
 			})
 		},
 	}

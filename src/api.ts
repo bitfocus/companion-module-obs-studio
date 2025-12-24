@@ -3,7 +3,7 @@ import OBSWebSocket, { EventSubscription } from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
 import type { OBSInstance } from './main.js'
 import * as utils from './utils.js'
-import { MediaStatus, RecordingState, StreamingState, OBSSceneItem } from './types.js'
+import { OBSMediaStatus, OBSRecordingState, OBSStreamingState, OBSSceneItem, ObsAudioMonitorType } from './types.js'
 
 export class OBSApi {
 	private self: OBSInstance
@@ -240,7 +240,7 @@ export class OBSApi {
 				if (this.self.states.streaming) {
 					void this.getStreamStatus()
 				}
-				if (this.self.states.recording === RecordingState.Recording) {
+				if (this.self.states.recording === OBSRecordingState.Recording) {
 					void this.getRecordStatus()
 				}
 				if (this.self.states.outputs) {
@@ -262,7 +262,7 @@ export class OBSApi {
 	public async startMediaPoll(): Promise<void> {
 		void this.stopMediaPoll()
 		this.self.mediaPoll = setInterval(() => {
-			void this.getMediaStatus()
+			void this.getOBSMediaStatus()
 		}, 1000)
 	}
 
@@ -492,8 +492,8 @@ export class OBSApi {
 
 				this.self.checkFeedbacks('streaming', 'streamCongestion')
 				this.self.setVariableValues({
-					streaming: utils.getStreamingStateLabel(
-						this.self.states.streaming ? StreamingState.Streaming : StreamingState.OffAir,
+					streaming: utils.getOBSStreamingStateLabel(
+						this.self.states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir,
 					),
 					stream_timecode: String(this.self.states.streamingTimecode),
 					stream_timecode_hh: streamingTimecodeSplit[0],
@@ -521,26 +521,26 @@ export class OBSApi {
 
 			if (recordStatus) {
 				if (recordStatus.outputActive === true) {
-					this.self.states.recording = RecordingState.Recording
+					this.self.states.recording = OBSRecordingState.Recording
 				} else {
-					this.self.states.recording = recordStatus.outputPaused ? RecordingState.Paused : RecordingState.Stopped
+					this.self.states.recording = recordStatus.outputPaused ? OBSRecordingState.Paused : OBSRecordingState.Stopped
 				}
 
 				this.self.states.recordDirectory = recordDirectory?.recordDirectory
 
 				this.self.checkFeedbacks('recording')
-				this.self.setVariableValues({ recording: utils.getRecordingStateLabel(this.self.states.recording) })
+				this.self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(this.self.states.recording) })
 			}
 		}
 	}
 
 	public updateRecordingTimecode(data: unknown): void {
-		if (this.self.states.recording === RecordingState.Recording) {
+		if (this.self.states.recording === OBSRecordingState.Recording) {
 			const timecode = (data as any).recordingTimecode
 			this.self.states.recordingTimecode = timecode
 			const recordingTimecodeSplit = timecode.split(':')
 			this.self.setVariableValues({
-				recording: utils.getRecordingStateLabel(this.self.states.recording),
+				recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
 				recording_timecode: String(this.self.states.recordingTimecode),
 				recording_timecode_hh: recordingTimecodeSplit[0],
 				recording_timecode_mm: recordingTimecodeSplit[1],
@@ -778,9 +778,9 @@ export class OBSApi {
 					case 'monitor': {
 						source.monitorType = data.monitorType
 						let monitorType = 'Off'
-						if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
+						if (data.monitorType === ObsAudioMonitorType.MonitorAndOutput) {
 							monitorType = 'Monitor / Output'
-						} else if (data.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
+						} else if (data.monitorType === ObsAudioMonitorType.MonitorOnly) {
 							monitorType = 'Monitor Only'
 						}
 						this.self.setVariableValues({ [`monitor_${validName}`]: monitorType })
@@ -888,7 +888,7 @@ export class OBSApi {
 	}
 
 	// Source Info
-	public async getMediaStatus(): Promise<void> {
+	public async getOBSMediaStatus(): Promise<void> {
 		const mediaSourceList = this.self.obsState.mediaSourceList
 		if (mediaSourceList.length === 0) return
 
@@ -912,7 +912,7 @@ export class OBSApi {
 					const validName = source.validName ?? sourceName
 					const data = response.responseData
 
-					source.mediaStatus = data.mediaState
+					source.OBSMediaStatus = data.mediaState
 					source.mediaCursor = data.mediaCursor
 					source.mediaDuration = data.mediaDuration
 
@@ -920,7 +920,7 @@ export class OBSApi {
 					source.timeElapsed = utils.formatTimecode(this.self, data.mediaCursor)
 					source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(this.self, remainingValue) : '--:--:--'
 
-					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING' || data.mediaState === 'OBS_MEDIA_STATE_PAUSED') {
+					if (data.mediaState === OBSMediaStatus.Playing || data.mediaState === OBSMediaStatus.Paused) {
 						if (source.active) {
 							currentMedia.push({
 								name: sourceName,
@@ -930,11 +930,11 @@ export class OBSApi {
 						}
 					}
 
-					let status = MediaStatus.Stopped
-					if (data.mediaState === 'OBS_MEDIA_STATE_PLAYING') status = MediaStatus.Playing
-					else if (data.mediaState === 'OBS_MEDIA_STATE_PAUSED') status = MediaStatus.Paused
+					let status = OBSMediaStatus.Stopped
+					if (data.mediaState === OBSMediaStatus.Playing) status = OBSMediaStatus.Playing
+					else if (data.mediaState === OBSMediaStatus.Paused) status = OBSMediaStatus.Paused
 
-					allValues[`media_status_${validName}`] = utils.getMediaStatusLabel(status)
+					allValues[`media_status_${validName}`] = utils.getOBSMediaStatusLabel(status)
 					allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
 					allValues[`media_time_remaining_${validName}`] = source.timeRemaining
 				}

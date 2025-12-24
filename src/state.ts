@@ -1,4 +1,4 @@
-import { Choice, OBSNormalizedState, RecordingState } from './types.js'
+import { ModuleChoice, OBSNormalizedState, OBSRecordingState } from './types.js'
 
 export class OBSState {
 	public readonly state: OBSNormalizedState
@@ -6,7 +6,7 @@ export class OBSState {
 	constructor() {
 		this.state = {
 			streaming: false,
-			recording: RecordingState.Stopped,
+			recording: OBSRecordingState.Stopped,
 			replayBuffer: false,
 			studioMode: false,
 			programScene: '',
@@ -71,33 +71,33 @@ export class OBSState {
 	}
 
 	// Derived Choices
-	public get sceneChoices(): Choice[] {
+	public get sceneChoices(): ModuleChoice[] {
 		return Array.from(this.state.scenes.values())
 			.map((s) => ({ id: s.sceneUuid, label: s.sceneName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get sourceChoices(): Choice[] {
+	public get sourceChoices(): ModuleChoice[] {
 		return Array.from(this.state.sources.values())
 			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get audioSourceList(): Choice[] {
+	public get audioSourceList(): ModuleChoice[] {
 		return Array.from(this.state.sources.values())
 			.filter((s) => s.inputMuted !== undefined || s.inputVolume !== undefined)
 			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get mediaSourceList(): Choice[] {
+	public get mediaSourceList(): ModuleChoice[] {
 		return Array.from(this.state.sources.values())
 			.filter((s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source')
 			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get filterList(): Choice[] {
+	public get filterList(): ModuleChoice[] {
 		const filters = new Set<string>()
 		for (const sourceFilters of this.state.sourceFilters.values()) {
 			for (const filter of sourceFilters) {
@@ -109,45 +109,45 @@ export class OBSState {
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get textSourceList(): Choice[] {
+	public get textSourceList(): ModuleChoice[] {
 		return Array.from(this.state.sources.values())
 			.filter((s) => s.inputKind?.startsWith('text_'))
 			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get imageSourceList(): Choice[] {
+	public get imageSourceList(): ModuleChoice[] {
 		return Array.from(this.state.sources.values())
 			.filter((s) => s.inputKind === 'image_source')
 			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get transitionList(): Choice[] {
+	public get transitionList(): ModuleChoice[] {
 		return Array.from(this.state.transitions.values())
 			.map((t) => ({ id: t.transitionName, label: t.transitionName }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get profileChoices(): Choice[] {
+	public get profileChoices(): ModuleChoice[] {
 		return Array.from(this.state.profiles.keys())
 			.map((name) => ({ id: name, label: name }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get sceneCollectionList(): Choice[] {
+	public get sceneCollectionList(): ModuleChoice[] {
 		return Array.from(this.state.sceneCollections.keys())
 			.map((name) => ({ id: name, label: name }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	public get outputList(): Choice[] {
+	public get outputList(): ModuleChoice[] {
 		return Array.from(this.state.outputs.keys())
 			.map((name) => ({ id: name, label: name }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	}
 
-	// Choice Defaults
+	// ModuleChoice Defaults
 	public get sceneListDefault(): string {
 		return (this.sceneChoices[0]?.id as string) ?? ''
 	}
@@ -173,11 +173,11 @@ export class OBSState {
 	}
 
 	// Special Choices
-	public get sourceChoicesWithScenes(): Choice[] {
+	public get sourceChoicesWithScenes(): ModuleChoice[] {
 		return [...this.sourceChoices, ...this.sceneChoices]
 	}
 
-	public get mediaSourceListCurrentMedia(): Choice[] {
+	public get mediaSourceListCurrentMedia(): ModuleChoice[] {
 		return [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }, ...this.mediaSourceList]
 	}
 }

@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
-import { MediaStatus } from '../types.js'
+import { OBSMediaStatus } from '../types.js'
 
 export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -29,7 +29,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		],
 		callback: (feedback) => {
 			const sourceUuid = feedback.options.source as string
-			return self.states.sources.get(sourceUuid)?.mediaStatus === MediaStatus.Playing
+			return self.states.sources.get(sourceUuid)?.OBSMediaStatus === OBSMediaStatus.Playing
 		},
 	}
 
@@ -82,23 +82,23 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			const source = self.states.sources.get(sourceUuid)
 			if (source) {
 				const remainingTime = Math.round(((source.mediaDuration ?? 0) - (source.mediaCursor ?? 0)) / 1000)
-				const mediaStatus = source.mediaStatus
+				const status = source.OBSMediaStatus
 
 				if (feedback.options.onlyIfSourceIsOnProgram && !source.active) {
 					return false
 				}
 
-				if (feedback.options.onlyIfSourceIsPlaying && mediaStatus !== MediaStatus.Playing) {
+				if (feedback.options.onlyIfSourceIsPlaying && status !== OBSMediaStatus.Playing) {
 					return false
 				}
 
-				if (mediaStatus === MediaStatus.Stopped) {
+				if (status === OBSMediaStatus.Stopped) {
 					return false
 				}
 
 				const threshold = feedback.options.rtThreshold as number
 				if (remainingTime <= threshold) {
-					if (feedback.options.blinkingEnabled && mediaStatus === MediaStatus.Playing) {
+					if (feedback.options.blinkingEnabled && status === OBSMediaStatus.Playing) {
 						return !!(Math.floor(Date.now() / 500) % 2)
 					}
 					return true

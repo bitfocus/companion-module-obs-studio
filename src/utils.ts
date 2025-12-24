@@ -1,5 +1,5 @@
 import type { OBSInstance } from './main.js'
-import { RecordingState, StreamingState, MediaStatus, ObsAudioMonitorType } from './types.js'
+import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
 
 export function validName(self: OBSInstance, name: string): string {
 	//Generate a valid name for use as a variable ID
@@ -50,49 +50,49 @@ export function rgbaToObsColor(rgbaString: string): number {
 	return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0
 }
 
-export function getRecordingStateLabel(state: RecordingState): string {
+export function getOBSRecordingStateLabel(state: OBSRecordingState): string {
 	switch (state) {
-		case RecordingState.Recording:
+		case OBSRecordingState.Recording:
 			return 'Recording'
-		case RecordingState.Paused:
+		case OBSRecordingState.Paused:
 			return 'Paused'
-		case RecordingState.Stopped:
+		case OBSRecordingState.Stopped:
 			return 'Stopped'
-		case RecordingState.Starting:
+		case OBSRecordingState.Starting:
 			return 'Starting'
-		case RecordingState.Stopping:
+		case OBSRecordingState.Stopping:
 			return 'Stopping'
 		default:
 			return 'Unknown'
 	}
 }
 
-export function getStreamingStateLabel(state: StreamingState): string {
+export function getOBSStreamingStateLabel(state: OBSStreamingState): string {
 	switch (state) {
-		case StreamingState.Streaming:
+		case OBSStreamingState.Streaming:
 			return 'Live'
-		case StreamingState.Starting:
+		case OBSStreamingState.Starting:
 			return 'Starting'
-		case StreamingState.Stopping:
+		case OBSStreamingState.Stopping:
 			return 'Stopping'
 		default:
 			return 'Off-Air'
 	}
 }
 
-export function getMediaStatusLabel(status: MediaStatus | undefined): string {
+export function getOBSMediaStatusLabel(status: OBSMediaStatus | undefined): string {
 	switch (status) {
-		case MediaStatus.Playing:
+		case OBSMediaStatus.Playing:
 			return 'Playing'
-		case MediaStatus.Paused:
+		case OBSMediaStatus.Paused:
 			return 'Paused'
-		case MediaStatus.Stopped:
+		case OBSMediaStatus.Stopped:
 			return 'Stopped'
-		case MediaStatus.Ended:
+		case OBSMediaStatus.Ended:
 			return 'Ended'
-		case MediaStatus.Buffering:
+		case OBSMediaStatus.Buffering:
 			return 'Buffering'
-		case MediaStatus.Error:
+		case OBSMediaStatus.Error:
 			return 'Error'
 		default:
 			return 'Stopped'

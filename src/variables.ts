@@ -162,7 +162,7 @@ export function updateVariableValues(this: OBSInstance): void {
 					} else if (inputSettings?.local_file) {
 						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
-					updates[`media_status_${sourceName}`] = utils.getMediaStatusLabel(source.mediaStatus)
+					updates[`media_status_${sourceName}`] = utils.getOBSMediaStatusLabel(source.OBSMediaStatus)
 					updates[`media_file_name_${sourceName}`] = file
 					updates[`media_time_elapsed_${sourceName}`] = source.timeElapsed ?? '00:00:00'
 					updates[`media_time_remaining_${sourceName}`] = source.timeRemaining ?? '00:00:00'
