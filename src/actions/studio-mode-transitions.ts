@@ -86,9 +86,10 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 				} else {
 					duration =
 						self.states.transitions.get(action.options.transition as string)?.transitionFixedDuration ??
-						(self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0)
+						(self.states.transitionDuration !== undefined && self.states.transitionDuration > 0
+							? Number(self.states.transitionDuration)
+							: 500)
 				}
-
 				if (!self.states.transitionActive) {
 					self.states.transitionActive = true
 					await self.obs.sendBatch([
@@ -102,6 +103,10 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 						},
 						{
 							requestType: 'TriggerStudioModeTransition',
+						},
+						{
+							requestType: 'Sleep',
+							requestData: { sleepMillis: duration + 100 },
 						},
 						{
 							requestType: 'SetCurrentSceneTransition',
