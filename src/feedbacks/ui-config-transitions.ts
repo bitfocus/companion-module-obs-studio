@@ -1,20 +1,17 @@
-import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import { Color } from '../utils.js'
 
 export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
-
-	const ColorWhite = combineRgb(255, 255, 255)
-	const ColorRed = combineRgb(200, 0, 0)
-	const ColorGreen = combineRgb(0, 200, 0)
 
 	feedbacks['profile_active'] = {
 		type: 'boolean',
 		name: 'Profile Active',
 		description: 'If a specific OBS profile is currently active, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -35,8 +32,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 		name: 'Scene Collection Active',
 		description: 'If a specific scene collection is currently active, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -57,8 +54,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 		name: 'Transition in Progress',
 		description: 'If an OBS transition is currently in progress, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [],
 		callback: () => {
@@ -72,8 +69,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 		description:
 			'If a specific transition type is currently selected as the active transition, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -97,8 +94,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 		name: 'Transition Duration',
 		description: 'If the current transition duration matches a specific time, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -121,8 +118,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 		name: 'Studio Mode Active',
 		description: 'If Studio Mode is currently enabled, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [],
 		callback: () => {
@@ -136,8 +133,8 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 		description:
 			'If the remaining disk space on the drive OBS is recording to is below a certain threshold, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorRed,
+			color: Color.White,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{
@@ -151,6 +148,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 			},
 		],
 		callback: (feedback) => {
+			console.log(self.states.stats?.availableDiskSpace)
 			return (self.states.stats?.availableDiskSpace ?? 1000000) < (feedback.options.diskSpace as number)
 		},
 	}

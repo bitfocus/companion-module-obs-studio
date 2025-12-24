@@ -1,23 +1,18 @@
-import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 import { OBSRecordingState } from '../types.js'
+import { Color } from '../utils.js'
 
 export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
-
-	const ColorWhite = combineRgb(255, 255, 255)
-	const ColorRed = combineRgb(200, 0, 0)
-	const ColorGreen = combineRgb(0, 200, 0)
-	const ColorOrange = combineRgb(255, 102, 0)
-	const ColorGray = combineRgb(72, 72, 72)
 
 	feedbacks['streaming'] = {
 		type: 'boolean',
 		name: 'Streaming Active',
 		description: 'If streaming is active, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [],
 		callback: () => {
@@ -34,25 +29,25 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 				type: 'colorpicker',
 				label: 'Foreground color (Recording)',
 				id: 'fg',
-				default: ColorWhite,
+				default: Color.White,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (Recording)',
 				id: 'bg',
-				default: ColorRed,
+				default: Color.Red,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Foreground color (Paused)',
 				id: 'fg_paused',
-				default: ColorWhite,
+				default: Color.White,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (Paused)',
 				id: 'bg_paused',
-				default: ColorOrange,
+				default: Color.Orange,
 			},
 		],
 		callback: (feedback) => {
@@ -71,8 +66,8 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 		name: 'Output Active',
 		description: 'If an output is currently active, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -93,8 +88,8 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 		name: 'Replay Buffer Active',
 		description: 'If the replay buffer is currently active, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorRed,
+			color: Color.White,
+			bgcolor: Color.Red,
 		},
 		options: [],
 		callback: () => {
@@ -111,25 +106,25 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 				type: 'colorpicker',
 				label: 'Background color (No Stream)',
 				id: 'colorNoStream',
-				default: ColorGray,
+				default: Color.Gray,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (Low Congestion)',
 				id: 'colorLow',
-				default: ColorGreen,
+				default: Color.Green,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (Medium Congestion)',
 				id: 'colorMedium',
-				default: ColorOrange,
+				default: Color.Orange,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (High Congestion)',
 				id: 'colorHigh',
-				default: ColorRed,
+				default: Color.Red,
 			},
 		],
 		callback: (feedback) => {

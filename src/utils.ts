@@ -1,5 +1,16 @@
 import type { OBSInstance } from './main.js'
+import { combineRgb } from '@companion-module/base'
 import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
+
+export const Color = {
+	Black: combineRgb(0, 0, 0),
+	Gray: combineRgb(72, 72, 72),
+	White: combineRgb(255, 255, 255),
+	Red: combineRgb(200, 0, 0),
+	Green: combineRgb(0, 200, 0),
+	Yellow: combineRgb(212, 174, 0),
+	Orange: combineRgb(255, 102, 0),
+}
 
 export function validName(self: OBSInstance, name: string): string {
 	//Generate a valid name for use as a variable ID

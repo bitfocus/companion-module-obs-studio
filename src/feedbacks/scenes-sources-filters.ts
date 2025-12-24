@@ -1,12 +1,9 @@
-import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
+import { Color } from '../utils.js'
 
 export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
-
-	const ColorWhite = combineRgb(255, 255, 255)
-	const ColorRed = combineRgb(200, 0, 0)
-	const ColorGreen = combineRgb(0, 200, 0)
 
 	feedbacks['scene_active'] = {
 		type: 'advanced',
@@ -36,25 +33,25 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 				type: 'colorpicker',
 				label: 'Foreground color (Program)',
 				id: 'fg',
-				default: ColorWhite,
+				default: Color.White,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (Program)',
 				id: 'bg',
-				default: ColorRed,
+				default: Color.Red,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Foreground color (Preview)',
 				id: 'fg_preview',
-				default: ColorWhite,
+				default: Color.White,
 			},
 			{
 				type: 'colorpicker',
 				label: 'Background color (Preview)',
 				id: 'bg_preview',
-				default: ColorGreen,
+				default: Color.Green,
 			},
 		],
 		callback: (feedback) => {
@@ -82,8 +79,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		name: 'Scene in Program',
 		description: 'If a scene is in the program output, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorRed,
+			color: Color.White,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{
@@ -106,8 +103,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		name: 'Scene in Preview',
 		description: 'If a scene is in the preview monitor (Studio Mode only), change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -130,8 +127,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		name: 'Previous Scene Active',
 		description: 'If a scene was the last scene previously active, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -153,8 +150,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		description:
 			'If a source is currently visible in the program output (either directly or via a scene), change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorRed,
+			color: Color.White,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{
@@ -207,8 +204,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		name: 'Source Active in Preview',
 		description: 'If a source is currently enabled in the preview scene, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -229,8 +226,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		name: 'Source Enabled in Scene',
 		description: 'If a specific source is enabled in a specific scene, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -300,8 +297,8 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 		name: 'Filter Enabled',
 		description: 'If a specific filter is enabled on a source, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{

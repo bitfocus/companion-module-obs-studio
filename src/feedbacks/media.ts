@@ -1,22 +1,18 @@
-import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 import { OBSMediaStatus } from '../types.js'
+import { Color } from '../utils.js'
 
 export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
-
-	const ColorWhite = combineRgb(255, 255, 255)
-	const ColorRed = combineRgb(200, 0, 0)
-	const ColorGreen = combineRgb(0, 200, 0)
-	const ColorBlack = combineRgb(0, 0, 0)
 
 	feedbacks['media_playing'] = {
 		type: 'boolean',
 		name: 'Media Playing',
 		description: 'If a specific media source is currently playing, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -38,8 +34,8 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		name: 'Media Source Remaining Time',
 		description: 'If remaining time of a media source is below a threshold, change the style of the button',
 		defaultStyle: {
-			color: ColorBlack,
-			bgcolor: ColorRed,
+			color: Color.Black,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{

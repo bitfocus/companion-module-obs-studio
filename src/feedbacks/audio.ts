@@ -1,22 +1,18 @@
-import { CompanionFeedbackDefinitions, combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 import { ObsAudioMonitorType } from '../types.js'
+import { Color } from '../utils.js'
 
 export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
-
-	const ColorWhite = combineRgb(255, 255, 255)
-	const ColorRed = combineRgb(200, 0, 0)
-	const ColorGreen = combineRgb(0, 200, 0)
-	const ColorBlack = combineRgb(0, 0, 0)
 
 	feedbacks['audio_muted'] = {
 		type: 'boolean',
 		name: 'Audio Muted',
 		description: 'If an audio source is muted, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorRed,
+			color: Color.White,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{
@@ -38,8 +34,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		name: 'Audio Monitor Type',
 		description: 'If the audio monitor type is matched, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorRed,
+			color: Color.White,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{
@@ -73,8 +69,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		name: 'Volume',
 		description: 'If an audio source volume is matched, change the style of the button',
 		defaultStyle: {
-			color: ColorWhite,
-			bgcolor: ColorGreen,
+			color: Color.White,
+			bgcolor: Color.Green,
 		},
 		options: [
 			{
@@ -105,8 +101,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		name: 'Audio Peaking',
 		description: 'If audio is above a certain dB value, change the style of the button',
 		defaultStyle: {
-			color: ColorBlack,
-			bgcolor: ColorRed,
+			color: Color.Black,
+			bgcolor: Color.Red,
 		},
 		options: [
 			{
