@@ -86,7 +86,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 	presets['transitionAutoHeader'] = {
 		type: 'text',
 		category: 'Transitions',
-		name: 'Transition Controls',
+		name: 'Current Transition Control / Info',
 		text: '',
 	}
 	presets['transitionAuto'] = {
@@ -122,6 +122,201 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			},
 		],
 	}
+	presets['transitionCurrentInfo'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Current Transition Info',
+		style: {
+			text: 'Current Transition $(obs:current_transition)\\n$(obs:transition_duration)ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionDurationSetHeader'] = {
+		type: 'text',
+		category: 'Transitions',
+		name: 'Set Transition Duration',
+		text: '',
+	}
+
+	for (let time = 500; time < 5100; time += 500) {
+		presets[`transitionDurationSet${time}`] = {
+			type: 'button',
+			category: 'Transitions',
+			name: `Transition Set ${time}ms`,
+			style: {
+				text: `${time}ms`,
+				size: '14',
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'set_transition_duration',
+							options: {
+								duration: time,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'transition_duration',
+					options: {
+						duration: time,
+					},
+					style: {
+						bgcolor: Color.Green,
+						color: Color.White,
+					},
+				},
+			],
+		}
+	}
+
+	presets['transitionDurationHeader'] = {
+		type: 'text',
+		category: 'Transitions',
+		name: 'Adjust Transition Duration',
+		text: '',
+	}
+	presets['transitionDecreaseDuration'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Decrease transition time',
+		style: {
+			text: 'Adjust Duration\\n-50ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjust_transition_duration',
+						options: {
+							amount: -50,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['transitionDuration'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Current Duration',
+		style: {
+			text: 'Current Duration $(obs:transition_duration)ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionIncreaseDuration'] = {
+		type: 'button',
+		category: 'Transitions',
+		name: 'Increase transition time',
+		style: {
+			text: 'Adjust Duration\\n+50ms',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjust_transition_duration',
+						options: {
+							amount: 50,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['transitionTypeHeader'] = {
+		type: 'text',
+		category: 'Transitions',
+		name: 'Set Transition Type',
+		text: '',
+	}
+	for (const transition of this.obsState.transitionList) {
+		presets[`setTransition_${transition.id}`] = {
+			type: 'button',
+			category: 'Transitions',
+			name: transition.label,
+			style: {
+				text: transition.label,
+				size: 14,
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'set_transition_type',
+							options: {
+								transitions: transition.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'current_transition',
+					options: {
+						transition: transition.id,
+					},
+					style: {
+						bgcolor: Color.Green,
+						color: Color.White,
+					},
+				},
+			],
+		}
+	}
+	presets['transitionTypeAdjustHeader'] = {
+		type: 'text',
+		category: 'Transitions',
+		name: 'Adjust Transition Type',
+		text: '',
+	}
 	presets['transitionPrevious'] = {
 		type: 'button',
 		category: 'Transitions',
@@ -148,7 +343,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		],
 		feedbacks: [],
 	}
-	presets['transitionCurrent'] = {
+	presets['transitionAdjustCurrent'] = {
 		type: 'button',
 		category: 'Transitions',
 		name: 'Current Transition',
@@ -193,83 +388,12 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		],
 		feedbacks: [],
 	}
-	presets['transitionDecreaseDuration'] = {
-		type: 'button',
-		category: 'Transitions',
-		name: 'Decrease transition time',
-		style: {
-			text: 'Adjust Duration\\n-100ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'adjust_transition_duration',
-						options: {
-							amount: -100,
-						},
-					},
-				],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
-	presets['transitionDuration'] = {
-		type: 'button',
-		category: 'Transitions',
-		name: 'Current Duration',
-		style: {
-			text: 'Current Duration $(obs:transition_duration)ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
-	presets['transitionIncreaseDuration'] = {
-		type: 'button',
-		category: 'Transitions',
-		name: 'Increase transition time',
-		style: {
-			text: 'Adjust Duration\\n+100ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'adjust_transition_duration',
-						options: {
-							amount: 100,
-						},
-					},
-				],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
 
 	presets['quickTransitionsHeader'] = {
 		type: 'text',
 		category: 'Transitions',
 		name: 'Quick Transitions',
-		text: 'Quickly toggle a specific transition, and then revert back to the previous transition',
+		text: 'Execute a specific transition, and then revert back to the previous transition',
 	}
 	for (const transition of this.obsState.transitionList) {
 		presets[`quickTransition_${transition.id}`] = {
@@ -414,7 +538,12 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			},
 		],
 	}
-
+	presets['recordingControlHeader'] = {
+		type: 'text',
+		category: 'Recording',
+		name: 'Recording Controls',
+		text: '',
+	}
 	presets['recording'] = {
 		type: 'button',
 		category: 'Recording',
@@ -449,13 +578,197 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			},
 		],
 	}
+	presets['recordStart'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'OBS Start Record',
+		style: {
+			text: 'OBS START RECORD',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'start_recording',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordStop'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'OBS Stop Record',
+		style: {
+			text: 'OBS STOP RECORD',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'stop_recording',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordPause'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'OBS Pause Record',
+		style: {
+			text: 'OBS STOP RECORD',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'pause_recording',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordResume'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'OBS Resume Record',
+		style: {
+			text: 'OBS RESUME RECORD',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'resume_recording',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordSplit'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'OBS Split Record',
+		style: {
+			text: 'OBS SPLIT RECORD',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'SplitRecordFile',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordChapter'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'OBS Record Chapter',
+		style: {
+			text: 'OBS CREATE CHAPTER',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'CreateRecordChapter',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordingInfoHeader'] = {
+		type: 'text',
+		category: 'Recording',
+		name: 'Recording Info',
+		text: '',
+	}
 
-	presets['recordingTimecode'] = {
+	presets['recordingStatusTimecode'] = {
 		type: 'button',
 		category: 'Recording',
 		name: 'Recording Status / Timecode',
 		style: {
 			text: 'REC STATUS\\n$(obs:recording)\\n$(obs:recording_timecode)',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		previewStyle: {
+			text: 'REC STATUS\n$(obs:recording)\n00:00:00',
+			size: '14',
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'recording',
+				options: {
+					bg: Color.Red,
+					fg: Color.White,
+					bg_paused: Color.Yellow,
+					fg_paused: Color.White,
+				},
+			},
+		],
+	}
+
+	presets['recordingTimecodeHH'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'Recording Timecode HH',
+		style: {
+			text: 'REC TIME\n$(obs:recording_timecode_hh)',
 			size: '14',
 			color: Color.White,
 			bgcolor: Color.Black,
@@ -562,6 +875,25 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		name: 'Recording File Path',
 		style: {
 			text: 'REC PATH:\\n$(obs:recording_path)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['recordingFileName'] = {
+		type: 'button',
+		category: 'Recording',
+		name: 'Recording File Name',
+		style: {
+			text: 'REC FILE:\\n$(obs:recording_file_name)',
 			size: 'auto',
 			color: Color.White,
 			bgcolor: Color.Black,
@@ -958,7 +1290,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		category: 'General',
 		name: 'Toggle Studio Mode',
 		style: {
-			text: 'Toggle Studio Mode',
+			text: 'ENABLE\\nStudio Mode',
 			size: 'auto',
 			color: Color.White,
 			bgcolor: Color.Black,
@@ -975,7 +1307,15 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 				up: [],
 			},
 		],
-		feedbacks: [],
+		feedbacks: [
+			{
+				feedbackId: 'studioMode',
+				options: {},
+				style: {
+					text: 'DISABLE\\nStudio Mode',
+				},
+			},
+		],
 	}
 
 	presets['takeScreenshot'] = {
