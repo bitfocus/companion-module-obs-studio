@@ -367,13 +367,13 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			} else if (action.options.type === 'Source') {
 				requestType = 'OpenSourceProjector'
 				requestData = {
-					sourceName: action.options.source,
+					sourceUuid: action.options.source,
 					monitorIndex: monitor,
 				}
 			} else if (action.options.type === 'Scene') {
-				requestType = 'OpenSceneProjector'
+				requestType = 'OpenSourceProjector'
 				requestData = {
-					sceneName: action.options.scene,
+					sourceUuid: action.options.scene,
 					monitorIndex: monitor,
 				}
 			} else {
