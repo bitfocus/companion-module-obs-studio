@@ -275,18 +275,24 @@ export class OBSApi {
 		void this.stopStatsPoll()
 		if (this.self.socket) {
 			this.self.statsPoll = setInterval(() => {
-				void this.getStats()
+				// Build array of promises for parallel execution
+				const promises: Promise<void>[] = [this.getStats()]
+
+				// Conditionally add streaming and recording status
 				if (this.self.states.streaming) {
-					void this.getStreamStatus()
+					promises.push(this.getStreamStatus())
 				}
 				if (this.self.states.recording === OBSRecordingState.Recording) {
-					void this.getRecordStatus()
+					promises.push(this.getRecordStatus())
 				}
-				if (this.self.states.outputs) {
-					for (const outputName in this.self.states.outputs) {
-						void this.getOutputStatus(outputName)
-					}
+
+				// Batch all output status requests
+				if (this.self.states.outputs.size > 0 && !this.self.states.sceneCollectionChanging) {
+					promises.push(this.getAllOutputStatuses())
 				}
+
+				// Execute all requests in parallel
+				void Promise.all(promises)
 			}, OBSApi.STATS_POLL_INTERVAL)
 		}
 	}
@@ -621,6 +627,31 @@ export class OBSApi {
 				this.self.states.outputs.set(outputName, outputStatus as any)
 				this.self.checkFeedbacks('output_active')
 			}
+		}
+	}
+
+	public async getAllOutputStatuses(): Promise<void> {
+		if (this.self.states.outputs.size === 0 || this.self.states.sceneCollectionChanging) {
+			return
+		}
+
+		// Batch all output status requests into a single batch call
+		const outputNames = Array.from(this.self.states.outputs.keys())
+		const batch = outputNames.map((outputName) => ({
+			requestType: 'GetOutputStatus',
+			requestData: { outputName },
+			requestId: outputName,
+		}))
+
+		const responses = await this.sendBatch(batch)
+		if (responses) {
+			for (const res of responses) {
+				if (res.requestStatus.result && res.responseData) {
+					const outputName = res.requestId
+					this.self.states.outputs.set(outputName, res.responseData)
+				}
+			}
+			this.self.checkFeedbacks('output_active')
 		}
 	}
 
