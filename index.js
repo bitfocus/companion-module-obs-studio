@@ -613,7 +613,7 @@ class OBSInstance extends InstanceBase {
 		})
 		this.obs.on('RecordStateChanged', (data) => {
 			if (data.outputActive === true) {
-				this.states.recording = 'Recording '
+				this.states.recording = 'Recording'
 			} else {
 				if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
 					this.states.recording = 'Paused'
@@ -999,12 +999,22 @@ class OBSInstance extends InstanceBase {
 
 		if (streamStatus) {
 			this.states.streaming = streamStatus.outputActive
-			this.states.streamingTimecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+			// Extract timecode string from regex match
+			let timecodeString = ''
+			let streamingTimecodeSplit = ['00', '00', '00']
 
-			const timecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-			this.states.streamingTimecode = timecode
-			const streamingTimecodeSplit = String(timecode)?.split(':')
+			if (streamStatus.outputTimecode) {
+				const timecodeMatch = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				if (timecodeMatch && timecodeMatch[0]) {
+					timecodeString = String(timecodeMatch[0])
+					const split = timecodeString.split(':')
+					if (split.length === 3) {
+						streamingTimecodeSplit = split.map((part) => String(part || '00'))
+					}
+				}
+			}
 
+			this.states.streamingTimecode = timecodeString
 			this.states.streamCongestion = streamStatus.outputCongestion
 
 			let kbits = 0
@@ -1018,14 +1028,14 @@ class OBSInstance extends InstanceBase {
 			this.checkFeedbacks('streaming', 'streamCongestion')
 			this.setVariableValues({
 				streaming: streamStatus.outputActive ? 'Live' : 'Off-Air',
-				stream_timecode: this.states.streamingTimecode,
-				stream_timecode_hh: streamingTimecodeSplit[0],
-				stream_timecode_mm: streamingTimecodeSplit[1],
-				stream_timecode_ss: streamingTimecodeSplit[2],
-				output_skipped_frames: streamStatus.outputSkippedFrames,
-				output_total_frames: streamStatus.outputTotalFrames,
-				kbits_per_sec: kbits,
-				stream_service: streamService?.streamServiceSettings?.service ?? 'Custom',
+				stream_timecode: String(this.states.streamingTimecode || ''),
+				stream_timecode_hh: streamingTimecodeSplit[0] || '00',
+				stream_timecode_mm: streamingTimecodeSplit[1] || '00',
+				stream_timecode_ss: streamingTimecodeSplit[2] || '00',
+				output_skipped_frames: String(streamStatus.outputSkippedFrames ?? ''),
+				output_total_frames: String(streamStatus.outputTotalFrames ?? ''),
+				kbits_per_sec: String(kbits ?? ''),
+				stream_service: String(streamService?.streamServiceSettings?.service ?? 'Custom'),
 			})
 		}
 	}
@@ -1041,19 +1051,32 @@ class OBSInstance extends InstanceBase {
 				this.states.recording = recordStatus.outputPaused ? 'Paused' : 'Stopped'
 			}
 
-			const timecode = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
-			this.states.recordingTimecode = timecode
-			const recordingTimecodeSplit = String(timecode)?.split(':')
-			this.states.recordDirectory = recordDirectory.recordDirectory
+			// Extract timecode string from regex match
+			let timecodeString = ''
+			let recordingTimecodeSplit = ['00', '00', '00']
+
+			if (recordStatus.outputTimecode) {
+				const timecodeMatch = recordStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				if (timecodeMatch && timecodeMatch[0]) {
+					timecodeString = String(timecodeMatch[0])
+					const split = timecodeString.split(':')
+					if (split.length === 3) {
+						recordingTimecodeSplit = split.map((part) => String(part || '00'))
+					}
+				}
+			}
+
+			this.states.recordingTimecode = timecodeString
+			this.states.recordDirectory = recordDirectory?.recordDirectory ? String(recordDirectory.recordDirectory) : ''
 
 			this.checkFeedbacks('recording')
 			this.setVariableValues({
-				recording: this.states.recording,
-				recording_timecode: this.states.recordingTimecode,
-				recording_timecode_hh: recordingTimecodeSplit[0],
-				recording_timecode_mm: recordingTimecodeSplit[1],
-				recording_timecode_ss: recordingTimecodeSplit[2],
-				recording_path: this.states.recordDirectory,
+				recording: String(this.states.recording || ''),
+				recording_timecode: String(this.states.recordingTimecode || ''),
+				recording_timecode_hh: recordingTimecodeSplit[0] || '00',
+				recording_timecode_mm: recordingTimecodeSplit[1] || '00',
+				recording_timecode_ss: recordingTimecodeSplit[2] || '00',
+				recording_path: String(this.states.recordDirectory || ''),
 			})
 		}
 	}
