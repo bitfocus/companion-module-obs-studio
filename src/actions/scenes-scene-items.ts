@@ -91,7 +91,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 		callback: async (action) => {
 			const sceneUuid = action.options.scene as string
 
-			if (self.states.previewSceneUuid == sceneUuid && self.states.programSceneUuid != sceneUuid) {
+			if (self.states.previewSceneUuid === sceneUuid && self.states.programSceneUuid !== sceneUuid) {
 				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
 				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: sceneUuid })
@@ -284,7 +284,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 							}
 						}
 					} else {
-						enabled = action.options.visible == 'true' ? true : false
+						enabled = action.options.visible === 'true'
 					}
 					requests.push({
 						requestType: 'SetSceneItemEnabled',

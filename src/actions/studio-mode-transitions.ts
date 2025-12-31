@@ -74,7 +74,7 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 			},
 		],
 		callback: async (action) => {
-			if (action.options.transition == 'Default' && !action.options.customDuration) {
+			if (action.options.transition === 'Default' && !action.options.customDuration) {
 				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
 				const revertTransition = self.states.currentTransition ?? 'Cut'

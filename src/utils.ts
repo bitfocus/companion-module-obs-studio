@@ -25,8 +25,11 @@ export function validName(self: OBSInstance, name: string): string {
 export function formatTimecode(self: OBSInstance, data: number): string {
 	//Converts milliseconds into a readable time format (hh:mm:ss)
 	try {
-		const formattedTime = new Date(data).toISOString().slice(11, 19)
-		return formattedTime
+		const totalSeconds = Math.floor(data / 1000)
+		const hours = Math.floor(totalSeconds / 3600)
+		const minutes = Math.floor((totalSeconds % 3600) / 60)
+		const seconds = totalSeconds % 60
+		return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 	} catch (error) {
 		self.log('debug', `Error formatting timecode: ${error} `)
 		return '00:00:00'
@@ -36,7 +39,8 @@ export function formatTimecode(self: OBSInstance, data: number): string {
 export function roundNumber(self: OBSInstance, number: number, decimalPlaces: number): number {
 	//Rounds a number to a specified number of decimal places
 	try {
-		return Number(Math.round(Number(number + 'e' + (decimalPlaces ?? 0))) + 'e-' + (decimalPlaces ?? 0))
+		const multiplier = Math.pow(10, decimalPlaces ?? 0)
+		return Math.round(number * multiplier) / multiplier
 	} catch (error) {
 		self.log('debug', `Error rounding number ${number}: ${error} `)
 		return typeof number === 'number' ? number : 0

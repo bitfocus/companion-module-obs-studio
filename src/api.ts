@@ -17,6 +17,11 @@ import {
 export class OBSApi {
 	private self: OBSInstance
 
+	// Poll intervals (in milliseconds)
+	private static readonly RECONNECTION_POLL_INTERVAL = 5000
+	private static readonly STATS_POLL_INTERVAL = 1000
+	private static readonly MEDIA_POLL_INTERVAL = 1000
+
 	constructor(self: OBSInstance) {
 		this.self = self
 	}
@@ -90,7 +95,7 @@ export class OBSApi {
 
 	public processWebsocketError(error: unknown): void {
 		if (!this.self.reconnectionPoll) {
-			let tryReconnect = null
+			let tryReconnect: boolean | null = null
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			if (errorMessage.match(/(Server sent no subprotocol)/i)) {
 				tryReconnect = false
@@ -256,7 +261,7 @@ export class OBSApi {
 		void this.stopReconnectionPoll()
 		this.self.reconnectionPoll = setInterval(() => {
 			void this.connectOBS()
-		}, 5000)
+		}, OBSApi.RECONNECTION_POLL_INTERVAL)
 	}
 
 	public async stopReconnectionPoll(): Promise<void> {
@@ -282,7 +287,7 @@ export class OBSApi {
 						void this.getOutputStatus(outputName)
 					}
 				}
-			}, 1000)
+			}, OBSApi.STATS_POLL_INTERVAL)
 		}
 	}
 
@@ -297,7 +302,7 @@ export class OBSApi {
 		void this.stopMediaPoll()
 		this.self.mediaPoll = setInterval(() => {
 			void this.getOBSMediaStatus()
-		}, 1000)
+		}, OBSApi.MEDIA_POLL_INTERVAL)
 	}
 
 	public async stopMediaPoll(): Promise<void> {
@@ -325,15 +330,18 @@ export class OBSApi {
 
 			const studioMode = await this.sendRequest('GetStudioModeEnabled')
 			if (studioMode) {
-				this.self.states.studioMode = studioMode.studioModeEnabled ? true : false
+				this.self.states.studioMode = studioMode.studioModeEnabled ?? false
 			}
 
-			await this.buildHotkeyList()
-			await this.buildOutputList()
-			await this.buildMonitorList()
-			await this.getVideoSettings()
-			await this.getReplayBufferStatus()
-			await this.getInputKindList()
+			// Parallelize independent operations for better performance
+			await Promise.all([
+				this.buildHotkeyList(),
+				this.buildOutputList(),
+				this.buildMonitorList(),
+				this.getVideoSettings(),
+				this.getReplayBufferStatus(),
+				this.getInputKindList(),
+			])
 
 			return true
 		} catch (error) {
@@ -518,10 +526,11 @@ export class OBSApi {
 			const streamService = data.find((res: any) => res.requestId === 'settings')?.responseData
 
 			if (streamStatus) {
-				const timecode = streamStatus.outputTimecode.match(/\d\d:\d\d:\d\d/i)
+				const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
+				const timecode = timecodeMatch?.[0] ?? '00:00:00'
 				this.self.states.streaming = streamStatus.outputActive
 				this.self.states.streamingTimecode = timecode
-				const streamingTimecodeSplit = String(timecode)?.split(':')
+				const streamingTimecodeSplit = timecode.split(':')
 
 				this.self.states.streamCongestion = streamStatus.outputCongestion
 
@@ -538,10 +547,10 @@ export class OBSApi {
 					streaming: utils.getOBSStreamingStateLabel(
 						this.self.states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir,
 					),
-					stream_timecode: String(this.self.states.streamingTimecode),
-					stream_timecode_hh: streamingTimecodeSplit[0],
-					stream_timecode_mm: streamingTimecodeSplit[1],
-					stream_timecode_ss: streamingTimecodeSplit[2],
+					stream_timecode: timecode,
+					stream_timecode_hh: streamingTimecodeSplit[0] ?? '00',
+					stream_timecode_mm: streamingTimecodeSplit[1] ?? '00',
+					stream_timecode_ss: streamingTimecodeSplit[2] ?? '00',
 					output_skipped_frames: streamStatus.outputSkippedFrames,
 					output_total_frames: streamStatus.outputTotalFrames,
 					kbits_per_sec: kbits,
@@ -563,7 +572,7 @@ export class OBSApi {
 			const recordDirectory = data.find((res: any) => res.requestId === 'directory')?.responseData
 
 			if (recordStatus) {
-				if (recordStatus.outputActive === true) {
+				if (recordStatus.outputActive === true && recordStatus.outputPaused === false) {
 					this.self.states.recording = OBSRecordingState.Recording
 				} else {
 					this.self.states.recording = recordStatus.outputPaused ? OBSRecordingState.Paused : OBSRecordingState.Stopped
@@ -579,16 +588,28 @@ export class OBSApi {
 	}
 
 	public updateRecordingTimecode(data: unknown): void {
-		if (this.self.states.recording === OBSRecordingState.Recording) {
-			const timecode = (data as any).outputTimecode.split('.')[0] ?? '00:00:00'
+		if (
+			this.self.states.recording === OBSRecordingState.Recording ||
+			this.self.states.recording === OBSRecordingState.Paused
+		) {
+			const outputTimecode = (data as any)?.outputTimecode
+			const timecode = outputTimecode ? String(outputTimecode).split('.')[0] : '00:00:00'
 			this.self.states.recordingTimecode = timecode
 			const recordingTimecodeSplit = timecode.split(':')
 			this.self.setVariableValues({
 				recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
-				recording_timecode: String(this.self.states.recordingTimecode),
-				recording_timecode_hh: recordingTimecodeSplit[0],
-				recording_timecode_mm: recordingTimecodeSplit[1],
-				recording_timecode_ss: recordingTimecodeSplit[2],
+				recording_timecode: timecode,
+				recording_timecode_hh: recordingTimecodeSplit[0] ?? '00',
+				recording_timecode_mm: recordingTimecodeSplit[1] ?? '00',
+				recording_timecode_ss: recordingTimecodeSplit[2] ?? '00',
+			})
+		} else {
+			this.self.setVariableValues({
+				recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
+				recording_timecode: '00:00:00',
+				recording_timecode_hh: '00',
+				recording_timecode_mm: '00',
+				recording_timecode_ss: '00',
 			})
 		}
 	}
@@ -770,7 +791,9 @@ export class OBSApi {
 			for (const res of responses) {
 				if (!res.requestStatus.result) continue
 
-				const [uuid, type] = res.requestId.split(':')
+				const requestIdParts = res.requestId.split(':')
+				if (requestIdParts.length < 2) continue
+				const [uuid, type] = requestIdParts
 				const source = this.self.states.sources.get(uuid)
 				if (!source) continue
 
@@ -900,10 +923,6 @@ export class OBSApi {
 
 			const transitionListVariable = this.self.obsState.transitionList?.map((item) => item.id) ?? []
 
-			if (currentTransition) {
-				const currentTransitionName = currentTransition.transitionName
-				if (currentTransitionName) this.self.states.currentTransition = currentTransitionName
-			}
 			this.self.states.currentTransition = currentTransition?.transitionName ?? 'None'
 			this.self.states.transitionDuration = currentTransition?.transitionDuration ?? 0
 
@@ -1053,10 +1072,12 @@ export class OBSApi {
 			const channel = input.inputLevelsMul[0]
 			if (channel) {
 				const channelPeak = channel?.[1]
-				const dbPeak = Math.round(20.0 * Math.log10(channelPeak))
-				if (dbPeak) {
-					this.self.states.audioPeak.set(input.inputUuid, dbPeak)
-					this.self.checkFeedbacks('audioPeaking', 'audioMeter')
+				if (channelPeak && channelPeak > 0) {
+					const dbPeak = Math.round(20.0 * Math.log10(channelPeak))
+					if (isFinite(dbPeak)) {
+						this.self.states.audioPeak.set(input.inputUuid, dbPeak)
+						this.self.checkFeedbacks('audioPeaking', 'audioMeter')
+					}
 				}
 			}
 		})

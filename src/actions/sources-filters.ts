@@ -470,7 +470,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 						if (action.options.visible === 'toggle') {
 							filterVisibility = !filter.filterEnabled
 						} else {
-							filterVisibility = action.options.visible == 'true' ? true : false
+							filterVisibility = action.options.visible === 'true'
 						}
 						requests.push({
 							requestType: 'SetSourceFilterEnabled',
@@ -496,7 +496,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 						return
 					}
 				} else {
-					filterVisibility = action.options.visible == 'true' ? true : false
+					filterVisibility = action.options.visible === 'true'
 				}
 
 				await self.obs.sendRequest('SetSourceFilterEnabled', {
@@ -563,7 +563,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 		],
 		callback: async (action) => {
 			const sourceUuid = action.options.source as string
-			if (self.states.sources.get(sourceUuid)?.inputKind == 'browser_source') {
+			if (self.states.sources.get(sourceUuid)?.inputKind === 'browser_source') {
 				await self.obs.sendRequest('PressInputPropertiesButton', {
 					inputUuid: sourceUuid,
 					propertyName: 'refreshnocache',
@@ -655,7 +655,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				filePath = `${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${action.options.format}`
 			}
 
-			const quality = action.options.compression == 0 ? -1 : action.options.compression
+			const quality = action.options.compression === 0 ? -1 : action.options.compression
 
 			await self.obs.sendRequest('SaveSourceScreenshot', {
 				sourceUuid: sourceUuid,

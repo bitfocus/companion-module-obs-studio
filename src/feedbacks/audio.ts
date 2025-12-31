@@ -92,7 +92,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		],
 		callback: (feedback) => {
 			const sourceUuid = feedback.options.source as string
-			return self.states.sources.get(sourceUuid)?.inputVolume == feedback.options.volume
+			return self.states.sources.get(sourceUuid)?.inputVolume === feedback.options.volume
 		},
 	}
 

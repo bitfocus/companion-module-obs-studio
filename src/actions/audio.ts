@@ -47,7 +47,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputMute', {
 				inputUuid: action.options.source as string,
-				inputMuted: action.options.mute == 'true' ? true : false,
+				inputMuted: action.options.mute === 'true',
 			})
 		},
 	}
