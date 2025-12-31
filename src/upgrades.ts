@@ -265,10 +265,11 @@ export default [
 				action.actionId === 'preview_scene' ||
 				action.actionId === 'smart_switcher'
 			) {
-				if (action.options.scene === 'customSceneName') {
-					action.options.custom = true
-					actionChanged = true
+				action.options.custom = true
+				if (action.options.scene !== 'customSceneName') {
+					action.options.customSceneName = action.options.scene as string
 				}
+				actionChanged = true
 			} else if (action.actionId === 'previewNextScene') {
 				action.actionId = 'adjustPreviewScene'
 				action.options.adjust = 'next'
@@ -318,8 +319,17 @@ export default [
 					feedback.options.anyScene = true
 					feedbackChanged = true
 				}
+			} else if (
+				feedback.feedbackId === 'scenePreview' ||
+				feedback.feedbackId === 'sceneProgram' ||
+				feedback.feedbackId === 'scenePrevious'
+			) {
+				if (feedback.options.scene) {
+					feedback.options.custom = true
+					feedback.options.customSceneName = feedback.options.scene as string
+					feedbackChanged = true
+				}
 			}
-
 			if (feedbackChanged) {
 				changes.updatedFeedbacks.push(feedback)
 			}

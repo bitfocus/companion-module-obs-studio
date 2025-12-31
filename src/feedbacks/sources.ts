@@ -97,7 +97,6 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				allowCustom: true,
 			},
 			{
 				type: 'checkbox',
@@ -111,7 +110,6 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				id: 'source',
 				default: self.obsState.sourceListDefault,
 				choices: self.obsState.sourceChoices,
-				allowCustom: true,
 				isVisibleExpression: `!$(options:any)`,
 			},
 		],

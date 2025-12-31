@@ -27,7 +27,6 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				allowCustom: true,
 			},
 			{
 				type: 'colorpicker',
@@ -89,12 +88,31 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				allowCustom: true,
+				isVisibleExpression: '!$(options:custom)',
+			},
+			{
+				type: 'checkbox',
+				label: 'Use Custom Name',
+				id: 'custom',
+				default: false,
+			},
+			{
+				type: 'textinput',
+				label: 'Custom Scene Name',
+				id: 'customSceneName',
+				default: '',
+				useVariables: true,
+				isVisibleExpression: '$(options:custom)',
 			},
 		],
 		callback: (feedback) => {
-			const sceneUuid = feedback.options.scene as string
-			return self.states.programSceneUuid === sceneUuid
+			if (feedback.options.custom) {
+				const scene = feedback.options.customSceneName as string
+				return self.states.programScene === scene
+			} else {
+				const sceneUuid = feedback.options.scene as string
+				return self.states.programSceneUuid === sceneUuid
+			}
 		},
 	}
 
@@ -113,12 +131,31 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				allowCustom: true,
+				isVisibleExpression: '!$(options:custom)',
+			},
+			{
+				type: 'checkbox',
+				label: 'Use Custom Name',
+				id: 'custom',
+				default: false,
+			},
+			{
+				type: 'textinput',
+				label: 'Custom Scene Name',
+				id: 'customSceneName',
+				default: '',
+				useVariables: true,
+				isVisibleExpression: '$(options:custom)',
 			},
 		],
 		callback: (feedback) => {
-			const sceneUuid = feedback.options.scene as string
-			return self.states.previewSceneUuid === sceneUuid
+			if (feedback.options.custom) {
+				const scene = feedback.options.customSceneName as string
+				return self.states.previewScene === scene
+			} else {
+				const sceneUuid = feedback.options.scene as string
+				return self.states.previewSceneUuid === sceneUuid
+			}
 		},
 	}
 
@@ -137,10 +174,31 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
+				isVisibleExpression: '!$(options:custom)',
+			},
+			{
+				type: 'checkbox',
+				label: 'Use Custom Name',
+				id: 'custom',
+				default: false,
+			},
+			{
+				type: 'textinput',
+				label: 'Custom Scene Name',
+				id: 'customSceneName',
+				default: '',
+				useVariables: true,
+				isVisibleExpression: '$(options:custom)',
 			},
 		],
 		callback: (feedback) => {
-			return self.states.previousSceneUuid === (feedback.options.scene as string)
+			if (feedback.options.custom) {
+				const scene = feedback.options.customSceneName as string
+				return self.states.previousScene === scene
+			} else {
+				const sceneUuid = feedback.options.scene as string
+				return self.states.previousSceneUuid === sceneUuid
+			}
 		},
 	}
 
