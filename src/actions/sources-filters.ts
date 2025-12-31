@@ -422,7 +422,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 	}
 
 	actions['set_filter_visible'] = {
-		name: 'Set Filter Visibility',
+		name: 'Filter - Set Visibility',
 		description: 'Shows, hides, or toggles the enabled state of a filter on a source',
 		options: [
 			{
@@ -509,7 +509,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 	}
 
 	actions['set_filter_settings'] = {
-		name: 'Set Filter Settings',
+		name: 'Filter - Set Settings',
 		description: 'Sets the settings for a filter using a JSON object',
 		options: [
 			{

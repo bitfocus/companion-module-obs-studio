@@ -8,7 +8,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 	feedbacks['media_playing'] = {
 		type: 'boolean',
-		name: 'Media Playing',
+		name: 'Media - Playing',
 		description: 'If a specific media source is currently playing, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -31,7 +31,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 	feedbacks['media_source_time_remaining'] = {
 		type: 'boolean',
-		name: 'Media Source Remaining Time',
+		name: 'Media - Remaining Time',
 		description: 'If remaining time of a media source is below a threshold, change the style of the button',
 		defaultStyle: {
 			color: Color.Black,

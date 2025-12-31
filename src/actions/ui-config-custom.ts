@@ -106,7 +106,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 	}
 
 	actions['trigger-hotkey'] = {
-		name: 'Trigger Hotkey (by ID)',
+		name: 'Hotkey - Trigger by ID',
 		description: 'Triggers a hotkey by its internal name in OBS',
 		options: [
 			{
@@ -123,7 +123,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 	actions['trigger-hotkey-sequence'] = {
-		name: 'Trigger Hotkey (Key Sequence)',
+		name: 'Hotkey - Trigger by Key Sequence',
 		description: 'Triggers a hotkey by specifying the key and optional modifiers',
 		options: [
 			{
@@ -131,6 +131,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				label: 'Key ID (e.g. OBS_KEY_A)',
 				id: 'keyId',
 				default: 'OBS_KEY_NONE',
+				useVariables: true,
 			},
 			{
 				type: 'checkbox',
@@ -152,9 +153,10 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 			{
 				type: 'checkbox',
-				label: 'Command (Mac)',
+				label: 'Command',
 				id: 'keyCommand',
 				default: false,
+				description: '(macOS only)',
 			},
 		],
 		callback: async (action) => {
@@ -277,7 +279,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 	}
 
 	actions['openInputPropertiesDialog'] = {
-		name: 'Open Source Properties Window',
+		name: 'Open Window - Source Properties',
 		description: 'Opens the properties dialog for a source within the OBS UI',
 		options: [
 			{
@@ -293,7 +295,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 	actions['openInputFiltersDialog'] = {
-		name: 'Open Source Filters Window',
+		name: 'Open Window - Source Filters',
 		description: 'Opens the filters dialog for a source within the OBS UI',
 		options: [
 			{
@@ -309,7 +311,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 	actions['openInputInteractDialog'] = {
-		name: 'Open Source Interact Window',
+		name: 'Open Window - Source Interact',
 		description: 'Opens the interact dialog for a source (e.g., browser source) within the OBS UI',
 		options: [
 			{
@@ -322,23 +324,6 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('OpenInputInteractDialog', { inputName: action.options.source as string })
-		},
-	}
-	actions['triggerInputActivateState'] = {
-		name: 'Trigger Input Activate State',
-		description: 'Triggers the activate state for a source (as if it was seen by program)',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.sourceListDefault,
-				choices: self.obsState.sourceChoices,
-			},
-		],
-		callback: async (action) => {
-			const source = action.options.source as string
-			await self.obs.sendRequest('TriggerInputActivateState' as any, { inputName: source })
 		},
 	}
 

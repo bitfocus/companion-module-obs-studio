@@ -51,7 +51,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 
 	feedbacks['transition_active'] = {
 		type: 'boolean',
-		name: 'Transition in Progress',
+		name: 'Transition - In Progress',
 		description: 'If an OBS transition is currently in progress, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -65,7 +65,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 
 	feedbacks['current_transition'] = {
 		type: 'boolean',
-		name: 'Current Transition Type',
+		name: 'Transition - Type',
 		description:
 			'If a specific transition type is currently selected as the active transition, change the style of the button',
 		defaultStyle: {
@@ -91,7 +91,7 @@ export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFee
 
 	feedbacks['transition_duration'] = {
 		type: 'boolean',
-		name: 'Transition Duration',
+		name: 'Transition - Duration',
 		description: 'If the current transition duration matches a specific time, change the style of the button',
 		defaultStyle: {
 			color: Color.White,

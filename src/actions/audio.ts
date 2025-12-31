@@ -7,7 +7,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
 	actions['toggle_source_mute'] = {
-		name: 'Toggle Source Mute',
+		name: 'Audio - Toggle Source Mute',
 		description: 'Toggles the mute state of a specific audio source',
 		options: [
 			{
@@ -22,8 +22,37 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			await self.obs.sendRequest('ToggleInputMute', { inputUuid: action.options.source as string })
 		},
 	}
+	actions['set_source_mute'] = {
+		name: 'Audio - Set Mute',
+		description: 'Sets the mute state of a specific audio source (deprecated, use audio actions instead)',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.audioSourceListDefault,
+				choices: self.obsState.audioSourceList,
+			},
+			{
+				type: 'dropdown',
+				label: 'Mute',
+				id: 'mute',
+				default: 'true',
+				choices: [
+					{ id: 'true', label: 'Mute' },
+					{ id: 'false', label: 'Unmute' },
+				],
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('SetInputMute', {
+				inputUuid: action.options.source as string,
+				inputMuted: action.options.mute == 'true' ? true : false,
+			})
+		},
+	}
 	actions['set_volume'] = {
-		name: 'Set Source Volume',
+		name: 'Audio - Set Source Volume',
 		description: 'Sets the volume of a specific audio source in decibels',
 		options: [
 			{
@@ -50,9 +79,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			})
 		},
 	}
-
 	actions['adjust_volume'] = {
-		name: 'Adjust Source Volume',
+		name: 'Audio - Adjust Source Volume',
 		description: 'Increases or decreases the volume of a specific audio source by a set amount of decibels',
 		options: [
 			{
@@ -86,7 +114,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 	}
 	actions['adjust_volume_percent'] = {
-		name: 'Adjust Source Volume (Percentage)',
+		name: 'Audio - Adjust Source Volume (Percentage)',
 		description: 'Increases or decreases the volume of a specific audio source by a percentage of its range',
 		options: [
 			{
@@ -129,7 +157,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 	}
 	actions['fadeVolume'] = {
-		name: 'Fade Source Volume',
+		name: 'Audio - Fade Source Volume',
 		description: 'Fades the volume of a source to a target value over a specific duration',
 		options: [
 			{
@@ -191,9 +219,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			}
 		},
 	}
-
 	actions['set_audio_offset'] = {
-		name: 'Set Source Audio Offset',
+		name: 'Audio - Set Source Audio Offset',
 		description: 'Sets the audio sync offset for a specific source in milliseconds',
 		options: [
 			{
@@ -220,9 +247,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			})
 		},
 	}
-
 	actions['adjust_audio_offset'] = {
-		name: 'Adjust Source Audio Offset',
+		name: 'Audio - Adjust Source Audio Offset',
 		description: 'Increases or decreases the audio sync offset of a specific source by a set amount of milliseconds',
 		options: [
 			{
@@ -257,9 +283,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			})
 		},
 	}
-
 	actions['set_audio_balance'] = {
-		name: 'Set Source Audio Balance',
+		name: 'Audio - Set Source Audio Balance',
 		description: 'Sets the audio balance for a specific source (0.0 for Left, 0.5 for Center, 1.0 for Right)',
 		options: [
 			{
@@ -287,9 +312,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			})
 		},
 	}
-
 	actions['adjust_audio_balance'] = {
-		name: 'Adjust Source Audio Balance',
+		name: 'Audio - Adjust Source Audio Balance',
 		description: 'Increases or decreases the audio balance of a specific source by a set percentage',
 		options: [
 			{
@@ -326,7 +350,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	}
 
 	actions['set_audio_monitor'] = {
-		name: 'Set Audio Monitor Type',
+		name: 'Audio - Set Audio Monitor Type',
 		description: 'Sets the audio monitoring type for a specific source',
 		options: [
 			{

@@ -138,36 +138,6 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 		},
 	}
 
-	actions['set_source_mute'] = {
-		name: 'Set Source Mute',
-		description: 'Sets the mute state of a specific audio source (deprecated, use audio actions instead)',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
-			},
-			{
-				type: 'dropdown',
-				label: 'Mute',
-				id: 'mute',
-				default: 'true',
-				choices: [
-					{ id: 'true', label: 'Mute' },
-					{ id: 'false', label: 'Unmute' },
-				],
-			},
-		],
-		callback: async (action) => {
-			await self.obs.sendRequest('SetInputMute', {
-				inputUuid: action.options.source as string,
-				inputMuted: action.options.mute == 'true' ? true : false,
-			})
-		},
-	}
-
 	actions['reorder_scene_item'] = {
 		name: 'Reorder Scene Item',
 		description: 'Changes the position (layering) of an item within a scene',
@@ -206,7 +176,7 @@ export function getScenesSceneItemsActions(self: OBSInstance): CompanionActionDe
 	}
 
 	actions['set_source_visible'] = {
-		name: 'Set Source Visibility',
+		name: 'Source - Set Visibility',
 		description: 'Shows, hides, or toggles the visibility of an item in the specified scene(s)',
 		options: [
 			{

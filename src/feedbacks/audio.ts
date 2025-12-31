@@ -8,7 +8,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 	feedbacks['audio_muted'] = {
 		type: 'boolean',
-		name: 'Audio Muted',
+		name: 'Audio - Muted',
 		description: 'If an audio source is muted, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -31,7 +31,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 	feedbacks['audio_monitor_type'] = {
 		type: 'boolean',
-		name: 'Audio Monitor Type',
+		name: 'Audio - Monitor Type',
 		description: 'If the audio monitor type is matched, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -66,7 +66,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 	feedbacks['volume'] = {
 		type: 'boolean',
-		name: 'Volume',
+		name: 'Audio - Volume',
 		description: 'If an audio source volume is matched, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -98,7 +98,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 	feedbacks['audioPeaking'] = {
 		type: 'boolean',
-		name: 'Audio Peaking',
+		name: 'Audio - Peaking',
 		description: 'If audio is above a certain dB value, change the style of the button',
 		defaultStyle: {
 			color: Color.Black,

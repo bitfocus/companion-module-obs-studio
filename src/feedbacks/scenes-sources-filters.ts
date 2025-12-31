@@ -7,7 +7,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['scene_active'] = {
 		type: 'advanced',
-		name: 'Scene in Preview / Program',
+		name: 'Scene - Preview / Program',
 		description: 'If a scene is in preview or program, change colors of the button. Useful for tally.',
 		options: [
 			{
@@ -76,7 +76,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['sceneProgram'] = {
 		type: 'boolean',
-		name: 'Scene in Program',
+		name: 'Scene - Program',
 		description: 'If a scene is in the program output, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -100,7 +100,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['scenePreview'] = {
 		type: 'boolean',
-		name: 'Scene in Preview',
+		name: 'Scene - Preview',
 		description: 'If a scene is in the preview monitor (Studio Mode only), change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -124,7 +124,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['scenePrevious'] = {
 		type: 'boolean',
-		name: 'Previous Scene Active',
+		name: 'Scene - Previous',
 		description: 'If a scene was the last scene previously active, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -146,7 +146,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['scene_item_active'] = {
 		type: 'boolean',
-		name: 'Source Visible in Program',
+		name: 'Source - Visible in Program',
 		description:
 			'If a source is currently visible in the program output (either directly or via a scene), change the style of the button',
 		defaultStyle: {
@@ -201,7 +201,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['scene_item_previewed'] = {
 		type: 'boolean',
-		name: 'Source Active in Preview',
+		name: 'Source - Active in Preview',
 		description: 'If a source is currently enabled in the preview scene, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -223,7 +223,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['scene_item_active_in_scene'] = {
 		type: 'boolean',
-		name: 'Source Enabled in Scene',
+		name: 'Source - Enabled in Scene',
 		description: 'If a specific source is enabled in a specific scene, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -294,7 +294,7 @@ export function getScenesSourcesFiltersFeedbacks(self: OBSInstance): CompanionFe
 
 	feedbacks['filter_enabled'] = {
 		type: 'boolean',
-		name: 'Filter Enabled',
+		name: 'Filter - Enabled',
 		description: 'If a specific filter is enabled on a source, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
