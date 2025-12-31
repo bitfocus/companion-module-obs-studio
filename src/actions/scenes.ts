@@ -14,6 +14,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
+				isVisibleExpression: '!$(options:custom)',
 			},
 			{
 				type: 'checkbox',
@@ -50,6 +51,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
+				isVisibleExpression: '!$(options:custom)',
 			},
 			{
 				type: 'checkbox',
@@ -76,8 +78,8 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 	}
 
-	actions['smart_preview_scene'] = {
-		name: 'Smart Preview Scene',
+	actions['smart_switcher'] = {
+		name: 'Smart Scene Switcher',
 		description: 'Preview a scene, or transition it if it is already in preview',
 		options: [
 			{
@@ -86,20 +88,44 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
+				isVisibleExpression: '!$(options:custom)',
+			},
+			{
+				type: 'checkbox',
+				label: 'Use Custom Name',
+				id: 'custom',
+				default: false,
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Custom Scene Name',
+				id: 'customSceneName',
+				default: '',
+				isVisibleExpression: '$(options:custom)',
 			},
 		],
 		callback: async (action) => {
 			const sceneUuid = action.options.scene as string
 
-			if (self.states.previewSceneUuid === sceneUuid && self.states.programSceneUuid !== sceneUuid) {
-				await self.obs.sendRequest('TriggerStudioModeTransition')
+			if (action.options.custom) {
+				const scene = action.options.customSceneName as string
+				if (self.states.previewScene === scene && self.states.programScene !== scene) {
+					await self.obs.sendRequest('TriggerStudioModeTransition')
+				} else {
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
+				}
 			} else {
-				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: sceneUuid })
+				if (self.states.previewSceneUuid === sceneUuid && self.states.programSceneUuid !== sceneUuid) {
+					await self.obs.sendRequest('TriggerStudioModeTransition')
+				} else {
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: sceneUuid })
+				}
 			}
 		},
 	}
 
-	actions['adjust_preview_scene'] = {
+	actions['adjustPreview_scene'] = {
 		name: 'Adjust Preview Scene',
 		description: 'Moves the preview selection to the next or previous scene in the list',
 		options: [
@@ -124,7 +150,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (previousScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: previousScene.sceneUuid })
 				} else {
-					self.log('debug', 'No previous scene found or already at the end of the list.')
+					self.log('debug', 'No previous scene found or already at the top of the list.')
 				}
 			} else if (action.options.adjust === 'next') {
 				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
@@ -132,46 +158,9 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (nextScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: nextScene.sceneUuid })
 				} else {
-					self.log('debug', 'No next scene found or already at the beginning of the list.')
+					self.log('debug', 'No next scene found or already at the bottom of the list.')
 				}
 			}
-		},
-	}
-
-	actions['reorder_scene_item'] = {
-		name: 'Reorder Scene Item',
-		description: 'Changes the position (layering) of an item within a scene',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Scene',
-				id: 'scene',
-				default: self.obsState.sceneListDefault,
-				choices: self.obsState.sceneChoices,
-			},
-			{
-				type: 'dropdown',
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.sourceListDefault,
-				choices: self.obsState.sourceChoices,
-			},
-			{
-				type: 'number',
-				label: 'Position (Index)',
-				id: 'pos',
-				default: 0,
-				min: 0,
-				max: 100,
-				range: false,
-			},
-		],
-		callback: async (action) => {
-			await self.obs.sendRequest('SetSceneItemIndex', {
-				sceneUuid: action.options.scene as string,
-				sceneItemId: action.options.source as number,
-				sceneItemIndex: action.options.pos as number,
-			})
 		},
 	}
 

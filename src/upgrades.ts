@@ -259,20 +259,26 @@ export default [
 
 		for (const action of props.actions) {
 			let actionChanged = false
-			if (action.actionId === 'set_scene' || action.actionId === 'preview_scene') {
-				if (action.options.scene === 'currentScene') {
-					action.options.useCurrentScene = true
-					actionChanged = true
-				} else if (action.options.scene === 'previewScene') {
-					action.options.usePreviewScene = true
-					actionChanged = true
-				}
-			} else if (action.actionId === 'smart_preview_scene') {
-				if (action.options.scene === 'currentScene' || action.options.scene === 'programScene') {
-					action.options.useProgramScene = true
+			//Scene Actions
+			if (
+				action.actionId === 'set_scene' ||
+				action.actionId === 'preview_scene' ||
+				action.actionId === 'smart_switcher'
+			) {
+				if (action.options.scene === 'customSceneName') {
+					action.options.custom = true
 					actionChanged = true
 				}
+			} else if (action.actionId === 'previewNextScene') {
+				action.actionId = 'adjustPreviewScene'
+				action.options.adjust = 'next'
+				actionChanged = true
+			} else if (action.actionId === 'previewPreviousScene') {
+				action.actionId = 'adjustPreviewScene'
+				action.options.adjust = 'previous'
+				actionChanged = true
 			} else if (action.actionId === 'set_source_visible') {
+				//UNTESTED BELOW
 				if (action.options.scene === 'anyScene') {
 					action.options.anyScene = true
 					actionChanged = true

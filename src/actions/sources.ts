@@ -18,9 +18,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
 				label: 'Text',
 				id: 'text',
+				useVariables: true,
 			},
 		],
 		callback: async (action) => {
@@ -73,9 +73,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
 				label: 'Text',
 				id: 'text',
+				useVariables: true,
 				isVisibleExpression: `arrayIncludes($(options:props), 'text')`,
 			},
 			{
@@ -94,23 +94,23 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
 				label: 'Font Size',
 				id: 'fontSize',
+				useVariables: true,
 				isVisibleExpression: `arrayIncludes($(options:props), 'fontSize')`,
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
 				label: 'Font Face',
 				id: 'fontFace',
+				useVariables: true,
 				isVisibleExpression: `arrayIncludes($(options:props), 'fontFace')`,
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
 				label: 'Font Style',
 				id: 'fontStyle',
+				useVariables: true,
 				isVisibleExpression: `arrayIncludes($(options:props), 'fontStyle')`,
 			},
 			{
