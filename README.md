@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.15.2
+
+- Fix
+  - Recording timecode variables not updating properly
+
 ### v3.15.1
 
 - Fix
