@@ -1,5 +1,9 @@
-export function getVariables() {
-	const variables = []
+import { CompanionVariableDefinition } from '@companion-module/base'
+import type { OBSInstance } from './main.js'
+import * as utils from './utils.js'
+
+export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
+	const variables: CompanionVariableDefinition[] = []
 
 	variables.push(
 		{ variableId: 'base_resolution', name: 'Current base (canvas) resolution' },
@@ -7,7 +11,7 @@ export function getVariables() {
 		{ variableId: 'target_framerate', name: 'Current profile framerate' },
 		{ variableId: 'fps', name: 'Current actual framerate' },
 		{ variableId: 'cpu_usage', name: 'Current CPU usage (percentage)' },
-		{ variableId: 'memory_usage', name: 'Current RAM usage (in megabytes)' },
+		{ variableId: 'memory_usage', name: 'Current RAM usage (in MB)' },
 		{ variableId: 'free_disk_space', name: 'Free recording disk space' },
 		{ variableId: 'free_disk_space_mb', name: 'Free recording disk space in MB, with no unit text' },
 		{ variableId: 'render_missed_frames', name: 'Number of frames missed due to rendering lag' },
@@ -22,7 +26,7 @@ export function getVariables() {
 		{ variableId: 'recording_timecode_hh', name: 'Recording timecode (hours)' },
 		{ variableId: 'recording_timecode_mm', name: 'Recording timecode (minutes)' },
 		{ variableId: 'recording_timecode_ss', name: 'Recording timecode (seconds)' },
-		{ variableId: 'stream_timecode', name: 'Stream Timecode' },
+		{ variableId: 'stream_timecode', name: 'Stream Timecode (hh:mm:ss)' },
 		{ variableId: 'stream_timecode_hh', name: 'Stream Timecode (hours)' },
 		{ variableId: 'stream_timecode_mm', name: 'Stream Timecode (minutes)' },
 		{ variableId: 'stream_timecode_ss', name: 'Stream Timecode (seconds)' },
@@ -38,11 +42,11 @@ export function getVariables() {
 		{ variableId: 'transition_duration', name: 'Current transition duration' },
 		{ variableId: 'transition_active', name: 'Transition in progress' },
 		{ variableId: 'transition_list', name: 'List of available transition types' },
-		{ variableId: 'current_media_name', name: 'Source name for currently playing media source' },
-		{ variableId: 'current_media_time_elapsed', name: 'Time elapsed for currently playing media source' },
+		{ variableId: 'current_media_name', name: 'Source name(s) for currently playing media source(s)' },
+		{ variableId: 'current_media_time_elapsed', name: 'Elapsed time(s) for currently playing media source(s)' },
 		{
 			variableId: 'current_media_time_remaining',
-			name: 'Time remaining for currently playing media source',
+			name: 'Remaining time(s) for currently playing media source(s)',
 		},
 		{ variableId: 'replay_buffer_path', name: 'File path of the last replay buffer saved' },
 		{
@@ -72,9 +76,8 @@ export function getVariables() {
 	)
 
 	//Source Specific Variables
-	for (let s in this.sources) {
-		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+	for (const source of this.states.sources.values()) {
+		const sourceName = source.validName ?? source.sourceName
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
@@ -115,44 +118,39 @@ export function getVariables() {
 
 	//Scene Variables
 	let sceneIndex = 0
-	for (let s = this.scenes?.length - 1; s >= 0; s--) {
-		let index = ++sceneIndex
-		variables.push({ variableId: `scene_${index}`, name: `Scene - ${index}` })
+	const sceneList = Array.from(this.states.scenes.values())
+	for (let s = sceneList.length - 1; s >= 0; s--) {
+		const index = ++sceneIndex
+		variables.push({ variableId: `scene_${index}`, name: `Scene Position ${index} - Name` })
 	}
 	return variables
 }
 
-export function updateVariableValues() {
-	//Defaults
-	this.setVariableValues({
+export function updateVariableValues(this: OBSInstance): void {
+	const updates: Record<string, string | number | boolean | undefined> = {
 		current_media_name: 'None',
 		recording_file_name: 'None',
 		replay_buffer_path: 'None',
-		current_media_time_elapsed: '--:--:--',
-		current_media_time_remaining: '--:--:--',
+		current_media_time_elapsed: '00:00:00',
+		current_media_time_remaining: '00:00:00',
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
 		scene_previous: this.states.previousScene ?? 'None',
-	})
+	}
 
 	//Source Specific Variables
-	for (let s in this.sources) {
-		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
-		let inputSettings = source.settings
+	for (const source of this.states.sources.values()) {
+		const sourceName = source.validName ?? source.sourceName
+		const inputSettings = source.settings
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
 				case 'text_gdiplus_v2':
 				case 'text_gdiplus_v3':
 					if (inputSettings?.from_file || inputSettings?.read_from_file) {
-						this.setVariableValues({
-							[`current_text_${sourceName}`]: `Text from file: ${inputSettings.text_file ?? inputSettings.file}`,
-						})
+						updates[`current_text_${sourceName}`] = `Text from file: ${inputSettings.text_file ?? inputSettings.file}`
 					} else {
-						this.setVariableValues({
-							[`current_text_${sourceName}`]: inputSettings?.text ?? '',
-						})
+						updates[`current_text_${sourceName}`] = inputSettings?.text ?? ''
 					}
 					break
 				case 'ffmpeg_source':
@@ -164,21 +162,17 @@ export function updateVariableValues() {
 					} else if (inputSettings?.local_file) {
 						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
 					}
-					this.setVariableValues({
-						[`media_status_${sourceName}`]: 'Stopped',
-						[`media_file_name_${sourceName}`]: file,
-						[`media_time_elapsed_${sourceName}`]: '--:--:--',
-						[`media_time_remaining_${sourceName}`]: '--:--:--',
-					})
+					updates[`media_status_${sourceName}`] = utils.getOBSMediaStatusLabel(source.OBSMediaStatus)
+					updates[`media_file_name_${sourceName}`] = file
+					updates[`media_time_elapsed_${sourceName}`] = source.timeElapsed ?? '00:00:00'
+					updates[`media_time_remaining_${sourceName}`] = source.timeRemaining ?? '00:00:00'
 
 					break
 				}
 				case 'image_source':
-					this.setVariableValues({
-						[`image_file_name_${sourceName}`]: inputSettings?.file
-							? (inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '')
-							: '',
-					})
+					updates[`image_file_name_${sourceName}`] = inputSettings?.file
+						? (inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '')
+						: ''
 					break
 				default:
 					break
@@ -186,34 +180,23 @@ export function updateVariableValues() {
 		}
 
 		if (source.inputAudioTracks) {
-			let monitorType
-			if (source.monitorType === 'OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT') {
-				monitorType = 'Monitor / Output'
-			} else if (source.monitorType === 'OBS_MONITORING_TYPE_MONITOR_ONLY') {
-				monitorType = 'Monitor Only'
-			} else {
-				monitorType = 'Off'
-			}
-
-			this.setVariableValues({
-				[`volume_${sourceName}`]: source.inputVolume !== undefined ? source.inputVolume + ' dB' : '',
-				[`mute_${sourceName}`]: source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : '',
-				[`monitor_${sourceName}`]: monitorType,
-				[`sync_offset_${sourceName}`]:
-					source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : '',
-				[`balance_${sourceName}`]: source.inputAudioBalance !== undefined ? source.inputAudioBalance : '',
-			})
+			updates[`volume_${sourceName}`] = source.inputVolume !== undefined ? source.inputVolume + ' dB' : ''
+			updates[`mute_${sourceName}`] = source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : ''
+			updates[`monitor_${sourceName}`] = utils.getMonitorTypeLabel(source.monitorType)
+			updates[`sync_offset_${sourceName}`] =
+				source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : ''
+			updates[`balance_${sourceName}`] = source.inputAudioBalance !== undefined ? source.inputAudioBalance : ''
 		}
 	}
 
 	//Scene Variables
 	let sceneIndex = 0
-	for (let s = this.scenes?.length - 1; s >= 0; s--) {
-		let index = ++sceneIndex
-
-		let sceneName = this.scenes[s].sceneName
-		this.setVariableValues({
-			[`scene_${index}`]: sceneName,
-		})
+	const sceneList = Array.from(this.states.scenes.values())
+	for (let s = sceneList.length - 1; s >= 0; s--) {
+		const index = ++sceneIndex
+		const sceneName = sceneList[s].sceneName
+		updates[`scene_${index}`] = sceneName
 	}
+
+	this.setVariableValues(updates)
 }

@@ -1,0 +1,346 @@
+import { CompanionActionDefinitions } from '@companion-module/base'
+import type { OBSInstance } from '../main.js'
+
+export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefinitions {
+	const actions: CompanionActionDefinitions = {}
+
+	actions['set_profile'] = {
+		name: 'Set Profile',
+		description: 'Switches the current OBS profile',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Profile',
+				id: 'profile',
+				default: self.obsState.profileChoicesDefault,
+				choices: self.obsState.profileChoices,
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('SetCurrentProfile', { profileName: action.options.profile as string })
+		},
+	}
+	actions['set_scene_collection'] = {
+		name: 'Set Scene Collection',
+		description: 'Switches the current OBS scene collection',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Scene Collection',
+				id: 'scene_collection',
+				default: self.obsState.sceneCollectionList?.[0] ? self.obsState.sceneCollectionList[0].id : '',
+				choices: self.obsState.sceneCollectionList,
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('SetCurrentSceneCollection', {
+				sceneCollectionName: action.options.scene_collection as string,
+			})
+		},
+	}
+	actions['start_output'] = {
+		name: 'Start Output',
+		description: 'Starts a specific output (e.g., Virtual Cam, Decklink)',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.obsState.outputList,
+			},
+		],
+		callback: async (action) => {
+			if (action.options.output === 'virtualcam_output') {
+				await self.obs.sendRequest('StartVirtualCam')
+			} else {
+				await self.obs.sendRequest('StartOutput', {
+					outputName: action.options.output as string,
+				})
+			}
+		},
+	}
+	actions['stop_output'] = {
+		name: 'Stop Output',
+		description: 'Stops a specific output',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.obsState.outputList,
+			},
+		],
+		callback: async (action) => {
+			if (action.options.output === 'virtualcam_output') {
+				await self.obs.sendRequest('StopVirtualCam')
+			} else {
+				await self.obs.sendRequest('StopOutput', {
+					outputName: action.options.output as string,
+				})
+			}
+		},
+	}
+	actions['start_stop_output'] = {
+		name: 'Toggle Output',
+		description: 'Toggles the state of a specific output',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.obsState.outputList,
+			},
+		],
+		callback: async (action) => {
+			if (action.options.output === 'virtualcam_output') {
+				await self.obs.sendRequest('ToggleVirtualCam')
+			} else {
+				await self.obs.sendRequest('ToggleOutput', {
+					outputName: action.options.output as string,
+				})
+			}
+		},
+	}
+
+	actions['trigger-hotkey'] = {
+		name: 'Trigger Hotkey (by ID)',
+		description: 'Triggers a hotkey by its internal name in OBS',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Hotkey ID',
+				id: 'id',
+				default: self.states.hotkeyNames?.[0] ? self.states.hotkeyNames[0].id : '',
+				choices: self.states.hotkeyNames,
+			},
+		],
+		callback: async (action) => {
+			const hotkey = action.options.id as string
+			await self.obs.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
+		},
+	}
+	actions['trigger-hotkey-sequence'] = {
+		name: 'Trigger Hotkey (Key Sequence)',
+		description: 'Triggers a hotkey by specifying the key and optional modifiers',
+		options: [
+			{
+				type: 'textinput',
+				label: 'Key ID (e.g. OBS_KEY_A)',
+				id: 'keyId',
+				default: 'OBS_KEY_NONE',
+			},
+			{
+				type: 'checkbox',
+				label: 'Shift',
+				id: 'keyShift',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Alt',
+				id: 'keyAlt',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Control',
+				id: 'keyControl',
+				default: false,
+			},
+			{
+				type: 'checkbox',
+				label: 'Command (Mac)',
+				id: 'keyCommand',
+				default: false,
+			},
+		],
+		callback: async (action) => {
+			const keyModifiers = {
+				shift: action.options.keyShift as boolean,
+				alt: action.options.keyAlt as boolean,
+				control: action.options.keyControl as boolean,
+				command: action.options.keyCommand as boolean,
+			}
+
+			await self.obs.sendRequest('TriggerHotkeyByKeySequence', {
+				keyId: action.options.keyId as string,
+				keyModifiers: keyModifiers,
+			})
+		},
+	}
+
+	actions['custom_command'] = {
+		name: 'Custom Command',
+		description: 'Sends a custom raw request to OBS WebSocket',
+		options: [
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Request Type',
+				id: 'command',
+				default: 'SetCurrentProgramScene',
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'Request Data (optional, JSON formatted)',
+				id: 'arg',
+				default: '{"sceneName": "Scene 1"}',
+			},
+		],
+		callback: async (action) => {
+			const command = action.options.command as string
+			let arg: any = ''
+			try {
+				command.replace(/ /g, '')
+			} catch (e: any) {
+				self.log('warn', `Unknown command format: ${e.message}`)
+				return
+			}
+
+			if (action.options.arg) {
+				arg = action.options.arg as string
+				try {
+					arg = JSON.parse(arg)
+				} catch (e: any) {
+					self.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
+					return
+				}
+			}
+
+			try {
+				const res = await self.obs.sendRequest(command as any, arg ? arg : {})
+				self.log('debug', `Custom Command Response: ${JSON.stringify(res)}`)
+			} catch (e: any) {
+				self.log('warn', `Custom Command Error: ${e.message}`)
+			}
+		},
+	}
+
+	actions['vendorRequest'] = {
+		name: 'Custom Vendor Request',
+		description: 'Sends a request to a specific OBS vendor plugin',
+		options: [
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'vendorName',
+				id: 'vendorName',
+				default: '',
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'requestType',
+				id: 'requestType',
+				default: '',
+			},
+			{
+				type: 'textinput',
+				useVariables: true,
+				label: 'requestData',
+				id: 'requestData',
+				default: '',
+			},
+		],
+		callback: async (action) => {
+			const vendorName = action.options.vendorName as string
+			const requestType = action.options.requestType as string
+			let requestData: any = ''
+			try {
+				vendorName.replace(/ /g, '')
+				requestType.replace(/ /g, '')
+			} catch (e: any) {
+				self.log('warn', `Unknown vendor or request format ${e.message}`)
+				return
+			}
+
+			if (action.options.requestData) {
+				requestData = action.options.requestData as string
+				try {
+					requestData = JSON.parse(requestData)
+				} catch (e: any) {
+					self.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
+					return
+				}
+			}
+			const data = {
+				vendorName: vendorName,
+				requestType: requestType,
+				requestData: requestData,
+			}
+			await self.obs.sendRequest('CallVendorRequest', data)
+		},
+	}
+
+	actions['openInputPropertiesDialog'] = {
+		name: 'Open Source Properties Window',
+		description: 'Opens the properties dialog for a source within the OBS UI',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source as string })
+		},
+	}
+	actions['openInputFiltersDialog'] = {
+		name: 'Open Source Filters Window',
+		description: 'Opens the filters dialog for a source within the OBS UI',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source as string })
+		},
+	}
+	actions['openInputInteractDialog'] = {
+		name: 'Open Source Interact Window',
+		description: 'Opens the interact dialog for a source (e.g., browser source) within the OBS UI',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			await self.obs.sendRequest('OpenInputInteractDialog', { inputName: action.options.source as string })
+		},
+	}
+	actions['triggerInputActivateState'] = {
+		name: 'Trigger Input Activate State',
+		description: 'Triggers the activate state for a source (as if it was seen by program)',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+		],
+		callback: async (action) => {
+			const source = action.options.source as string
+			await self.obs.sendRequest('TriggerInputActivateState' as any, { inputName: source })
+		},
+	}
+
+	return actions
+}

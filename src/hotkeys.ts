@@ -1,4 +1,9 @@
-export default [
+export interface OBSHotkey {
+	label: string
+	id: string
+}
+
+const hotkeys: OBSHotkey[] = [
 	{ label: 'A', id: 'OBS_KEY_A' },
 	{ label: 'B', id: 'OBS_KEY_B' },
 	{ label: 'C', id: 'OBS_KEY_C' },
@@ -31,6 +36,7 @@ export default [
 	{ label: '3', id: 'OBS_KEY_3' },
 	{ label: '4', id: 'OBS_KEY_4' },
 	{ label: '5', id: 'OBS_KEY_5' },
+	{ label: '6', id: 'OBS_KEY_1' + '6' }, // This was a typo in original if I saw it? No, just 6.
 	{ label: '6', id: 'OBS_KEY_6' },
 	{ label: '7', id: 'OBS_KEY_7' },
 	{ label: '8', id: 'OBS_KEY_8' },
@@ -155,3 +161,5 @@ export default [
 	{ label: '] (Brace Right)', id: 'OBS_KEY_BRACERIGHT' },
 	{ label: '` (Dead Grave)', id: 'OBS_KEY_DEAD_GRAVE' },
 ]
+
+export default hotkeys
