@@ -1,7 +1,7 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 
-export function getRecordingStreamingActions(self: OBSInstance): CompanionActionDefinitions {
+export function getOutputActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
 	//Recording
@@ -242,6 +242,73 @@ export function getRecordingStreamingActions(self: OBSInstance): CompanionAction
 		options: [],
 		callback: async () => {
 			await self.obs.sendRequest('ToggleReplayBuffer')
+		},
+	}
+	//Outputs
+	actions['start_output'] = {
+		name: 'Start Output',
+		description: 'Starts a specific output (e.g., Virtual Cam, Decklink)',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.obsState.outputList,
+			},
+		],
+		callback: async (action) => {
+			if (action.options.output === 'virtualcam_output') {
+				await self.obs.sendRequest('StartVirtualCam')
+			} else {
+				await self.obs.sendRequest('StartOutput', {
+					outputName: action.options.output as string,
+				})
+			}
+		},
+	}
+	actions['stop_output'] = {
+		name: 'Stop Output',
+		description: 'Stops a specific output',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.obsState.outputList,
+			},
+		],
+		callback: async (action) => {
+			if (action.options.output === 'virtualcam_output') {
+				await self.obs.sendRequest('StopVirtualCam')
+			} else {
+				await self.obs.sendRequest('StopOutput', {
+					outputName: action.options.output as string,
+				})
+			}
+		},
+	}
+	actions['start_stop_output'] = {
+		name: 'Toggle Output',
+		description: 'Toggles the state of a specific output',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'virtualcam_output',
+				choices: self.obsState.outputList,
+			},
+		],
+		callback: async (action) => {
+			if (action.options.output === 'virtualcam_output') {
+				await self.obs.sendRequest('ToggleVirtualCam')
+			} else {
+				await self.obs.sendRequest('ToggleOutput', {
+					outputName: action.options.output as string,
+				})
+			}
 		},
 	}
 

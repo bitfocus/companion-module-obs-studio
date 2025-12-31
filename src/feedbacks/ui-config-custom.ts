@@ -2,7 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 import { Color } from '../utils.js'
 
-export function getUiConfigTransitionsFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
+export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
 
 	feedbacks['profile_active'] = {

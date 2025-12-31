@@ -3,7 +3,7 @@ import type { OBSInstance } from '../main.js'
 import { OBSRecordingState } from '../types.js'
 import { Color } from '../utils.js'
 
-export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
+export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
 
 	feedbacks['streaming'] = {

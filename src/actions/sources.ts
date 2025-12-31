@@ -2,9 +2,10 @@ import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 import * as utils from '../utils.js'
 
-export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefinitions {
+export function getSourceActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
+	//Text Sources
 	actions['setText'] = {
 		name: 'Set Source Text',
 		options: [
@@ -421,6 +422,7 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
+	//Filters
 	actions['set_filter_visible'] = {
 		name: 'Filter - Set Visibility',
 		description: 'Shows, hides, or toggles the enabled state of a filter on a source',
@@ -759,6 +761,131 @@ export function getSourcesFiltersActions(self: OBSInstance): CompanionActionDefi
 				}
 			} catch (e: any) {
 				self.log('error', `Set Scene Item Properties Error: ${e.message}`)
+			}
+		},
+	}
+
+	actions['set_source_visible'] = {
+		name: 'Source - Set Visibility',
+		description: 'Shows, hides, or toggles the visibility of an item in the specified scene(s)',
+		options: [
+			{
+				type: 'checkbox',
+				label: 'All Scenes',
+				id: 'anyScene',
+				default: true,
+			},
+			{
+				type: 'checkbox',
+				label: 'Current Scene',
+				id: 'useCurrentScene',
+				default: false,
+				isVisibleExpression: '!$(options:anyScene)',
+			},
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				isVisibleExpression: '!$(options:anyScene) &&!$(options:useCurrentScene)',
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+			},
+			{
+				type: 'dropdown',
+				label: 'Visibility',
+				id: 'visible',
+				default: 'toggle',
+				choices: [
+					{ id: 'true', label: 'Show' },
+					{ id: 'false', label: 'Hide' },
+					{ id: 'toggle', label: 'Toggle' },
+				],
+			},
+		],
+		callback: async (action) => {
+			const sourceUuid = action.options.source as string
+			const sources: any[] = []
+
+			if (action.options.anyScene) {
+				for (const [sceneUuid, sceneItems] of self.states.sceneItems) {
+					const item = sceneItems.find((i: any) => i.sourceUuid === sourceUuid)
+					if (item) {
+						sources.push({
+							sceneUuid: sceneUuid,
+							sceneItemId: item.sceneItemId,
+						})
+					}
+				}
+				for (const [groupUuid, groupItems] of self.states.groups) {
+					const item = groupItems.find((i: any) => i.sourceUuid === sourceUuid)
+					if (item) {
+						sources.push({
+							sceneUuid: groupUuid,
+							sceneItemId: item.sceneItemId,
+						})
+					}
+				}
+			} else {
+				const sceneUuid = action.options.useCurrentScene
+					? self.states.programSceneUuid
+					: (action.options.scene as string)
+				const sceneItems = self.states.sceneItems.get(sceneUuid)
+				const item = sceneItems?.find((i: any) => i.sourceUuid === sourceUuid)
+				if (item) {
+					sources.push({
+						sceneUuid: sceneUuid,
+						sceneItemId: item.sceneItemId,
+					})
+				} else {
+					const groups = self.states.groups.get(sceneUuid)
+					const item = groups?.find((i: any) => i.sourceUuid === sourceUuid)
+					if (item) {
+						sources.push({
+							sceneUuid: sceneUuid,
+							sceneItemId: item.sceneItemId,
+						})
+					}
+				}
+			}
+
+			if (sources.length > 0) {
+				const requests: any[] = []
+				sources.forEach((source) => {
+					let enabled: boolean
+					if (action.options.visible === 'toggle') {
+						const sceneItems = self.states.sceneItems.get(source.sceneUuid)
+						const item = sceneItems?.find((i: any) => i.sceneItemId === source.sceneItemId)
+						if (item) {
+							enabled = !item.sceneItemEnabled
+						} else {
+							const groups = self.states.groups.get(source.sceneUuid)
+							const item = groups?.find((i: any) => i.sceneItemId === source.sceneItemId)
+							if (item) {
+								enabled = !item.sceneItemEnabled
+							} else {
+								enabled = false
+							}
+						}
+					} else {
+						enabled = action.options.visible === 'true'
+					}
+					requests.push({
+						requestType: 'SetSceneItemEnabled',
+						requestData: {
+							sceneUuid: source.sceneUuid,
+							sceneItemId: source.sceneItemId,
+							sceneItemEnabled: enabled,
+						},
+					})
+				})
+				await self.obs.sendBatch(requests)
 			}
 		},
 	}

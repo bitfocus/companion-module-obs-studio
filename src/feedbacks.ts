@@ -1,17 +1,22 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type { OBSInstance } from './main.js'
-import { getRecordingStreamingOutputFeedbacks } from './feedbacks/recording-streaming-outputs.js'
-import { getScenesSourcesFiltersFeedbacks } from './feedbacks/scenes-sources-filters.js'
+
 import { getAudioFeedbacks } from './feedbacks/audio.js'
 import { getMediaFeedbacks } from './feedbacks/media.js'
-import { getUiConfigTransitionsFeedbacks } from './feedbacks/ui-config-transitions.js'
+import { getOutputFeedbacks } from './feedbacks/outputs.js'
+import { getSceneFeedbacks } from './feedbacks/scenes.js'
+import { getSourceFeedbacks } from './feedbacks/sources.js'
+import { getTransitionFeedbacks } from './feedbacks/transitions.js'
+import { getUiConfigCustomFeedbacks } from './feedbacks/ui-config-custom.js'
 
 export function getFeedbacks(this: OBSInstance): CompanionFeedbackDefinitions {
 	return {
-		...getRecordingStreamingOutputFeedbacks(this),
-		...getScenesSourcesFiltersFeedbacks(this),
 		...getAudioFeedbacks(this),
 		...getMediaFeedbacks(this),
-		...getUiConfigTransitionsFeedbacks(this),
+		...getOutputFeedbacks(this),
+		...getSceneFeedbacks(this),
+		...getSourceFeedbacks(this),
+		...getTransitionFeedbacks(this),
+		...getUiConfigCustomFeedbacks(this),
 	}
 }

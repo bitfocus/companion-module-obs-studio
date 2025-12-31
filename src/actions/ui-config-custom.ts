@@ -4,6 +4,33 @@ import type { OBSInstance } from '../main.js'
 export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
+	//Studio Mode
+	actions['enable_studio_mode'] = {
+		name: 'Studio Mode - Enable',
+		description: 'Enables Studio Mode, which allows for previewing changes before they go live',
+		options: [],
+		callback: async () => {
+			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: true })
+		},
+	}
+	actions['disable_studio_mode'] = {
+		name: 'Studio Mode - Disable',
+		description: 'Disables Studio Mode, making all changes go directly to program',
+		options: [],
+		callback: async () => {
+			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: false })
+		},
+	}
+	actions['toggle_studio_mode'] = {
+		name: 'Studio Mode - Toggle',
+		description: 'Toggles Studio Mode between on and off',
+		options: [],
+		callback: async () => {
+			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: self.states.studioMode ? false : true })
+		},
+	}
+
+	//Profile + Scene Collection
 	actions['set_profile'] = {
 		name: 'Set Profile',
 		description: 'Switches the current OBS profile',
@@ -38,73 +65,8 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			})
 		},
 	}
-	actions['start_output'] = {
-		name: 'Start Output',
-		description: 'Starts a specific output (e.g., Virtual Cam, Decklink)',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Output',
-				id: 'output',
-				default: 'virtualcam_output',
-				choices: self.obsState.outputList,
-			},
-		],
-		callback: async (action) => {
-			if (action.options.output === 'virtualcam_output') {
-				await self.obs.sendRequest('StartVirtualCam')
-			} else {
-				await self.obs.sendRequest('StartOutput', {
-					outputName: action.options.output as string,
-				})
-			}
-		},
-	}
-	actions['stop_output'] = {
-		name: 'Stop Output',
-		description: 'Stops a specific output',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Output',
-				id: 'output',
-				default: 'virtualcam_output',
-				choices: self.obsState.outputList,
-			},
-		],
-		callback: async (action) => {
-			if (action.options.output === 'virtualcam_output') {
-				await self.obs.sendRequest('StopVirtualCam')
-			} else {
-				await self.obs.sendRequest('StopOutput', {
-					outputName: action.options.output as string,
-				})
-			}
-		},
-	}
-	actions['start_stop_output'] = {
-		name: 'Toggle Output',
-		description: 'Toggles the state of a specific output',
-		options: [
-			{
-				type: 'dropdown',
-				label: 'Output',
-				id: 'output',
-				default: 'virtualcam_output',
-				choices: self.obsState.outputList,
-			},
-		],
-		callback: async (action) => {
-			if (action.options.output === 'virtualcam_output') {
-				await self.obs.sendRequest('ToggleVirtualCam')
-			} else {
-				await self.obs.sendRequest('ToggleOutput', {
-					outputName: action.options.output as string,
-				})
-			}
-		},
-	}
 
+	//Hotkeys
 	actions['trigger-hotkey'] = {
 		name: 'Hotkey - Trigger by ID',
 		description: 'Triggers a hotkey by its internal name in OBS',
@@ -174,6 +136,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
+	//Custom + Vendor Commands
 	actions['custom_command'] = {
 		name: 'Custom Command',
 		description: 'Sends a custom raw request to OBS WebSocket',
@@ -278,6 +241,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
+	//Open Windows
 	actions['openInputPropertiesDialog'] = {
 		name: 'Open Window - Source Properties',
 		description: 'Opens the properties dialog for a source within the OBS UI',

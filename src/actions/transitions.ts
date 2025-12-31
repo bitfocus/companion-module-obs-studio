@@ -1,34 +1,8 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type { OBSInstance } from '../main.js'
 
-export function getStudioModeTransitionActions(self: OBSInstance): CompanionActionDefinitions {
+export function getTransitionActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
-
-	actions['enable_studio_mode'] = {
-		name: 'Studio Mode - Enable',
-		description: 'Enables Studio Mode, which allows for previewing changes before they go live',
-		options: [],
-		callback: async () => {
-			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: true })
-		},
-	}
-	actions['disable_studio_mode'] = {
-		name: 'Studio Mode - Disable',
-		description: 'Disables Studio Mode, making all changes go directly to program',
-		options: [],
-		callback: async () => {
-			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: false })
-		},
-	}
-	actions['toggle_studio_mode'] = {
-		name: 'Studio Mode - Toggle',
-		description: 'Toggles Studio Mode between on and off',
-		options: [],
-		callback: async () => {
-			await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: self.states.studioMode ? false : true })
-		},
-	}
-
 	actions['do_transition'] = {
 		name: 'Transition - Perform Transition',
 		description: 'Transitions the current preview scene to program using the current transition',
@@ -227,6 +201,5 @@ export function getStudioModeTransitionActions(self: OBSInstance): CompanionActi
 			}
 		},
 	}
-
 	return actions
 }
