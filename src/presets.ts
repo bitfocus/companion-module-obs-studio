@@ -435,11 +435,20 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		}
 	}
 
-	// Preset for Start Streaming button with colors indicating streaming status
+	presets['streamingControlHeader'] = {
+		type: 'text',
+		category: 'Streaming',
+		name: 'Streaming Controls',
+		text: '',
+	}
 	presets['streaming'] = {
 		type: 'button',
 		category: 'Streaming',
-		name: 'OBS Streaming',
+		name: 'OBS Toggle Streaming',
+		previewStyle: {
+			text: 'OBS TOGGLE STREAM',
+			size: 'auto',
+		},
 		style: {
 			text: 'OBS START STREAM',
 			size: 'auto',
@@ -470,8 +479,61 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			},
 		],
 	}
-
-	presets['streamingTimecode'] = {
+	presets['streamingStart'] = {
+		type: 'button',
+		category: 'Streaming',
+		name: 'OBS Start Stream',
+		style: {
+			text: 'OBS START STREAM',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'start_streaming',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['streamingStop'] = {
+		type: 'button',
+		category: 'Streaming',
+		name: 'OBS Stop Stream',
+		style: {
+			text: 'OBS STOP STREAM',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'stop_streaming',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['streamingInfoHeader'] = {
+		type: 'text',
+		category: 'Streaming',
+		name: 'Streaming Info',
+		text: '',
+	}
+	presets['streamingStatus'] = {
 		type: 'button',
 		category: 'Streaming',
 		name: 'Streaming Status / Timecode',
@@ -484,12 +546,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		},
 		steps: [
 			{
-				down: [
-					{
-						actionId: 'StartStopStreaming',
-						options: {},
-					},
-				],
+				down: [],
 				up: [],
 			},
 		],
@@ -504,13 +561,35 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			},
 		],
 	}
-
 	presets['streamingService'] = {
 		type: 'button',
 		category: 'Streaming',
 		name: 'Streaming Service Info',
 		style: {
-			text: 'STREAM DEST\\n$(obs:stream_service)\\n$(obs:streaming)',
+			text: 'STREAM DEST\\n$(obs:stream_service)',
+			size: '14',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+	presets['streamingTimecodeHH'] = {
+		type: 'button',
+		category: 'Streaming',
+		name: 'Streaming Timecode HH',
+		previewStyle: {
+			text: 'Stream Time:\\nHours',
+			size: '14',
+		},
+		style: {
+			text: '$(obs:stream_timecode_hh)',
 			size: 'auto',
 			color: Color.White,
 			bgcolor: Color.Black,
@@ -518,26 +597,60 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		},
 		steps: [
 			{
-				down: [
-					{
-						actionId: 'StartStopStreaming',
-						options: {},
-					},
-				],
+				down: [],
 				up: [],
 			},
 		],
-		feedbacks: [
+		feedbacks: [],
+	}
+	presets['streamingTimecodeMM'] = {
+		type: 'button',
+		category: 'Streaming',
+		name: 'Streaming Timecode MM',
+		previewStyle: {
+			text: 'Stream Time:\\nMinutes',
+			size: '14',
+		},
+		style: {
+			text: '$(obs:stream_timecode_mm)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
 			{
-				feedbackId: 'streaming',
-				options: {},
-				style: {
-					bgcolor: Color.Green,
-					color: Color.White,
-				},
+				down: [],
+				up: [],
 			},
 		],
+		feedbacks: [],
 	}
+
+	presets['streamingTimecodeSS'] = {
+		type: 'button',
+		category: 'Streaming',
+		name: 'Streaming Timecode SS',
+		previewStyle: {
+			text: 'Stream Time:\\nSeconds',
+			size: '14',
+		},
+		style: {
+			text: '$(obs:stream_timecode_ss)',
+			size: 'auto',
+			color: Color.White,
+			bgcolor: Color.Black,
+			show_topbar: false,
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
 	presets['recordingControlHeader'] = {
 		type: 'text',
 		category: 'Recording',
@@ -548,6 +661,10 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		type: 'button',
 		category: 'Recording',
 		name: 'OBS Recording',
+		previewStyle: {
+			text: 'OBS TOGGLE RECORD',
+			size: 'auto',
+		},
 		style: {
 			text: 'OBS START RECORD',
 			size: '14',
@@ -569,11 +686,19 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		feedbacks: [
 			{
 				feedbackId: 'recording',
-				options: {
-					bg: Color.Red,
-					fg: Color.White,
-					bg_paused: Color.Yellow,
-					fg_paused: Color.White,
+				options: {},
+				style: {
+					text: 'OBS STOP RECORD',
+					bgcolor: Color.Red,
+					color: Color.White,
+				},
+			},
+			{
+				feedbackId: 'recordingPaused',
+				options: {},
+				style: {
+					bgcolor: Color.Orange,
+					color: Color.White,
 				},
 			},
 		],
@@ -631,7 +756,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		category: 'Recording',
 		name: 'OBS Pause Record',
 		style: {
-			text: 'OBS STOP RECORD',
+			text: 'OBS PAUSE RECORD',
 			size: '14',
 			color: Color.White,
 			bgcolor: Color.Black,
@@ -741,7 +866,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 			show_topbar: false,
 		},
 		previewStyle: {
-			text: 'REC STATUS\n$(obs:recording)\n00:00:00',
+			text: 'REC STATUS\n$(obs:recording)\\n00:00:00',
 			size: '14',
 		},
 		steps: [
@@ -753,11 +878,18 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 		feedbacks: [
 			{
 				feedbackId: 'recording',
-				options: {
-					bg: Color.Red,
-					fg: Color.White,
-					bg_paused: Color.Yellow,
-					fg_paused: Color.White,
+				options: {},
+				style: {
+					bgcolor: Color.Red,
+					color: Color.White,
+				},
+			},
+			{
+				feedbackId: 'recordingPaused',
+				options: {},
+				style: {
+					bgcolor: Color.Orange,
+					color: Color.White,
 				},
 			},
 		],
@@ -784,17 +916,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 				up: [],
 			},
 		],
-		feedbacks: [
-			{
-				feedbackId: 'recording',
-				options: {
-					bg: Color.Red,
-					fg: Color.White,
-					bg_paused: Color.Yellow,
-					fg_paused: Color.White,
-				},
-			},
-		],
+		feedbacks: [],
 	}
 
 	presets['recordingTimecodeHH'] = {
@@ -1367,7 +1489,7 @@ export function getPresets(this: OBSInstance): CompanionPresetDefinitions {
 					{
 						actionId: 'play_pause_media',
 						options: {
-							source: 'currentMedia',
+							useCurrentMedia: true,
 							playPause: 'toggle',
 						},
 					},

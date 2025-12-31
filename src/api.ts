@@ -571,7 +571,8 @@ export class OBSApi {
 
 				this.self.states.recordDirectory = recordDirectory?.recordDirectory
 
-				this.self.checkFeedbacks('recording')
+				this.self.checkFeedbacks('recording', 'recordingPaused')
+				this.updateRecordingTimecode(recordStatus)
 				this.self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(this.self.states.recording) })
 			}
 		}
@@ -579,7 +580,7 @@ export class OBSApi {
 
 	public updateRecordingTimecode(data: unknown): void {
 		if (this.self.states.recording === OBSRecordingState.Recording) {
-			const timecode = (data as any).recordingTimecode
+			const timecode = (data as any).outputTimecode.split('.')[0] ?? '00:00:00'
 			this.self.states.recordingTimecode = timecode
 			const recordingTimecodeSplit = timecode.split(':')
 			this.self.setVariableValues({

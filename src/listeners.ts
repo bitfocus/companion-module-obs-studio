@@ -404,7 +404,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			})
 		}
 		self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(self.states.recording) })
-		self.checkFeedbacks('recording')
+		self.checkFeedbacks('recording', 'recordingPaused')
 	})
 	obs.on('ReplayBufferStateChanged', (data) => {
 		self.states.replayBuffer = data.outputActive

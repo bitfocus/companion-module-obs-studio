@@ -8,7 +8,7 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 
 	feedbacks['streaming'] = {
 		type: 'boolean',
-		name: 'Streaming Active',
+		name: 'Streaming - Active',
 		description: 'If streaming is active, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -21,49 +21,36 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 	}
 
 	feedbacks['recording'] = {
-		type: 'advanced',
-		name: 'Recording Status',
-		description: 'If recording is active or paused, change the style of the button',
-		options: [
-			{
-				type: 'colorpicker',
-				label: 'Foreground color (Recording)',
-				id: 'fg',
-				default: Color.White,
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color (Recording)',
-				id: 'bg',
-				default: Color.Red,
-			},
-			{
-				type: 'colorpicker',
-				label: 'Foreground color (Paused)',
-				id: 'fg_paused',
-				default: Color.White,
-			},
-			{
-				type: 'colorpicker',
-				label: 'Background color (Paused)',
-				id: 'bg_paused',
-				default: Color.Orange,
-			},
-		],
-		callback: (feedback) => {
-			if (self.states.recording === OBSRecordingState.Recording) {
-				return { color: feedback.options.fg as number, bgcolor: feedback.options.bg as number }
-			} else if (self.states.recording === OBSRecordingState.Paused) {
-				return { color: feedback.options.fg_paused as number, bgcolor: feedback.options.bg_paused as number }
-			} else {
-				return {}
-			}
+		type: 'boolean',
+		name: 'Recording - Active',
+		description: 'If recording is active, change the style of the button',
+		defaultStyle: {
+			color: Color.White,
+			bgcolor: Color.Red,
+		},
+		options: [],
+		callback: () => {
+			return self.states.recording === OBSRecordingState.Recording
+		},
+	}
+
+	feedbacks['recordingPaused'] = {
+		type: 'boolean',
+		name: 'Recording - Paused',
+		description: 'If recording is paused, change the style of the button',
+		defaultStyle: {
+			color: Color.White,
+			bgcolor: Color.Orange,
+		},
+		options: [],
+		callback: () => {
+			return self.states.recording === OBSRecordingState.Paused
 		},
 	}
 
 	feedbacks['output_active'] = {
 		type: 'boolean',
-		name: 'Output Active',
+		name: 'Output - Active',
 		description: 'If an output is currently active, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
@@ -85,7 +72,7 @@ export function getRecordingStreamingOutputFeedbacks(self: OBSInstance): Compani
 
 	feedbacks['replayBufferActive'] = {
 		type: 'boolean',
-		name: 'Replay Buffer Active',
+		name: 'Replay Buffer - Active',
 		description: 'If the replay buffer is currently active, change the style of the button',
 		defaultStyle: {
 			color: Color.White,
