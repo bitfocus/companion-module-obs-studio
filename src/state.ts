@@ -178,8 +178,4 @@ export class OBSState {
 	public get sourceChoicesWithScenes(): ModuleChoice[] {
 		return [...this.sourceChoices, ...this.sceneChoices]
 	}
-
-	public get mediaSourceListCurrentMedia(): ModuleChoice[] {
-		return [{ id: 'currentMedia', label: '<CURRENT MEDIA>' }, ...this.mediaSourceList]
-	}
 }

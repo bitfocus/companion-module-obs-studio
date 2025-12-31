@@ -291,5 +291,97 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
+	actions['open_projector'] = {
+		name: 'Open Projector',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Projector Type',
+				id: 'type',
+				default: 'Multiview',
+				choices: [
+					{ id: 'Multiview', label: 'Multiview' },
+					{ id: 'Preview', label: 'Preview' },
+					{ id: 'StudioProgram', label: 'Program' },
+					{ id: 'Source', label: 'Source' },
+					{ id: 'Scene', label: 'Scene' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Window Type',
+				id: 'window',
+				default: 'window',
+				choices: [
+					{ id: 'window', label: 'Window' },
+					{ id: 'fullscreen', label: 'Fullscreen' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Display',
+				id: 'display',
+				default: 0,
+				choices: self.states.monitors,
+				isVisibleExpression: `$(options:window) === 'fullscreen'`,
+			},
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: self.obsState.sourceListDefault,
+				choices: self.obsState.sourceChoices,
+				isVisibleExpression: `$(options:type) === 'Source'`,
+			},
+			{
+				type: 'dropdown',
+				label: 'Scene',
+				id: 'scene',
+				default: self.obsState.sceneListDefault,
+				choices: self.obsState.sceneChoices,
+				isVisibleExpression: `$(options:type) === 'Scene'`,
+			},
+		],
+		callback: async (action) => {
+			const monitor = action.options.window === 'window' ? -1 : (action.options.display as number)
+			let requestType
+			let requestData
+			if (action.options.type === 'Multiview') {
+				requestType = 'OpenVideoMixProjector'
+				requestData = {
+					videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_MULTIVIEW',
+					monitorIndex: monitor,
+				}
+			} else if (action.options.type === 'Preview') {
+				requestType = 'OpenVideoMixProjector'
+				requestData = {
+					videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PREVIEW',
+					monitorIndex: monitor,
+				}
+			} else if (action.options.type === 'StudioProgram') {
+				requestType = 'OpenVideoMixProjector'
+				requestData = {
+					videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PROGRAM',
+					monitorIndex: monitor,
+				}
+			} else if (action.options.type === 'Source') {
+				requestType = 'OpenSourceProjector'
+				requestData = {
+					sourceName: action.options.source,
+					monitorIndex: monitor,
+				}
+			} else if (action.options.type === 'Scene') {
+				requestType = 'OpenSceneProjector'
+				requestData = {
+					sceneName: action.options.scene,
+					monitorIndex: monitor,
+				}
+			} else {
+				return
+			}
+			await self.obs.sendRequest(requestType as any, requestData as any)
+		},
+	}
+
 	return actions
 }

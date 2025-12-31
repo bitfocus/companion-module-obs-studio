@@ -423,7 +423,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 	}
 
 	//Filters
-	actions['set_filter_visible'] = {
+	actions['toggle_filter'] = {
 		name: 'Filter - Set Visibility',
 		description: 'Shows, hides, or toggles the enabled state of a filter on a source',
 		options: [
@@ -510,7 +510,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 	}
 
-	actions['set_filter_settings'] = {
+	actions['setFilterSettings'] = {
 		name: 'Filter - Set Settings',
 		description: 'Sets the settings for a filter using a JSON object',
 		options: [
@@ -668,9 +668,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 	}
 
-	actions['set_scene_item_properties'] = {
-		name: 'Set Scene Item Properties',
-		description: 'Sets the transform properties (position, scale, rotation) of a scene item',
+	actions['source_properties'] = {
+		name: 'Source - Set Transform Properties',
+		description: 'Sets the transform properties (position, scale, rotation) of a source',
 		options: [
 			{
 				type: 'checkbox',
@@ -684,7 +684,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisible: (options) => !options.useProgramScene,
+				isVisibleExpression: `!$(options:useProgramScene)`,
 			},
 			{
 				type: 'dropdown',
@@ -765,7 +765,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 	}
 
-	actions['set_source_visible'] = {
+	actions['toggle_scene_item'] = {
 		name: 'Source - Set Visibility',
 		description: 'Shows, hides, or toggles the visibility of an item in the specified scene(s)',
 		options: [

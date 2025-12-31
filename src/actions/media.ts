@@ -237,7 +237,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 	}
 
-	actions['set_media_source_file'] = {
+	actions['updateMediaLocalFile'] = {
 		name: 'Media - Set Source File',
 		description: 'Changes the file associated with a media source',
 		options: [
