@@ -463,50 +463,10 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		callback: async (action) => {
 			const filterName = action.options.filter as string
 
-			if (action.options.allSources) {
-				const requests: any[] = []
-				self.states.sourceFilters.forEach((filters, sourceUuid) => {
-					const filter = filters.find((f: any) => f.filterName === filterName)
-					if (filter) {
-						let filterVisibility: boolean
-						if (action.options.visible === 'toggle') {
-							filterVisibility = !filter.filterEnabled
-						} else {
-							filterVisibility = action.options.visible === 'true'
-						}
-						requests.push({
-							requestType: 'SetSourceFilterEnabled',
-							requestData: {
-								sourceUuid: sourceUuid,
-								filterName: filterName,
-								filterEnabled: filterVisibility,
-							},
-						})
-					}
-				})
-
-				await self.obs.sendBatch(requests)
-			} else {
-				const sourceUuid = action.options.source as string
-				let filterVisibility: boolean
-				if (action.options.visible === 'toggle') {
-					const filters = self.states.sourceFilters.get(sourceUuid)
-					const filter = filters?.find((f) => f.filterName === filterName)
-					if (filter) {
-						filterVisibility = !filter.filterEnabled
-					} else {
-						return
-					}
-				} else {
-					filterVisibility = action.options.visible === 'true'
-				}
-
-				await self.obs.sendRequest('SetSourceFilterEnabled', {
-					sourceUuid: sourceUuid,
-					filterName: filterName,
-					filterEnabled: filterVisibility,
-				})
-			}
+			await self.obs.setFilterVisibility(filterName, action.options.visible as string, {
+				allSources: action.options.allSources as boolean,
+				source: action.options.source as string,
+			})
 		},
 	}
 
@@ -811,82 +771,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		],
 		callback: async (action) => {
 			const sourceUuid = action.options.source as string
-			const sources: any[] = []
-
-			if (action.options.anyScene) {
-				for (const [sceneUuid, sceneItems] of self.states.sceneItems) {
-					const item = sceneItems.find((i: any) => i.sourceUuid === sourceUuid)
-					if (item) {
-						sources.push({
-							sceneUuid: sceneUuid,
-							sceneItemId: item.sceneItemId,
-						})
-					}
-				}
-				for (const [groupUuid, groupItems] of self.states.groups) {
-					const item = groupItems.find((i: any) => i.sourceUuid === sourceUuid)
-					if (item) {
-						sources.push({
-							sceneUuid: groupUuid,
-							sceneItemId: item.sceneItemId,
-						})
-					}
-				}
-			} else {
-				const sceneUuid = action.options.useCurrentScene
-					? self.states.programSceneUuid
-					: (action.options.scene as string)
-				const sceneItems = self.states.sceneItems.get(sceneUuid)
-				const item = sceneItems?.find((i: any) => i.sourceUuid === sourceUuid)
-				if (item) {
-					sources.push({
-						sceneUuid: sceneUuid,
-						sceneItemId: item.sceneItemId,
-					})
-				} else {
-					const groups = self.states.groups.get(sceneUuid)
-					const item = groups?.find((i: any) => i.sourceUuid === sourceUuid)
-					if (item) {
-						sources.push({
-							sceneUuid: sceneUuid,
-							sceneItemId: item.sceneItemId,
-						})
-					}
-				}
-			}
-
-			if (sources.length > 0) {
-				const requests: any[] = []
-				sources.forEach((source) => {
-					let enabled: boolean
-					if (action.options.visible === 'toggle') {
-						const sceneItems = self.states.sceneItems.get(source.sceneUuid)
-						const item = sceneItems?.find((i: any) => i.sceneItemId === source.sceneItemId)
-						if (item) {
-							enabled = !item.sceneItemEnabled
-						} else {
-							const groups = self.states.groups.get(source.sceneUuid)
-							const item = groups?.find((i: any) => i.sceneItemId === source.sceneItemId)
-							if (item) {
-								enabled = !item.sceneItemEnabled
-							} else {
-								enabled = false
-							}
-						}
-					} else {
-						enabled = action.options.visible === 'true'
-					}
-					requests.push({
-						requestType: 'SetSceneItemEnabled',
-						requestData: {
-							sceneUuid: source.sceneUuid,
-							sceneItemId: source.sceneItemId,
-							sceneItemEnabled: enabled,
-						},
-					})
-				})
-				await self.obs.sendBatch(requests)
-			}
+			await self.obs.setSourceVisibility(sourceUuid, action.options.visible as string, {
+				anyScene: action.options.anyScene as boolean,
+				useCurrentScene: action.options.useCurrentScene as boolean,
+				scene: action.options.scene as string,
+			})
 		},
 	}
 

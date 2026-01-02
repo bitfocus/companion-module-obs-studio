@@ -1113,4 +1113,136 @@ export class OBSApi {
 			}
 		})
 	}
+
+	public async setSourceVisibility(
+		sourceUuid: string,
+		visible: string,
+		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
+	): Promise<void> {
+		const sources: { sceneUuid: string; sceneItemId: number }[] = []
+
+		if (options.anyScene) {
+			for (const [sceneUuid, sceneItems] of this.self.states.sceneItems) {
+				const item = sceneItems.find((i: any) => i.sourceUuid === sourceUuid)
+				if (item) {
+					sources.push({
+						sceneUuid: sceneUuid,
+						sceneItemId: item.sceneItemId,
+					})
+				}
+			}
+			for (const [groupUuid, groupItems] of this.self.states.groups) {
+				const item = groupItems.find((i: any) => i.sourceUuid === sourceUuid)
+				if (item) {
+					sources.push({
+						sceneUuid: groupUuid,
+						sceneItemId: item.sceneItemId,
+					})
+				}
+			}
+		} else {
+			const sceneUuid = options.useCurrentScene ? this.self.states.programSceneUuid : options.scene
+			const sceneItems = this.self.states.sceneItems.get(sceneUuid)
+			const item = sceneItems?.find((i: any) => i.sourceUuid === sourceUuid)
+			if (item) {
+				sources.push({
+					sceneUuid: sceneUuid,
+					sceneItemId: item.sceneItemId,
+				})
+			} else {
+				const groups = this.self.states.groups.get(sceneUuid)
+				const item = groups?.find((i: any) => i.sourceUuid === sourceUuid)
+				if (item) {
+					sources.push({
+						sceneUuid: sceneUuid,
+						sceneItemId: item.sceneItemId,
+					})
+				}
+			}
+		}
+
+		if (sources.length > 0) {
+			const requests: any[] = []
+			sources.forEach((source) => {
+				let enabled: boolean
+				if (visible === 'toggle') {
+					const sceneItems = this.self.states.sceneItems.get(source.sceneUuid)
+					const item = sceneItems?.find((i: any) => i.sceneItemId === source.sceneItemId)
+					if (item) {
+						enabled = !item.sceneItemEnabled
+					} else {
+						const groups = this.self.states.groups.get(source.sceneUuid)
+						const item = groups?.find((i: any) => i.sceneItemId === source.sceneItemId)
+						if (item) {
+							enabled = !item.sceneItemEnabled
+						} else {
+							enabled = false
+						}
+					}
+				} else {
+					enabled = visible === 'true'
+				}
+				requests.push({
+					requestType: 'SetSceneItemEnabled',
+					requestData: {
+						sceneUuid: source.sceneUuid,
+						sceneItemId: source.sceneItemId,
+						sceneItemEnabled: enabled,
+					},
+				})
+			})
+			await this.sendBatch(requests)
+		}
+	}
+
+	public async setFilterVisibility(
+		filterName: string,
+		visible: string,
+		options: { allSources: boolean; source: string },
+	): Promise<void> {
+		if (options.allSources) {
+			const requests: any[] = []
+			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
+				const filter = filters.find((f: any) => f.filterName === filterName)
+				if (filter) {
+					let filterVisibility: boolean
+					if (visible === 'toggle') {
+						filterVisibility = !filter.filterEnabled
+					} else {
+						filterVisibility = visible === 'true'
+					}
+					requests.push({
+						requestType: 'SetSourceFilterEnabled',
+						requestData: {
+							sourceUuid: sourceUuid,
+							filterName: filterName,
+							filterEnabled: filterVisibility,
+						},
+					})
+				}
+			})
+
+			await this.sendBatch(requests)
+		} else {
+			const sourceUuid = options.source
+			let filterVisibility: boolean
+			if (visible === 'toggle') {
+				const filters = this.self.states.sourceFilters.get(sourceUuid)
+				const filter = filters?.find((f) => f.filterName === filterName)
+				if (filter) {
+					filterVisibility = !filter.filterEnabled
+				} else {
+					return
+				}
+			} else {
+				filterVisibility = visible === 'true'
+			}
+
+			await this.sendRequest('SetSourceFilterEnabled', {
+				sourceUuid: sourceUuid,
+				filterName: filterName,
+				filterEnabled: filterVisibility,
+			})
+		}
+	}
 }
