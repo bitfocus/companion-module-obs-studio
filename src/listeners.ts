@@ -112,12 +112,18 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			'scene_item_active',
 			'scene_item_active_in_scene',
 		)
+		if (self.isRecordingActions) {
+			self.sendToActionRecorder({ actionId: 'set_scene', options: { scene: data.sceneUuid } })
+		}
 	})
 	obs.on('CurrentPreviewSceneChanged', (data) => {
 		self.states.previewScene = data.sceneName ?? 'None'
 		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
 		self.checkFeedbacks('scene_active', 'scenePreview')
+		if (self.isRecordingActions) {
+			self.sendToActionRecorder({ actionId: 'preview_scene', options: { scene: data.sceneUuid } })
+		}
 	})
 	obs.on('SceneListChanged', (data) => {
 		self.states.scenes.clear()
@@ -253,12 +259,18 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				void self.obs.buildSceneTransitionList()
 				void self.updateActionsFeedbacksVariables()
 			}
+			if (self.isRecordingActions) {
+				self.sendToActionRecorder({ actionId: 'set_transition_type', options: { transitions: data.transitionName } })
+			}
 		})()
 	})
 	obs.on('CurrentSceneTransitionDurationChanged', (data) => {
 		self.states.transitionDuration = data.transitionDuration ?? 0
 		self.checkFeedbacks('transition_duration')
 		self.setVariableValues({ transition_duration: self.states.transitionDuration })
+		if (self.isRecordingActions) {
+			self.sendToActionRecorder({ actionId: 'set_transition_duration', options: { duration: data.transitionDuration } })
+		}
 	})
 	obs.on('SceneTransitionStarted', () => {
 		self.states.transitionActive = true

@@ -1,4 +1,10 @@
-import { InstanceBase, InstanceStatus, runEntrypoint, SomeCompanionConfigField } from '@companion-module/base'
+import {
+	CompanionRecordedAction,
+	InstanceBase,
+	InstanceStatus,
+	runEntrypoint,
+	SomeCompanionConfigField,
+} from '@companion-module/base'
 import { GetConfigFields } from './config.js'
 import { getActions } from './actions.js'
 import { getPresets } from './presets.js'
@@ -17,6 +23,8 @@ export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
 	public obsState!: OBSState
 	public config!: ModuleConfig
 	public secrets!: ModuleSecrets
+
+	public isRecordingActions: boolean = false
 
 	public reconnectionPoll?: NodeJS.Timeout
 	public statsPoll?: NodeJS.Timeout
@@ -90,6 +98,18 @@ export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
 		this.initFeedbacks()
 		this.initPresets()
 		this.initActions()
+	}
+
+	handleStartStopRecordActions(isRecording: boolean): void {
+		this.isRecordingActions = isRecording
+		console.log('isRecordingActions', this.isRecordingActions)
+	}
+
+	sendToActionRecorder(action: CompanionRecordedAction, uniquenessId?: string): void {
+		const timestamp = Date.now()
+		uniquenessId = timestamp.toString()
+		console.log(action, uniquenessId)
+		this.recordAction(action, uniquenessId)
 	}
 }
 runEntrypoint(OBSInstance, UpgradeScripts as any)
