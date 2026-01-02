@@ -65,6 +65,17 @@ export function rgbaToObsColor(rgbaString: string): number {
 	return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0
 }
 
+export function obsColorToRgba(obsColor: number): string {
+	// OBS provides colors as 32-bit integers: (alpha << 24) | (blue << 16) | (green << 8) | red
+	// We need to convert this to rgba(r, g, b, a) string
+	const a = ((obsColor >> 24) & 0xff) / 255
+	const b = (obsColor >> 16) & 0xff
+	const g = (obsColor >> 8) & 0xff
+	const r = obsColor & 0xff
+
+	return `rgba(${r}, ${g}, ${b}, ${a})`
+}
+
 export function getOBSRecordingStateLabel(state: OBSRecordingState): string {
 	switch (state) {
 		case OBSRecordingState.Recording:

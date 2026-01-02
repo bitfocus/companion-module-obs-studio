@@ -282,6 +282,15 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				self.log('error', `Set Media Source File Error: ${e.message}`)
 			}
 		},
+		learn: (action) => {
+			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const input = self.obsState.state?.sources.get(mediaUuid)
+			if (!input) return undefined
+			return {
+				...action.options,
+				path: input.settings?.local_file,
+			}
+		},
 	}
 
 	return actions

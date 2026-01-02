@@ -31,6 +31,16 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			}
 			await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: { text: newText } })
 		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.obsState.state?.sources.get(sourceUuid)
+			const text = source?.settings?.text
+			if (!text) return undefined
+			return {
+				...action.options,
+				text: text,
+			}
+		},
 	}
 	actions['setTextProperties'] = {
 		name: 'Set Text Properties',
@@ -396,6 +406,59 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				inputUuid: sourceUuid,
 				inputSettings: inputSettings,
 			})
+		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.obsState.state?.sources.get(sourceUuid)
+			const settings = source?.settings
+			if (!settings) return undefined
+
+			const props = (action.options.props as string[]) || []
+			const newOptions: Record<string, any> = { ...action.options }
+			const kind = source.inputKind || ''
+
+			const setIfProp = (prop: string, value: any): void => {
+				if (props.includes(prop) && value !== undefined) {
+					newOptions[prop] = value
+				}
+			}
+
+			setIfProp('text', settings.text)
+
+			const font = settings.font
+			if (font) {
+				setIfProp('fontSize', font.size)
+				setIfProp('fontFace', font.face)
+				setIfProp('fontStyle', font.style)
+			}
+
+			if (kind.includes('text_gdiplus')) {
+				setIfProp('textTransform', settings.transform)
+				if (settings.color !== undefined) setIfProp('color1', utils.obsColorToRgba(settings.color))
+				if (settings.gradient_color !== undefined) setIfProp('color2', utils.obsColorToRgba(settings.gradient_color))
+				setIfProp('gradient', settings.gradient)
+				setIfProp('outline', settings.outline)
+				setIfProp('outlineSize', settings.outline_size)
+				if (settings.outline_color !== undefined)
+					setIfProp('outlineColor', utils.obsColorToRgba(settings.outline_color))
+				if (settings.bk_color !== undefined) setIfProp('backgroundColor', utils.obsColorToRgba(settings.bk_color))
+				setIfProp('backgroundOpacity', settings.bk_opacity)
+				setIfProp('wrap', settings.extents_wrap)
+				setIfProp('alignment', settings.align)
+				setIfProp('verticalAlignment', settings.valign)
+				setIfProp('extents', settings.extents)
+				setIfProp('extentsWidth', settings.extents_cx)
+				setIfProp('extentsHeight', settings.extents_cy)
+				setIfProp('vertical', settings.vertical)
+			} else {
+				if (settings.color1 !== undefined) setIfProp('color1', utils.obsColorToRgba(settings.color1))
+				if (settings.color2 !== undefined) setIfProp('color2', utils.obsColorToRgba(settings.color2))
+				setIfProp('outline', settings.outline)
+				setIfProp('dropShadow', settings.drop_shadow)
+				setIfProp('wrap', settings.word_wrap)
+			}
+
+			return newOptions
 		},
 	}
 	actions['resetCaptureDevice'] = {

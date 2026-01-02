@@ -169,6 +169,15 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 			}
 		},
+		learn: () => {
+			const duration = self.states.transitionDuration
+			if (duration !== undefined) {
+				return {
+					duration: Number(duration),
+				}
+			}
+			return undefined
+		},
 	}
 
 	actions['adjust_transition_duration'] = {

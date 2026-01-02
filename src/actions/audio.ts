@@ -78,6 +78,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				inputVolumeDb: action.options.volume as number,
 			})
 		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.obsState.state?.sources.get(sourceUuid)
+			if (!source) return undefined
+			return {
+				...action.options,
+				volume: source.inputVolume,
+			}
+		},
 	}
 	actions['adjust_volume'] = {
 		name: 'Audio - Adjust Source Volume',
@@ -246,6 +255,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				inputAudioSyncOffset: action.options.offset as number,
 			})
 		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.obsState.state?.sources.get(sourceUuid)
+			if (!source) return undefined
+			return {
+				...action.options,
+				offset: source.inputAudioSyncOffset,
+			}
+		},
 	}
 	actions['adjust_audio_offset'] = {
 		name: 'Audio - Adjust Source Audio Offset',
@@ -310,6 +328,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				inputUuid: sourceUuid,
 				inputAudioBalance: action.options.balance as number,
 			})
+		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.obsState.state?.sources.get(sourceUuid)
+			if (!source) return undefined
+			return {
+				...action.options,
+				balance: source.inputAudioBalance,
+			}
 		},
 	}
 	actions['adjust_audio_balance'] = {
@@ -378,6 +405,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				inputUuid: action.options.source as string,
 				monitorType: monitorType,
 			})
+		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.obsState.state?.sources.get(sourceUuid)
+			if (!source) return undefined
+			return {
+				...action.options,
+				monitor: source.monitorType,
+			}
 		},
 	}
 
