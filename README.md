@@ -8,6 +8,11 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ## Changelog
 
+### v3.15.3
+
+- Fix
+  - Set Source Visibility action not working when a source is in a group
+
 ### v3.15.2
 
 - Fix
