@@ -1026,16 +1026,18 @@ export function getActions() {
 			if (this.sources[sourceName]?.groupedSource) {
 				let group = this.sources[sourceName].groupName
 				let source = this.groups[group].find((item) => item.sourceName === sourceName)
-				if (action.options.visible === 'toggle') {
-					enabled = !source.sceneItemEnabled
-				} else {
-					enabled = action.options.visible == 'true' ? true : false
+				if (source) {
+					if (action.options.visible === 'toggle') {
+						enabled = !source.sceneItemEnabled
+					} else {
+						enabled = action.options.visible == 'true' ? true : false
+					}
+					this.sendRequest('SetSceneItemEnabled', {
+						sceneName: group,
+						sceneItemId: source.sceneItemId,
+						sceneItemEnabled: enabled,
+					})
 				}
-				this.sendRequest('SetSceneItemEnabled', {
-					sceneName: source.groupName,
-					sceneItemId: source.sceneItemId,
-					sceneItemEnabled: enabled,
-				})
 			}
 			let targetScene = this.sceneItems[sceneName]
 			if (targetScene) {
