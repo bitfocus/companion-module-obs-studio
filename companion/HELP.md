@@ -158,6 +158,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - monitor (Current audio monitoring state of a source)
 - sync_offset (Current audio sync offset of a source)
 - balance (Current audio balance of a source)
+- tracks (Current audio output tracks of a source)
 
 **General**
 
