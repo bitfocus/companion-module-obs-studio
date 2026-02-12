@@ -84,6 +84,43 @@ export function getPresets() {
 				},
 			],
 		}
+
+		presets[`smart_${scene.id}`] = {
+			type: 'button',
+			category: 'Smart Switch Scene',
+			name: scene.label,
+			style: {
+				text: scene.label,
+				size: 'auto',
+				color: ColorWhite,
+				bgcolor: 0,
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'smart_switcher',
+							options: {
+								scene: scene.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'programAndPreview',
+					options: {
+						scene: scene.id,
+						fg: ColorWhite,
+						bg: ColorGreen,
+						fg_preview: ColorWhite,
+						bg_preview: ColorRed,
+					},
+				},
+			],
+		}
 	}
 
 	presets['transitionAuto'] = {
