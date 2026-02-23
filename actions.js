@@ -1091,7 +1091,7 @@ export function getActions() {
 				type: 'multidropdown',
 				label: 'Tracks',
 				id: 'tracks',
-				default: '1',
+				default: ['1'],
 				isVisible: (options) => options.all === false,
 				choices: [
 					{ id: '1', label: 'Track 1' },
