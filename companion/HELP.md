@@ -44,7 +44,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Audio Monitor
 - Set Audio Sync Offset
 - Set Audio Balance
-- Set Audio Tracks
+- Source Audio Tracks (Set Per-Track / Toggle Selected / Toggle All)
 - Set Source Text
 - Set Text Properties
 - Refresh Browser Source
