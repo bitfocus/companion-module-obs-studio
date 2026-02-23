@@ -109,6 +109,7 @@ export function getVariables() {
 				{ variableId: `monitor_${sourceName}`, name: `${sourceName} - Audio monitor` },
 				{ variableId: `sync_offset_${sourceName}`, name: `${sourceName} - Sync offset` },
 				{ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` },
+				{ variableId: `tracks_${sourceName}`, name: `${sourceName} - Tracks` },
 			)
 		}
 	}
@@ -202,6 +203,7 @@ export function updateVariableValues() {
 				[`sync_offset_${sourceName}`]:
 					source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : '',
 				[`balance_${sourceName}`]: source.inputAudioBalance !== undefined ? source.inputAudioBalance : '',
+				[`tracks_${sourceName}`]: source.inputAudioTracks !== undefined ? source.inputAudioTracks : {},
 			})
 		}
 	}

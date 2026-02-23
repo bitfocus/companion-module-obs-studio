@@ -971,6 +971,173 @@ export function getActions() {
 			})
 		},
 	}
+	actions['set_output_tracks'] = {
+		name: 'Set Audio Output Tracks',
+		description: 'Set or toggle the output tracks of an audio source',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+			{
+				type: 'dropdown',
+				label: 'Track 1',
+				id: 'track1',
+				default: 'true',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Track 2',
+				id: 'track2',
+				default: 'true',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Track 3',
+				id: 'track3',
+				default: 'true',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Track 4',
+				id: 'track4',
+				default: 'true',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Track 5',
+				id: 'track5',
+				default: 'true',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Track 6',
+				id: 'track6',
+				default: 'true',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+		],
+		callback: async (action) => {
+			let sourceName = await this.parseVariablesInString(action.options.source)
+			let sourceAudioTracks = this.sources[sourceName]?.inputAudioTracks;
+			let setAudioTracks = {};
+			if (sourceAudioTracks) {
+				Object.entries(sourceAudioTracks).forEach(([trackNo, enabled]) => {
+				    if(action.options['track'+trackNo] === 'toggle') {
+					setAudioTracks[trackNo] = !enabled;
+				    } else {
+					setAudioTracks[trackNo] = action.options['track'+trackNo] == 'true' ? true : false;
+				    }
+				})
+				await this.sendRequest('SetInputAudioTracks', {
+					inputName: action.options.source,
+					inputAudioTracks: setAudioTracks
+				})
+			} else {
+				return
+			}
+		},
+	}
+	actions.toggle_output_tracks = {
+		name: 'Toggle Audio Output Tracks',
+		description: 'Toggle the output track(s) of an audio source',
+		options: [
+			{
+				type: 'dropdown',
+				label: 'Source',
+				id: 'source',
+				default: this.audioSourceListDefault,
+				choices: this.audioSourceList,
+			},
+			{
+				type: 'checkbox',
+				label: 'All Tracks',
+				id: 'all',
+				default: false,
+			},
+			{
+				type: 'multidropdown',
+				label: 'Tracks',
+				id: 'tracks',
+				default: ['1'],
+				isVisible: (options) => options.all === false,
+				choices: [
+					{ id: '1', label: 'Track 1' },
+					{ id: '2', label: 'Track 2' },
+					{ id: '3', label: 'Track 3' },
+					{ id: '4', label: 'Track 4' },
+					{ id: '5', label: 'Track 5' },
+					{ id: '6', label: 'Track 6' },
+				],
+			},
+			{
+				type: 'dropdown',
+				label: 'Output',
+				id: 'output',
+				default: 'toggle',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'true', label: 'True' },
+					{ id: 'false', label: 'False' },
+				],
+			},
+		],
+		callback: async (action) => {
+			let sourceName = await this.parseVariablesInString(action.options.source);
+			let audioTrackIDs = await this.parseVariablesInString(action.options.tracks);
+			let sourceAudioTracks = this.sources[sourceName]?.inputAudioTracks;
+			let setAudioTracks = {};
+			if (sourceAudioTracks) {
+				Object.entries(sourceAudioTracks).forEach(([trackNo, enabled]) => {
+				    if(action.options.all === true || action.options.tracks.includes(trackNo)) {
+					if(action.options.output === 'toggle') {
+						setAudioTracks[trackNo] = !enabled;
+					} else {
+						setAudioTracks[trackNo] = action.options.output == 'true' ? true : false;
+					}
+				    }
+				});
+				await this.sendRequest('SetInputAudioTracks', {
+					inputName: action.options.source,
+					inputAudioTracks: setAudioTracks
+				})
+			} else {
+				return
+			}
+		},
+	},
 	actions['toggle_scene_item'] = {
 		name: 'Set Source Visibility',
 		description: 'Set or toggle the visibility of a source within a scene',
