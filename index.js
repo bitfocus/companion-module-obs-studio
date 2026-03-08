@@ -480,7 +480,11 @@ class OBSInstance extends InstanceBase {
 				[`sync_offset_${name}`]: this.sources[data.inputName].inputAudioSyncOffset + 'ms',
 			})
 		})
-		this.obs.on('InputAudioTracksChanged', () => {})
+		this.obs.on('InputAudioTracksChanged', (data) => {
+			this.sources[data.inputName].inputAudioTracks = data.inputAudioTracks
+			let name = this.sources[data.inputName].validName
+			this.setVariableValues({ [`tracks_${name}`]: this.sources[data.inputName].inputAudioTracks })
+		})
 		this.obs.on('InputAudioMonitorTypeChanged', (data) => {
 			this.sources[data.inputName].monitorType = data.monitorType
 			let name = this.sources[data.inputName].validName
@@ -1582,6 +1586,7 @@ class OBSInstance extends InstanceBase {
 					}
 					case 'GetInputAudioTracks':
 						this.sources[sourceName].inputAudioTracks = data.inputAudioTracks
+						this.setVariableValues({ [`tracks_${validName}`]: this.sources[sourceName].inputAudioTracks })
 						break
 					default:
 						break
@@ -1594,6 +1599,7 @@ class OBSInstance extends InstanceBase {
 			[`volume_${validName}`]: this.sources[sourceName].inputVolume + 'dB',
 			[`balance_${validName}`]: this.sources[sourceName].inputAudioBalance,
 			[`sync_offset_${validName}`]: this.sources[sourceName].inputAudioSyncOffset + 'ms',
+			[`tracks_${validName}`]: this.sources[sourceName].inputAudioTracks,
 		})
 		this.checkFeedbacks('audio_muted', 'volume', 'audio_monitor_type')
 	}
