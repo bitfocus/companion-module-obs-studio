@@ -50,6 +50,17 @@ class OBSInstance extends InstanceBase {
 				label: 'Server Password',
 				width: 4,
 			},
+			{
+				type: 'dropdown',
+				id: 'scheme',
+				label: 'Server Scheme',
+				default: 'ws',
+				choices: [
+					{ id: 'ws', label: 'ws' },
+					{ id: 'wss', label: 'wss' },
+				],
+				width: 4,
+			},
 		]
 	}
 
@@ -234,7 +245,7 @@ class OBSInstance extends InstanceBase {
 		}
 		try {
 			const { obsWebSocketVersion } = await this.obs.connect(
-				`ws://${this.config.host}:${this.config.port}`,
+				`${this.config.scheme ?? 'ws'}://${this.config.host}:${this.config.port}`,
 				this.config.pass,
 				{
 					eventSubscriptions:
