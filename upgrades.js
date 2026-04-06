@@ -203,4 +203,13 @@ export default [
 		}
 		return changes
 	},
+	function v3_16_0(context, props) {
+		let changes = {
+			updatedConfig: { ...props.config, scheme: 'ws' },
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		return changes
+	},
 ]
