@@ -50,6 +50,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				inputMuted: action.options.mute === 'true',
 			})
 		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const source = self.states.sources.get(sourceUuid)
+			if (!source) return undefined
+			return {
+				...action.options,
+				mute: source.inputMuted ? 'true' : 'false',
+			}
+		},
 	}
 	actions['set_volume'] = {
 		name: 'Audio - Set Source Volume',

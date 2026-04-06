@@ -115,6 +115,11 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			const transition = action.options.transitions as string
 			await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
 		},
+		learn: () => {
+			const transition = self.states.currentTransition
+			if (!transition) return undefined
+			return { transitions: transition }
+		},
 	}
 	actions['adjustTransitionType'] = {
 		name: 'Transition - Adjust Type',

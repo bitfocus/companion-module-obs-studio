@@ -531,6 +531,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				source: action.options.source as string,
 			})
 		},
+		learn: (action) => {
+			if (action.options.allSources) return undefined
+			const sourceUuid = action.options.source as string
+			const filterName = action.options.filter as string
+			const filters = self.states.sourceFilters.get(sourceUuid)
+			const filter = filters?.find((f) => f.filterName === filterName)
+			if (!filter) return undefined
+			return {
+				...action.options,
+				visible: filter.filterEnabled ? 'true' : 'false',
+			}
+		},
 	}
 
 	actions['setFilterSettings'] = {
@@ -570,6 +582,17 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				})
 			} catch (e: any) {
 				self.log('error', `Set Filter Settings Error: ${e.message}`)
+			}
+		},
+		learn: (action) => {
+			const sourceUuid = action.options.source as string
+			const filterName = action.options.filter as string
+			const filters = self.states.sourceFilters.get(sourceUuid)
+			const filter = filters?.find((f) => f.filterName === filterName)
+			if (!filter) return undefined
+			return {
+				...action.options,
+				settings: JSON.stringify(filter.filterSettings, null, 2),
 			}
 		},
 	}
@@ -839,6 +862,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				useCurrentScene: action.options.useCurrentScene as boolean,
 				scene: action.options.scene as string,
 			})
+		},
+		learn: (action) => {
+			if (action.options.anyScene) return undefined
+			const sourceUuid = action.options.source as string
+			const sceneUuid = action.options.useCurrentScene ? self.states.programSceneUuid : (action.options.scene as string)
+			const sceneItems = self.states.sceneItems.get(sceneUuid)
+			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
+			if (!item) return undefined
+			return {
+				...action.options,
+				visible: item.sceneItemEnabled ? 'true' : 'false',
+			}
 		},
 	}
 

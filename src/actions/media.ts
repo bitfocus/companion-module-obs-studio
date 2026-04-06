@@ -197,6 +197,15 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				mediaCursor: mediaTime,
 			})
 		},
+		learn: (action) => {
+			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const source = self.states.sources.get(mediaUuid)
+			if (!source || source.mediaCursor === undefined) return undefined
+			return {
+				...action.options,
+				mediaTime: source.mediaCursor,
+			}
+		},
 	}
 
 	actions['scrub_media'] = {

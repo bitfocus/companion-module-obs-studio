@@ -39,6 +39,14 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				await self.obs.sendRequest('SetCurrentProgramScene', { sceneUuid: action.options.scene as string })
 			}
 		},
+		learn: (action) => {
+			if (action.options.custom) {
+				if (!self.states.programScene) return undefined
+				return { ...action.options, customSceneName: self.states.programScene }
+			}
+			if (!self.states.programSceneUuid) return undefined
+			return { ...action.options, scene: self.states.programSceneUuid }
+		},
 	}
 
 	actions['preview_scene'] = {
@@ -75,6 +83,14 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 			} else {
 				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: action.options.scene as string })
 			}
+		},
+		learn: (action) => {
+			if (action.options.custom) {
+				if (!self.states.previewScene) return undefined
+				return { ...action.options, customSceneName: self.states.previewScene }
+			}
+			if (!self.states.previewSceneUuid) return undefined
+			return { ...action.options, scene: self.states.previewSceneUuid }
 		},
 	}
 
@@ -122,6 +138,14 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: sceneUuid })
 				}
 			}
+		},
+		learn: (action) => {
+			if (action.options.custom) {
+				if (!self.states.previewScene) return undefined
+				return { ...action.options, customSceneName: self.states.previewScene }
+			}
+			if (!self.states.previewSceneUuid) return undefined
+			return { ...action.options, scene: self.states.previewSceneUuid }
 		},
 	}
 
