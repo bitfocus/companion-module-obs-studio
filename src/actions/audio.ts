@@ -80,7 +80,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 		learn: (action) => {
 			const sourceUuid = action.options.source as string
-			const source = self.obsState.state?.sources.get(sourceUuid)
+			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
 				...action.options,
@@ -257,7 +257,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 		learn: (action) => {
 			const sourceUuid = action.options.source as string
-			const source = self.obsState.state?.sources.get(sourceUuid)
+			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
 				...action.options,
@@ -331,7 +331,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 		learn: (action) => {
 			const sourceUuid = action.options.source as string
-			const source = self.obsState.state?.sources.get(sourceUuid)
+			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
 				...action.options,
@@ -408,7 +408,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 		learn: (action) => {
 			const sourceUuid = action.options.source as string
-			const source = self.obsState.state?.sources.get(sourceUuid)
+			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
 				...action.options,

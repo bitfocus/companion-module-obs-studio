@@ -157,14 +157,8 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const command = action.options.command as string
+			const command = (action.options.command as string).replace(/ /g, '')
 			let arg: any = ''
-			try {
-				command.replace(/ /g, '')
-			} catch (e: any) {
-				self.log('warn', `Unknown command format: ${e.message}`)
-				return
-			}
 
 			if (action.options.arg) {
 				arg = action.options.arg as string
@@ -212,16 +206,9 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const vendorName = action.options.vendorName as string
-			const requestType = action.options.requestType as string
+			const vendorName = (action.options.vendorName as string).replace(/ /g, '')
+			const requestType = (action.options.requestType as string).replace(/ /g, '')
 			let requestData: any = ''
-			try {
-				vendorName.replace(/ /g, '')
-				requestType.replace(/ /g, '')
-			} catch (e: any) {
-				self.log('warn', `Unknown vendor or request format ${e.message}`)
-				return
-			}
 
 			if (action.options.requestData) {
 				requestData = action.options.requestData as string

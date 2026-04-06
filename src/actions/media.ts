@@ -284,7 +284,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 		learn: (action) => {
 			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
-			const input = self.obsState.state?.sources.get(mediaUuid)
+			const input = self.states.sources.get(mediaUuid)
 			if (!input) return undefined
 			return {
 				...action.options,

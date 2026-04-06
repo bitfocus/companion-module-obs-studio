@@ -33,7 +33,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 		learn: (action) => {
 			const sourceUuid = action.options.source as string
-			const source = self.obsState.state?.sources.get(sourceUuid)
+			const source = self.states.sources.get(sourceUuid)
 			const text = source?.settings?.text
 			if (!text) return undefined
 			return {
@@ -409,7 +409,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 		learn: (action) => {
 			const sourceUuid = action.options.source as string
-			const source = self.obsState.state?.sources.get(sourceUuid)
+			const source = self.states.sources.get(sourceUuid)
 			const settings = source?.settings
 			if (!settings) return undefined
 

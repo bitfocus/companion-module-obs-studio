@@ -102,13 +102,11 @@ export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
 
 	handleStartStopRecordActions(isRecording: boolean): void {
 		this.isRecordingActions = isRecording
-		console.log('isRecordingActions', this.isRecordingActions)
 	}
 
 	sendToActionRecorder(action: CompanionRecordedAction, uniquenessId?: string): void {
 		const timestamp = Date.now()
-		uniquenessId = timestamp.toString()
-		console.log(action, uniquenessId)
+		uniquenessId = uniquenessId ?? timestamp.toString()
 		this.recordAction(action, uniquenessId)
 	}
 }
