@@ -73,14 +73,14 @@ export function getActions() {
 		options: [
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Chapter Name',
 				id: 'chapterName',
 				default: '',
 			},
 		],
-		callback: async (action) => {
-			const chapterName = await this.parseVariablesInString(action.options.chapterName)
+		callback: async (action, context) => {
+			const chapterName = await context.parseVariablesInString(action.options.chapterName)
 			await this.sendRequest('CreateRecordChapter', { chapterName: chapterName })
 		},
 	}
@@ -145,16 +145,16 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Custom Scene Name',
 				id: 'customSceneName',
 				default: '',
 				isVisible: (options) => options.scene === 'customSceneName',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			if (action.options.scene === 'customSceneName') {
-				const scene = await this.parseVariablesInString(action.options.customSceneName)
+				const scene = await context.parseVariablesInString(action.options.customSceneName)
 				await this.sendRequest('SetCurrentProgramScene', { sceneName: scene })
 			} else {
 				await this.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
@@ -173,16 +173,16 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Custom Scene Name',
 				id: 'customSceneName',
 				default: '',
 				isVisible: (options) => options.scene === 'customSceneName',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			if (action.options.scene === 'customSceneName') {
-				const scene = await this.parseVariablesInString(action.options.customSceneName)
+				const scene = await context.parseVariablesInString(action.options.customSceneName)
 				await this.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
 				await this.sendRequest('SetCurrentPreviewScene', { sceneName: action.options.scene })
@@ -202,17 +202,17 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Custom Scene Name',
 				id: 'customSceneName',
 				default: '',
 				isVisible: (options) => options.scene === 'customSceneName',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			let scene = action.options.scene
 			if (action.options.scene === 'customSceneName') {
-				scene = await this.parseVariablesInString(action.options.customSceneName)
+				scene = await context.parseVariablesInString(action.options.customSceneName)
 			}
 
 			if (this.states.previewScene == scene && this.states.programScene != scene) {
@@ -284,6 +284,7 @@ export function getActions() {
 				id: 'transition',
 				default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 				choices: this.transitionList,
+				allowCustom: true,
 			},
 			{
 				type: 'checkbox',
@@ -301,7 +302,8 @@ export function getActions() {
 				isVisible: (options) => options.customDuration === true,
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
+            const transition = context.parseVariablesInString(action.options.transition)
 			if (action.options.transition == 'Default' && !action.options.customDuration) {
 				await this.sendRequest('TriggerStudioModeTransition')
 			} else {
@@ -310,9 +312,9 @@ export function getActions() {
 				let revertTransition = this.states.currentTransition
 				let revertTransitionDuration = this.states.transitionDuration > 0 ? this.states.transitionDuration : 500
 
-				if (action.options.transition == 'Cut') {
+				if (transition == 'Cut') {
 					transitionWaitTime = 100
-				} else if (action.options.transition != 'Cut' && action.options.customDuration) {
+				} else if (transition != 'Cut' && action.options.customDuration) {
 					transitionWaitTime =
 						action.options.transition_time > 50 ? action.options.transition_time + 100 : revertTransitionDuration + 100
 				} else {
@@ -330,7 +332,7 @@ export function getActions() {
 					await this.sendBatch([
 						{
 							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: action.options.transition },
+							requestData: { transitionName: transition },
 						},
 						{
 							requestType: 'SetCurrentSceneTransitionDuration',
@@ -371,8 +373,8 @@ export function getActions() {
 				allowCustom: true,
 			},
 		],
-		callback: async (action) => {
-			let transition = await this.parseVariablesInString(action.options.transitions)
+		callback: async (action, context) => {
+			let transition = await context.parseVariablesInString(action.options.transitions)
 			await this.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
 		},
 	}
@@ -418,7 +420,7 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Transition time variable (in ms)',
 				id: 'variableValue',
 				default: '500',
@@ -431,10 +433,10 @@ export function getActions() {
 				default: false,
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			let duration = null
 			if (action.options.useVariable) {
-				duration = await this.parseVariablesInString(action.options.variableValue)
+				duration = await context.parseVariablesInString(action.options.variableValue)
 				duration = parseInt(duration)
 				if (duration >= 50 && duration <= 20000) {
 					//Pass duration as is
@@ -515,7 +517,7 @@ export function getActions() {
 				label: 'Service Name',
 				id: 'serviceName',
 				default: 'Twitch',
-				useVariables: true,
+				useVariables: { local: true },
 				isVisibleExpression: `$(options:streamType) === 'rtmp_common' && $(options:service) === 'Custom'`,
 			},
 			{
@@ -523,7 +525,7 @@ export function getActions() {
 				label: 'Stream URL',
 				id: 'streamURL',
 				default: '',
-				useVariables: true,
+				useVariables: { local: true },
 				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' || $(options:streamType) === 'whip_custom'`,
 			},
 			{
@@ -531,7 +533,7 @@ export function getActions() {
 				label: 'Stream Key',
 				id: 'streamKey',
 				default: '',
-				useVariables: true,
+				useVariables: { local: true },
 				isVisibleExpression: `$(options:streamType) === 'rtmp_common' || $(options:streamType) === 'rtmp_custom'`,
 			},
 			{
@@ -546,7 +548,7 @@ export function getActions() {
 				label: 'User Name (Optional)',
 				id: 'streamUserName',
 				default: '',
-				useVariables: true,
+				useVariables: { local: true },
 				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:streamAuth)`,
 			},
 			{
@@ -554,7 +556,7 @@ export function getActions() {
 				label: 'Password (Optional)',
 				id: 'streamPassword',
 				default: '',
-				useVariables: true,
+				useVariables: { local: true },
 				isVisibleExpression: `$(options:streamType) === 'rtmp_custom' && $(options:streamAuth)`,
 			},
 			{
@@ -562,33 +564,33 @@ export function getActions() {
 				id: 'bearerToken',
 				label: 'Bearer Token (Optional)',
 				default: '',
-				useVariables: true,
+				useVariables: { local: true },
 				isVisibleExpression: `$(options:streamType) === 'whip_custom'`,
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			let streamServiceSettings = {}
 
 			if (action.options.streamType === 'rtmp_common') {
-				streamServiceSettings.key = await this.parseVariablesInString(action.options.streamKey)
+				streamServiceSettings.key = await context.parseVariablesInString(action.options.streamKey)
 				streamServiceSettings.service =
 					action.options.service === 'Custom'
-						? await this.parseVariablesInString(action.options.serviceName)
+						? await context.parseVariablesInString(action.options.serviceName)
 						: action.options.service
 			}
 
 			if (action.options.streamType === 'rtmp_custom') {
-				streamServiceSettings.server = await this.parseVariablesInString(action.options.streamURL)
-				streamServiceSettings.key = await this.parseVariablesInString(action.options.streamKey)
+				streamServiceSettings.server = await context.parseVariablesInString(action.options.streamURL)
+				streamServiceSettings.key = await context.parseVariablesInString(action.options.streamKey)
 				streamServiceSettings.use_auth = action.options.streamAuth
-				streamServiceSettings.username = await this.parseVariablesInString(action.options.streamUserName)
-				streamServiceSettings.password = await this.parseVariablesInString(action.options.streamPassword)
+				streamServiceSettings.username = await context.parseVariablesInString(action.options.streamUserName)
+				streamServiceSettings.password = await context.parseVariablesInString(action.options.streamPassword)
 			}
 
 			if (action.options.streamType === 'whip_custom') {
-				streamServiceSettings.server = await this.parseVariablesInString(action.options.streamURL)
+				streamServiceSettings.server = await context.parseVariablesInString(action.options.streamURL)
 				streamServiceSettings.service = 'WHIP'
-				streamServiceSettings.bearer_token = await this.parseVariablesInString(action.options.bearerToken)
+				streamServiceSettings.bearer_token = await context.parseVariablesInString(action.options.bearerToken)
 			}
 
 			let streamServiceType = action.options.streamType
@@ -605,15 +607,15 @@ export function getActions() {
 		options: [
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Caption Text',
 				id: 'text',
 				default: '',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			if (this.states.streaming) {
-				let captionText = await this.parseVariablesInString(action.options.customSceneName)
+				let captionText = await context.parseVariablesInString(action.options.customSceneName)
 				this.sendRequest('SendStreamCaption', { captionText: captionText })
 			}
 		},
@@ -1010,9 +1012,9 @@ export function getActions() {
 				],
 			},
 		],
-		callback: async (action) => {
-			let sceneName = await this.parseVariablesInString(action.options.scene)
-			let sourceName = await this.parseVariablesInString(action.options.source)
+		callback: async (action, context) => {
+			let sceneName = await context.parseVariablesInString(action.options.scene)
+			let sourceName = await context.parseVariablesInString(action.options.source)
 			let enabled = true
 			let requests = []
 
@@ -1096,13 +1098,13 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Text',
 				id: 'text',
 			},
 		],
-		callback: async (action) => {
-			let newText = await this.parseVariablesInString(action.options.text)
+		callback: async (action, context) => {
+			let newText = await context.parseVariablesInString(action.options.text)
 			if (typeof newText === 'string') {
 				newText = newText.replace(/\\n/g, '\n')
 			}
@@ -1150,7 +1152,7 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Text',
 				id: 'text',
 				isVisibleExpression: `arrayIncludes($(options:props), 'text')`,
@@ -1171,21 +1173,21 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Font Size',
 				id: 'fontSize',
 				isVisibleExpression: `arrayIncludes($(options:props), 'fontSize')`,
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Font Face',
 				id: 'fontFace',
 				isVisibleExpression: `arrayIncludes($(options:props), 'fontFace')`,
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Font Style',
 				id: 'fontStyle',
 				isVisibleExpression: `arrayIncludes($(options:props), 'fontStyle')`,
@@ -1229,7 +1231,7 @@ export function getActions() {
 				default: 1,
 				isVisibleExpression: `arrayIncludes($(options:props), 'outlineSize')`,
 				description: 'GDI+ Text Sources Only',
-				useVariables: true,
+				useVariables: { local: true },
 			},
 			{
 				type: 'colorpicker',
@@ -1258,7 +1260,7 @@ export function getActions() {
 				default: 100,
 				isVisibleExpression: `arrayIncludes($(options:props), 'backgroundOpacity')`,
 				description: 'GDI+ Text Sources Only',
-				useVariables: true,
+				useVariables: { local: true },
 			},
 			{
 				type: 'checkbox',
@@ -1323,7 +1325,7 @@ export function getActions() {
 				id: 'extentsWidth',
 				default: 100,
 				isVisibleExpression: `arrayIncludes($(options:props), 'extentsWidth')`,
-				useVariables: true,
+				useVariables: { local: true },
 				description: 'GDI+ Text Sources Only',
 			},
 			{
@@ -1332,11 +1334,11 @@ export function getActions() {
 				id: 'extentsHeight',
 				default: 100,
 				isVisibleExpression: `arrayIncludes($(options:props), 'extentsHeight')`,
-				useVariables: true,
+				useVariables: { local: true },
 				description: 'GDI+ Text Sources Only',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			const source = action.options.source
 			const props = action.options.props || []
 			const existingSettings = { ...(this.sources[source]?.settings || {}) }
@@ -1348,7 +1350,7 @@ export function getActions() {
 			const kind = this.sources[source]?.inputKind || ''
 			for (const prop of props) {
 				if (prop === 'text') {
-					let val = await this.parseVariablesInString(action.options.text)
+					let val = await context.parseVariablesInString(action.options.text)
 					// Unescape \n for newlines
 					if (typeof val === 'string') {
 						val = val.replace(/\\n/g, '\n')
@@ -1359,20 +1361,20 @@ export function getActions() {
 					inputSettings.transform = action.options.textTransform
 				}
 				if (prop === 'fontSize') {
-					let size = await this.parseVariablesInString(action.options.fontSize)
+					let size = await context.parseVariablesInString(action.options.fontSize)
 					const sizeNumber = parseInt(size)
 					if (!isNaN(sizeNumber)) {
 						existingFont.size = sizeNumber
 					}
 				}
 				if (prop === 'fontFace') {
-					let face = await this.parseVariablesInString(action.options.fontFace)
+					let face = await context.parseVariablesInString(action.options.fontFace)
 					if (face) {
 						existingFont.face = face
 					}
 				}
 				if (prop === 'fontStyle') {
-					let style = await this.parseVariablesInString(action.options.fontStyle)
+					let style = await context.parseVariablesInString(action.options.fontStyle)
 					if (style) {
 						existingFont.style = style
 					}
@@ -1397,7 +1399,7 @@ export function getActions() {
 					inputSettings.outline = action.options.outline
 				}
 				if (prop === 'outlineSize' && kind.includes('text_gdiplus')) {
-					let outlineSize = await this.parseVariablesInString(action.options.outlineSize)
+					let outlineSize = await context.parseVariablesInString(action.options.outlineSize)
 					const size = parseInt(outlineSize)
 					if (!isNaN(size)) {
 						inputSettings.outline_size = size
@@ -1412,7 +1414,7 @@ export function getActions() {
 					inputSettings.bk_color = colorValue
 				}
 				if (prop === 'backgroundOpacity' && kind.includes('text_gdiplus')) {
-					let backgroundOpacity = await this.parseVariablesInString(action.options.backgroundOpacity)
+					let backgroundOpacity = await context.parseVariablesInString(action.options.backgroundOpacity)
 					const opacity = parseInt(backgroundOpacity)
 					if (!isNaN(opacity)) {
 						inputSettings.bk_opacity = opacity
@@ -1442,14 +1444,14 @@ export function getActions() {
 					inputSettings.extents = action.options.extents
 				}
 				if (prop === 'extentsWidth' && kind.includes('text_gdiplus')) {
-					let extentsWidth = await this.parseVariablesInString(action.options.extentsWidth)
+					let extentsWidth = await context.parseVariablesInString(action.options.extentsWidth)
 					const width = parseInt(extentsWidth)
 					if (!isNaN(width)) {
 						inputSettings.extents_cx = width
 					}
 				}
 				if (prop === 'extentsHeight' && kind.includes('text_gdiplus')) {
-					let extentsHeight = await this.parseVariablesInString(action.options.extentsHeight)
+					let extentsHeight = await context.parseVariablesInString(action.options.extentsHeight)
 					const height = parseInt(extentsHeight)
 					if (!isNaN(height)) {
 						inputSettings.extents_cy = height
@@ -1506,8 +1508,8 @@ export function getActions() {
 				allowCustom: true,
 			},
 		],
-		callback: async (action) => {
-			let hotkey = await this.parseVariablesInString(action.options.id)
+		callback: async (action, context) => {
+			let hotkey = await context.parseVariablesInString(action.options.id)
 			await this.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
 		},
 	}
@@ -1755,7 +1757,7 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Custom File Path',
 				tooltip: 'Optional, leave blank to use the recording path',
 				id: 'path',
@@ -1763,7 +1765,7 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Custom File Name',
 				default: 'Screenshot_$(internal:date_iso)_$(internal:time_hms)',
 				tooltip: 'Optional, leave blank to use the format "YYYY-MM-DD_SourceName_HH-MM-SS"',
@@ -1771,7 +1773,7 @@ export function getActions() {
 				isVisible: (options) => options.customName === true,
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			//Get date for default filename
 			const date = new Date().toISOString()
 			const day = date.slice(0, 10)
@@ -1780,11 +1782,11 @@ export function getActions() {
 			const sourceName = action.options.source === 'programScene' ? this.states.programScene : action.options.custom
 			const fileName =
 				action.options.customName && action.options.fileName
-					? (await this.parseVariablesInString(action.options.fileName)).replace(/:/g, '-')
+					? (await context.parseVariablesInString(action.options.fileName)).replace(/:/g, '-')
 					: `${day}_${sourceName}_${time}`
 			const fileLocation =
 				action.options.customName && action.options.path
-					? await this.parseVariablesInString(action.options.path)
+					? await context.parseVariablesInString(action.options.path)
 					: this.states.recordDirectory
 			const filePath = `${fileLocation}/${fileName}.${action.options.format}`
 
@@ -1836,9 +1838,9 @@ export function getActions() {
 				],
 			},
 		],
-		callback: async (action) => {
-			let source = await this.parseVariablesInString(action.options.source)
-			let filterName = await this.parseVariablesInString(action.options.filter)
+		callback: async (action, context) => {
+			let source = await context.parseVariablesInString(action.options.source)
+			let filterName = await context.parseVariablesInString(action.options.filter)
 
 			let sourceFilterList = this.sourceFilters[source]
 			if (action.options.all) {
@@ -1898,16 +1900,16 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Filter Settings',
 				id: 'settings',
 				default: '{"left": 100, "top": 0, "right": 100, "bottom": 0}',
 				tooltip: 'Must be a JSON object with the settings for the filter',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			try {
-				let settings = await this.parseVariablesInString(action.options.settings)
+				let settings = await context.parseVariablesInString(action.options.settings)
 				let settingsJSON = JSON.parse(settings)
 				await this.sendRequest('SetSourceFilterSettings', {
 					sourceName: action.options.source,
@@ -2097,12 +2099,12 @@ export function getActions() {
 				type: 'textinput',
 				label: 'File Path',
 				id: 'mediaFilePath',
-				useVariables: true,
+				useVariables: { local: true },
 				default: '',
 			},
 		],
-		callback: async (action) => {
-			let mediaFilePath = await this.parseVariablesInString(action.options.mediaFilePath)
+		callback: async (action, context) => {
+			let mediaFilePath = await context.parseVariablesInString(action.options.mediaFilePath)
 			let inputName = action.options.source === 'currentMedia' ? this.states.currentMedia : action.options.source
 			try {
 				let input = await this.sendRequest('GetInputSettings', {
@@ -2221,41 +2223,41 @@ export function getActions() {
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Position - X (pixels)',
 				id: 'positionX',
 				default: '',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Position - Y (pixels)',
 				id: 'positionY',
 				default: '',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Scale - X (multiplier, 1 is 100%)',
 				id: 'scaleX',
 				default: '',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Scale - Y (multiplier, 1 is 100%)',
 				id: 'scaleY',
 				default: '',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Rotation (degrees clockwise)',
 				id: 'rotation',
 				default: '',
 			},
 		],
-		callback: async (action) => {
+		callback: async (action, context) => {
 			let sourceScene
 			if (action.options.scene == 'Current Scene') {
 				sourceScene = this.states.programScene
@@ -2265,11 +2267,11 @@ export function getActions() {
 				sourceScene = action.options.scene
 			}
 
-			let positionX = await this.parseVariablesInString(action.options.positionX)
-			let positionY = await this.parseVariablesInString(action.options.positionY)
-			let scaleX = await this.parseVariablesInString(action.options.scaleX)
-			let scaleY = await this.parseVariablesInString(action.options.scaleY)
-			let rotation = await this.parseVariablesInString(action.options.rotation)
+			let positionX = await context.parseVariablesInString(action.options.positionX)
+			let positionY = await context.parseVariablesInString(action.options.positionY)
+			let scaleX = await context.parseVariablesInString(action.options.scaleX)
+			let scaleY = await context.parseVariablesInString(action.options.scaleY)
+			let rotation = await context.parseVariablesInString(action.options.rotation)
 
 			let transform = {}
 			if (positionX) {
@@ -2354,21 +2356,21 @@ export function getActions() {
 		options: [
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Request Type',
 				id: 'command',
 				default: 'SetCurrentProgramScene',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'Request Data (optional, JSON formatted)',
 				id: 'arg',
 				default: '{"sceneName": "Scene 1"}',
 			},
 		],
-		callback: async (action) => {
-			let command = await this.parseVariablesInString(action.options.command)
+		callback: async (action, context) => {
+			let command = await context.parseVariablesInString(action.options.command)
 			let arg = ''
 			try {
 				command.replace(/ /g, '')
@@ -2378,7 +2380,7 @@ export function getActions() {
 			}
 
 			if (action.options.arg) {
-				arg = await this.parseVariablesInString(action.options.arg)
+				arg = await context.parseVariablesInString(action.options.arg)
 				try {
 					arg = JSON.parse(arg)
 				} catch (e) {
@@ -2394,29 +2396,29 @@ export function getActions() {
 		options: [
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'vendorName',
 				id: 'vendorName',
 				default: '',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'requestType',
 				id: 'requestType',
 				default: '',
 			},
 			{
 				type: 'textinput',
-				useVariables: true,
+				useVariables: { local: true },
 				label: 'requestData',
 				id: 'requestData',
 				default: '',
 			},
 		],
-		callback: async (action) => {
-			let vendorName = await this.parseVariablesInString(action.options.vendorName)
-			let requestType = await this.parseVariablesInString(action.options.requestType)
+		callback: async (action, context) => {
+			let vendorName = await context.parseVariablesInString(action.options.vendorName)
+			let requestType = await context.parseVariablesInString(action.options.requestType)
 			let requestData = ''
 			try {
 				vendorName.replace(/ /g, '')
@@ -2427,7 +2429,7 @@ export function getActions() {
 			}
 
 			if (action.options.requestData) {
-				requestData = await this.parseVariablesInString(action.options.requestData)
+				requestData = await context.parseVariablesInString(action.options.requestData)
 				try {
 					requestData = JSON.parse(requestData)
 				} catch (e) {

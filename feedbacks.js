@@ -436,10 +436,12 @@ export function getFeedbacks() {
 				id: 'transition',
 				default: this.transitionList?.[0] ? this.transitionList[0].id : '',
 				choices: this.transitionList,
+				allowCustom: true,
 			},
 		],
-		callback: (feedback) => {
-			if (this.states.currentTransition === feedback.options.transition) {
+		callback: async (feedback, context) => {
+			const transition = await context.parseVariablesInString(feedback.options.transition)
+			if (this.states.currentTransition === transition) {
 				return true
 			}
 		},
