@@ -303,8 +303,8 @@ export function getActions() {
 			},
 		],
 		callback: async (action, context) => {
-            const transition = context.parseVariablesInString(action.options.transition)
-			if (action.options.transition == 'Default' && !action.options.customDuration) {
+			const transition = await context.parseVariablesInString(action.options.transition)
+			if (transition == 'Default' && !action.options.customDuration) {
 				await this.sendRequest('TriggerStudioModeTransition')
 			} else {
 				let transitionWaitTime
