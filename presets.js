@@ -110,9 +110,10 @@ export function getPresets() {
 			],
 			feedbacks: [
 				{
-					feedbackId: 'programAndPreview',
+					feedbackId: 'scene_active',
 					options: {
 						scene: scene.id,
+						mode: 'programAndPreview',
 						fg: ColorWhite,
 						bg: ColorGreen,
 						fg_preview: ColorWhite,
