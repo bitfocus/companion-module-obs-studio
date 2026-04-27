@@ -615,7 +615,7 @@ export function getActions() {
 		],
 		callback: async (action, context) => {
 			if (this.states.streaming) {
-				let captionText = await context.parseVariablesInString(action.options.customSceneName)
+				let captionText = await context.parseVariablesInString(action.options.text)
 				this.sendRequest('SendStreamCaption', { captionText: captionText })
 			}
 		},
