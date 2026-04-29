@@ -1,6 +1,7 @@
-import type OBSInstance from './main.js'
-import { combineRgb } from '@companion-module/base'
+import { combineRgb, createModuleLogger } from '@companion-module/base'
 import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
+
+const logger = createModuleLogger('Utils')
 
 export const Color = {
 	Black: combineRgb(0, 0, 0),
@@ -12,17 +13,17 @@ export const Color = {
 	Green: combineRgb(0, 200, 0),
 }
 
-export function validName(self: OBSInstance, name: string): string {
+export function validName(name: string): string {
 	//Generate a valid name for use as a variable ID
 	try {
 		return name.replace(/[^a-z0-9-_.]+/gi, '_')
 	} catch (error) {
-		self.log('debug', `Unable to generate validName for ${name}: ${error} `)
+		logger.debug(`Unable to generate validName for ${name}: ${error} `)
 		return name
 	}
 }
 
-export function formatTimecode(self: OBSInstance, data: number): string {
+export function formatTimecode(data: number): string {
 	//Converts milliseconds into a readable time format (hh:mm:ss)
 	try {
 		const totalSeconds = Math.floor(data / 1000)
@@ -31,18 +32,18 @@ export function formatTimecode(self: OBSInstance, data: number): string {
 		const seconds = totalSeconds % 60
 		return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 	} catch (error) {
-		self.log('debug', `Error formatting timecode: ${error} `)
+		logger.debug(`Error formatting timecode: ${error} `)
 		return '00:00:00'
 	}
 }
 
-export function roundNumber(self: OBSInstance, number: number, decimalPlaces: number): number {
+export function roundNumber(number: number, decimalPlaces: number): number {
 	//Rounds a number to a specified number of decimal places
 	try {
 		const multiplier = Math.pow(10, decimalPlaces ?? 0)
 		return Math.round(number * multiplier) / multiplier
 	} catch (error) {
-		self.log('debug', `Error rounding number ${number}: ${error} `)
+		logger.debug(`Error rounding number ${number}: ${error} `)
 		return typeof number === 'number' ? number : 0
 	}
 }

@@ -1,6 +1,8 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
+
+const logger = createModuleLogger('Actions/Sources')
 
 export function getSourceActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -478,7 +480,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			if (source?.inputKind) {
 				await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: {} })
 			} else {
-				self.log('warn', 'The selected source is not an input.')
+				logger.warn('The selected source is not an input.')
 				return
 			}
 		},
@@ -579,7 +581,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 					filterSettings: settingsJSON,
 				})
 			} catch (e: any) {
-				self.log('error', `Set Filter Settings Error: ${e.message}`)
+				logger.error(`Set Filter Settings Error: ${e.message}`)
 			}
 		},
 		learn: (action) => {
@@ -799,11 +801,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 						sceneItemTransform: transform,
 					})
 				} else {
-					self.log('warn', `Scene item not found for source: ${sourceUuid} in scene: ${sourceSceneUuid}`)
+					logger.warn(`Scene item not found for source: ${sourceUuid} in scene: ${sourceSceneUuid}`)
 					return
 				}
 			} catch (e: any) {
-				self.log('error', `Set Scene Item Properties Error: ${e.message}`)
+				logger.error(`Set Scene Item Properties Error: ${e.message}`)
 			}
 		},
 	}

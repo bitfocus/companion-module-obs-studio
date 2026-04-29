@@ -1,8 +1,11 @@
+import { createModuleLogger } from '@companion-module/base'
 import type OBSInstance from './main.js'
 import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
 import { OBSMediaStatus, OBSRecordingState, OBSStreamingState, ObsAudioMonitorType } from './types.js'
+
+const logger = createModuleLogger('Listeners')
 
 export function initOBSListeners(self: OBSInstance): void {
 	const obs = self.socket
@@ -32,7 +35,7 @@ function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		try {
 			eventData = JSON.stringify(data.eventData)
 		} catch (error) {
-			self.log('debug', `Vendor Event Error: ${error}`)
+			logger.debug(`Vendor Event Error: ${error}`)
 		}
 		self.setVariableValues({
 			vendor_event_name: data.vendorName,
@@ -152,7 +155,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.sourceName = data.inputName
-			source.validName = utils.validName(self, data.inputName)
+			source.validName = utils.validName(data.inputName)
 		}
 		void self.updateActionsFeedbacksVariables()
 	})
@@ -182,7 +185,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputVolumeChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.inputVolume = utils.roundNumber(self, data.inputVolumeDb, 1)
+			source.inputVolume = utils.roundNumber(data.inputVolumeDb, 1)
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`volume_${name}`]: source.inputVolume + ' dB' })
 			self.checkFeedbacks('volume')
@@ -197,7 +200,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputAudioBalanceChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			source.inputAudioBalance = utils.roundNumber(self, data.inputAudioBalance, 1)
+			source.inputAudioBalance = utils.roundNumber(data.inputAudioBalance, 1)
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`balance_${name}`]: source.inputAudioBalance })
 			if (self.isRecordingActions) {

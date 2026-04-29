@@ -1,4 +1,4 @@
-import { InstanceStatus } from '@companion-module/base'
+import { InstanceStatus, createModuleLogger } from '@companion-module/base'
 import OBSWebSocket, { EventSubscription, OBSRequestTypes, OBSResponseTypes } from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
 import type OBSInstance from './main.js'
@@ -13,6 +13,8 @@ import {
 	OBSBatchRequest,
 	OBSBatchResponse,
 } from './types.js'
+
+const logger = createModuleLogger('OBSApi')
 
 export class OBSApi {
 	private self: OBSInstance
@@ -57,7 +59,7 @@ export class OBSApi {
 			if (obsWebSocketVersion) {
 				this.self.updateStatus(InstanceStatus.Ok)
 				void this.stopReconnectionPoll()
-				this.self.log('info', 'Connected to OBS')
+				logger.info('Connected to OBS')
 
 				//Setup Initial State Objects
 				this.initializeStates()
@@ -99,29 +101,25 @@ export class OBSApi {
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			if (errorMessage.match(/(Server sent no subprotocol)/i)) {
 				tryReconnect = false
-				this.self.log('error', 'Failed to connect to OBS. Please upgrade OBS to version 28 or above')
+				logger.error('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
 				this.self.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated OBS version')
 			} else if (errorMessage.match(/(missing an `authentication` string)/i)) {
 				tryReconnect = false
-				this.self.log(
-					'error',
-					`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`,
-				)
+				logger.error(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
 				this.self.updateStatus(InstanceStatus.BadConfig, 'Missing password')
 			} else if (errorMessage.match(/(Authentication failed)/i)) {
 				tryReconnect = false
-				this.self.log(
-					'error',
+				logger.error(
 					`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
 				)
 				this.self.updateStatus(InstanceStatus.AuthenticationFailure)
 			} else if (errorMessage.match(/(ECONNREFUSED)/i)) {
 				tryReconnect = true
-				this.self.log('error', `Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
+				logger.error(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
 				this.self.updateStatus(InstanceStatus.ConnectionFailure)
 			} else {
 				tryReconnect = true
-				this.self.log('error', `Failed to connect to OBS (${errorMessage})`)
+				logger.error(`Failed to connect to OBS (${errorMessage})`)
 				this.self.updateStatus(InstanceStatus.UnknownError)
 			}
 			if (tryReconnect) {
@@ -144,7 +142,7 @@ export class OBSApi {
 
 	public async connectionLost(): Promise<void> {
 		if (!this.self.reconnectionPoll) {
-			this.self.log('error', 'Connection lost to OBS')
+			logger.error('Connection lost to OBS')
 			this.self.updateStatus(InstanceStatus.Disconnected)
 			await this.disconnectOBS()
 
@@ -160,7 +158,7 @@ export class OBSApi {
 		try {
 			return (await this.self.socket.call(requestType as any, requestData)) as OBSResponseTypes[T]
 		} catch (error: any) {
-			this.self.log('debug', `Request ${requestType} failed (${error?.message ?? error})`)
+			logger.debug(`Request ${requestType} failed (${error?.message ?? error})`)
 			return undefined
 		}
 	}
@@ -195,8 +193,7 @@ export class OBSApi {
 	): Promise<OBSResponseTypes[T] | undefined> {
 		const data = await this._call(requestType, requestData)
 		if (data) {
-			this.self.log(
-				'debug',
+			logger.debug(
 				`Custom Command Response: Request ${requestType} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
 			)
 			this.self.setVariableValues({
@@ -224,11 +221,11 @@ export class OBSApi {
 			)
 			if (errors.length > 0) {
 				const errorMessages = errors.map((error) => error.requestStatus.comment).join(' // ')
-				this.self.log('debug', `Partial batch request failure (${errorMessages})`)
+				logger.debug(`Partial batch request failure (${errorMessages})`)
 			}
 			return data
 		} catch (error: any) {
-			this.self.log('debug', `Batch request failed (${error?.message ?? error})`)
+			logger.debug(`Batch request failed (${error?.message ?? error})`)
 			return undefined
 		}
 	}
@@ -239,7 +236,7 @@ export class OBSApi {
 			source = {
 				sourceName,
 				sourceUuid,
-				validName: utils.validName(this.self, sourceName),
+				validName: utils.validName(sourceName),
 				isGroup: !!isGroup,
 				inputKind: inputKind ?? undefined,
 			}
@@ -325,8 +322,7 @@ export class OBSApi {
 			if (!version) return false
 
 			this.self.states.version = version
-			this.self.log(
-				'debug',
+			logger.debug(
 				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
 			)
 			this.self.states.imageFormats = []
@@ -351,7 +347,7 @@ export class OBSApi {
 
 			return true
 		} catch (error) {
-			this.self.log('debug', error as any)
+			logger.debug(error as any)
 			return false
 		}
 	}
@@ -468,23 +464,23 @@ export class OBSApi {
 			if (data) {
 				this.self.states.stats = data as any
 
-				const freeSpaceMB = utils.roundNumber(this.self, data.availableDiskSpace, 0)
+				const freeSpaceMB = utils.roundNumber(data.availableDiskSpace, 0)
 				let freeSpace: number | string = freeSpaceMB
 				if (freeSpace > 1000) {
-					freeSpace = `${utils.roundNumber(this.self, freeSpace / 1000, 0)} GB`
+					freeSpace = `${utils.roundNumber(freeSpace / 1000, 0)} GB`
 				} else {
-					freeSpace = `${utils.roundNumber(this.self, freeSpace, 0)} MB`
+					freeSpace = `${utils.roundNumber(freeSpace, 0)} MB`
 				}
 
 				this.self.setVariableValues({
-					fps: utils.roundNumber(this.self, data.activeFps, 2),
+					fps: utils.roundNumber(data.activeFps, 2),
 					render_total_frames: data.renderTotalFrames,
 					render_missed_frames: data.renderSkippedFrames,
 					output_total_frames: data.outputTotalFrames,
 					output_skipped_frames: data.outputSkippedFrames,
-					average_frame_time: utils.roundNumber(this.self, data.averageFrameRenderTime, 2),
-					cpu_usage: `${utils.roundNumber(this.self, data.cpuUsage, 2)}%`,
-					memory_usage: `${utils.roundNumber(this.self, data.memoryUsage, 0)} MB`,
+					average_frame_time: utils.roundNumber(data.averageFrameRenderTime, 2),
+					cpu_usage: `${utils.roundNumber(data.cpuUsage, 2)}%`,
+					memory_usage: `${utils.roundNumber(data.memoryUsage, 0)} MB`,
 					free_disk_space: freeSpace,
 					free_disk_space_mb: freeSpaceMB,
 				})
@@ -504,7 +500,6 @@ export class OBSApi {
 			this.self.states.resolution = `${videoSettings.baseWidth}x${videoSettings.baseHeight}`
 			this.self.states.outputResolution = `${videoSettings.outputWidth}x${videoSettings.outputHeight}`
 			this.self.states.framerate = `${utils.roundNumber(
-				this.self,
 				videoSettings.fpsNumerator / videoSettings.fpsDenominator,
 				2,
 			)} fps`
@@ -826,7 +821,7 @@ export class OBSApi {
 				if (!source) continue
 
 				const data = res.responseData
-				const validName = source.validName ?? utils.validName(this.self, source.sourceName)
+				const validName = source.validName ?? utils.validName(source.sourceName)
 				if (!source.validName) source.validName = validName
 
 				switch (type) {
@@ -877,12 +872,12 @@ export class OBSApi {
 	}
 
 	private _updateSourceVolume(source: OBSSource, volumeDb: number): void {
-		source.inputVolume = utils.roundNumber(this.self, volumeDb, 1)
+		source.inputVolume = utils.roundNumber(volumeDb, 1)
 		this.self.setVariableValues({ [`volume_${source.validName}`]: source.inputVolume + ' dB' })
 	}
 
 	private _updateSourceBalance(source: OBSSource, balance: number): void {
-		source.inputAudioBalance = utils.roundNumber(this.self, balance, 1)
+		source.inputAudioBalance = utils.roundNumber(balance, 1)
 		this.self.setVariableValues({ [`balance_${source.validName}`]: source.inputAudioBalance })
 	}
 
@@ -1006,8 +1001,8 @@ export class OBSApi {
 					source.mediaDuration = responseData.mediaDuration
 
 					const remainingValue = (responseData.mediaDuration ?? 0) - (responseData.mediaCursor ?? 0)
-					source.timeElapsed = utils.formatTimecode(this.self, responseData.mediaCursor)
-					source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(this.self, remainingValue) : '--:--:--'
+					source.timeElapsed = utils.formatTimecode(responseData.mediaCursor)
+					source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(remainingValue) : '--:--:--'
 
 					if (responseData.mediaState === OBSMediaStatus.Playing || responseData.mediaState === OBSMediaStatus.Paused) {
 						if (source.active) {

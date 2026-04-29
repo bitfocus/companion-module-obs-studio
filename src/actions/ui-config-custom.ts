@@ -1,5 +1,7 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+
+const logger = createModuleLogger('Actions/Custom')
 
 export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -165,16 +167,16 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				try {
 					arg = JSON.parse(arg)
 				} catch (e: any) {
-					self.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
+					logger.warn(`Request data must be formatted as valid JSON. ${e.message}`)
 					return
 				}
 			}
 
 			try {
 				const res = await self.obs.sendRequest(command as any, arg ? arg : {})
-				self.log('debug', `Custom Command Response: ${JSON.stringify(res)}`)
+				logger.debug(`Custom Command Response: ${JSON.stringify(res)}`)
 			} catch (e: any) {
-				self.log('warn', `Custom Command Error: ${e.message}`)
+				logger.warn(`Custom Command Error: ${e.message}`)
 			}
 		},
 	}
@@ -215,7 +217,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				try {
 					requestData = JSON.parse(requestData)
 				} catch (e: any) {
-					self.log('warn', `Request data must be formatted as valid JSON. ${e.message}`)
+					logger.warn(`Request data must be formatted as valid JSON. ${e.message}`)
 					return
 				}
 			}

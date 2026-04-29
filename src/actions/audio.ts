@@ -219,7 +219,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 						requestType: 'SetInputVolume',
 						requestData: {
 							inputUuid: sourceUuid,
-							inputVolumeDb: utils.roundNumber(self, currentVolume + volStep * i, 1),
+							inputVolumeDb: utils.roundNumber(currentVolume + volStep * i, 1),
 						},
 						sleep: 50,
 					})

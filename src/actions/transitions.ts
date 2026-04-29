@@ -1,5 +1,7 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+
+const logger = createModuleLogger('Actions/Transitions')
 
 export function getTransitionActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -11,8 +13,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			if (self.states.studioMode) {
 				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
-				self.log(
-					'warn',
+				logger.warn(
 					'Transition Preview to Program action only works when Studio Mode is enabled. Use the Set Scene action instead.',
 				)
 			}
@@ -210,7 +211,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 				}
 			} else {
-				self.log('warn', 'Unable to adjust transition duration')
+				logger.warn('Unable to adjust transition duration')
 			}
 		},
 	}

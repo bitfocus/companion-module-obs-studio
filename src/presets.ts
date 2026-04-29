@@ -2,7 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from './main.js'
 
 import { getSourcePresets } from './presets/sources.js'
-import { getScenePresets } from './presets/scenes.js'
+import { getPreviewScenePresets, getProgramScenePresets } from './presets/scenes.js'
 import { getTransitionPresets } from './presets/transitions.js'
 import { getAudioPresets } from './presets/audio.js'
 import { getMediaPresets } from './presets/media.js'
@@ -17,7 +17,8 @@ export function getPresets(this: OBSInstance): {
 		...getAudioPresets(this),
 		...getMediaPresets(this),
 		...getOutputPresets(this),
-		...getScenePresets(this),
+		...getProgramScenePresets(this),
+		...getPreviewScenePresets(this),
 		...getSourcePresets(this),
 		...getTransitionPresets(this),
 		...getUiConfigCustomPresets(this),
@@ -40,9 +41,14 @@ export function getPresets(this: OBSInstance): {
 			definitions: Object.keys(getOutputPresets(this)),
 		},
 		{
-			id: 'scenes',
-			name: 'Scenes',
-			definitions: Object.keys(getScenePresets(this)),
+			id: 'scenes-program',
+			name: 'Scenes to Program',
+			definitions: Object.keys(getProgramScenePresets(this)),
+		},
+		{
+			id: 'scenes-preview',
+			name: 'Scenes to Preview',
+			definitions: Object.keys(getPreviewScenePresets(this)),
 		},
 		{
 			id: 'sources',

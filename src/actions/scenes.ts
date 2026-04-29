@@ -1,5 +1,7 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+
+const logger = createModuleLogger('Actions/Scenes')
 
 export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -174,7 +176,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (previousScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: previousScene.sceneUuid })
 				} else {
-					self.log('debug', 'No previous scene found or already at the top of the list.')
+					logger.debug('No previous scene found or already at the top of the list.')
 				}
 			} else if ((action.options as any).adjust === 'next') {
 				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
@@ -182,7 +184,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (nextScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: nextScene.sceneUuid })
 				} else {
-					self.log('debug', 'No next scene found or already at the bottom of the list.')
+					logger.debug('No next scene found or already at the bottom of the list.')
 				}
 			}
 		},

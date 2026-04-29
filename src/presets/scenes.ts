@@ -2,7 +2,7 @@ import { CompanionPresetDefinitions } from '@companion-module/base'
 import { Color } from '../utils.js'
 import type OBSInstance from '../main.js'
 
-export function getScenePresets(self: OBSInstance): CompanionPresetDefinitions {
+export function getProgramScenePresets(self: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
 
 	for (const scene of self.obsState.sceneChoices) {
@@ -42,7 +42,15 @@ export function getScenePresets(self: OBSInstance): CompanionPresetDefinitions {
 				},
 			],
 		}
+	}
 
+	return presets
+}
+
+export function getPreviewScenePresets(self: OBSInstance): CompanionPresetDefinitions {
+	const presets: CompanionPresetDefinitions = {}
+
+	for (const scene of self.obsState.sceneChoices) {
 		presets[`toPreview_${scene.id}`] = {
 			type: 'simple',
 			name: scene.label,
