@@ -1,19 +1,12 @@
 import { CompanionPresetDefinitions } from '@companion-module/base'
 import { Color } from '../utils.js'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getTransitionPresets(self: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
 
-	presets['transitionAutoHeader'] = {
-		type: 'text',
-		category: 'Transitions',
-		name: 'Current Transition Control / Info',
-		text: '',
-	}
 	presets['transitionAuto'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Send previewed scene to program',
 		style: {
 			text: 'AUTO',
@@ -45,8 +38,7 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		],
 	}
 	presets['transitionCurrentInfo'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Current Transition Info',
 		style: {
 			text: 'Current Transition $(obs:current_transition)\\n$(obs:transition_duration)ms',
@@ -63,17 +55,10 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		],
 		feedbacks: [],
 	}
-	presets['transitionDurationSetHeader'] = {
-		type: 'text',
-		category: 'Transitions',
-		name: 'Set Transition Duration',
-		text: '',
-	}
 
 	for (let time = 500; time < 5100; time += 500) {
 		presets[`transitionDurationSet${time}`] = {
-			type: 'button',
-			category: 'Transitions',
+			type: 'simple',
 			name: `Transition Set ${time}ms`,
 			style: {
 				text: `${time}ms`,
@@ -110,15 +95,8 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		}
 	}
 
-	presets['transitionDurationHeader'] = {
-		type: 'text',
-		category: 'Transitions',
-		name: 'Adjust Transition Duration',
-		text: '',
-	}
 	presets['transitionDecreaseDuration'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Decrease transition time',
 		style: {
 			text: 'Adjust Duration\\n-50ms',
@@ -144,8 +122,7 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 	}
 
 	presets['transitionDuration'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Current Duration',
 		style: {
 			text: 'Current Duration $(obs:transition_duration)ms',
@@ -163,8 +140,7 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		feedbacks: [],
 	}
 	presets['transitionIncreaseDuration'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Increase transition time',
 		style: {
 			text: 'Adjust Duration\\n+50ms',
@@ -188,16 +164,10 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		],
 		feedbacks: [],
 	}
-	presets['transitionTypeHeader'] = {
-		type: 'text',
-		category: 'Transitions',
-		name: 'Set Transition Type',
-		text: '',
-	}
+
 	for (const transition of self.obsState.transitionList) {
 		presets[`setTransition_${transition.id}`] = {
-			type: 'button',
-			category: 'Transitions',
+			type: 'simple',
 			name: transition.label,
 			style: {
 				text: transition.label,
@@ -233,15 +203,9 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 			],
 		}
 	}
-	presets['transitionTypeAdjustHeader'] = {
-		type: 'text',
-		category: 'Transitions',
-		name: 'Adjust Transition Type',
-		text: '',
-	}
+
 	presets['transitionPrevious'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Previous Transition',
 		style: {
 			text: 'Previous Transition',
@@ -266,8 +230,7 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		feedbacks: [],
 	}
 	presets['transitionAdjustCurrent'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Current Transition',
 		style: {
 			text: 'Current Transition $(obs:current_transition)',
@@ -285,8 +248,7 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		feedbacks: [],
 	}
 	presets['transitionNext'] = {
-		type: 'button',
-		category: 'Transitions',
+		type: 'simple',
 		name: 'Next Transition',
 		style: {
 			text: 'Next Transition',
@@ -311,16 +273,9 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 		feedbacks: [],
 	}
 
-	presets['quickTransitionsHeader'] = {
-		type: 'text',
-		category: 'Transitions',
-		name: 'Quick Transitions',
-		text: 'Execute a specific transition, and then revert back to the previous transition',
-	}
 	for (const transition of self.obsState.transitionList) {
 		presets[`quickTransition_${transition.id}`] = {
-			type: 'button',
-			category: 'Transitions',
+			type: 'simple',
 			name: transition.label,
 			style: {
 				text: transition.label,

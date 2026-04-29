@@ -1,6 +1,6 @@
 import { CompanionPresetDefinitions } from '@companion-module/base'
 import { Color } from '../utils.js'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getAudioPresets(self: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
@@ -8,8 +8,7 @@ export function getAudioPresets(self: OBSInstance): CompanionPresetDefinitions {
 	for (const audioSource of self.obsState.audioSourceList) {
 		const sourceName = audioSource.label.replace(/[\W]/gi, '_')
 		presets[`toggleSourceMute_${sourceName}`] = {
-			type: 'button',
-			category: 'Audio Sources',
+			type: 'simple',
 			name: `Toggle ${audioSource.label}`,
 			previewStyle: {
 				text: `Toggle Mute ${audioSource.label}`,

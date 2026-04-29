@@ -1,4 +1,4 @@
-import type { OBSInstance } from './main.js'
+import type OBSInstance from './main.js'
 import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
@@ -263,7 +263,9 @@ function updateSourceProperty(
 		;(source as unknown as Record<string, unknown>)[property as string] = value
 		if (feedback) {
 			if (Array.isArray(feedback)) {
-				self.checkFeedbacks(...feedback)
+				if (feedback.length > 0) {
+					self.checkFeedbacks(feedback[0], ...feedback.slice(1))
+				}
 			} else {
 				self.checkFeedbacks(feedback)
 			}
@@ -316,7 +318,7 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 }
 
 function findSourceByName(self: OBSInstance, sourceName: string): OBSSource | undefined {
-	return Array.from(self.states.sources.values()).find((s) => s.sourceName === sourceName)
+	return Array.from(self.states.sources.values()).find((s: any) => s.sourceName === sourceName)
 }
 
 function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {
@@ -586,7 +588,7 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				mediaActionId = 'previous_media'
 			}
 			if (mediaActionId) {
-				self.sendToActionRecorder({ actionId: mediaActionId, options: mediaOptions })
+				self.recordAction({ actionId: mediaActionId, options: mediaOptions as any })
 			}
 		}
 	})

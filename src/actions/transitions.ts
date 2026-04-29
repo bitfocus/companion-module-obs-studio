@@ -1,5 +1,5 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getTransitionActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -48,18 +48,18 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		],
 		callback: async (action) => {
-			if (action.options.transition === 'Default' && !action.options.customDuration) {
+			if ((action.options as any).transition === 'Default' && !(action.options as any).customDuration) {
 				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
 				const revertTransition = self.states.currentTransition ?? 'Cut'
 				const revertTransitionDuration =
 					self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0
 				let duration
-				if (action.options.customDuration) {
-					duration = action.options.duration as number
+				if ((action.options as any).customDuration) {
+					duration = (action.options as any).duration as number
 				} else {
 					duration =
-						self.states.transitions.get(action.options.transition as string)?.transitionFixedDuration ??
+						self.states.transitions.get((action.options as any).transition as string)?.transitionFixedDuration ??
 						(self.states.transitionDuration !== undefined && self.states.transitionDuration > 0
 							? Number(self.states.transitionDuration)
 							: 500)
@@ -69,7 +69,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					await self.obs.sendBatch([
 						{
 							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: action.options.transition as string },
+							requestData: { transitionName: (action.options as any).transition as string },
 						},
 						{
 							requestType: 'SetCurrentSceneTransitionDuration',
@@ -112,7 +112,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		],
 		callback: async (action) => {
-			const transition = action.options.transitions as string
+			const transition = (action.options as any).transitions as string
 			await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
 		},
 		learn: () => {
@@ -140,12 +140,11 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			const currentTransition = self.states.currentTransition
 			const currentTransitionIndex = self.obsState.transitionList.findIndex((item) => item.id === currentTransition)
 
-			if (action.options.adjust === 'next') {
+			if ((action.options as any).adjust === 'next') {
 				const nextTransition =
-					self.obsState.transitionList[currentTransitionIndex + 1]?.id ??
-					(self.obsState.transitionList[0]?.id as string)
+					self.obsState.transitionList[currentTransitionIndex + 1]?.id ?? self.obsState.transitionList[0]?.id
 				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition as string })
-			} else if (action.options.adjust === 'previous') {
+			} else if ((action.options as any).adjust === 'previous') {
 				const previousTransition =
 					(self.obsState.transitionList[currentTransitionIndex - 1]?.id as string) ??
 					(self.obsState.transitionList[self.obsState.transitionList.length - 1]?.id as string)
@@ -169,7 +168,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		],
 		callback: async (action) => {
-			const duration = action.options.duration as number
+			const duration = (action.options as any).duration as number
 			if (duration !== null) {
 				await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 			}
@@ -201,7 +200,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		],
 		callback: async (action) => {
 			if (self.states.transitionDuration !== undefined) {
-				let duration = Number(self.states.transitionDuration) + (action.options.amount as number)
+				let duration = Number(self.states.transitionDuration) + ((action.options as any).amount as number)
 				if (duration > 60000) {
 					duration = 60000
 				} else if (duration < 0) {

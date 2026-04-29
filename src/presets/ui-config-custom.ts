@@ -1,19 +1,12 @@
 import { CompanionPresetDefinitions } from '@companion-module/base'
 import { Color } from '../utils.js'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
 
-	presets['statsHeader'] = {
-		type: 'text',
-		category: 'General',
-		name: 'Stats',
-		text: '',
-	}
 	presets['cpuRamUsage'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'CPU/RAM Usage',
 		style: {
 			text: 'CPU:\\n$(obs:cpu_usage)\\nRAM:\\n$(obs:memory_usage)',
@@ -31,8 +24,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 		feedbacks: [],
 	}
 	presets['cpuUsage'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'CPU Usage',
 		style: {
 			text: 'CPU:\\n$(obs:cpu_usage)',
@@ -50,8 +42,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 		feedbacks: [],
 	}
 	presets['ramUsage'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'RAM Usage',
 		style: {
 			text: 'RAM:\n$(obs:memory_usage)',
@@ -70,8 +61,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 	}
 
 	presets['renderTotalFrames'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Render Total Frames',
 		style: {
 			text: 'Render Total Frames:\\n$(obs:render_total_frames)',
@@ -89,8 +79,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 		feedbacks: [],
 	}
 	presets['renderMissedFrames'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Render Missed Frames',
 		style: {
 			text: 'Render Missed Frames:\\n$(obs:render_missed_frames)',
@@ -108,8 +97,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 		feedbacks: [],
 	}
 	presets['outputTotalFrames'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Output Total Frames',
 		style: {
 			text: 'Output Total Frames:\\n$(obs:output_total_frames)',
@@ -127,8 +115,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 		feedbacks: [],
 	}
 	presets['outputSkippedFrames'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Output Skipped Frames',
 		style: {
 			text: 'Output Skipped Frames:\n$(obs:output_skipped_frames)',
@@ -146,8 +133,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 		feedbacks: [],
 	}
 	presets['averageFrameTime'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Average Frame Time',
 		style: {
 			text: 'Average Frame Time:\n$(obs:average_frame_time)',
@@ -166,8 +152,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 	}
 
 	presets['remainingDiskSpace'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Remaining Disk Space',
 		style: {
 			text: 'Disk Space Remaining:\\n$(obs:free_disk_space)',
@@ -205,16 +190,9 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 			},
 		],
 	}
-	presets['uiHeader'] = {
-		type: 'text',
-		category: 'General',
-		name: 'UI',
-		text: '',
-	}
 
 	presets['toggleStudioMode'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Toggle Studio Mode',
 		style: {
 			text: 'ENABLE\\nStudio Mode',
@@ -246,8 +224,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 	}
 
 	presets['takeScreenshot'] = {
-		type: 'button',
-		category: 'General',
+		type: 'simple',
 		name: 'Take Screenshot',
 		style: {
 			text: 'Take Screenshot',
@@ -280,8 +257,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 	for (const profile of self.obsState.profileChoices) {
 		const profileName = profile.label.replace(/[^\w]/gi, '_')
 		presets[`profile_${profileName}`] = {
-			type: 'button',
-			category: 'Profiles',
+			type: 'simple',
 			name: profile.label,
 			style: {
 				text: profile.label,
@@ -320,8 +296,7 @@ export function getUiConfigCustomPresets(self: OBSInstance): CompanionPresetDefi
 	for (const sceneCollection of self.obsState.sceneCollectionList) {
 		const sceneCollectionName = sceneCollection.label.replace(/[^\w]/gi, '_')
 		presets[`sceneCollection_${sceneCollectionName}`] = {
-			type: 'button',
-			category: 'Scene Collections',
+			type: 'simple',
 			name: sceneCollection.label,
 			style: {
 				text: sceneCollection.label,

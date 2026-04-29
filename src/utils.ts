@@ -1,4 +1,4 @@
-import type { OBSInstance } from './main.js'
+import type OBSInstance from './main.js'
 import { combineRgb } from '@companion-module/base'
 import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
 

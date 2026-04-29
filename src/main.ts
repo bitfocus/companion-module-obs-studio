@@ -1,10 +1,4 @@
-import {
-	CompanionRecordedAction,
-	InstanceBase,
-	InstanceStatus,
-	runEntrypoint,
-	SomeCompanionConfigField,
-} from '@companion-module/base'
+import { CompanionRecordedAction, InstanceBase, InstanceStatus, SomeCompanionConfigField } from '@companion-module/base'
 import { GetConfigFields } from './config.js'
 import { getActions } from './actions.js'
 import { getPresets } from './presets.js'
@@ -17,7 +11,7 @@ import { OBSState } from './state.js'
 import OBSWebSocket from 'obs-websocket-js'
 import { OBSApi } from './api.js'
 
-export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
+export default class OBSInstance extends InstanceBase {
 	public socket!: OBSWebSocket
 	public obs!: OBSApi
 	public obsState!: OBSState
@@ -84,8 +78,8 @@ export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
 	}
 
 	initPresets(): void {
-		const presets = getPresets.bind(this)()
-		this.setPresetDefinitions(presets)
+		const { presets, structure } = getPresets.bind(this)()
+		this.setPresetDefinitions(structure, presets)
 	}
 
 	initActions(): void {
@@ -110,4 +104,5 @@ export class OBSInstance extends InstanceBase<ModuleConfig, ModuleSecrets> {
 		this.recordAction(action, uniquenessId)
 	}
 }
-runEntrypoint(OBSInstance, UpgradeScripts as any)
+
+export { UpgradeScripts }

@@ -7,6 +7,20 @@ import {
 } from '@companion-module/base'
 import { ModuleConfig, ModuleSecrets } from './types.js'
 
+function getOpt(options: any, key: string): any {
+	const opt = options[key]
+	return opt !== null && typeof opt === 'object' && 'value' in opt ? opt.value : opt
+}
+
+function setOpt(options: any, key: string, value: any): void {
+	const opt = options[key]
+	if (opt !== null && typeof opt === 'object' && 'value' in opt) {
+		opt.value = value
+	} else {
+		options[key] = value
+	}
+}
+
 export default [
 	CreateConvertToBooleanFeedbackUpgradeScript({
 		streaming: true,
@@ -23,8 +37,8 @@ export default [
 	function v2_0_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -43,8 +57,8 @@ export default [
 				changes.updatedActions.push(action)
 			}
 			if (action.actionId === 'take_screenshot') {
-				action.options.source = 'programScene'
-				action.options.custom = ''
+				setOpt(action.options, 'source', 'programScene')
+				setOpt(action.options, 'custom', '')
 				changes.updatedActions.push(action)
 			}
 		}
@@ -54,8 +68,8 @@ export default [
 	function v3_1_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -63,11 +77,11 @@ export default [
 
 		for (const action of props.actions) {
 			if (action.actionId === 'quick_transition') {
-				if ((action.options.transition_time as number) > 0) {
-					action.options.customDuration = true
+				if ((getOpt(action.options, 'transition_time') as number) > 0) {
+					setOpt(action.options, 'customDuration', true)
 				} else {
-					action.options.customDuration = false
-					action.options.transition_time = 500
+					setOpt(action.options, 'customDuration', false)
+					setOpt(action.options, 'transition_time', 500)
 				}
 				changes.updatedActions.push(action)
 			}
@@ -78,8 +92,8 @@ export default [
 	function v3_3_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -87,24 +101,24 @@ export default [
 
 		for (const action of props.actions) {
 			if (action.actionId === 'toggle_filter') {
-				action.options.all = false
+				setOpt(action.options, 'all', false)
 				changes.updatedActions.push(action)
 			}
 			if (action.actionId === 'toggle_scene_item') {
-				if (action.options.source === 'allSources') {
-					action.options.all = true
+				if (getOpt(action.options, 'source') === 'allSources') {
+					setOpt(action.options, 'all', true)
 				} else {
-					action.options.all = false
+					setOpt(action.options, 'all', false)
 				}
 				changes.updatedActions.push(action)
 			}
 		}
 		for (const feedback of props.feedbacks) {
 			if (feedback.feedbackId === 'scene_item_active_in_scene') {
-				if (feedback.options.source === 'anySource') {
-					feedback.options.any = true
+				if (getOpt(feedback.options, 'source') === 'anySource') {
+					setOpt(feedback.options, 'any', true)
 				} else {
-					feedback.options.any = false
+					setOpt(feedback.options, 'any', false)
 				}
 				changes.updatedFeedbacks.push(feedback)
 			}
@@ -115,8 +129,8 @@ export default [
 	function v3_5_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -124,14 +138,11 @@ export default [
 
 		for (const feedback of props.feedbacks) {
 			if (feedback.feedbackId === 'streamCongestion') {
-				if (!feedback.options.colorNoStream) {
-					feedback.options = {
-						...feedback.options,
-						colorNoStream: '#464646',
-						colorLow: '#00c800',
-						colorMedium: '#d4ae00',
-						colorHigh: '#c80000',
-					}
+				if (!getOpt(feedback.options, 'colorNoStream')) {
+					setOpt(feedback.options, 'colorNoStream', '#464646')
+					setOpt(feedback.options, 'colorLow', '#00c800')
+					setOpt(feedback.options, 'colorMedium', '#d4ae00')
+					setOpt(feedback.options, 'colorHigh', '#c80000')
 				}
 				changes.updatedFeedbacks.push(feedback)
 			}
@@ -142,8 +153,8 @@ export default [
 	function v3_7_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -151,16 +162,16 @@ export default [
 
 		for (const action of props.actions) {
 			if (action.actionId === 'set_transition_duration') {
-				if (typeof action.options.duration === 'number') {
-					if (action.options.duration < 50) {
-						action.options.duration = 50
+				if (typeof getOpt(action.options, 'duration') === 'number') {
+					if (getOpt(action.options, 'duration') < 50) {
+						setOpt(action.options, 'duration', 50)
 					}
-					if (action.options.duration > 20000) {
-						action.options.duration = 20000
+					if (getOpt(action.options, 'duration') > 20000) {
+						setOpt(action.options, 'duration', 20000)
 					}
 				}
-				action.options.variableValue = '500'
-				action.options.useVariable = false
+				setOpt(action.options, 'variableValue', '500')
+				setOpt(action.options, 'useVariable', false)
 				changes.updatedActions.push(action)
 			}
 		}
@@ -170,8 +181,8 @@ export default [
 	function v3_11_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
@@ -179,8 +190,8 @@ export default [
 
 		for (const feedback of props.feedbacks) {
 			if (feedback.feedbackId === 'audioMeter') {
-				if (!feedback.options.threshold) {
-					feedback.options.threshold = -60
+				if (!getOpt(feedback.options, 'threshold')) {
+					setOpt(feedback.options, 'threshold', -60)
 				}
 				changes.updatedFeedbacks.push(feedback)
 			}
@@ -191,20 +202,20 @@ export default [
 	function v3_12_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
 		}
 		for (const action of props.actions) {
 			if (action.actionId === 'take_screenshot') {
-				if (!action.options.customName && action.options.path) {
-					action.options.customName = true
-					action.options.fileName = ''
-				} else if (!action.options.customName) {
-					action.options.customName = false
-					action.options.fileName = ''
+				if (!getOpt(action.options, 'customName') && getOpt(action.options, 'path')) {
+					setOpt(action.options, 'customName', true)
+					setOpt(action.options, 'fileName', '')
+				} else if (!getOpt(action.options, 'customName')) {
+					setOpt(action.options, 'customName', false)
+					setOpt(action.options, 'fileName', '')
 				}
 
 				changes.updatedActions.push(action)
@@ -215,22 +226,22 @@ export default [
 	function v3_15_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
-	): CompanionStaticUpgradeResult<ModuleConfig> {
-		const changes: CompanionStaticUpgradeResult<ModuleConfig> = {
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
 			updatedActions: [],
 			updatedFeedbacks: [],
 		}
 		for (const action of props.actions) {
 			if (action.actionId === 'set_stream_settings') {
-				if (!action.options.service) {
-					action.options.service = 'Twitch'
+				if (!getOpt(action.options, 'service')) {
+					setOpt(action.options, 'service', 'Twitch')
 				}
-				if (!action.options.serviceName) {
-					action.options.serviceName = 'Twitch'
+				if (!getOpt(action.options, 'serviceName')) {
+					setOpt(action.options, 'serviceName', 'Twitch')
 				}
-				if (!action.options.bearerToken) {
-					action.options.bearerToken = ''
+				if (!getOpt(action.options, 'bearerToken')) {
+					setOpt(action.options, 'bearerToken', '')
 				}
 				changes.updatedActions.push(action)
 			}
@@ -265,44 +276,44 @@ export default [
 				action.actionId === 'preview_scene' ||
 				action.actionId === 'smart_switcher'
 			) {
-				action.options.custom = true
-				if (action.options.scene !== 'customSceneName') {
-					action.options.customSceneName = action.options.scene as string
+				setOpt(action.options, 'custom', true)
+				if (getOpt(action.options, 'scene') !== 'customSceneName') {
+					setOpt(action.options, 'customSceneName', getOpt(action.options, 'scene'))
 				}
 				actionChanged = true
 			} else if (action.actionId === 'previewNextScene') {
 				action.actionId = 'adjustPreviewScene'
-				action.options.adjust = 'next'
+				setOpt(action.options, 'adjust', 'next')
 				actionChanged = true
 			} else if (action.actionId === 'previewPreviousScene') {
 				action.actionId = 'adjustPreviewScene'
-				action.options.adjust = 'previous'
+				setOpt(action.options, 'adjust', 'previous')
 				actionChanged = true
 			} else if (action.actionId === 'set_source_visible') {
 				//UNTESTED BELOW
-				if (action.options.scene === 'anyScene') {
-					action.options.anyScene = true
+				if (getOpt(action.options, 'scene') === 'anyScene') {
+					setOpt(action.options, 'anyScene', true)
 					actionChanged = true
-				} else if (action.options.scene === 'currentScene') {
-					action.options.useCurrentScene = true
+				} else if (getOpt(action.options, 'scene') === 'currentScene') {
+					setOpt(action.options, 'useCurrentScene', true)
 					actionChanged = true
 				}
 			} else if (action.actionId === 'set_filter_visible') {
-				if (action.options.source === 'allSources') {
-					action.options.allSources = true
+				if (getOpt(action.options, 'source') === 'allSources') {
+					setOpt(action.options, 'allSources', true)
 					actionChanged = true
 				}
 			} else if (action.actionId === 'take_screenshot') {
-				if (action.options.source === 'programScene') {
-					action.options.useProgramScene = true
+				if (getOpt(action.options, 'source') === 'programScene') {
+					setOpt(action.options, 'useProgramScene', true)
 					actionChanged = true
-				} else if (action.options.source === 'previewScene') {
-					action.options.usePreviewScene = true
+				} else if (getOpt(action.options, 'source') === 'previewScene') {
+					setOpt(action.options, 'usePreviewScene', true)
 					actionChanged = true
 				}
 			} else if (action.actionId === 'set_scene_item_properties') {
-				if (action.options.scene === 'current') {
-					action.options.useProgramScene = true
+				if (getOpt(action.options, 'scene') === 'current') {
+					setOpt(action.options, 'useProgramScene', true)
 					actionChanged = true
 				}
 			}
@@ -315,8 +326,8 @@ export default [
 		for (const feedback of props.feedbacks) {
 			let feedbackChanged = false
 			if (feedback.feedbackId === 'scene_item_active') {
-				if (feedback.options.scene === 'anyScene') {
-					feedback.options.anyScene = true
+				if (getOpt(feedback.options, 'scene') === 'anyScene') {
+					setOpt(feedback.options, 'anyScene', true)
 					feedbackChanged = true
 				}
 			} else if (
@@ -324,9 +335,9 @@ export default [
 				feedback.feedbackId === 'sceneProgram' ||
 				feedback.feedbackId === 'scenePrevious'
 			) {
-				if (feedback.options.scene) {
-					feedback.options.custom = true
-					feedback.options.customSceneName = feedback.options.scene as string
+				if (getOpt(feedback.options, 'scene')) {
+					setOpt(feedback.options, 'custom', true)
+					setOpt(feedback.options, 'customSceneName', getOpt(feedback.options, 'scene'))
 					feedbackChanged = true
 				}
 			}

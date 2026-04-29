@@ -1,7 +1,7 @@
 import { InstanceStatus } from '@companion-module/base'
 import OBSWebSocket, { EventSubscription, OBSRequestTypes, OBSResponseTypes } from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
-import type { OBSInstance } from './main.js'
+import type OBSInstance from './main.js'
 import * as utils from './utils.js'
 import {
 	OBSMediaStatus,
@@ -173,15 +173,15 @@ export class OBSApi {
 		if (requestData) {
 			const data = requestData as any
 			if (data.sceneName && !data.sceneUuid) {
-				const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === data.sceneName)
+				const scene = Array.from(this.self.states.scenes.values()).find((s: any) => s.sceneName === data.sceneName)
 				if (scene) data.sceneUuid = scene.sceneUuid
 			}
 			if (data.inputName && !data.inputUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.inputName)
+				const source = Array.from(this.self.states.sources.values()).find((s: any) => s.sourceName === data.inputName)
 				if (source) data.inputUuid = source.sourceUuid
 			}
 			if (data.sourceName && !data.sourceUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
+				const source = Array.from(this.self.states.sources.values()).find((s: any) => s.sourceName === data.sourceName)
 				if (source) data.sourceUuid = source.sourceUuid
 			}
 		}
@@ -324,7 +324,7 @@ export class OBSApi {
 			const version = await this.sendRequest('GetVersion')
 			if (!version) return false
 
-			this.self.states.version = version as any
+			this.self.states.version = version
 			this.self.log(
 				'debug',
 				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
@@ -373,10 +373,7 @@ export class OBSApi {
 					this.self.states.inputKindList.set(inputKind, {})
 					const defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
 					if (defaultSettings) {
-						this.self.states.inputKindList.set(
-							inputKind,
-							defaultSettings.defaultInputSettings as Record<string, unknown>,
-						)
+						this.self.states.inputKindList.set(inputKind, defaultSettings.defaultInputSettings)
 					}
 				}),
 			)
@@ -637,7 +634,7 @@ export class OBSApi {
 
 		// Batch all output status requests into a single batch call
 		const outputNames = Array.from(this.self.states.outputs.keys())
-		const batch = outputNames.map((outputName) => ({
+		const batch: OBSBatchRequest[] = outputNames.map((outputName) => ({
 			requestType: 'GetOutputStatus',
 			requestData: { outputName },
 			requestId: outputName,
@@ -697,7 +694,7 @@ export class OBSApi {
 
 		// Fetch all scene items for all scenes
 		const sceneUuids = Array.from(this.self.states.scenes.keys())
-		const batch = sceneUuids.map((uuid) => ({
+		const batch: OBSBatchRequest[] = sceneUuids.map((uuid) => ({
 			requestType: 'GetSceneItemList',
 			requestData: { sceneUuid: uuid },
 			requestId: uuid,
@@ -723,11 +720,11 @@ export class OBSApi {
 
 		// Handle Groups separately as they contain sources not directly in scenes
 		const groupUuids = Array.from(this.self.states.sources.values())
-			.filter((s) => s.isGroup)
-			.map((s) => s.sourceUuid)
+			.filter((s: any) => s.isGroup)
+			.map((s: any) => s.sourceUuid)
 
 		if (groupUuids.length > 0) {
-			const groupBatch = groupUuids.map((uuid) => ({
+			const groupBatch: OBSBatchRequest[] = groupUuids.map((uuid) => ({
 				requestType: 'GetGroupSceneItemList',
 				requestData: { sceneUuid: uuid },
 				requestId: uuid,
@@ -845,11 +842,7 @@ export class OBSApi {
 						if (source.inputKind && this.self.states.inputKindList.has(source.inputKind)) {
 							const kindList = this.self.states.inputKindList.get(source.inputKind)
 							if (kindList?.defaultInputSettings) {
-								this.buildInputSettings(
-									source.sourceUuid,
-									source.inputKind,
-									kindList.defaultInputSettings as Record<string, unknown>,
-								)
+								this.buildInputSettings(source.sourceUuid, source.inputKind, kindList.defaultInputSettings)
 							}
 						}
 						break
@@ -1057,7 +1050,7 @@ export class OBSApi {
 
 		const kindList = this.self.states.inputKindList.get(inputKind)
 		source.settings = kindList?.defaultInputSettings
-			? { ...(kindList.defaultInputSettings as Record<string, any>), ...inputSettings }
+			? { ...kindList.defaultInputSettings, ...inputSettings }
 			: inputSettings
 
 		const name = source.validName ?? source.sourceName

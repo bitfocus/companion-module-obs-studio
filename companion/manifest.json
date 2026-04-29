@@ -1,4 +1,6 @@
 {
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
 	"id": "obs-studio",
 	"name": "obs-studio",
 	"shortname": "obs",

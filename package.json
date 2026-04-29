@@ -15,7 +15,7 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@companion-module/base": "~1.14.1",
+		"@companion-module/base": "~2.0.4",
 		"obs-websocket-js": "5.0.8"
 	},
 	"repository": {
@@ -23,7 +23,7 @@
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.7.1",
+		"@companion-module/tools": "^3.0.1",
 		"@types/node": "^22.19.17",
 		"eslint": "^9.39.4",
 		"husky": "^9.1.7",
@@ -46,5 +46,9 @@
 			"yarn lint:raw --fix"
 		]
 	},
-	"packageManager": "yarn@4.13.0"
+	"packageManager": "yarn@4.13.0",
+	"resolutions": {
+		"type-fest": "4.33.0",
+		"@types/estree": "1.0.6"
+	}
 }

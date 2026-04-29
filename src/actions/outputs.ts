@@ -1,5 +1,5 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getOutputActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -75,7 +75,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const chapterName = action.options.chapterName as string
+			const chapterName = (action.options as any).chapterName as string
 			await self.obs.sendRequest('CreateRecordChapter', { chapterName: chapterName })
 		},
 	}
@@ -167,23 +167,23 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const streamType = action.options.streamType as string
+			const streamType = (action.options as any).streamType as string
 			const streamServiceSettings: any = {}
 
 			if (streamType === 'rtmp_custom') {
-				streamServiceSettings.server = action.options.streamURL as string
-				streamServiceSettings.key = action.options.streamKey as string
-				streamServiceSettings.use_auth = action.options.useAuth as boolean
+				streamServiceSettings.server = (action.options as any).streamURL as string
+				streamServiceSettings.key = (action.options as any).streamKey as string
+				streamServiceSettings.use_auth = (action.options as any).useAuth as boolean
 				if (streamServiceSettings.use_auth) {
-					streamServiceSettings.username = action.options.username as string
-					streamServiceSettings.password = action.options.password as string
+					streamServiceSettings.username = (action.options as any).username as string
+					streamServiceSettings.password = (action.options as any).password as string
 				}
 			} else if (streamType === 'rtmp_common') {
-				streamServiceSettings.key = action.options.streamKey as string
+				streamServiceSettings.key = (action.options as any).streamKey as string
 			} else if (streamType === 'whip_custom') {
-				streamServiceSettings.server = action.options.streamURL as string
+				streamServiceSettings.server = (action.options as any).streamURL as string
 				streamServiceSettings.service = 'WHIP'
-				streamServiceSettings.bearer_token = action.options.bearerToken as string
+				streamServiceSettings.bearer_token = (action.options as any).bearerToken as string
 			}
 
 			await self.obs.sendRequest('SetStreamServiceSettings', {
@@ -206,7 +206,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		],
 		callback: async (action) => {
 			if (self.states.streaming) {
-				const captionText = action.options.text as string
+				const captionText = (action.options as any).text as string
 				await self.obs.sendRequest('SendStreamCaption', { captionText: captionText })
 			}
 		},
@@ -258,11 +258,11 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			if (action.options.output === 'virtualcam_output') {
+			if ((action.options as any).output === 'virtualcam_output') {
 				await self.obs.sendRequest('StartVirtualCam')
 			} else {
 				await self.obs.sendRequest('StartOutput', {
-					outputName: action.options.output as string,
+					outputName: (action.options as any).output as string,
 				})
 			}
 		},
@@ -280,11 +280,11 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			if (action.options.output === 'virtualcam_output') {
+			if ((action.options as any).output === 'virtualcam_output') {
 				await self.obs.sendRequest('StopVirtualCam')
 			} else {
 				await self.obs.sendRequest('StopOutput', {
-					outputName: action.options.output as string,
+					outputName: (action.options as any).output as string,
 				})
 			}
 		},
@@ -302,11 +302,11 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			if (action.options.output === 'virtualcam_output') {
+			if ((action.options as any).output === 'virtualcam_output') {
 				await self.obs.sendRequest('ToggleVirtualCam')
 			} else {
 				await self.obs.sendRequest('ToggleOutput', {
-					outputName: action.options.output as string,
+					outputName: (action.options as any).output as string,
 				})
 			}
 		},

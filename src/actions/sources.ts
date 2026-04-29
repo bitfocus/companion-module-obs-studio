@@ -1,5 +1,5 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
 
 export function getSourceActions(self: OBSInstance): CompanionActionDefinitions {
@@ -24,20 +24,19 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = action.options.source as string
-			let newText = action.options.text as string
+			const sourceUuid = (action.options as any).source as string
+			let newText = (action.options as any).text as string
 			if (typeof newText === 'string') {
 				newText = newText.replace(/\\n/g, '\n')
 			}
 			await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: { text: newText } })
 		},
 		learn: (action) => {
-			const sourceUuid = action.options.source as string
+			const sourceUuid = (action.options as any).source as string
 			const source = self.states.sources.get(sourceUuid)
 			const text = source?.settings?.text
 			if (!text) return undefined
 			return {
-				...action.options,
 				text: text,
 			}
 		},
@@ -270,8 +269,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = action.options.source as string
-			const props = (action.options.props as string[]) || []
+			const sourceUuid = (action.options as any).source as string
+			const props = ((action.options as any).props as string[]) || []
 			const source = self.states.sources.get(sourceUuid)
 			const existingSettings = { ...(source?.settings || {}) }
 
@@ -283,7 +282,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 
 			for (const prop of props) {
 				if (prop === 'text') {
-					let val = action.options.text as string
+					let val = (action.options as any).text as string
 					// Unescape \n for newlines
 					if (typeof val === 'string') {
 						val = val.replace(/\\n/g, '\n')
@@ -291,29 +290,29 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 					inputSettings.text = val
 				}
 				if (prop === 'textTransform' && kind.includes('text_gdiplus')) {
-					inputSettings.transform = action.options.textTransform
+					inputSettings.transform = (action.options as any).textTransform
 				}
 				if (prop === 'fontSize') {
-					const size = action.options.fontSize as string
+					const size = (action.options as any).fontSize as string
 					const sizeNumber = parseInt(size)
 					if (!isNaN(sizeNumber)) {
 						existingFont.size = sizeNumber
 					}
 				}
 				if (prop === 'fontFace') {
-					const face = action.options.fontFace as string
+					const face = (action.options as any).fontFace as string
 					if (face) {
 						existingFont.face = face
 					}
 				}
 				if (prop === 'fontStyle') {
-					const style = action.options.fontStyle as string
+					const style = (action.options as any).fontStyle as string
 					if (style) {
 						existingFont.style = style
 					}
 				}
 				if (prop === 'color1') {
-					const colorValue = utils.rgbaToObsColor(action.options.color1 as string)
+					const colorValue = utils.rgbaToObsColor((action.options as any).color1 as string)
 					if (kind.includes('text_gdiplus')) {
 						inputSettings.color = colorValue
 					} else {
@@ -321,7 +320,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 					}
 				}
 				if (prop === 'color2') {
-					const colorValue = utils.rgbaToObsColor(action.options.color2 as string)
+					const colorValue = utils.rgbaToObsColor((action.options as any).color2 as string)
 					if (kind.includes('text_gdiplus')) {
 						inputSettings.gradient_color = colorValue
 					} else {
@@ -329,69 +328,69 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 					}
 				}
 				if (prop === 'outline') {
-					inputSettings.outline = action.options.outline
+					inputSettings.outline = (action.options as any).outline
 				}
 				if (prop === 'outlineSize' && kind.includes('text_gdiplus')) {
-					const outlineSize = action.options.outlineSize as string
+					const outlineSize = (action.options as any).outlineSize as string
 					const size = parseInt(outlineSize)
 					if (!isNaN(size)) {
 						inputSettings.outline_size = size
 					}
 				}
 				if (prop === 'outlineColor' && kind.includes('text_gdiplus')) {
-					const colorValue = utils.rgbaToObsColor(action.options.outlineColor as string)
+					const colorValue = utils.rgbaToObsColor((action.options as any).outlineColor as string)
 					inputSettings.outline_color = colorValue
 				}
 				if (prop === 'backgroundColor' && kind.includes('text_gdiplus')) {
-					const colorValue = utils.rgbaToObsColor(action.options.backgroundColor as string)
+					const colorValue = utils.rgbaToObsColor((action.options as any).backgroundColor as string)
 					inputSettings.bk_color = colorValue
 				}
 				if (prop === 'backgroundOpacity' && kind.includes('text_gdiplus')) {
-					const backgroundOpacity = action.options.backgroundOpacity as string
+					const backgroundOpacity = (action.options as any).backgroundOpacity as string
 					const opacity = parseInt(backgroundOpacity)
 					if (!isNaN(opacity)) {
 						inputSettings.bk_opacity = opacity
 					}
 				}
 				if (prop === 'gradient') {
-					inputSettings.gradient = action.options.gradient
+					inputSettings.gradient = (action.options as any).gradient
 				}
 
 				if (prop === 'dropShadow') {
-					inputSettings.drop_shadow = action.options.dropShadow
+					inputSettings.drop_shadow = (action.options as any).dropShadow
 				}
 				if (prop === 'wrap') {
 					if (kind.includes('text_gdiplus')) {
-						inputSettings.extents_wrap = action.options.wrap
+						inputSettings.extents_wrap = (action.options as any).wrap
 					} else {
-						inputSettings.word_wrap = action.options.wrap
+						inputSettings.word_wrap = (action.options as any).wrap
 					}
 				}
 				if (prop === 'alignment' && kind.includes('text_gdiplus')) {
-					inputSettings.align = action.options.alignment
+					inputSettings.align = (action.options as any).alignment
 				}
 				if (prop === 'verticalAlignment' && kind.includes('text_gdiplus')) {
-					inputSettings.valign = action.options.verticalAlignment
+					inputSettings.valign = (action.options as any).verticalAlignment
 				}
 				if (prop === 'extents' && kind.includes('text_gdiplus')) {
-					inputSettings.extents = action.options.extents
+					inputSettings.extents = (action.options as any).extents
 				}
 				if (prop === 'extentsWidth' && kind.includes('text_gdiplus')) {
-					const extentsWidth = action.options.extentsWidth as string
+					const extentsWidth = (action.options as any).extentsWidth as string
 					const width = parseInt(extentsWidth)
 					if (!isNaN(width)) {
 						inputSettings.extents_cx = width
 					}
 				}
 				if (prop === 'extentsHeight' && kind.includes('text_gdiplus')) {
-					const extentsHeight = action.options.extentsHeight as string
+					const extentsHeight = (action.options as any).extentsHeight as string
 					const height = parseInt(extentsHeight)
 					if (!isNaN(height)) {
 						inputSettings.extents_cy = height
 					}
 				}
 				if (prop === 'vertical' && kind.includes('text_gdiplus')) {
-					inputSettings.vertical = action.options.vertical
+					inputSettings.vertical = (action.options as any).vertical
 				}
 			}
 
@@ -408,12 +407,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = action.options.source as string
+			const sourceUuid = (action.options as any).source as string
 			const source = self.states.sources.get(sourceUuid)
 			const settings = source?.settings
 			if (!settings) return undefined
 
-			const props = (action.options.props as string[]) || []
+			const props = ((action.options as any).props as string[]) || []
 			const newOptions: Record<string, any> = { ...action.options }
 			const kind = source.inputKind || ''
 
@@ -474,7 +473,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = action.options.source as string
+			const sourceUuid = (action.options as any).source as string
 			const source = self.states.sources.get(sourceUuid)
 			if (source?.inputKind) {
 				await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: {} })
@@ -524,22 +523,21 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const filterName = action.options.filter as string
+			const filterName = (action.options as any).filter as string
 
-			await self.obs.setFilterVisibility(filterName, action.options.visible as string, {
-				allSources: action.options.allSources as boolean,
-				source: action.options.source as string,
+			await self.obs.setFilterVisibility(filterName, (action.options as any).visible as string, {
+				allSources: (action.options as any).allSources as boolean,
+				source: (action.options as any).source as string,
 			})
 		},
 		learn: (action) => {
-			if (action.options.allSources) return undefined
-			const sourceUuid = action.options.source as string
-			const filterName = action.options.filter as string
+			if ((action.options as any).allSources) return undefined
+			const sourceUuid = (action.options as any).source as string
+			const filterName = (action.options as any).filter as string
 			const filters = self.states.sourceFilters.get(sourceUuid)
 			const filter = filters?.find((f) => f.filterName === filterName)
 			if (!filter) return undefined
 			return {
-				...action.options,
 				visible: filter.filterEnabled ? 'true' : 'false',
 			}
 		},
@@ -573,11 +571,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		],
 		callback: async (action) => {
 			try {
-				const settings = action.options.settings as string
+				const settings = (action.options as any).settings as string
 				const settingsJSON = JSON.parse(settings)
 				await self.obs.sendRequest('SetSourceFilterSettings', {
-					sourceUuid: action.options.source as string,
-					filterName: action.options.filter as string,
+					sourceUuid: (action.options as any).source as string,
+					filterName: (action.options as any).filter as string,
 					filterSettings: settingsJSON,
 				})
 			} catch (e: any) {
@@ -585,13 +583,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			}
 		},
 		learn: (action) => {
-			const sourceUuid = action.options.source as string
-			const filterName = action.options.filter as string
+			const sourceUuid = (action.options as any).source as string
+			const filterName = (action.options as any).filter as string
 			const filters = self.states.sourceFilters.get(sourceUuid)
 			const filter = filters?.find((f) => f.filterName === filterName)
 			if (!filter) return undefined
 			return {
-				...action.options,
 				settings: JSON.stringify(filter.filterSettings, null, 2),
 			}
 		},
@@ -610,7 +607,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = action.options.source as string
+			const sourceUuid = (action.options as any).source as string
 			if (self.states.sources.get(sourceUuid)?.inputKind === 'browser_source') {
 				await self.obs.sendRequest('PressInputPropertiesButton', {
 					inputUuid: sourceUuid,
@@ -687,27 +684,27 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		],
 		callback: async (action) => {
 			let sourceUuid: string
-			if (action.options.useProgramScene) {
+			if ((action.options as any).useProgramScene) {
 				sourceUuid = self.states.programSceneUuid
-			} else if (action.options.usePreviewScene) {
+			} else if ((action.options as any).usePreviewScene) {
 				sourceUuid = self.states.previewSceneUuid
 			} else {
-				sourceUuid = action.options.source as string
+				sourceUuid = (action.options as any).source as string
 			}
 
 			let filePath
-			if (action.options.customName) {
-				filePath = action.options.path as string
+			if ((action.options as any).customName) {
+				filePath = (action.options as any).path as string
 			} else {
-				const prefix = action.options.prefix as string
-				filePath = `${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${action.options.format}`
+				const prefix = (action.options as any).prefix as string
+				filePath = `${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${(action.options as any).format}`
 			}
 
-			const quality = action.options.compression === 0 ? -1 : action.options.compression
+			const quality = (action.options as any).compression === 0 ? -1 : (action.options as any).compression
 
 			await self.obs.sendRequest('SaveSourceScreenshot', {
 				sourceUuid: sourceUuid,
-				imageFormat: action.options.format as string,
+				imageFormat: (action.options as any).format as string,
 				imageFilePath: filePath,
 				imageCompressionQuality: quality as number,
 			})
@@ -776,17 +773,17 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceSceneUuid = action.options.useProgramScene
+			const sourceSceneUuid = (action.options as any).useProgramScene
 				? self.states.programSceneUuid
-				: (action.options.scene as string)
-			const sourceUuid = action.options.source as string
+				: ((action.options as any).scene as string)
+			const sourceUuid = (action.options as any).source as string
 
 			const transform: { [key: string]: number } = {}
-			if (action.options.positionX) transform.positionX = Number(action.options.positionX as string)
-			if (action.options.positionY) transform.positionY = Number(action.options.positionY as string)
-			if (action.options.scaleX) transform.scaleX = Number(action.options.scaleX as string)
-			if (action.options.scaleY) transform.scaleY = Number(action.options.scaleY as string)
-			if (action.options.rotation) transform.rotation = Number(action.options.rotation as string)
+			if ((action.options as any).positionX) transform.positionX = Number((action.options as any).positionX as string)
+			if ((action.options as any).positionY) transform.positionY = Number((action.options as any).positionY as string)
+			if ((action.options as any).scaleX) transform.scaleX = Number((action.options as any).scaleX as string)
+			if ((action.options as any).scaleY) transform.scaleY = Number((action.options as any).scaleY as string)
+			if ((action.options as any).rotation) transform.rotation = Number((action.options as any).rotation as string)
 
 			try {
 				const sourceName = self.states.sources.get(sourceUuid)?.sourceName || sourceUuid
@@ -856,22 +853,23 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = action.options.source as string
-			await self.obs.setSourceVisibility(sourceUuid, action.options.visible as string, {
-				anyScene: action.options.anyScene as boolean,
-				useCurrentScene: action.options.useCurrentScene as boolean,
-				scene: action.options.scene as string,
+			const sourceUuid = (action.options as any).source as string
+			await self.obs.setSourceVisibility(sourceUuid, (action.options as any).visible as string, {
+				anyScene: (action.options as any).anyScene as boolean,
+				useCurrentScene: (action.options as any).useCurrentScene as boolean,
+				scene: (action.options as any).scene as string,
 			})
 		},
 		learn: (action) => {
-			if (action.options.anyScene) return undefined
-			const sourceUuid = action.options.source as string
-			const sceneUuid = action.options.useCurrentScene ? self.states.programSceneUuid : (action.options.scene as string)
+			if ((action.options as any).anyScene) return undefined
+			const sourceUuid = (action.options as any).source as string
+			const sceneUuid = (action.options as any).useCurrentScene
+				? self.states.programSceneUuid
+				: ((action.options as any).scene as string)
 			const sceneItems = self.states.sceneItems.get(sceneUuid)
 			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
 			if (!item) return undefined
 			return {
-				...action.options,
 				visible: item.sceneItemEnabled ? 'true' : 'false',
 			}
 		},

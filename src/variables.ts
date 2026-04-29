@@ -1,79 +1,55 @@
-import { CompanionVariableDefinition } from '@companion-module/base'
-import type { OBSInstance } from './main.js'
+import type OBSInstance from './main.js'
 import * as utils from './utils.js'
 
-export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
-	const variables: CompanionVariableDefinition[] = []
-
-	variables.push(
-		{ variableId: 'base_resolution', name: 'Current base (canvas) resolution' },
-		{ variableId: 'output_resolution', name: 'Current  output (scaled) resolution' },
-		{ variableId: 'target_framerate', name: 'Current profile framerate' },
-		{ variableId: 'fps', name: 'Current actual framerate' },
-		{ variableId: 'cpu_usage', name: 'Current CPU usage (percentage)' },
-		{ variableId: 'memory_usage', name: 'Current RAM usage (in MB)' },
-		{ variableId: 'free_disk_space', name: 'Free recording disk space' },
-		{ variableId: 'free_disk_space_mb', name: 'Free recording disk space in MB, with no unit text' },
-		{ variableId: 'render_missed_frames', name: 'Number of frames missed due to rendering lag' },
-		{ variableId: 'render_total_frames', name: 'Number of frames rendered' },
-		{ variableId: 'output_skipped_frames', name: 'Number of encoder frames skipped' },
-		{ variableId: 'output_total_frames', name: 'Number of total encoder frames' },
-		{ variableId: 'average_frame_time', name: 'Average frame time (in milliseconds)' },
-		{ variableId: 'recording', name: 'Recording State' },
-		{ variableId: 'recording_file_name', name: 'File name of the last completed recording' },
-		{ variableId: 'recording_path', name: 'File path of current recording' },
-		{ variableId: 'recording_timecode', name: 'Recording timecode (hh:mm:ss)' },
-		{ variableId: 'recording_timecode_hh', name: 'Recording timecode (hours)' },
-		{ variableId: 'recording_timecode_mm', name: 'Recording timecode (minutes)' },
-		{ variableId: 'recording_timecode_ss', name: 'Recording timecode (seconds)' },
-		{ variableId: 'stream_timecode', name: 'Stream Timecode (hh:mm:ss)' },
-		{ variableId: 'stream_timecode_hh', name: 'Stream Timecode (hours)' },
-		{ variableId: 'stream_timecode_mm', name: 'Stream Timecode (minutes)' },
-		{ variableId: 'stream_timecode_ss', name: 'Stream Timecode (seconds)' },
-		{ variableId: 'stream_service', name: 'Stream Service' },
-		{ variableId: 'streaming', name: 'Streaming State' },
-		{ variableId: 'kbits_per_sec', name: 'Stream output in kilobits per second' },
-		{ variableId: 'scene_active', name: 'Current active scene' },
-		{ variableId: 'scene_preview', name: 'Current preview scene' },
-		{ variableId: 'scene_previous', name: 'Previously active scene, before the current scene' },
-		{ variableId: 'profile', name: 'Current profile' },
-		{ variableId: 'scene_collection', name: 'Current scene collection' },
-		{ variableId: 'current_transition', name: 'Current transition' },
-		{ variableId: 'transition_duration', name: 'Current transition duration' },
-		{ variableId: 'transition_active', name: 'Transition in progress' },
-		{ variableId: 'transition_list', name: 'List of available transition types' },
-		{ variableId: 'current_media_name', name: 'Source name(s) for currently playing media source(s)' },
-		{ variableId: 'current_media_time_elapsed', name: 'Elapsed time(s) for currently playing media source(s)' },
-		{
-			variableId: 'current_media_time_remaining',
-			name: 'Remaining time(s) for currently playing media source(s)',
-		},
-		{ variableId: 'replay_buffer_path', name: 'File path of the last replay buffer saved' },
-		{
-			variableId: 'custom_command_type',
-			name: 'Latest Custom Command type sent to obs-websocket',
-		},
-		{
-			variableId: 'custom_command_request',
-			name: 'Latest Custom Command request data sent to obs-websocket',
-		},
-		{
-			variableId: 'custom_command_response',
-			name: 'Latest response from obs-websocket after using the Custom Command action',
-		},
-		{
-			variableId: 'vendor_event_name',
-			name: 'Vendor name of the latest Vendor Event received from obs-websocket',
-		},
-		{
-			variableId: 'vendor_event_type',
-			name: 'Latest Vendor Event type received from obs-websocket',
-		},
-		{
-			variableId: 'vendor_event_data',
-			name: 'Latest Vendor Event data received from obs-websocket',
-		},
-	)
+export function getVariables(this: OBSInstance): any {
+	const variables: Record<string, { name: string }> = {
+		base_resolution: { name: 'Current base (canvas) resolution' },
+		output_resolution: { name: 'Current  output (scaled) resolution' },
+		target_framerate: { name: 'Current profile framerate' },
+		fps: { name: 'Current actual framerate' },
+		cpu_usage: { name: 'Current CPU usage (percentage)' },
+		memory_usage: { name: 'Current RAM usage (in MB)' },
+		free_disk_space: { name: 'Free recording disk space' },
+		free_disk_space_mb: { name: 'Free recording disk space in MB, with no unit text' },
+		render_missed_frames: { name: 'Number of frames missed due to rendering lag' },
+		render_total_frames: { name: 'Number of frames rendered' },
+		output_skipped_frames: { name: 'Number of encoder frames skipped' },
+		output_total_frames: { name: 'Number of total encoder frames' },
+		average_frame_time: { name: 'Average frame time (in milliseconds)' },
+		recording: { name: 'Recording State' },
+		recording_file_name: { name: 'File name of the last completed recording' },
+		recording_path: { name: 'File path of current recording' },
+		recording_timecode: { name: 'Recording timecode (hh:mm:ss)' },
+		recording_timecode_hh: { name: 'Recording timecode (hours)' },
+		recording_timecode_mm: { name: 'Recording timecode (minutes)' },
+		recording_timecode_ss: { name: 'Recording timecode (seconds)' },
+		stream_timecode: { name: 'Stream Timecode (hh:mm:ss)' },
+		stream_timecode_hh: { name: 'Stream Timecode (hours)' },
+		stream_timecode_mm: { name: 'Stream Timecode (minutes)' },
+		stream_timecode_ss: { name: 'Stream Timecode (seconds)' },
+		stream_service: { name: 'Stream Service' },
+		streaming: { name: 'Streaming State' },
+		kbits_per_sec: { name: 'Stream output in kilobits per second' },
+		scene_active: { name: 'Current active scene' },
+		scene_preview: { name: 'Current preview scene' },
+		scene_previous: { name: 'Previously active scene, before the current scene' },
+		profile: { name: 'Current profile' },
+		scene_collection: { name: 'Current scene collection' },
+		current_transition: { name: 'Current transition' },
+		transition_duration: { name: 'Current transition duration' },
+		transition_active: { name: 'Transition in progress' },
+		transition_list: { name: 'List of available transition types' },
+		current_media_name: { name: 'Source name(s) for currently playing media source(s)' },
+		current_media_time_elapsed: { name: 'Elapsed time(s) for currently playing media source(s)' },
+		current_media_time_remaining: { name: 'Remaining time(s) for currently playing media source(s)' },
+		replay_buffer_path: { name: 'File path of the last replay buffer saved' },
+		custom_command_type: { name: 'Latest Custom Command type sent to obs-websocket' },
+		custom_command_request: { name: 'Latest Custom Command request data sent to obs-websocket' },
+		custom_command_response: { name: 'Latest response from obs-websocket after using the Custom Command action' },
+		vendor_event_name: { name: 'Vendor name of the latest Vendor Event received from obs-websocket' },
+		vendor_event_type: { name: 'Latest Vendor Event type received from obs-websocket' },
+		vendor_event_data: { name: 'Latest Vendor Event data received from obs-websocket' },
+	}
 
 	//Source Specific Variables
 	for (const source of this.states.sources.values()) {
@@ -83,36 +59,29 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 				case 'text_ft2_source_v2':
 				case 'text_gdiplus_v2':
 				case 'text_gdiplus_v3':
-					variables.push({ variableId: `current_text_${sourceName}`, name: `${sourceName} - Current text` })
+					variables[`current_text_${sourceName}`] = { name: `${sourceName} - Current text` }
 					break
 				case 'ffmpeg_source':
 				case 'vlc_source': {
-					variables.push(
-						{ variableId: `media_status_${sourceName}`, name: `${sourceName} - Media status` },
-						{ variableId: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name` },
-						{ variableId: `media_time_elapsed_${sourceName}`, name: `${sourceName} - Time elapsed` },
-						{ variableId: `media_time_remaining_${sourceName}`, name: `${sourceName} - Time remaining` },
-					)
+					variables[`media_status_${sourceName}`] = { name: `${sourceName} - Media status` }
+					variables[`media_file_name_${sourceName}`] = { name: `${sourceName} - Media file name` }
+					variables[`media_time_elapsed_${sourceName}`] = { name: `${sourceName} - Time elapsed` }
+					variables[`media_time_remaining_${sourceName}`] = { name: `${sourceName} - Time remaining` }
 					break
 				}
 				case 'image_source':
-					variables.push({
-						variableId: `image_file_name_${sourceName}`,
-						name: `${sourceName} - Image file name`,
-					})
+					variables[`image_file_name_${sourceName}`] = { name: `${sourceName} - Image file name` }
 					break
 				default:
 					break
 			}
 		}
 		if (source.inputAudioTracks) {
-			variables.push(
-				{ variableId: `volume_${sourceName}`, name: `${sourceName} - Volume` },
-				{ variableId: `mute_${sourceName}`, name: `${sourceName} - Mute status` },
-				{ variableId: `monitor_${sourceName}`, name: `${sourceName} - Audio monitor` },
-				{ variableId: `sync_offset_${sourceName}`, name: `${sourceName} - Sync offset` },
-				{ variableId: `balance_${sourceName}`, name: `${sourceName} - Audio balance` },
-			)
+			variables[`volume_${sourceName}`] = { name: `${sourceName} - Volume` }
+			variables[`mute_${sourceName}`] = { name: `${sourceName} - Mute status` }
+			variables[`monitor_${sourceName}`] = { name: `${sourceName} - Audio monitor` }
+			variables[`sync_offset_${sourceName}`] = { name: `${sourceName} - Sync offset` }
+			variables[`balance_${sourceName}`] = { name: `${sourceName} - Audio balance` }
 		}
 	}
 
@@ -121,7 +90,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinition[] {
 	const sceneList = Array.from(this.states.scenes.values())
 	for (let s = sceneList.length - 1; s >= 0; s--) {
 		const index = ++sceneIndex
-		variables.push({ variableId: `scene_${index}`, name: `Scene Position ${index} - Name` })
+		variables[`scene_${index}`] = { name: `Scene Position ${index} - Name` }
 	}
 	return variables
 }

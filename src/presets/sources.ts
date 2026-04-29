@@ -1,6 +1,6 @@
 import { CompanionPresetDefinitions } from '@companion-module/base'
 import { Color } from '../utils.js'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
@@ -12,13 +12,6 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 		const sceneItems = self.obsState.state.sceneItems.get(sceneUuid) ?? []
 
 		if (sceneItems.length > 0) {
-			presets[`sceneSourcesHeader_${sceneUuid}`] = {
-				type: 'text',
-				category: 'Sources',
-				name: scene.label,
-				text: '',
-			}
-
 			for (const item of sceneItems) {
 				const sourcesToProcess = []
 				if (item.isGroup) {
@@ -31,8 +24,7 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 				for (const sourceItem of sourcesToProcess) {
 					processedSources.add(sourceItem.sourceUuid)
 					presets[`sourceStatus_${sceneUuid}_${sourceItem.sourceUuid}`] = {
-						type: 'button',
-						category: 'Sources',
+						type: 'simple',
 						name: `${sourceItem.sourceName} Status (${scene.label})`,
 						style: {
 							text: sourceItem.sourceName,
@@ -78,17 +70,9 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 
 	const otherSources = self.obsState.sourceChoices.filter((s) => !processedSources.has(s.id as string))
 	if (otherSources.length > 0) {
-		presets[`otherSourcesHeader`] = {
-			type: 'text',
-			category: 'Sources',
-			name: 'Other Sources',
-			text: '',
-		}
-
 		for (const source of otherSources) {
 			presets[`sourceStatus_other_${source.id}`] = {
-				type: 'button',
-				category: 'Sources',
+				type: 'simple',
 				name: `${source.label} Status`,
 				style: {
 					text: source.label,

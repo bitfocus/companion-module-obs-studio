@@ -1,18 +1,12 @@
 import { CompanionPresetDefinitions } from '@companion-module/base'
 import { Color } from '../utils.js'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
-	presets['streamingControlHeader'] = {
-		type: 'text',
-		category: 'Streaming',
-		name: 'Streaming Controls',
-		text: '',
-	}
+
 	presets['streaming'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'OBS Toggle Streaming',
 		previewStyle: {
 			text: 'OBS TOGGLE STREAM',
@@ -49,8 +43,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		],
 	}
 	presets['streamingStart'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'OBS Start Stream',
 		style: {
 			text: 'OBS START STREAM',
@@ -73,8 +66,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['streamingStop'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'OBS Stop Stream',
 		style: {
 			text: 'OBS STOP STREAM',
@@ -96,15 +88,9 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		],
 		feedbacks: [],
 	}
-	presets['streamingInfoHeader'] = {
-		type: 'text',
-		category: 'Streaming',
-		name: 'Streaming Info',
-		text: '',
-	}
+
 	presets['streamingStatus'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'Streaming Status / Timecode',
 		style: {
 			text: 'STREAM STATUS\\n$(obs:streaming)\\n$(obs:stream_timecode)',
@@ -131,8 +117,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		],
 	}
 	presets['streamingService'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'Streaming Service Info',
 		style: {
 			text: 'STREAM DEST\\n$(obs:stream_service)',
@@ -150,8 +135,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['streamingTimecodeHH'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'Streaming Timecode HH',
 		previewStyle: {
 			text: 'Stream Time:\\nHours',
@@ -173,8 +157,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['streamingTimecodeMM'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'Streaming Timecode MM',
 		previewStyle: {
 			text: 'Stream Time:\\nMinutes',
@@ -197,8 +180,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	presets['streamingTimecodeSS'] = {
-		type: 'button',
-		category: 'Streaming',
+		type: 'simple',
 		name: 'Streaming Timecode SS',
 		previewStyle: {
 			text: 'Stream Time:\\nSeconds',
@@ -220,15 +202,8 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 
-	presets['recordingControlHeader'] = {
-		type: 'text',
-		category: 'Recording',
-		name: 'Recording Controls',
-		text: '',
-	}
 	presets['recording'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Recording',
 		previewStyle: {
 			text: 'OBS TOGGLE RECORD',
@@ -273,8 +248,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		],
 	}
 	presets['recordStart'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Start Record',
 		style: {
 			text: 'OBS START RECORD',
@@ -297,8 +271,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['recordStop'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Stop Record',
 		style: {
 			text: 'OBS STOP RECORD',
@@ -321,8 +294,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['recordPause'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Pause Record',
 		style: {
 			text: 'OBS PAUSE RECORD',
@@ -345,8 +317,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['recordResume'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Resume Record',
 		style: {
 			text: 'OBS RESUME RECORD',
@@ -369,8 +340,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['recordSplit'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Split Record',
 		style: {
 			text: 'OBS SPLIT RECORD',
@@ -393,8 +363,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['recordChapter'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'OBS Record Chapter',
 		style: {
 			text: 'OBS CREATE CHAPTER',
@@ -416,16 +385,9 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		],
 		feedbacks: [],
 	}
-	presets['recordingInfoHeader'] = {
-		type: 'text',
-		category: 'Recording',
-		name: 'Recording Info',
-		text: '',
-	}
 
 	presets['recordingStatusTimecode'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording Status / Timecode',
 		style: {
 			text: 'REC STATUS\\n$(obs:recording)\\n$(obs:recording_timecode)',
@@ -465,8 +427,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	presets['recordingTimecodeHH'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording Timecode HH',
 		style: {
 			text: 'REC TIME\n$(obs:recording_timecode_hh)',
@@ -489,8 +450,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	presets['recordingTimecodeHH'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording Timecode HH',
 		style: {
 			text: '$(obs:recording_timecode_hh)',
@@ -513,8 +473,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	presets['recordingTimecodeMM'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording Timecode MM',
 		style: {
 			text: '$(obs:recording_timecode_mm)',
@@ -537,8 +496,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	presets['recordingTimecodeSS'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording Timecode SS',
 		style: {
 			text: '$(obs:recording_timecode_ss)',
@@ -561,8 +519,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	presets['recordingFilePath'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording File Path',
 		style: {
 			text: 'REC PATH:\\n$(obs:recording_path)',
@@ -580,8 +537,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 		feedbacks: [],
 	}
 	presets['recordingFileName'] = {
-		type: 'button',
-		category: 'Recording',
+		type: 'simple',
 		name: 'Recording File Name',
 		style: {
 			text: 'REC FILE:\\n$(obs:recording_file_name)',
@@ -600,15 +556,8 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 	}
 
 	for (const output of self.obsState.outputList) {
-		presets[`output${output.id}Header`] = {
-			type: 'text',
-			category: 'Outputs',
-			name: output.label,
-			text: '',
-		}
 		presets[`statusOutput_${output.id}`] = {
-			type: 'button',
-			category: 'Outputs',
+			type: 'simple',
 			name: `Status ${output.label}`,
 			style: {
 				text: `STATUS\\n${output.label}`,
@@ -650,8 +599,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 			],
 		}
 		presets[`toggleOutput_${output.id}`] = {
-			type: 'button',
-			category: 'Outputs',
+			type: 'simple',
 			name: `Toggle ${output.label}`,
 			previewStyle: {
 				text: `TOGGLE\\n${output.label}`,
@@ -707,8 +655,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 			],
 		}
 		presets[`startOutput_${output.id}`] = {
-			type: 'button',
-			category: 'Outputs',
+			type: 'simple',
 			name: `Start ${output.label}`,
 			style: {
 				text: `START\\n${output.label}`,
@@ -733,8 +680,7 @@ export function getOutputPresets(self: OBSInstance): CompanionPresetDefinitions 
 			feedbacks: [],
 		}
 		presets[`stopOutput_${output.id}`] = {
-			type: 'button',
-			category: 'Outputs',
+			type: 'simple',
 			name: `Stop ${output.label}`,
 			style: {
 				text: `STOP\\n${output.label}`,

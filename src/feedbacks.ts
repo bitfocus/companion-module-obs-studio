@@ -1,5 +1,5 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
-import type { OBSInstance } from './main.js'
+import type OBSInstance from './main.js'
 
 import { getAudioFeedbacks } from './feedbacks/audio.js'
 import { getMediaFeedbacks } from './feedbacks/media.js'

@@ -1,5 +1,5 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 import { Color } from '../utils.js'
 
 export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
@@ -23,7 +23,7 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 			},
 		],
 		callback: (feedback) => {
-			return self.states.currentProfile === (feedback.options.profile as string)
+			return self.states.currentProfile === ((feedback.options as any).profile as string)
 		},
 	}
 
@@ -45,7 +45,7 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 			},
 		],
 		callback: (feedback) => {
-			return self.states.currentSceneCollection === (feedback.options.scene_collection as string)
+			return self.states.currentSceneCollection === ((feedback.options as any).scene_collection as string)
 		},
 	}
 
@@ -84,7 +84,7 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 			},
 		],
 		callback: (feedback) => {
-			return (self.states.stats?.availableDiskSpace ?? 1000000) < (feedback.options.diskSpace as number)
+			return (self.states.stats?.availableDiskSpace ?? 1000000) < ((feedback.options as any).diskSpace as number)
 		},
 	}
 

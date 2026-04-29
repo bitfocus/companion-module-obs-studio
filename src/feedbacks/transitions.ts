@@ -1,5 +1,5 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 import { Color } from '../utils.js'
 
 export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
@@ -38,7 +38,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 			},
 		],
 		callback: (feedback) => {
-			if (self.states.currentTransition === feedback.options.transition) {
+			if (self.states.currentTransition === (feedback.options as any).transition) {
 				return true
 			}
 			return false
@@ -65,7 +65,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 			},
 		],
 		callback: (feedback) => {
-			return self.states.transitionDuration === (feedback.options.duration as number)
+			return self.states.transitionDuration === ((feedback.options as any).duration as number)
 		},
 	}
 

@@ -1,5 +1,5 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 import { OBSMediaStatus, OBSMediaInputAction } from '../types.js'
 
 export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
@@ -36,8 +36,10 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
-			let playPause = action.options.playPause as string
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
+			let playPause = (action.options as any).playPause as string
 			if (playPause === 'toggle') {
 				playPause =
 					self.states.sources.get(mediaUuid)?.OBSMediaStatus === OBSMediaStatus.Playing
@@ -72,7 +74,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
 				mediaAction: OBSMediaInputAction.Restart,
@@ -99,7 +103,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
 				mediaAction: OBSMediaInputAction.Stop,
@@ -126,7 +132,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
 				mediaAction: OBSMediaInputAction.Next,
@@ -153,7 +161,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
 			await self.obs.sendRequest('TriggerMediaInputAction', {
 				inputUuid: mediaUuid,
 				mediaAction: OBSMediaInputAction.Previous,
@@ -190,19 +200,22 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
-			const mediaTime = action.options.mediaTime as number
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
+			const mediaTime = (action.options as any).mediaTime as number
 			await self.obs.sendRequest('SetMediaInputCursor', {
 				inputUuid: mediaUuid,
 				mediaCursor: mediaTime,
 			})
 		},
 		learn: (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
 			const source = self.states.sources.get(mediaUuid)
 			if (!source || source.mediaCursor === undefined) return undefined
 			return {
-				...action.options,
 				mediaTime: source.mediaCursor,
 			}
 		},
@@ -237,8 +250,10 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
-			const scrubAmount = action.options.scrubAmount as number
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
+			const scrubAmount = (action.options as any).scrubAmount as number
 			await self.obs.sendRequest('OffsetMediaInputCursor', {
 				inputUuid: mediaUuid,
 				mediaCursorOffset: scrubAmount * 1000,
@@ -273,8 +288,10 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
-			const mediaFilePath = action.options.path as string
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
+			const mediaFilePath = (action.options as any).path as string
 			try {
 				const input = await self.obs.sendRequest('GetInputSettings', {
 					inputUuid: mediaUuid,
@@ -292,11 +309,12 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			}
 		},
 		learn: (action) => {
-			const mediaUuid = action.options.useCurrentMedia ? self.states.currentMedia : (action.options.source as string)
+			const mediaUuid = (action.options as any).useCurrentMedia
+				? self.states.currentMedia
+				: ((action.options as any).source as string)
 			const input = self.states.sources.get(mediaUuid)
 			if (!input) return undefined
 			return {
-				...action.options,
 				path: input.settings?.local_file,
 			}
 		},

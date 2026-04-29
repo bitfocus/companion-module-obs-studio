@@ -1,10 +1,12 @@
 export interface ModuleConfig {
+	[key: string]: any
 	host: string
 	port: number
 }
 
 export interface ModuleSecrets {
-	pass: string
+	[key: string]: any
+	pass?: string
 }
 
 export interface ModuleChoice {

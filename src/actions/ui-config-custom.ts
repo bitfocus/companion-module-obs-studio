@@ -1,5 +1,5 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
-import type { OBSInstance } from '../main.js'
+import type OBSInstance from '../main.js'
 
 export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -44,7 +44,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('SetCurrentProfile', { profileName: action.options.profile as string })
+			await self.obs.sendRequest('SetCurrentProfile', { profileName: (action.options as any).profile as string })
 		},
 	}
 	actions['set_scene_collection'] = {
@@ -61,7 +61,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetCurrentSceneCollection', {
-				sceneCollectionName: action.options.scene_collection as string,
+				sceneCollectionName: (action.options as any).scene_collection as string,
 			})
 		},
 	}
@@ -80,7 +80,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const hotkey = action.options.id as string
+			const hotkey = (action.options as any).id as string
 			await self.obs.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
 		},
 	}
@@ -123,14 +123,14 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		],
 		callback: async (action) => {
 			const keyModifiers = {
-				shift: action.options.keyShift as boolean,
-				alt: action.options.keyAlt as boolean,
-				control: action.options.keyControl as boolean,
-				command: action.options.keyCommand as boolean,
+				shift: (action.options as any).keyShift as boolean,
+				alt: (action.options as any).keyAlt as boolean,
+				control: (action.options as any).keyControl as boolean,
+				command: (action.options as any).keyCommand as boolean,
 			}
 
 			await self.obs.sendRequest('TriggerHotkeyByKeySequence', {
-				keyId: action.options.keyId as string,
+				keyId: (action.options as any).keyId as string,
 				keyModifiers: keyModifiers,
 			})
 		},
@@ -157,11 +157,11 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const command = (action.options.command as string).replace(/ /g, '')
+			const command = ((action.options as any).command as string).replace(/ /g, '')
 			let arg: any = ''
 
-			if (action.options.arg) {
-				arg = action.options.arg as string
+			if ((action.options as any).arg) {
+				arg = (action.options as any).arg as string
 				try {
 					arg = JSON.parse(arg)
 				} catch (e: any) {
@@ -206,12 +206,12 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const vendorName = (action.options.vendorName as string).replace(/ /g, '')
-			const requestType = (action.options.requestType as string).replace(/ /g, '')
+			const vendorName = ((action.options as any).vendorName as string).replace(/ /g, '')
+			const requestType = ((action.options as any).requestType as string).replace(/ /g, '')
 			let requestData: any = ''
 
-			if (action.options.requestData) {
-				requestData = action.options.requestData as string
+			if ((action.options as any).requestData) {
+				requestData = (action.options as any).requestData as string
 				try {
 					requestData = JSON.parse(requestData)
 				} catch (e: any) {
@@ -242,7 +242,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source as string })
+			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputName: (action.options as any).source as string })
 		},
 	}
 	actions['openInputFiltersDialog'] = {
@@ -258,7 +258,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source as string })
+			await self.obs.sendRequest('OpenInputFiltersDialog', { inputName: (action.options as any).source as string })
 		},
 	}
 	actions['openInputInteractDialog'] = {
@@ -274,7 +274,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputInteractDialog', { inputName: action.options.source as string })
+			await self.obs.sendRequest('OpenInputInteractDialog', { inputName: (action.options as any).source as string })
 		},
 	}
 
@@ -330,37 +330,37 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			const monitor = action.options.window === 'window' ? -1 : (action.options.display as number)
+			const monitor = (action.options as any).window === 'window' ? -1 : ((action.options as any).display as number)
 			let requestType
 			let requestData
-			if (action.options.type === 'Multiview') {
+			if ((action.options as any).type === 'Multiview') {
 				requestType = 'OpenVideoMixProjector'
 				requestData = {
 					videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_MULTIVIEW',
 					monitorIndex: monitor,
 				}
-			} else if (action.options.type === 'Preview') {
+			} else if ((action.options as any).type === 'Preview') {
 				requestType = 'OpenVideoMixProjector'
 				requestData = {
 					videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PREVIEW',
 					monitorIndex: monitor,
 				}
-			} else if (action.options.type === 'StudioProgram') {
+			} else if ((action.options as any).type === 'StudioProgram') {
 				requestType = 'OpenVideoMixProjector'
 				requestData = {
 					videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PROGRAM',
 					monitorIndex: monitor,
 				}
-			} else if (action.options.type === 'Source') {
+			} else if ((action.options as any).type === 'Source') {
 				requestType = 'OpenSourceProjector'
 				requestData = {
-					sourceUuid: action.options.source,
+					sourceUuid: (action.options as any).source,
 					monitorIndex: monitor,
 				}
-			} else if (action.options.type === 'Scene') {
+			} else if ((action.options as any).type === 'Scene') {
 				requestType = 'OpenSourceProjector'
 				requestData = {
-					sourceUuid: action.options.scene,
+					sourceUuid: (action.options as any).scene,
 					monitorIndex: monitor,
 				}
 			} else {

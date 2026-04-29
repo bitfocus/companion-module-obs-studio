@@ -1,5 +1,5 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
-import type { OBSInstance } from './main.js'
+import type OBSInstance from './main.js'
 
 import { getAudioActions } from './actions/audio.js'
 import { getMediaActions } from './actions/media.js'
