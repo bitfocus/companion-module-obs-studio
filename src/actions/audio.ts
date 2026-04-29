@@ -1,7 +1,16 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { clamp, opt } from '../utils.js'
 import * as utils from '../utils.js'
 import { ObsAudioMonitorType } from '../types.js'
+import {
+	VOLUME_MIN_DB,
+	VOLUME_MAX_DB,
+	BALANCE_MIN,
+	BALANCE_MAX,
+	SYNC_OFFSET_MIN,
+	SYNC_OFFSET_MAX,
+} from '../constants.js'
 
 export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
@@ -19,7 +28,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('ToggleInputMute', { inputUuid: (action.options as any).source as string })
+			await self.obs.sendRequest('ToggleInputMute', { inputUuid: opt<string>(action, 'source') })
 		},
 	}
 	actions['set_source_mute'] = {
@@ -46,12 +55,12 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputMute', {
-				inputUuid: (action.options as any).source as string,
-				inputMuted: (action.options as any).mute === 'true',
+				inputUuid: opt<string>(action, 'source'),
+				inputMuted: opt<any>(action, 'mute') === 'true',
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
@@ -75,19 +84,19 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Volume in dB (-100 to 26)',
 				id: 'volume',
 				default: 0,
-				min: -100,
-				max: 26,
+				min: VOLUME_MIN_DB,
+				max: VOLUME_MAX_DB,
 				range: false,
 			},
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputVolume', {
-				inputUuid: (action.options as any).source as string,
-				inputVolumeDb: (action.options as any).volume as number,
+				inputUuid: opt<string>(action, 'source'),
+				inputVolumeDb: opt<number>(action, 'volume'),
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
@@ -111,20 +120,19 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Amount in dB',
 				id: 'volume',
 				default: 1,
-				min: -100,
-				max: 26,
+				min: VOLUME_MIN_DB,
+				max: VOLUME_MAX_DB,
 				range: false,
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const currentVolume = self.states.sources.get(sourceUuid)?.inputVolume
-			let newVolume = (currentVolume !== undefined ? currentVolume : 0) + ((action.options as any).volume as number)
-			if (newVolume > 26) {
-				newVolume = 26
-			} else if (newVolume < -100) {
-				newVolume = -100
-			}
+			const newVolume = clamp(
+				(currentVolume !== undefined ? currentVolume : 0) + opt<number>(action, 'volume'),
+				VOLUME_MIN_DB,
+				VOLUME_MAX_DB,
+			)
 
 			await self.obs.sendRequest('SetInputVolume', { inputUuid: sourceUuid, inputVolumeDb: newVolume })
 		},
@@ -145,29 +153,23 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Amount in Percentage',
 				id: 'volume',
 				default: 5,
-				min: -100,
+				min: VOLUME_MIN_DB,
 				max: 100,
 				range: false,
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const currentVolume = self.states.sources.get(sourceUuid)?.inputVolume ?? -100
 
 			const LOG_OFFSET_DB = 0
 			const currentPercentage = Math.pow(10, (currentVolume - LOG_OFFSET_DB) / 20) * 100
-			let newPercentage = currentPercentage + ((action.options as any).volume as number)
+			let newPercentage = currentPercentage + opt<number>(action, 'volume')
 
-			if (newPercentage > 100) {
-				newPercentage = 100
-			} else if (newPercentage < 0) {
-				newPercentage = 0
-			}
+			newPercentage = clamp(newPercentage, 0, 100)
 
 			let newDb = 20 * Math.log10(newPercentage / 100) + LOG_OFFSET_DB
-			if (newDb < -100) {
-				newDb = -100
-			}
+			newDb = clamp(newDb, VOLUME_MIN_DB, VOLUME_MAX_DB)
 
 			await self.obs.sendRequest('SetInputVolume', { inputUuid: sourceUuid, inputVolumeDb: newDb })
 		},
@@ -188,8 +190,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Target Volume in dB',
 				id: 'volume',
 				default: 0,
-				min: -100,
-				max: 26,
+				min: VOLUME_MIN_DB,
+				max: VOLUME_MAX_DB,
 				range: false,
 			},
 			{
@@ -203,9 +205,9 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = (action.options as any).source as string
-			const targetVolume = (action.options as any).volume as number
-			const duration = (action.options as any).duration as number
+			const sourceUuid = opt<string>(action, 'source')
+			const targetVolume = opt<number>(action, 'volume')
+			const duration = opt<number>(action, 'duration')
 			const source = self.states.sources.get(sourceUuid)
 
 			if (source && !source.audioFadeActive) {
@@ -228,9 +230,12 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				if (source) {
 					source.audioFadeActive = true
 				}
-				await self.obs.sendBatch(fadeBatch)
-				if (source) {
-					source.audioFadeActive = false
+				try {
+					await self.obs.sendBatch(fadeBatch)
+				} finally {
+					if (source) {
+						source.audioFadeActive = false
+					}
 				}
 			}
 		},
@@ -251,19 +256,19 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Offset in ms',
 				id: 'offset',
 				default: 0,
-				min: -950,
-				max: 20000,
+				min: SYNC_OFFSET_MIN,
+				max: SYNC_OFFSET_MAX,
 				range: false,
 			},
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputAudioSyncOffset', {
-				inputUuid: (action.options as any).source as string,
-				inputAudioSyncOffset: (action.options as any).offset as number,
+				inputUuid: opt<string>(action, 'source'),
+				inputAudioSyncOffset: opt<number>(action, 'offset'),
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
@@ -288,19 +293,18 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'amount',
 				default: 50,
 				min: -20000,
-				max: 20000,
+				max: SYNC_OFFSET_MAX,
 				range: false,
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const currentOffset = self.states.sources.get(sourceUuid)?.inputAudioSyncOffset
-			let newOffset = (currentOffset !== undefined ? currentOffset : 0) + ((action.options as any).amount as number)
-			if (newOffset > 20000) {
-				newOffset = 20000
-			} else if (newOffset < -950) {
-				newOffset = -950
-			}
+			const newOffset = clamp(
+				(currentOffset !== undefined ? currentOffset : 0) + opt<number>(action, 'amount'),
+				SYNC_OFFSET_MIN,
+				SYNC_OFFSET_MAX,
+			)
 			await self.obs.sendRequest('SetInputAudioSyncOffset', {
 				inputUuid: sourceUuid,
 				inputAudioSyncOffset: newOffset,
@@ -323,20 +327,20 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Balance (0.0 to 1.0)',
 				id: 'balance',
 				default: 0.5,
-				min: 0.0,
-				max: 1.0,
+				min: BALANCE_MIN,
+				max: BALANCE_MAX,
 				range: false,
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			await self.obs.sendRequest('SetInputAudioBalance', {
 				inputUuid: sourceUuid,
-				inputAudioBalance: (action.options as any).balance as number,
+				inputAudioBalance: opt<number>(action, 'balance'),
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {
@@ -361,19 +365,18 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'amount',
 				default: 0.1,
 				min: -1.0,
-				max: 1.0,
+				max: BALANCE_MAX,
 				range: false,
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const currentOffset = self.states.sources.get(sourceUuid)?.inputAudioBalance
-			let newOffset = (currentOffset !== undefined ? currentOffset : 0.5) + ((action.options as any).amount as number)
-			if (newOffset > 1.0) {
-				newOffset = 1.0
-			} else if (newOffset < 0.0) {
-				newOffset = 0.0
-			}
+			const newOffset = clamp(
+				(currentOffset !== undefined ? currentOffset : 0.5) + opt<number>(action, 'amount'),
+				BALANCE_MIN,
+				BALANCE_MAX,
+			)
 			await self.obs.sendRequest('SetInputAudioBalance', {
 				inputUuid: sourceUuid,
 				inputAudioBalance: newOffset,
@@ -405,14 +408,14 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const monitorType = (action.options as any).monitor as ObsAudioMonitorType
+			const monitorType = opt<ObsAudioMonitorType>(action, 'monitor')
 			await self.obs.sendRequest('SetInputAudioMonitorType', {
-				inputUuid: (action.options as any).source as string,
+				inputUuid: opt<string>(action, 'source'),
 				monitorType: monitorType,
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = (action.options as any).source as string
+			const sourceUuid = opt<string>(action, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (!source) return undefined
 			return {

@@ -67,23 +67,23 @@ export default class OBSInstance extends InstanceBase {
 	}
 
 	initVariables(): void {
-		const variables = getVariables.bind(this)()
+		const variables = getVariables.call(this)
 		this.setVariableDefinitions(variables)
-		updateVariableValues.bind(this)()
+		updateVariableValues.call(this)
 	}
 
 	initFeedbacks(): void {
-		const feedbacks = getFeedbacks.bind(this)()
+		const feedbacks = getFeedbacks.call(this)
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
 	initPresets(): void {
-		const { presets, structure } = getPresets.bind(this)()
+		const { presets, structure } = getPresets.call(this)
 		this.setPresetDefinitions(structure, presets)
 	}
 
 	initActions(): void {
-		const actions = getActions.bind(this)()
+		const actions = getActions.call(this)
 		this.setActionDefinitions(actions)
 	}
 

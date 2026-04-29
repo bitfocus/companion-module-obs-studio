@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Color } from '../utils.js'
+import { opt, Color } from '../utils.js'
 
 export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -45,16 +45,16 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
+			const sourceUuid = opt<string>(feedback, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (!source?.active) return false
 
-			if ((feedback.options as any).anyScene) {
+			if (opt<any>(feedback, 'anyScene')) {
 				return true
 			} else {
-				const sceneUuid = (feedback.options as any).useCurrentScene
+				const sceneUuid = opt<any>(feedback, 'useCurrentScene')
 					? self.states.programSceneUuid
-					: ((feedback.options as any).scene as string)
+					: opt<string>(feedback, 'scene')
 				return sceneUuid === self.states.programSceneUuid
 			}
 		},
@@ -78,7 +78,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			return !!self.states.sources.get((feedback.options as any).source as string)?.videoShowing
+			return !!self.states.sources.get(opt<string>(feedback, 'source'))?.videoShowing
 		},
 	}
 
@@ -114,10 +114,10 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			const sceneUuid = (feedback.options as any).scene as string
-			const sourceUuid = (feedback.options as any).source as string
+			const sceneUuid = opt<string>(feedback, 'scene')
+			const sourceUuid = opt<string>(feedback, 'source')
 
-			if ((feedback.options as any).any) {
+			if (opt<any>(feedback, 'any')) {
 				const scene = self.states.sceneItems.get(sceneUuid)
 
 				if (scene) {
@@ -176,10 +176,10 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
+			const sourceUuid = opt<string>(feedback, 'source')
 			const sourceFilters = self.states.sourceFilters.get(sourceUuid)
 			if (sourceFilters) {
-				const filter = sourceFilters.find((item) => item.filterName === ((feedback.options as any).filter as string))
+				const filter = sourceFilters.find((item) => item.filterName === opt<string>(feedback, 'filter'))
 				return !!filter?.filterEnabled
 			}
 			return false

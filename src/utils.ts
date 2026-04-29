@@ -3,6 +3,20 @@ import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorTy
 
 const logger = createModuleLogger('Utils')
 
+/**
+ * Safely extract an option value with a generic type parameter.
+ */
+export function opt<T>(event: { options: any }, key: string): T {
+	return event.options[key] as T
+}
+
+/**
+ * Clamp a number between a minimum and maximum value.
+ */
+export function clamp(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max)
+}
+
 export const Color = {
 	Black: combineRgb(0, 0, 0),
 	White: combineRgb(255, 255, 255),

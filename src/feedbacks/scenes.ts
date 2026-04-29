@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Color } from '../utils.js'
+import { opt, Color } from '../utils.js'
 
 export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -54,21 +54,21 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			let mode = (feedback.options as any).mode
-			const sceneUuid = (feedback.options as any).scene as string
+			let mode = opt<any>(feedback, 'mode')
+			const sceneUuid = opt<string>(feedback, 'scene')
 			if (!mode) {
 				mode = 'programAndPreview'
 			}
 			if (self.states.programSceneUuid === sceneUuid && (mode === 'programAndPreview' || mode === 'program')) {
-				return { color: (feedback.options as any).fg as number, bgcolor: (feedback.options as any).bg as number }
+				return { color: opt<number>(feedback, 'fg'), bgcolor: opt<number>(feedback, 'bg') }
 			} else if (
 				self.states.previewSceneUuid === sceneUuid &&
 				self.states.studioMode === true &&
 				(mode === 'programAndPreview' || mode === 'preview')
 			) {
 				return {
-					color: (feedback.options as any).fg_preview as number,
-					bgcolor: (feedback.options as any).bg_preview as number,
+					color: opt<number>(feedback, 'fg_preview'),
+					bgcolor: opt<number>(feedback, 'bg_preview'),
 				}
 			} else {
 				return {}
@@ -109,11 +109,11 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			if ((feedback.options as any).custom) {
-				const scene = (feedback.options as any).customSceneName as string
+			if (opt<any>(feedback, 'custom')) {
+				const scene = opt<string>(feedback, 'customSceneName')
 				return self.states.programScene === scene
 			} else {
-				const sceneUuid = (feedback.options as any).scene as string
+				const sceneUuid = opt<string>(feedback, 'scene')
 				return self.states.programSceneUuid === sceneUuid
 			}
 		},
@@ -152,11 +152,11 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			if ((feedback.options as any).custom) {
-				const scene = (feedback.options as any).customSceneName as string
+			if (opt<any>(feedback, 'custom')) {
+				const scene = opt<string>(feedback, 'customSceneName')
 				return self.states.previewScene === scene
 			} else {
-				const sceneUuid = (feedback.options as any).scene as string
+				const sceneUuid = opt<string>(feedback, 'scene')
 				return self.states.previewSceneUuid === sceneUuid
 			}
 		},
@@ -195,11 +195,11 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			if ((feedback.options as any).custom) {
-				const scene = (feedback.options as any).customSceneName as string
+			if (opt<any>(feedback, 'custom')) {
+				const scene = opt<string>(feedback, 'customSceneName')
 				return self.states.previousScene === scene
 			} else {
-				const sceneUuid = (feedback.options as any).scene as string
+				const sceneUuid = opt<string>(feedback, 'scene')
 				return self.states.previousSceneUuid === sceneUuid
 			}
 		},

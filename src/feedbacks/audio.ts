@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { ObsAudioMonitorType } from '../types.js'
-import { Color } from '../utils.js'
+import { opt, Color } from '../utils.js'
 
 export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -24,7 +24,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
+			const sourceUuid = opt<string>(feedback, 'source')
 			return !!self.states.sources.get(sourceUuid)?.inputMuted
 		},
 	}
@@ -58,8 +58,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
-			const monitorType = (feedback.options as any).monitor as ObsAudioMonitorType
+			const sourceUuid = opt<string>(feedback, 'source')
+			const monitorType = opt<ObsAudioMonitorType>(feedback, 'monitor')
 			return self.states.sources.get(sourceUuid)?.monitorType === monitorType
 		},
 	}
@@ -91,8 +91,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
-			return self.states.sources.get(sourceUuid)?.inputVolume === (feedback.options as any).volume
+			const sourceUuid = opt<string>(feedback, 'source')
+			return self.states.sources.get(sourceUuid)?.inputVolume === opt<any>(feedback, 'volume')
 		},
 	}
 
@@ -123,9 +123,9 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
+			const sourceUuid = opt<string>(feedback, 'source')
 			const source = self.states.sources.get(sourceUuid)
-			if (source?.peak && source.peak > ((feedback.options as any).threshold as number)) {
+			if (source?.peak && source.peak > opt<number>(feedback, 'threshold')) {
 				return true
 			}
 			return false

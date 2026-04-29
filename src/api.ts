@@ -14,21 +14,26 @@ import {
 	OBSBatchResponse,
 } from './types.js'
 
+import { POLL_INTERVALS } from './constants.js'
+
 const logger = createModuleLogger('OBSApi')
 
+// ══════════════════════════════════════════════════════════════════════════
+// ═══ OBS Api Class ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 export class OBSApi {
 	private self: OBSInstance
 
 	// Poll intervals (in milliseconds)
-	private static readonly RECONNECTION_POLL_INTERVAL = 5000
-	private static readonly STATS_POLL_INTERVAL = 1000
-	private static readonly MEDIA_POLL_INTERVAL = 1000
+	private static readonly RECONNECTION_POLL_INTERVAL = POLL_INTERVALS.RECONNECTION
+	private static readonly STATS_POLL_INTERVAL = POLL_INTERVALS.STATS
+	private static readonly MEDIA_POLL_INTERVAL = POLL_INTERVALS.MEDIA
 
 	constructor(self: OBSInstance) {
 		this.self = self
 	}
 
-	// Initialization & Connection
+	// ═══ Initialization & Connection ═══
 	public initializeStates(): void {
 		this.self.obsState.resetSceneSourceStates()
 		// Basic Info
@@ -150,7 +155,7 @@ export class OBSApi {
 		}
 	}
 
-	// OBS Websocket Commands
+	// ═══ OBS Websocket Commands ═══
 	private async _call<T extends keyof OBSRequestTypes>(
 		requestType: T,
 		requestData?: OBSRequestTypes[T],
@@ -253,7 +258,7 @@ export class OBSApi {
 		})
 	}
 
-	// Polls
+	// ═══ Polls ═══
 	public async startReconnectionPoll(): Promise<void> {
 		void this.stopReconnectionPoll()
 		this.self.reconnectionPoll = setInterval(() => {
@@ -315,7 +320,7 @@ export class OBSApi {
 		}
 	}
 
-	// General OBS Project Info
+	// ═══ General OBS Project Info ═══
 	public async obsInfo(): Promise<boolean> {
 		try {
 			const version = await this.sendRequest('GetVersion')
@@ -511,7 +516,7 @@ export class OBSApi {
 		}
 	}
 
-	// Outputs, Streams, Recordings
+	// ═══ Outputs, Streams, Recordings ═══
 	public async getStreamStatus(): Promise<void> {
 		const batch = [
 			{ requestType: 'GetStreamStatus', requestId: 'status' },
@@ -586,12 +591,9 @@ export class OBSApi {
 	}
 
 	public updateRecordingTimecode(data: unknown): void {
-		if (
-			this.self.states.recording === OBSRecordingState.Recording ||
-			this.self.states.recording === OBSRecordingState.Paused
-		) {
-			const outputTimecode = (data as any)?.outputTimecode
-			const timecode = outputTimecode ? String(outputTimecode).split('.')[0] : '00:00:00'
+		const outputTimecode = (data as any)?.outputTimecode
+		if (outputTimecode) {
+			const timecode = String(outputTimecode).split('.')[0]
 			this.self.states.recordingTimecode = timecode
 			const recordingTimecodeSplit = timecode.split(':')
 			this.self.setVariableValues({
@@ -601,7 +603,7 @@ export class OBSApi {
 				recording_timecode_mm: recordingTimecodeSplit[1] ?? '00',
 				recording_timecode_ss: recordingTimecodeSplit[2] ?? '00',
 			})
-		} else {
+		} else if (this.self.states.recording === OBSRecordingState.Stopped) {
 			this.self.setVariableValues({
 				recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
 				recording_timecode: '00:00:00',
@@ -653,10 +655,12 @@ export class OBSApi {
 		if (replayBuffer) {
 			this.self.states.replayBuffer = replayBuffer.outputActive
 			this.self.checkFeedbacks('replayBufferActive')
+		} else {
+			logger.debug('GetReplayBufferStatus failed or returned no data')
 		}
 	}
 
-	// Scene Collection Specific Info
+	// ═══ Scene Collection Specific Info ═══
 	public async buildSceneList(): Promise<void> {
 		this.self.states.scenes.clear()
 		this.self.states.sources.clear()

@@ -7,6 +7,9 @@ import { OBSMediaStatus, OBSRecordingState, OBSStreamingState, ObsAudioMonitorTy
 
 const logger = createModuleLogger('Listeners')
 
+// ══════════════════════════════════════════════════════════════════════════
+// ═══ OBS Listeners ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 export function initOBSListeners(self: OBSInstance): void {
 	const obs = self.socket
 
@@ -22,6 +25,7 @@ export function initOBSListeners(self: OBSInstance): void {
 	setupUIListeners(self, obs)
 }
 
+// ═══ General Listeners ═══
 function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.once('ExitStarted', () => {
 		void self.obs.connectionLost()
@@ -46,6 +50,7 @@ function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// ═══ Config Listeners ═══
 function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('CurrentSceneCollectionChanging', () => {
 		void self.obs.stopMediaPoll()
@@ -76,6 +81,7 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// ═══ Scene Listeners ═══
 function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneCreated', (data) => {
 		if (data?.isGroup === false && self.states.sceneCollectionChanging === false) {
@@ -140,6 +146,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// ═══ Input Listeners ═══
 function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputCreated', (data) => {
 		self.obs.addSource(data.inputUuid, data.inputName, data.inputKind)
@@ -276,6 +283,7 @@ function updateSourceProperty(
 	}
 }
 
+// ═══ Transition Listeners ═══
 function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('CurrentSceneTransitionChanged', (data) => {
 		void (async () => {
@@ -330,6 +338,7 @@ function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {
 	})
 }
 
+// ═══ Filter Listeners ═══
 function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
@@ -376,6 +385,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// ═══ Scene Item Listeners ═══
 function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemCreated', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
@@ -440,6 +450,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemTransformChanged', () => {})
 }
 
+// ═══ Output Listeners ═══
 function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StreamStateChanged', (data) => {
 		self.states.streaming = data.outputActive
@@ -464,28 +475,18 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('RecordStateChanged', (data) => {
 		const previousRecordingState = self.states.recording
-		if (data.outputActive === true) {
-			self.states.recording = OBSRecordingState.Recording
-		} else {
-			if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
-				self.states.recording = OBSRecordingState.Paused
-			} else {
-				self.states.recording = OBSRecordingState.Stopped
-				self.setVariableValues({
-					recording_timecode: '00:00:00',
-					recording_timecode_hh: '00',
-					recording_timecode_mm: '00',
-					recording_timecode_ss: '00',
-				})
-			}
-		}
+		self.states.recording = data.outputState as OBSRecordingState
+
 		if (data.outputPath) {
 			self.setVariableValues({
 				recording_file_name: data.outputPath.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '',
 			})
 		}
+
 		self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(self.states.recording) })
 		self.checkFeedbacks('recording', 'recordingPaused')
+		self.obs.updateRecordingTimecode(data)
+
 		if (self.isRecordingActions) {
 			if (data.outputActive && previousRecordingState === OBSRecordingState.Paused) {
 				self.sendToActionRecorder({ actionId: 'resume_recording', options: {} })
@@ -533,6 +534,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// ═══ Media Listeners ═══
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('MediaInputPlaybackStarted', (data) => {
 		self.states.currentMedia = data.inputUuid
@@ -597,6 +599,7 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// ═══ UI Listeners ═══
 function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StudioModeStateChanged', (data) => {
 		if (self.isRecordingActions) {

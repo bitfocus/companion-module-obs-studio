@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { OBSMediaStatus } from '../types.js'
-import { Color } from '../utils.js'
+import { opt, Color } from '../utils.js'
 
 export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -24,7 +24,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
+			const sourceUuid = opt<string>(feedback, 'source')
 			return self.states.sources.get(sourceUuid)?.OBSMediaStatus === OBSMediaStatus.Playing
 		},
 	}
@@ -74,17 +74,17 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = (feedback.options as any).source as string
+			const sourceUuid = opt<string>(feedback, 'source')
 			const source = self.states.sources.get(sourceUuid)
 			if (source) {
 				const remainingTime = Math.round(((source.mediaDuration ?? 0) - (source.mediaCursor ?? 0)) / 1000)
 				const status = source.OBSMediaStatus
 
-				if ((feedback.options as any).onlyIfSourceIsOnProgram && !source.active) {
+				if (opt<any>(feedback, 'onlyIfSourceIsOnProgram') && !source.active) {
 					return false
 				}
 
-				if ((feedback.options as any).onlyIfSourceIsPlaying && status !== OBSMediaStatus.Playing) {
+				if (opt<any>(feedback, 'onlyIfSourceIsPlaying') && status !== OBSMediaStatus.Playing) {
 					return false
 				}
 
@@ -92,9 +92,9 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					return false
 				}
 
-				const threshold = (feedback.options as any).rtThreshold as number
+				const threshold = opt<number>(feedback, 'rtThreshold')
 				if (remainingTime <= threshold) {
-					if ((feedback.options as any).blinkingEnabled && status === OBSMediaStatus.Playing) {
+					if (opt<any>(feedback, 'blinkingEnabled') && status === OBSMediaStatus.Playing) {
 						return !!(Math.floor(Date.now() / 500) % 2)
 					}
 					return true

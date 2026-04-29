@@ -1,3 +1,4 @@
+import { opt } from '../utils.js'
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 
@@ -49,18 +50,18 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		],
 		callback: async (action) => {
-			if ((action.options as any).transition === 'Default' && !(action.options as any).customDuration) {
+			if (opt<any>(action, 'transition') === 'Default' && !opt<any>(action, 'customDuration')) {
 				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
 				const revertTransition = self.states.currentTransition ?? 'Cut'
 				const revertTransitionDuration =
 					self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0
 				let duration
-				if ((action.options as any).customDuration) {
-					duration = (action.options as any).duration as number
+				if (opt<any>(action, 'customDuration')) {
+					duration = opt<number>(action, 'duration')
 				} else {
 					duration =
-						self.states.transitions.get((action.options as any).transition as string)?.transitionFixedDuration ??
+						self.states.transitions.get(opt<string>(action, 'transition'))?.transitionFixedDuration ??
 						(self.states.transitionDuration !== undefined && self.states.transitionDuration > 0
 							? Number(self.states.transitionDuration)
 							: 500)
@@ -70,7 +71,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					await self.obs.sendBatch([
 						{
 							requestType: 'SetCurrentSceneTransition',
-							requestData: { transitionName: (action.options as any).transition as string },
+							requestData: { transitionName: opt<string>(action, 'transition') },
 						},
 						{
 							requestType: 'SetCurrentSceneTransitionDuration',
@@ -113,7 +114,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		],
 		callback: async (action) => {
-			const transition = (action.options as any).transitions as string
+			const transition = opt<string>(action, 'transitions')
 			await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
 		},
 		learn: () => {
@@ -141,11 +142,11 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			const currentTransition = self.states.currentTransition
 			const currentTransitionIndex = self.obsState.transitionList.findIndex((item) => item.id === currentTransition)
 
-			if ((action.options as any).adjust === 'next') {
+			if (opt<any>(action, 'adjust') === 'next') {
 				const nextTransition =
 					self.obsState.transitionList[currentTransitionIndex + 1]?.id ?? self.obsState.transitionList[0]?.id
 				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition as string })
-			} else if ((action.options as any).adjust === 'previous') {
+			} else if (opt<any>(action, 'adjust') === 'previous') {
 				const previousTransition =
 					(self.obsState.transitionList[currentTransitionIndex - 1]?.id as string) ??
 					(self.obsState.transitionList[self.obsState.transitionList.length - 1]?.id as string)
@@ -169,7 +170,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		],
 		callback: async (action) => {
-			const duration = (action.options as any).duration as number
+			const duration = opt<number>(action, 'duration')
 			if (duration !== null) {
 				await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 			}
@@ -201,7 +202,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		],
 		callback: async (action) => {
 			if (self.states.transitionDuration !== undefined) {
-				let duration = Number(self.states.transitionDuration) + ((action.options as any).amount as number)
+				let duration = Number(self.states.transitionDuration) + opt<number>(action, 'amount')
 				if (duration > 60000) {
 					duration = 60000
 				} else if (duration < 0) {

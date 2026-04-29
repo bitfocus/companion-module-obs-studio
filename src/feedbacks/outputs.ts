@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { OBSRecordingState } from '../types.js'
-import { Color } from '../utils.js'
+import { opt, Color } from '../utils.js'
 
 export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
 	const feedbacks: CompanionFeedbackDefinitions = {}
@@ -66,7 +66,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			return !!self.states.outputs.get((feedback.options as any).output as string)?.outputActive
+			return !!self.states.outputs.get(opt<string>(feedback, 'output'))?.outputActive
 		},
 	}
 
@@ -116,14 +116,14 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		],
 		callback: (feedback) => {
 			if (self.states.streaming === false) {
-				return { bgcolor: (feedback.options as any).colorNoStream as number }
+				return { bgcolor: opt<number>(feedback, 'colorNoStream') }
 			} else {
 				if (self.states.streamCongestion > 0.8) {
-					return { bgcolor: (feedback.options as any).colorHigh as number }
+					return { bgcolor: opt<number>(feedback, 'colorHigh') }
 				} else if (self.states.streamCongestion > 0.4) {
-					return { bgcolor: (feedback.options as any).colorMedium as number }
+					return { bgcolor: opt<number>(feedback, 'colorMedium') }
 				} else {
-					return { bgcolor: (feedback.options as any).colorLow as number }
+					return { bgcolor: opt<number>(feedback, 'colorLow') }
 				}
 			}
 		},

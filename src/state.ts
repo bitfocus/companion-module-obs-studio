@@ -70,6 +70,20 @@ export class OBSState {
 		this.state.sceneItems.clear()
 	}
 
+	// Internal helper to build choice lists
+	private buildChoices<T>(
+		items: T[],
+		filterFn: (item: T) => boolean,
+		mapFn: (item: T) => ModuleChoice,
+		sortFn?: (a: ModuleChoice, b: ModuleChoice) => number,
+	): ModuleChoice[] {
+		let result = items.filter(filterFn).map(mapFn)
+		if (sortFn) {
+			result = result.sort(sortFn)
+		}
+		return result
+	}
+
 	// Derived Choices
 	public get sceneChoices(): ModuleChoice[] {
 		return Array.from(this.state.scenes.values())
@@ -78,23 +92,30 @@ export class OBSState {
 	}
 
 	public get sourceChoices(): ModuleChoice[] {
-		return Array.from(this.state.sources.values())
-			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.sources.values()),
+			() => true,
+			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get audioSourceList(): ModuleChoice[] {
-		return Array.from(this.state.sources.values())
-			.filter((s) => s.inputMuted !== undefined || s.inputVolume !== undefined)
-			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.sources.values()),
+			(s) => s.inputMuted !== undefined || s.inputVolume !== undefined,
+			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get mediaSourceList(): ModuleChoice[] {
-		return Array.from(this.state.sources.values())
-			.filter((s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source')
-			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.sources.values()),
+			(s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source',
+			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get filterList(): ModuleChoice[] {
@@ -104,49 +125,66 @@ export class OBSState {
 				filters.add(filter.filterName)
 			}
 		}
-		return Array.from(filters)
-			.map((name) => ({ id: name, label: name }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(filters),
+			() => true,
+			(name) => ({ id: name, label: name }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get textSourceList(): ModuleChoice[] {
-		return Array.from(this.state.sources.values())
-			.filter((s) => s.inputKind?.startsWith('text_'))
-			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.sources.values()),
+			(s) => !!s.inputKind?.startsWith('text_'),
+			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get imageSourceList(): ModuleChoice[] {
-		return Array.from(this.state.sources.values())
-			.filter((s) => s.inputKind === 'image_source')
-			.map((s) => ({ id: s.sourceUuid, label: s.sourceName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.sources.values()),
+			(s) => s.inputKind === 'image_source',
+			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get transitionList(): ModuleChoice[] {
-		return Array.from(this.state.transitions.values())
-			.map((t) => ({ id: t.transitionName, label: t.transitionName }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.transitions.values()),
+			() => true,
+			(t) => ({ id: t.transitionName, label: t.transitionName }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get profileChoices(): ModuleChoice[] {
-		return Array.from(this.state.profiles.keys())
-			.map((name) => ({ id: name, label: name }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.profiles.keys()),
+			() => true,
+			(name) => ({ id: name, label: name }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get sceneCollectionList(): ModuleChoice[] {
-		return Array.from(this.state.sceneCollections.keys())
-			.map((name) => ({ id: name, label: name }))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.sceneCollections.keys()),
+			() => true,
+			(name) => ({ id: name, label: name }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	public get outputList(): ModuleChoice[] {
-		return Array.from(this.state.outputs.keys())
-			.map((name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Camera' : name }))
-			.filter((item) => !item.id.includes('file_output'))
-			.filter((item) => !item.id.includes('ffmpeg_output'))
-			.sort((a, b) => a.label.localeCompare(b.label))
+		return this.buildChoices(
+			Array.from(this.state.outputs.keys()),
+			(id) => !id.includes('file_output') && !id.includes('ffmpeg_output'),
+			(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Camera' : name }),
+			(a, b) => a.label.localeCompare(b.label),
+		)
 	}
 
 	// ModuleChoice Defaults
