@@ -121,7 +121,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				const scene = self.states.sceneItems.get(sceneUuid)
 
 				if (scene) {
-					const enabled = scene.find((item: any) => item.sceneItemEnabled === true)
+					const enabled = scene.find((item) => item.sceneItemEnabled === true)
 					if (enabled) {
 						return true
 					}
@@ -132,7 +132,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 					const groupUuid = source.groupName // groupName is now groupUuid
 					if (groupUuid) {
 						const group = self.states.groups.get(groupUuid)
-						const sceneItem = group?.find((item: any) => item.sourceUuid === sourceUuid)
+						const sceneItem = group?.find((item) => item.sourceUuid === sourceUuid)
 						if (sceneItem) {
 							return sceneItem.sceneItemEnabled
 						}
@@ -140,7 +140,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				} else {
 					const scene = self.states.sceneItems.get(sceneUuid)
 					if (scene) {
-						const sceneItem = scene.find((item: any) => item.sourceUuid === sourceUuid)
+						const sceneItem = scene.find((item) => item.sourceUuid === sourceUuid)
 						if (sceneItem) {
 							return sceneItem.sceneItemEnabled
 						}

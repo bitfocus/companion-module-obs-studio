@@ -1,18 +1,17 @@
 import {
-	CompanionMigrationAction,
-	CompanionMigrationFeedback,
+	CompanionStaticUpgradeProps,
 	CompanionUpgradeContext,
 	CompanionStaticUpgradeResult,
 	CreateConvertToBooleanFeedbackUpgradeScript,
 } from '@companion-module/base'
 import { ModuleConfig, ModuleSecrets } from './types.js'
 
-function getOpt(options: any, key: string): any {
+function getOpt(options: Record<string, unknown>, key: string): unknown {
 	const opt = options[key]
 	return opt !== null && typeof opt === 'object' && 'value' in opt ? opt.value : opt
 }
 
-function setOpt(options: any, key: string, value: any): void {
+function setOpt(options: Record<string, unknown>, key: string, value: unknown): void {
 	const opt = options[key]
 	if (opt !== null && typeof opt === 'object' && 'value' in opt) {
 		opt.value = value
@@ -36,7 +35,7 @@ export default [
 	}),
 	function v2_0_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -45,7 +44,7 @@ export default [
 		}
 		if (props.config) {
 			const config = props.config
-			if (config.port == undefined || config.port == '' || config.port == 4444) {
+			if (config.port == undefined || config.port === 4444 || !config.port) {
 				config.port = 4455
 				changes.updatedConfig = config
 			}
@@ -67,7 +66,7 @@ export default [
 	},
 	function v3_1_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -91,7 +90,7 @@ export default [
 	},
 	function v3_3_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -128,7 +127,7 @@ export default [
 	},
 	function v3_5_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -152,7 +151,7 @@ export default [
 	},
 	function v3_7_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -163,10 +162,10 @@ export default [
 		for (const action of props.actions) {
 			if (action.actionId === 'set_transition_duration') {
 				if (typeof getOpt(action.options, 'duration') === 'number') {
-					if (getOpt(action.options, 'duration') < 50) {
+					if ((getOpt(action.options, 'duration') as number) < 50) {
 						setOpt(action.options, 'duration', 50)
 					}
-					if (getOpt(action.options, 'duration') > 20000) {
+					if ((getOpt(action.options, 'duration') as number) > 20000) {
 						setOpt(action.options, 'duration', 20000)
 					}
 				}
@@ -180,7 +179,7 @@ export default [
 	},
 	function v3_11_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -201,7 +200,7 @@ export default [
 	},
 	function v3_12_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -225,7 +224,7 @@ export default [
 	},
 	function v3_15_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -250,7 +249,7 @@ export default [
 	},
 	function v4_0_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: { config: any; actions: CompanionMigrationAction[]; feedbacks: CompanionMigrationFeedback[] },
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,

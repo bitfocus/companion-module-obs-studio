@@ -172,7 +172,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 
 			if ((action.options as any).adjust === 'previous') {
 				const previousIndex = previewSceneIndex + 1 // Assuming higher index means "previous" in the list order
-				const previousScene = Array.from(self.states.scenes.values()).find((s: any) => s.sceneIndex === previousIndex)
+				const previousScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === previousIndex)
 				if (previousScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: previousScene.sceneUuid })
 				} else {
@@ -180,7 +180,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				}
 			} else if ((action.options as any).adjust === 'next') {
 				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
-				const nextScene = Array.from(self.states.scenes.values()).find((s: any) => s.sceneIndex === nextIndex)
+				const nextScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === nextIndex)
 				if (nextScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: nextScene.sceneUuid })
 				} else {

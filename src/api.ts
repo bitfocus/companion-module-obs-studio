@@ -171,15 +171,15 @@ export class OBSApi {
 		if (requestData) {
 			const data = requestData as any
 			if (data.sceneName && !data.sceneUuid) {
-				const scene = Array.from(this.self.states.scenes.values()).find((s: any) => s.sceneName === data.sceneName)
+				const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === data.sceneName)
 				if (scene) data.sceneUuid = scene.sceneUuid
 			}
 			if (data.inputName && !data.inputUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s: any) => s.sourceName === data.inputName)
+				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.inputName)
 				if (source) data.inputUuid = source.sourceUuid
 			}
 			if (data.sourceName && !data.sourceUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s: any) => s.sourceName === data.sourceName)
+				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
 				if (source) data.sourceUuid = source.sourceUuid
 			}
 		}
@@ -355,7 +355,7 @@ export class OBSApi {
 	public async buildHotkeyList(): Promise<void> {
 		const hotkeyList = await this.sendRequest('GetHotkeyList')
 		this.self.states.hotkeyNames = []
-		hotkeyList?.hotkeys?.forEach((hotkey: any) => {
+		hotkeyList?.hotkeys?.forEach((hotkey: string) => {
 			this.self.states.hotkeyNames.push({ id: hotkey, label: hotkey })
 		})
 		void this.self.updateActionsFeedbacksVariables()
@@ -365,7 +365,7 @@ export class OBSApi {
 		const inputKindList = await this.sendRequest('GetInputKindList')
 		if (inputKindList && inputKindList.inputKinds) {
 			await Promise.all(
-				inputKindList.inputKinds.map(async (inputKind: any) => {
+				inputKindList.inputKinds.map(async (inputKind: string) => {
 					this.self.states.inputKindList.set(inputKind, {})
 					const defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
 					if (defaultSettings) {
@@ -382,7 +382,7 @@ export class OBSApi {
 
 		this.self.states.currentProfile = profiles?.currentProfileName ?? 'None'
 
-		profiles?.profiles.forEach((profile: any) => {
+		profiles?.profiles.forEach((profile: string) => {
 			this.self.states.profiles.set(profile, {})
 		})
 
@@ -396,7 +396,7 @@ export class OBSApi {
 		this.self.states.sceneCollections.clear()
 
 		this.self.states.currentSceneCollection = collections?.currentSceneCollectionName ?? 'None'
-		collections?.sceneCollections.forEach((sceneCollection: any) => {
+		collections?.sceneCollections.forEach((sceneCollection: string) => {
 			this.self.states.sceneCollections.set(sceneCollection, {})
 		})
 
@@ -520,8 +520,8 @@ export class OBSApi {
 		const data = await this.sendBatch(batch)
 
 		if (data) {
-			const streamStatus = data.find((res: any) => res.requestId === 'status')?.responseData
-			const streamService = data.find((res: any) => res.requestId === 'settings')?.responseData
+			const streamStatus = data.find((res) => res.requestId === 'status')?.responseData
+			const streamService = data.find((res) => res.requestId === 'settings')?.responseData
 
 			if (streamStatus) {
 				const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
@@ -566,8 +566,8 @@ export class OBSApi {
 		const data = await this.sendBatch(batch)
 
 		if (data) {
-			const recordStatus = data.find((res: any) => res.requestId === 'status')?.responseData
-			const recordDirectory = data.find((res: any) => res.requestId === 'directory')?.responseData
+			const recordStatus = data.find((res) => res.requestId === 'status')?.responseData
+			const recordDirectory = data.find((res) => res.requestId === 'directory')?.responseData
 
 			if (recordStatus) {
 				if (recordStatus.outputActive === true && recordStatus.outputPaused === false) {
@@ -715,8 +715,8 @@ export class OBSApi {
 
 		// Handle Groups separately as they contain sources not directly in scenes
 		const groupUuids = Array.from(this.self.states.sources.values())
-			.filter((s: any) => s.isGroup)
-			.map((s: any) => s.sourceUuid)
+			.filter((s) => s.isGroup)
+			.map((s) => s.sourceUuid)
 
 		if (groupUuids.length > 0) {
 			const groupBatch: OBSBatchRequest[] = groupUuids.map((uuid) => ({
@@ -750,7 +750,7 @@ export class OBSApi {
 	public async fetchSourcesData(sourceUuids: string[]): Promise<void> {
 		if (sourceUuids.length === 0) return
 
-		const batch: any[] = []
+		const batch: OBSBatchRequest[] = []
 		for (const uuid of sourceUuids) {
 			batch.push(
 				{
@@ -1111,7 +1111,7 @@ export class OBSApi {
 
 		if (options.anyScene) {
 			for (const [sceneUuid, sceneItems] of this.self.states.sceneItems) {
-				const item = sceneItems.find((i: any) => i.sourceUuid === sourceUuid)
+				const item = sceneItems.find((i) => i.sourceUuid === sourceUuid)
 				if (item) {
 					sources.push({
 						sceneUuid: sceneUuid,
@@ -1120,7 +1120,7 @@ export class OBSApi {
 				}
 			}
 			for (const [groupUuid, groupItems] of this.self.states.groups) {
-				const item = groupItems.find((i: any) => i.sourceUuid === sourceUuid)
+				const item = groupItems.find((i) => i.sourceUuid === sourceUuid)
 				if (item) {
 					sources.push({
 						sceneUuid: groupUuid,
@@ -1131,7 +1131,7 @@ export class OBSApi {
 		} else {
 			const sceneUuid = options.useCurrentScene ? this.self.states.programSceneUuid : options.scene
 			const sceneItems = this.self.states.sceneItems.get(sceneUuid)
-			const item = sceneItems?.find((i: any) => i.sourceUuid === sourceUuid)
+			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
 			if (item) {
 				sources.push({
 					sceneUuid: sceneUuid,
@@ -1139,7 +1139,7 @@ export class OBSApi {
 				})
 			} else {
 				const groups = this.self.states.groups.get(sceneUuid)
-				const item = groups?.find((i: any) => i.sourceUuid === sourceUuid)
+				const item = groups?.find((i) => i.sourceUuid === sourceUuid)
 				if (item) {
 					sources.push({
 						sceneUuid: sceneUuid,
@@ -1150,17 +1150,17 @@ export class OBSApi {
 		}
 
 		if (sources.length > 0) {
-			const requests: any[] = []
+			const requests: OBSBatchRequest[] = []
 			sources.forEach((source) => {
 				let enabled: boolean
 				if (visible === 'toggle') {
 					const sceneItems = this.self.states.sceneItems.get(source.sceneUuid)
-					const item = sceneItems?.find((i: any) => i.sceneItemId === source.sceneItemId)
+					const item = sceneItems?.find((i) => i.sceneItemId === source.sceneItemId)
 					if (item) {
 						enabled = !item.sceneItemEnabled
 					} else {
 						const groups = this.self.states.groups.get(source.sceneUuid)
-						const item = groups?.find((i: any) => i.sceneItemId === source.sceneItemId)
+						const item = groups?.find((i) => i.sceneItemId === source.sceneItemId)
 						if (item) {
 							enabled = !item.sceneItemEnabled
 						} else {
@@ -1189,7 +1189,7 @@ export class OBSApi {
 		options: { allSources: boolean; source: string },
 	): Promise<void> {
 		if (options.allSources) {
-			const requests: any[] = []
+			const requests: OBSBatchRequest[] = []
 			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
 				const filter = filters.find((f: any) => f.filterName === filterName)
 				if (filter) {

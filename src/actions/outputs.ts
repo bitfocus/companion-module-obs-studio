@@ -168,7 +168,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		],
 		callback: async (action) => {
 			const streamType = (action.options as any).streamType as string
-			const streamServiceSettings: any = {}
+			const streamServiceSettings: Record<string, unknown> = {}
 
 			if (streamType === 'rtmp_custom') {
 				streamServiceSettings.server = (action.options as any).streamURL as string
@@ -188,7 +188,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 
 			await self.obs.sendRequest('SetStreamServiceSettings', {
 				streamServiceType: streamType,
-				streamServiceSettings: streamServiceSettings,
+				streamServiceSettings: streamServiceSettings as Record<string, string>,
 			})
 			void self.obs.getStreamStatus()
 		},

@@ -13,58 +13,35 @@ export function getPresets(this: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	structure: CompanionPresetSection[]
 } {
+	const audio = getAudioPresets(this)
+	const media = getMediaPresets(this)
+	const outputs = getOutputPresets(this)
+	const program = getProgramScenePresets(this)
+	const preview = getPreviewScenePresets(this)
+	const sources = getSourcePresets(this)
+	const transitions = getTransitionPresets(this)
+	const ui = getUiConfigCustomPresets(this)
+
 	const presets: CompanionPresetDefinitions = {
-		...getAudioPresets(this),
-		...getMediaPresets(this),
-		...getOutputPresets(this),
-		...getProgramScenePresets(this),
-		...getPreviewScenePresets(this),
-		...getSourcePresets(this),
-		...getTransitionPresets(this),
-		...getUiConfigCustomPresets(this),
+		...audio,
+		...media,
+		...outputs,
+		...program,
+		...preview,
+		...sources,
+		...transitions,
+		...ui,
 	}
 
 	const structure: CompanionPresetSection[] = [
-		{
-			id: 'audio',
-			name: 'Audio Sources',
-			definitions: Object.keys(getAudioPresets(this)),
-		},
-		{
-			id: 'media',
-			name: 'Media Sources',
-			definitions: Object.keys(getMediaPresets(this)),
-		},
-		{
-			id: 'outputs',
-			name: 'Streaming & Recording',
-			definitions: Object.keys(getOutputPresets(this)),
-		},
-		{
-			id: 'scenes-program',
-			name: 'Scenes to Program',
-			definitions: Object.keys(getProgramScenePresets(this)),
-		},
-		{
-			id: 'scenes-preview',
-			name: 'Scenes to Preview',
-			definitions: Object.keys(getPreviewScenePresets(this)),
-		},
-		{
-			id: 'sources',
-			name: 'Sources',
-			definitions: Object.keys(getSourcePresets(this)),
-		},
-		{
-			id: 'transitions',
-			name: 'Transitions',
-			definitions: Object.keys(getTransitionPresets(this)),
-		},
-		{
-			id: 'ui',
-			name: 'General & Profiles',
-			definitions: Object.keys(getUiConfigCustomPresets(this)),
-		},
+		{ id: 'audio', name: 'Audio Sources', definitions: Object.keys(audio) },
+		{ id: 'media', name: 'Media Sources', definitions: Object.keys(media) },
+		{ id: 'outputs', name: 'Streaming & Recording', definitions: Object.keys(outputs) },
+		{ id: 'scenes-program', name: 'Scenes to Program', definitions: Object.keys(program) },
+		{ id: 'scenes-preview', name: 'Scenes to Preview', definitions: Object.keys(preview) },
+		{ id: 'sources', name: 'Sources', definitions: Object.keys(sources) },
+		{ id: 'transitions', name: 'Transitions', definitions: Object.keys(transitions) },
+		{ id: 'ui', name: 'General & Profiles', definitions: Object.keys(ui) },
 	]
 
 	return { presets, structure }

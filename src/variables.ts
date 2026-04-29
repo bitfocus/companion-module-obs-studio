@@ -1,8 +1,9 @@
 import type OBSInstance from './main.js'
+import type { CompanionVariableDefinitions } from '@companion-module/base'
 import * as utils from './utils.js'
 
-export function getVariables(this: OBSInstance): any {
-	const variables: Record<string, { name: string }> = {
+export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
+	const variables: CompanionVariableDefinitions = {
 		base_resolution: { name: 'Current base (canvas) resolution' },
 		output_resolution: { name: 'Current  output (scaled) resolution' },
 		target_framerate: { name: 'Current profile framerate' },

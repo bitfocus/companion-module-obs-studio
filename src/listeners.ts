@@ -321,7 +321,7 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 }
 
 function findSourceByName(self: OBSInstance, sourceName: string): OBSSource | undefined {
-	return Array.from(self.states.sources.values()).find((s: any) => s.sourceName === sourceName)
+	return Array.from(self.states.sources.values()).find((s) => s.sourceName === sourceName)
 }
 
 function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {

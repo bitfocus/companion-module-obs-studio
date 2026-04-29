@@ -10,13 +10,12 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 
 ### v4.0.0
 
-Note: This is a major rewrite of the module with the focus on performance and stability.
+Note: This is a major rewrite of the module with the focus on performance and stability. This also updates the underlying Companion module API to v2.0.0. Because of this change, Companion v4.3.0 is required.
 
 - New
-  - Use unique IDs for sources and scenes to prevent issues with duplicate names
+  - Password is now securly stored and hidden by default
   - Batch more communication with obs-websocket, wherever possible, to improve performance
   - Rewritten using TypeScript to improve code quality and stability
-  - Password is now securly stored and hidden by default
 
 ### v3.15.2
 
