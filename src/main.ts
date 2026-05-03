@@ -90,8 +90,8 @@ export default class OBSInstance extends InstanceBase {
 	async updateActionsFeedbacksVariables(): Promise<void> {
 		this.initVariables()
 		this.initFeedbacks()
-		this.initPresets()
 		this.initActions()
+		this.initPresets()
 	}
 
 	handleStartStopRecordActions(isRecording: boolean): void {
