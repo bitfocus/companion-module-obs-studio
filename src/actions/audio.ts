@@ -227,15 +227,11 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 					})
 				}
 
-				if (source) {
-					source.audioFadeActive = true
-				}
+				source.audioFadeActive = true
 				try {
 					await self.obs.sendBatch(fadeBatch)
 				} finally {
-					if (source) {
-						source.audioFadeActive = false
-					}
+					source.audioFadeActive = false
 				}
 			}
 		},

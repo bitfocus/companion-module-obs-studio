@@ -245,7 +245,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputName: opt<string>(action, 'source') })
+			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputUuid: opt<string>(action, 'source') })
 		},
 	}
 	actions['openInputFiltersDialog'] = {
@@ -261,7 +261,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputFiltersDialog', { inputName: opt<string>(action, 'source') })
+			await self.obs.sendRequest('OpenInputFiltersDialog', { inputUuid: opt<string>(action, 'source') })
 		},
 	}
 	actions['openInputInteractDialog'] = {
@@ -277,7 +277,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputInteractDialog', { inputName: opt<string>(action, 'source') })
+			await self.obs.sendRequest('OpenInputInteractDialog', { inputUuid: opt<string>(action, 'source') })
 		},
 	}
 

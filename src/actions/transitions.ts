@@ -208,9 +208,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				} else if (duration < 0) {
 					duration = 0
 				}
-				if (duration !== null) {
-					await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
-				}
+				await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
 			} else {
 				logger.warn('Unable to adjust transition duration')
 			}

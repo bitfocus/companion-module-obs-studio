@@ -63,7 +63,7 @@ export class OBSApi {
 			)
 			if (obsWebSocketVersion) {
 				this.self.updateStatus(InstanceStatus.Ok)
-				void this.stopReconnectionPoll()
+				this.stopReconnectionPoll()
 				logger.info('Connected to OBS')
 
 				//Setup Initial State Objects
@@ -80,7 +80,7 @@ export class OBSApi {
 					await this.getStats()
 					await this.getRecordStatus()
 					await this.getStreamStatus()
-					await this.startStatsPoll()
+					this.startStatsPoll()
 
 					//Build General Parameters
 					await this.buildProfileList()
@@ -128,7 +128,7 @@ export class OBSApi {
 				this.self.updateStatus(InstanceStatus.UnknownError)
 			}
 			if (tryReconnect) {
-				void this.startReconnectionPoll()
+				this.startReconnectionPoll()
 			}
 		}
 	}
@@ -136,8 +136,8 @@ export class OBSApi {
 	public async disconnectOBS(): Promise<void> {
 		if (this.self.socket) {
 			//Clear all active polls
-			void this.stopStatsPoll()
-			void this.stopMediaPoll()
+			this.stopStatsPoll()
+			this.stopMediaPoll()
 			//Remove listeners, will recreate on connection
 			this.self.socket.removeAllListeners()
 			//Disconnect from OBS
@@ -151,7 +151,7 @@ export class OBSApi {
 			this.self.updateStatus(InstanceStatus.Disconnected)
 			await this.disconnectOBS()
 
-			void this.startReconnectionPoll()
+			this.startReconnectionPoll()
 		}
 	}
 
@@ -259,22 +259,22 @@ export class OBSApi {
 	}
 
 	// ═══ Polls ═══
-	public async startReconnectionPoll(): Promise<void> {
-		void this.stopReconnectionPoll()
+	public startReconnectionPoll(): void {
+		this.stopReconnectionPoll()
 		this.self.reconnectionPoll = setInterval(() => {
 			void this.connectOBS()
 		}, OBSApi.RECONNECTION_POLL_INTERVAL)
 	}
 
-	public async stopReconnectionPoll(): Promise<void> {
+	public stopReconnectionPoll(): void {
 		if (this.self.reconnectionPoll) {
 			clearInterval(this.self.reconnectionPoll)
 			delete this.self.reconnectionPoll
 		}
 	}
 
-	public async startStatsPoll(): Promise<void> {
-		void this.stopStatsPoll()
+	public startStatsPoll(): void {
+		this.stopStatsPoll()
 		if (this.self.socket) {
 			this.self.statsPoll = setInterval(() => {
 				// Build array of promises for parallel execution
@@ -299,21 +299,21 @@ export class OBSApi {
 		}
 	}
 
-	public async stopStatsPoll(): Promise<void> {
+	public stopStatsPoll(): void {
 		if (this.self.statsPoll) {
 			clearInterval(this.self.statsPoll)
 			delete this.self.statsPoll
 		}
 	}
 
-	public async startMediaPoll(): Promise<void> {
-		void this.stopMediaPoll()
+	public startMediaPoll(): void {
+		this.stopMediaPoll()
 		this.self.mediaPoll = setInterval(() => {
 			void this.getOBSMediaStatus()
 		}, OBSApi.MEDIA_POLL_INTERVAL)
 	}
 
-	public async stopMediaPoll(): Promise<void> {
+	public stopMediaPoll(): void {
 		if (this.self.mediaPoll) {
 			clearInterval(this.self.mediaPoll)
 			this.self.mediaPoll = null
@@ -892,13 +892,7 @@ export class OBSApi {
 
 	private _updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
 		source.monitorType = monitorType
-		let label = 'Off'
-		if (monitorType === ObsAudioMonitorType.MonitorAndOutput) {
-			label = 'Monitor / Output'
-		} else if (monitorType === ObsAudioMonitorType.MonitorOnly) {
-			label = 'Monitor Only'
-		}
-		this.self.setVariableValues({ [`monitor_${source.validName}`]: label })
+		this.self.setVariableValues({ [`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType) })
 	}
 
 	public async buildSourceList(sceneUuid: string): Promise<void> {
@@ -1099,6 +1093,10 @@ export class OBSApi {
 					const dbPeak = Math.round(20.0 * Math.log10(channelPeak))
 					if (isFinite(dbPeak)) {
 						this.self.states.audioPeak.set(input.inputUuid, dbPeak)
+						const source = this.self.states.sources.get(input.inputUuid)
+						if (source) {
+							source.peak = dbPeak
+						}
 						this.self.checkFeedbacks('audioPeaking', 'audioMeter')
 					}
 				}

@@ -152,7 +152,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 		},
 	}
 
-	actions['adjustPreview_scene'] = {
+	actions['adjustPreviewScene'] = {
 		name: 'Adjust Preview Scene',
 		description: 'Moves the preview selection to the next or previous scene in the list',
 		options: [

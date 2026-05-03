@@ -56,6 +56,7 @@ export default class OBSInstance extends InstanceBase {
 	}
 
 	async configUpdated(config: ModuleConfig, secrets: ModuleSecrets): Promise<void> {
+		await this.obs.disconnectOBS()
 		this.config = config
 		this.secrets = secrets
 		void this.init(config, false, secrets)
@@ -63,7 +64,7 @@ export default class OBSInstance extends InstanceBase {
 
 	async destroy(): Promise<void> {
 		void this.obs.disconnectOBS()
-		void this.obs.stopReconnectionPoll()
+		this.obs.stopReconnectionPoll()
 	}
 
 	initVariables(): void {

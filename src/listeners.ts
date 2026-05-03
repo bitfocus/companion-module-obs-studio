@@ -53,7 +53,7 @@ function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 // ═══ Config Listeners ═══
 function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('CurrentSceneCollectionChanging', () => {
-		void self.obs.stopMediaPoll()
+		self.obs.stopMediaPoll()
 		self.states.sceneCollectionChanging = true
 	})
 	obs.on('CurrentSceneCollectionChanged', (data) => {

@@ -5,7 +5,7 @@ import * as utils from './utils.js'
 export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 	const variables: CompanionVariableDefinitions = {
 		base_resolution: { name: 'Current base (canvas) resolution' },
-		output_resolution: { name: 'Current  output (scaled) resolution' },
+		output_resolution: { name: 'Current output (scaled) resolution' },
 		target_framerate: { name: 'Current profile framerate' },
 		fps: { name: 'Current actual framerate' },
 		cpu_usage: { name: 'Current CPU usage (percentage)' },
