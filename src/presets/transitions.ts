@@ -292,7 +292,7 @@ export function getTransitionPresets(self: OBSInstance): CompanionPresetDefiniti
 							options: {
 								transition: transition.id,
 								customDuration: false,
-								duration: 500,
+								transition_time: 500,
 							},
 						},
 					],

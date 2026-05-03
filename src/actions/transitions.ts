@@ -41,7 +41,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			{
 				type: 'number',
 				label: 'Transition time (in ms)',
-				id: 'duration',
+				id: 'transition_time',
 				default: 500,
 				min: 0,
 				max: 60 * 1000, //max is required by api
@@ -58,7 +58,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0
 				let duration
 				if (opt<any>(action, 'customDuration')) {
-					duration = opt<number>(action, 'duration')
+					duration = opt<number>(action, 'transition_time')
 				} else {
 					duration =
 						self.states.transitions.get(opt<string>(action, 'transition'))?.transitionFixedDuration ??
