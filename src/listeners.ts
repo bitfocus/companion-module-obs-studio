@@ -122,7 +122,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			'scene_item_active_in_scene',
 		)
 		if (self.isRecordingActions) {
-			self.sendToActionRecorder({ actionId: 'set_scene', options: { scene: data.sceneUuid } })
+			self.sendToActionRecorder({ actionId: 'set_scene', options: { scene: data.sceneName } })
 		}
 	})
 	obs.on('CurrentPreviewSceneChanged', (data) => {
@@ -131,7 +131,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.setVariableValues({ scene_preview: self.states.previewScene })
 		self.checkFeedbacks('scene_active', 'scenePreview')
 		if (self.isRecordingActions) {
-			self.sendToActionRecorder({ actionId: 'preview_scene', options: { scene: data.sceneUuid } })
+			self.sendToActionRecorder({ actionId: 'preview_scene', options: { scene: data.sceneName } })
 		}
 	})
 	obs.on('SceneListChanged', (data) => {
@@ -184,7 +184,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			if (self.isRecordingActions) {
 				self.sendToActionRecorder({
 					actionId: 'set_source_mute',
-					options: { source: data.inputUuid, mute: data.inputMuted ? 'true' : 'false' },
+					options: { source: source.sourceName, mute: data.inputMuted ? 'true' : 'false' },
 				})
 			}
 		}
@@ -199,7 +199,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			if (self.isRecordingActions) {
 				self.sendToActionRecorder({
 					actionId: 'set_volume',
-					options: { source: data.inputUuid, volume: source.inputVolume },
+					options: { source: source.sourceName, volume: source.inputVolume },
 				})
 			}
 		}
@@ -213,7 +213,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			if (self.isRecordingActions) {
 				self.sendToActionRecorder({
 					actionId: 'set_audio_balance',
-					options: { source: data.inputUuid, balance: source.inputAudioBalance },
+					options: { source: source.sourceName, balance: source.inputAudioBalance },
 				})
 			}
 		}
@@ -229,7 +229,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			if (self.isRecordingActions) {
 				self.sendToActionRecorder({
 					actionId: 'set_audio_offset',
-					options: { source: data.inputUuid, offset: data.inputAudioSyncOffset },
+					options: { source: source.sourceName, offset: data.inputAudioSyncOffset },
 				})
 			}
 		}
@@ -245,7 +245,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			if (self.isRecordingActions) {
 				self.sendToActionRecorder({
 					actionId: 'set_audio_monitor',
-					options: { source: data.inputUuid, monitor: data.monitorType },
+					options: { source: source.sourceName, monitor: data.monitorType },
 				})
 			}
 		}
@@ -375,7 +375,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 					actionId: 'toggle_filter',
 					options: {
 						allSources: false,
-						source: source.sourceUuid,
+						source: source.sourceName,
 						filter: data.filterName,
 						visible: data.filterEnabled ? 'true' : 'false',
 					},
@@ -432,14 +432,16 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			}
 		}
 		self.checkFeedbacks('scene_item_active_in_scene')
-		if (self.isRecordingActions && sourceUuid) {
+		const sceneName = self.states.scenes.get(data.sceneUuid)?.sceneName
+		const sourceName = sourceUuid ? self.states.sources.get(sourceUuid)?.sourceName : undefined
+		if (self.isRecordingActions && sourceName && sceneName) {
 			self.sendToActionRecorder({
 				actionId: 'toggle_scene_item',
 				options: {
 					anyScene: false,
 					useCurrentScene: false,
-					scene: data.sceneUuid,
-					source: sourceUuid,
+					scene: sceneName,
+					source: sourceName,
 					visible: data.sceneItemEnabled ? 'true' : 'false',
 				},
 			})
@@ -576,7 +578,7 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		}
 		if (self.isRecordingActions) {
 			let mediaActionId: string | undefined
-			const mediaOptions: Record<string, unknown> = { source: data.inputUuid, useCurrentMedia: false }
+			const mediaOptions: Record<string, unknown> = { source: source?.sourceName, useCurrentMedia: false }
 			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
 				mediaActionId = 'play_pause_media'
 				mediaOptions.playPause = 'pause'

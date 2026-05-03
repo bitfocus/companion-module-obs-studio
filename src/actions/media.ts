@@ -39,18 +39,18 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			let playPause = opt<string>(action, 'playPause')
 			if (playPause === 'toggle') {
 				playPause =
-					self.states.sources.get(mediaUuid)?.OBSMediaStatus === OBSMediaStatus.Playing
+					self.obsState.findSourceByName(mediaName)?.OBSMediaStatus === OBSMediaStatus.Playing
 						? OBSMediaInputAction.Pause
 						: OBSMediaInputAction.Play
 			} else {
 				playPause = playPause === 'pause' ? OBSMediaInputAction.Pause : OBSMediaInputAction.Play
 			}
 			await self.obs.sendRequest('TriggerMediaInputAction', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaAction: playPause,
 			})
 		},
@@ -75,9 +75,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			await self.obs.sendRequest('TriggerMediaInputAction', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaAction: OBSMediaInputAction.Restart,
 			})
 		},
@@ -102,9 +102,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			await self.obs.sendRequest('TriggerMediaInputAction', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaAction: OBSMediaInputAction.Stop,
 			})
 		},
@@ -129,9 +129,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			await self.obs.sendRequest('TriggerMediaInputAction', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaAction: OBSMediaInputAction.Next,
 			})
 		},
@@ -156,9 +156,9 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			await self.obs.sendRequest('TriggerMediaInputAction', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaAction: OBSMediaInputAction.Previous,
 			})
 		},
@@ -193,16 +193,16 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			const mediaTime = opt<number>(action, 'mediaTime')
 			await self.obs.sendRequest('SetMediaInputCursor', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaCursor: mediaTime,
 			})
 		},
 		learn: (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
-			const source = self.states.sources.get(mediaUuid)
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(mediaName)
 			if (!source || source.mediaCursor === undefined) return undefined
 			return {
 				mediaTime: source.mediaCursor,
@@ -239,10 +239,10 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			const scrubAmount = opt<number>(action, 'scrubAmount')
 			await self.obs.sendRequest('OffsetMediaInputCursor', {
-				inputUuid: mediaUuid,
+				inputName: mediaName,
 				mediaCursorOffset: scrubAmount * 1000,
 			})
 		},
@@ -275,15 +275,15 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
 			const mediaFilePath = opt<string>(action, 'path')
 			try {
 				const input = await self.obs.sendRequest('GetInputSettings', {
-					inputUuid: mediaUuid,
+					inputName: mediaName,
 				})
 				if (input?.inputSettings?.local_file !== undefined) {
 					await self.obs.sendRequest('SetInputSettings', {
-						inputUuid: mediaUuid,
+						inputName: mediaName,
 						inputSettings: {
 							local_file: mediaFilePath,
 						},
@@ -294,8 +294,8 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			}
 		},
 		learn: (action) => {
-			const mediaUuid = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
-			const input = self.states.sources.get(mediaUuid)
+			const mediaName = opt<any>(action, 'useCurrentMedia') ? self.states.currentMedia : opt<string>(action, 'source')
+			const input = self.obsState.findSourceByName(mediaName)
 			if (!input) return undefined
 			return {
 				path: input.settings?.local_file,

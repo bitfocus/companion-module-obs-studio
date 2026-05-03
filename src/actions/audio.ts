@@ -28,7 +28,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('ToggleInputMute', { inputUuid: opt<string>(action, 'source') })
+			await self.obs.sendRequest('ToggleInputMute', { inputName: opt<string>(action, 'source') })
 		},
 	}
 	actions['set_source_mute'] = {
@@ -55,13 +55,13 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputMute', {
-				inputUuid: opt<string>(action, 'source'),
+				inputName: opt<string>(action, 'source'),
 				inputMuted: opt<any>(action, 'mute') === 'true',
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (!source) return undefined
 			return {
 				mute: source.inputMuted ? 'true' : 'false',
@@ -91,13 +91,13 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputVolume', {
-				inputUuid: opt<string>(action, 'source'),
+				inputName: opt<string>(action, 'source'),
 				inputVolumeDb: opt<number>(action, 'volume'),
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (!source) return undefined
 			return {
 				volume: source.inputVolume,
@@ -126,15 +126,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const currentVolume = self.states.sources.get(sourceUuid)?.inputVolume
+			const sourceName = opt<string>(action, 'source')
+			const currentVolume = self.obsState.findSourceByName(sourceName)?.inputVolume
 			const newVolume = clamp(
 				(currentVolume !== undefined ? currentVolume : 0) + opt<number>(action, 'volume'),
 				VOLUME_MIN_DB,
 				VOLUME_MAX_DB,
 			)
 
-			await self.obs.sendRequest('SetInputVolume', { inputUuid: sourceUuid, inputVolumeDb: newVolume })
+			await self.obs.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newVolume })
 		},
 	}
 	actions['adjust_volume_percent'] = {
@@ -159,8 +159,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const currentVolume = self.states.sources.get(sourceUuid)?.inputVolume ?? -100
+			const sourceName = opt<string>(action, 'source')
+			const currentVolume = self.obsState.findSourceByName(sourceName)?.inputVolume ?? -100
 
 			const LOG_OFFSET_DB = 0
 			const currentPercentage = Math.pow(10, (currentVolume - LOG_OFFSET_DB) / 20) * 100
@@ -171,7 +171,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			let newDb = 20 * Math.log10(newPercentage / 100) + LOG_OFFSET_DB
 			newDb = clamp(newDb, VOLUME_MIN_DB, VOLUME_MAX_DB)
 
-			await self.obs.sendRequest('SetInputVolume', { inputUuid: sourceUuid, inputVolumeDb: newDb })
+			await self.obs.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newDb })
 		},
 	}
 	actions['fadeVolume'] = {
@@ -205,10 +205,10 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 			const targetVolume = opt<number>(action, 'volume')
 			const duration = opt<number>(action, 'duration')
-			const source = self.states.sources.get(sourceUuid)
+			const source = self.obsState.findSourceByName(sourceName)
 
 			if (source && !source.audioFadeActive) {
 				const currentVolume = source.inputVolume ?? -100
@@ -220,7 +220,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 					fadeBatch.push({
 						requestType: 'SetInputVolume',
 						requestData: {
-							inputUuid: sourceUuid,
+							inputName: sourceName,
 							inputVolumeDb: utils.roundNumber(currentVolume + volStep * i, 1),
 						},
 						sleep: 50,
@@ -259,13 +259,13 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		],
 		callback: async (action) => {
 			await self.obs.sendRequest('SetInputAudioSyncOffset', {
-				inputUuid: opt<string>(action, 'source'),
+				inputName: opt<string>(action, 'source'),
 				inputAudioSyncOffset: opt<number>(action, 'offset'),
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (!source) return undefined
 			return {
 				offset: source.inputAudioSyncOffset,
@@ -294,15 +294,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const currentOffset = self.states.sources.get(sourceUuid)?.inputAudioSyncOffset
+			const sourceName = opt<string>(action, 'source')
+			const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioSyncOffset
 			const newOffset = clamp(
 				(currentOffset !== undefined ? currentOffset : 0) + opt<number>(action, 'amount'),
 				SYNC_OFFSET_MIN,
 				SYNC_OFFSET_MAX,
 			)
 			await self.obs.sendRequest('SetInputAudioSyncOffset', {
-				inputUuid: sourceUuid,
+				inputName: sourceName,
 				inputAudioSyncOffset: newOffset,
 			})
 		},
@@ -329,15 +329,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 			await self.obs.sendRequest('SetInputAudioBalance', {
-				inputUuid: sourceUuid,
+				inputName: sourceName,
 				inputAudioBalance: opt<number>(action, 'balance'),
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (!source) return undefined
 			return {
 				balance: source.inputAudioBalance,
@@ -366,15 +366,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const currentOffset = self.states.sources.get(sourceUuid)?.inputAudioBalance
+			const sourceName = opt<string>(action, 'source')
+			const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioBalance
 			const newOffset = clamp(
 				(currentOffset !== undefined ? currentOffset : 0.5) + opt<number>(action, 'amount'),
 				BALANCE_MIN,
 				BALANCE_MAX,
 			)
 			await self.obs.sendRequest('SetInputAudioBalance', {
-				inputUuid: sourceUuid,
+				inputName: sourceName,
 				inputAudioBalance: newOffset,
 			})
 		},
@@ -406,13 +406,13 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		callback: async (action) => {
 			const monitorType = opt<ObsAudioMonitorType>(action, 'monitor')
 			await self.obs.sendRequest('SetInputAudioMonitorType', {
-				inputUuid: opt<string>(action, 'source'),
+				inputName: opt<string>(action, 'source'),
 				monitorType: monitorType,
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (!source) return undefined
 			return {
 				monitor: source.monitorType,

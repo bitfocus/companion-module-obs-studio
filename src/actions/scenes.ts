@@ -39,7 +39,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				const scene = opt<string>(action, 'customSceneName')
 				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: scene })
 			} else {
-				await self.obs.sendRequest('SetCurrentProgramScene', { sceneUuid: opt<string>(action, 'scene') })
+				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: opt<string>(action, 'scene') })
 			}
 		},
 		learn: (action) => {
@@ -47,8 +47,8 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (!self.states.programScene) return undefined
 				return { customSceneName: self.states.programScene }
 			}
-			if (!self.states.programSceneUuid) return undefined
-			return { scene: self.states.programSceneUuid }
+			if (!self.states.programScene) return undefined
+			return { scene: self.states.programScene }
 		},
 	}
 
@@ -84,7 +84,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				const scene = opt<string>(action, 'customSceneName')
 				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 			} else {
-				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: opt<string>(action, 'scene') })
+				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: opt<string>(action, 'scene') })
 			}
 		},
 		learn: (action) => {
@@ -92,8 +92,8 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (!self.states.previewScene) return undefined
 				return { customSceneName: self.states.previewScene }
 			}
-			if (!self.states.previewSceneUuid) return undefined
-			return { scene: self.states.previewSceneUuid }
+			if (!self.states.previewScene) return undefined
+			return { scene: self.states.previewScene }
 		},
 	}
 
@@ -125,7 +125,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const sceneUuid = opt<string>(action, 'scene')
+			const sceneName = opt<string>(action, 'scene')
 
 			if (opt<any>(action, 'custom')) {
 				const scene = opt<string>(action, 'customSceneName')
@@ -135,10 +135,10 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
 				}
 			} else {
-				if (self.states.previewSceneUuid === sceneUuid && self.states.programSceneUuid !== sceneUuid) {
+				if (self.states.previewScene === sceneName && self.states.programScene !== sceneName) {
 					await self.obs.sendRequest('TriggerStudioModeTransition')
 				} else {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: sceneUuid })
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: sceneName })
 				}
 			}
 		},
@@ -147,8 +147,8 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				if (!self.states.previewScene) return undefined
 				return { customSceneName: self.states.previewScene }
 			}
-			if (!self.states.previewSceneUuid) return undefined
-			return { scene: self.states.previewSceneUuid }
+			if (!self.states.previewScene) return undefined
+			return { scene: self.states.previewScene }
 		},
 	}
 
@@ -168,22 +168,22 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 		],
 		callback: async (action) => {
-			const previewSceneUuid = self.states.previewSceneUuid
-			const previewSceneIndex = self.states.scenes.get(previewSceneUuid)?.sceneIndex ?? 0
+			const previewScene = self.obsState.findSceneByName(self.states.previewScene)
+			const previewSceneIndex = previewScene?.sceneIndex ?? 0
 
 			if (opt<any>(action, 'adjust') === 'previous') {
-				const previousIndex = previewSceneIndex + 1 // Assuming higher index means "previous" in the list order
+				const previousIndex = previewSceneIndex + 1
 				const previousScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === previousIndex)
 				if (previousScene) {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: previousScene.sceneUuid })
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: previousScene.sceneName })
 				} else {
 					logger.debug('No previous scene found or already at the top of the list.')
 				}
 			} else if (opt<any>(action, 'adjust') === 'next') {
-				const nextIndex = previewSceneIndex - 1 // Assuming lower index means "next" in the list order
+				const nextIndex = previewSceneIndex - 1
 				const nextScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === nextIndex)
 				if (nextScene) {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneUuid: nextScene.sceneUuid })
+					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: nextScene.sceneName })
 				} else {
 					logger.debug('No next scene found or already at the bottom of the list.')
 				}

@@ -24,8 +24,8 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = opt<string>(feedback, 'source')
-			return self.states.sources.get(sourceUuid)?.OBSMediaStatus === OBSMediaStatus.Playing
+			const sourceName = opt<string>(feedback, 'source')
+			return self.obsState.findSourceByName(sourceName)?.OBSMediaStatus === OBSMediaStatus.Playing
 		},
 	}
 
@@ -74,8 +74,8 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = opt<string>(feedback, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(feedback, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (source) {
 				const remainingTime = Math.round(((source.mediaDuration ?? 0) - (source.mediaCursor ?? 0)) / 1000)
 				const status = source.OBSMediaStatus

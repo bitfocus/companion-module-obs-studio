@@ -55,14 +55,14 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		],
 		callback: (feedback) => {
 			let mode = opt<any>(feedback, 'mode')
-			const sceneUuid = opt<string>(feedback, 'scene')
+			const sceneName = opt<string>(feedback, 'scene')
 			if (!mode) {
 				mode = 'programAndPreview'
 			}
-			if (self.states.programSceneUuid === sceneUuid && (mode === 'programAndPreview' || mode === 'program')) {
+			if (self.states.programScene === sceneName && (mode === 'programAndPreview' || mode === 'program')) {
 				return { color: opt<number>(feedback, 'fg'), bgcolor: opt<number>(feedback, 'bg') }
 			} else if (
-				self.states.previewSceneUuid === sceneUuid &&
+				self.states.previewScene === sceneName &&
 				self.states.studioMode === true &&
 				(mode === 'programAndPreview' || mode === 'preview')
 			) {
@@ -113,8 +113,8 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				const scene = opt<string>(feedback, 'customSceneName')
 				return self.states.programScene === scene
 			} else {
-				const sceneUuid = opt<string>(feedback, 'scene')
-				return self.states.programSceneUuid === sceneUuid
+				const sceneName = opt<string>(feedback, 'scene')
+				return self.states.programScene === sceneName
 			}
 		},
 	}
@@ -156,8 +156,8 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				const scene = opt<string>(feedback, 'customSceneName')
 				return self.states.previewScene === scene
 			} else {
-				const sceneUuid = opt<string>(feedback, 'scene')
-				return self.states.previewSceneUuid === sceneUuid
+				const sceneName = opt<string>(feedback, 'scene')
+				return self.states.previewScene === sceneName
 			}
 		},
 	}
@@ -199,8 +199,8 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				const scene = opt<string>(feedback, 'customSceneName')
 				return self.states.previousScene === scene
 			} else {
-				const sceneUuid = opt<string>(feedback, 'scene')
-				return self.states.previousSceneUuid === sceneUuid
+				const sceneName = opt<string>(feedback, 'scene')
+				return self.states.previousScene === sceneName
 			}
 		},
 	}

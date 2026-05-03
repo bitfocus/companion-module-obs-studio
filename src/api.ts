@@ -172,23 +172,6 @@ export class OBSApi {
 		requestType: T,
 		requestData?: OBSRequestTypes[T],
 	): Promise<OBSResponseTypes[T] | undefined> {
-		// Backward Compatibility: If sceneName or inputName is provided but we have a UUID, prioritize UUID
-		if (requestData) {
-			const data = requestData as any
-			if (data.sceneName && !data.sceneUuid) {
-				const scene = Array.from(this.self.states.scenes.values()).find((s) => s.sceneName === data.sceneName)
-				if (scene) data.sceneUuid = scene.sceneUuid
-			}
-			if (data.inputName && !data.inputUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.inputName)
-				if (source) data.inputUuid = source.sourceUuid
-			}
-			if (data.sourceName && !data.sourceUuid) {
-				const source = Array.from(this.self.states.sources.values()).find((s) => s.sourceName === data.sourceName)
-				if (source) data.sourceUuid = source.sourceUuid
-			}
-		}
-
 		return this._call(requestType, requestData)
 	}
 
@@ -977,7 +960,7 @@ export class OBSApi {
 		const batch = mediaSourceList.map((source) => ({
 			requestId: source.id as string,
 			requestType: 'GetMediaInputStatus',
-			requestData: { inputUuid: source.id },
+			requestData: { inputName: source.id },
 		}))
 
 		const data = await this.sendBatch(batch)
@@ -986,11 +969,10 @@ export class OBSApi {
 			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
 			for (const response of data) {
 				if (response.requestStatus.result) {
-					const sourceUuid = response.requestId
-					const source = this.self.states.sources.get(sourceUuid)
+					const sourceName = response.requestId
+					const source = this.self.obsState.findSourceByName(sourceName)
 					if (!source) continue
 
-					const sourceName = source.sourceName
 					const validName = source.validName ?? sourceName
 					const responseData = response.responseData
 
@@ -1105,11 +1087,14 @@ export class OBSApi {
 	}
 
 	public async setSourceVisibility(
-		sourceUuid: string,
+		sourceName: string,
 		visible: string,
 		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
 	): Promise<void> {
 		const sources: { sceneUuid: string; sceneItemId: number }[] = []
+		const source = this.self.obsState.findSourceByName(sourceName)
+		if (!source) return
+		const sourceUuid = source.sourceUuid
 
 		if (options.anyScene) {
 			for (const [sceneUuid, sceneItems] of this.self.states.sceneItems) {
@@ -1131,7 +1116,11 @@ export class OBSApi {
 				}
 			}
 		} else {
-			const sceneUuid = options.useCurrentScene ? this.self.states.programSceneUuid : options.scene
+			const scene = options.useCurrentScene
+				? this.self.states.scenes.get(this.self.states.programSceneUuid)
+				: this.self.obsState.findSceneByName(options.scene)
+			if (!scene) return
+			const sceneUuid = scene.sceneUuid
 			const sceneItems = this.self.states.sceneItems.get(sceneUuid)
 			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
 			if (item) {
@@ -1214,7 +1203,9 @@ export class OBSApi {
 
 			await this.sendBatch(requests)
 		} else {
-			const sourceUuid = options.source
+			const source = this.self.obsState.findSourceByName(options.source)
+			if (!source) return
+			const sourceUuid = source.sourceUuid
 			let filterVisibility: boolean
 			if (visible === 'toggle') {
 				const filters = this.self.states.sourceFilters.get(sourceUuid)

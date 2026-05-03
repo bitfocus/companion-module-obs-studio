@@ -1,4 +1,4 @@
-import { ModuleChoice, OBSNormalizedState, OBSRecordingState } from './types.js'
+import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSource, OBSScene } from './types.js'
 
 export class OBSState {
 	public readonly state: OBSNormalizedState
@@ -87,7 +87,7 @@ export class OBSState {
 	// Derived Choices
 	public get sceneChoices(): ModuleChoice[] {
 		return Array.from(this.state.scenes.values())
-			.map((s) => ({ id: s.sceneUuid, label: s.sceneName }))
+			.map((s) => ({ id: s.sceneName, label: s.sceneName }))
 			.reverse()
 	}
 
@@ -95,7 +95,7 @@ export class OBSState {
 		return this.buildChoices(
 			Array.from(this.state.sources.values()),
 			() => true,
-			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(s) => ({ id: s.sourceName, label: s.sourceName }),
 			(a, b) => a.label.localeCompare(b.label),
 		)
 	}
@@ -104,7 +104,7 @@ export class OBSState {
 		return this.buildChoices(
 			Array.from(this.state.sources.values()),
 			(s) => s.inputMuted !== undefined || s.inputVolume !== undefined,
-			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(s) => ({ id: s.sourceName, label: s.sourceName }),
 			(a, b) => a.label.localeCompare(b.label),
 		)
 	}
@@ -113,7 +113,7 @@ export class OBSState {
 		return this.buildChoices(
 			Array.from(this.state.sources.values()),
 			(s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source',
-			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(s) => ({ id: s.sourceName, label: s.sourceName }),
 			(a, b) => a.label.localeCompare(b.label),
 		)
 	}
@@ -137,7 +137,7 @@ export class OBSState {
 		return this.buildChoices(
 			Array.from(this.state.sources.values()),
 			(s) => !!s.inputKind?.startsWith('text_'),
-			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(s) => ({ id: s.sourceName, label: s.sourceName }),
 			(a, b) => a.label.localeCompare(b.label),
 		)
 	}
@@ -146,7 +146,7 @@ export class OBSState {
 		return this.buildChoices(
 			Array.from(this.state.sources.values()),
 			(s) => s.inputKind === 'image_source',
-			(s) => ({ id: s.sourceUuid, label: s.sourceName }),
+			(s) => ({ id: s.sourceName, label: s.sourceName }),
 			(a, b) => a.label.localeCompare(b.label),
 		)
 	}
@@ -215,5 +215,32 @@ export class OBSState {
 	// Special Choices
 	public get sourceChoicesWithScenes(): ModuleChoice[] {
 		return [...this.sourceChoices, ...this.sceneChoices]
+	}
+
+	// Name-based lookup helpers
+	public findSourceByName(name: string): OBSSource | undefined {
+		return Array.from(this.state.sources.values()).find((s) => s.sourceName === name)
+	}
+
+	public findSceneByName(name: string): OBSScene | undefined {
+		return Array.from(this.state.scenes.values()).find((s) => s.sceneName === name)
+	}
+
+	public findSourceFiltersByName(sourceName: string): import('./types.js').OBSFilter[] | undefined {
+		const source = this.findSourceByName(sourceName)
+		if (source) return this.state.sourceFilters.get(source.sourceUuid)
+		return undefined
+	}
+
+	public findSceneItemsByName(sceneName: string): import('./types.js').OBSSceneItem[] | undefined {
+		const scene = this.findSceneByName(sceneName)
+		if (scene) return this.state.sceneItems.get(scene.sceneUuid)
+		return undefined
+	}
+
+	public findGroupItemsByName(sourceName: string): import('./types.js').OBSSceneItem[] | undefined {
+		const source = this.findSourceByName(sourceName)
+		if (source) return this.state.groups.get(source.sourceUuid)
+		return undefined
 	}
 }

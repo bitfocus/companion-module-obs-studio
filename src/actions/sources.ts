@@ -27,16 +27,16 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 			let newText = opt<string>(action, 'text')
 			if (typeof newText === 'string') {
 				newText = newText.replace(/\\n/g, '\n')
 			}
-			await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: { text: newText } })
+			await self.obs.sendRequest('SetInputSettings', { inputName: sourceName, inputSettings: { text: newText } })
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			const text = source?.settings?.text
 			if (!text) return undefined
 			return {
@@ -272,9 +272,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 			const props = opt<string[]>(action, 'props') || []
-			const source = self.states.sources.get(sourceUuid)
+			const source = self.obsState.findSourceByName(sourceName)
 			const existingSettings = { ...(source?.settings || {}) }
 
 			// Start with all existing settings, then overlay changes
@@ -405,13 +405,13 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				inputSettings.font = existingFont
 			}
 			await self.obs.sendRequest('SetInputSettings', {
-				inputUuid: sourceUuid,
+				inputName: sourceName,
 				inputSettings: inputSettings,
 			})
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			const settings = source?.settings
 			if (!settings) return undefined
 
@@ -476,10 +476,10 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (source?.inputKind) {
-				await self.obs.sendRequest('SetInputSettings', { inputUuid: sourceUuid, inputSettings: {} })
+				await self.obs.sendRequest('SetInputSettings', { inputName: sourceName, inputSettings: {} })
 			} else {
 				logger.warn('The selected source is not an input.')
 				return
@@ -535,9 +535,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 		learn: (action) => {
 			if (opt<any>(action, 'allSources')) return undefined
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 			const filterName = opt<string>(action, 'filter')
-			const filters = self.states.sourceFilters.get(sourceUuid)
+			const filters = self.obsState.findSourceFiltersByName(sourceName)
 			const filter = filters?.find((f) => f.filterName === filterName)
 			if (!filter) return undefined
 			return {
@@ -577,7 +577,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				const settings = opt<string>(action, 'settings')
 				const settingsJSON = JSON.parse(settings)
 				await self.obs.sendRequest('SetSourceFilterSettings', {
-					sourceUuid: opt<string>(action, 'source'),
+					sourceName: opt<string>(action, 'source'),
 					filterName: opt<string>(action, 'filter'),
 					filterSettings: settingsJSON,
 				})
@@ -586,9 +586,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			}
 		},
 		learn: (action) => {
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 			const filterName = opt<string>(action, 'filter')
-			const filters = self.states.sourceFilters.get(sourceUuid)
+			const filters = self.obsState.findSourceFiltersByName(sourceName)
 			const filter = filters?.find((f) => f.filterName === filterName)
 			if (!filter) return undefined
 			return {
@@ -610,10 +610,10 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceUuid = opt<string>(action, 'source')
-			if (self.states.sources.get(sourceUuid)?.inputKind === 'browser_source') {
+			const sourceName = opt<string>(action, 'source')
+			if (self.obsState.findSourceByName(sourceName)?.inputKind === 'browser_source') {
 				await self.obs.sendRequest('PressInputPropertiesButton', {
-					inputUuid: sourceUuid,
+					inputName: sourceName,
 					propertyName: 'refreshnocache',
 				})
 			}
@@ -686,13 +686,13 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			let sourceUuid: string
+			let sourceName: string
 			if (opt<any>(action, 'useProgramScene')) {
-				sourceUuid = self.states.programSceneUuid
+				sourceName = self.states.programScene
 			} else if (opt<any>(action, 'usePreviewScene')) {
-				sourceUuid = self.states.previewSceneUuid
+				sourceName = self.states.previewScene
 			} else {
-				sourceUuid = opt<string>(action, 'source')
+				sourceName = opt<string>(action, 'source')
 			}
 
 			let filePath
@@ -706,7 +706,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			const quality = opt<any>(action, 'compression') === 0 ? -1 : opt<any>(action, 'compression')
 
 			await self.obs.sendRequest('SaveSourceScreenshot', {
-				sourceUuid: sourceUuid,
+				sourceName: sourceName,
 				imageFormat: opt<string>(action, 'format'),
 				imageFilePath: filePath,
 				imageCompressionQuality: quality as number,
@@ -776,10 +776,10 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 		],
 		callback: async (action) => {
-			const sourceSceneUuid = opt<any>(action, 'useProgramScene')
-				? self.states.programSceneUuid
+			const sourceSceneName = opt<any>(action, 'useProgramScene')
+				? self.states.programScene
 				: opt<string>(action, 'scene')
-			const sourceUuid = opt<string>(action, 'source')
+			const sourceName = opt<string>(action, 'source')
 
 			const transform: { [key: string]: number } = {}
 			if (opt<any>(action, 'positionX')) transform.positionX = Number(opt<string>(action, 'positionX'))
@@ -789,20 +789,19 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			if (opt<any>(action, 'rotation')) transform.rotation = Number(opt<string>(action, 'rotation'))
 
 			try {
-				const sourceName = self.states.sources.get(sourceUuid)?.sourceName || sourceUuid
 				const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
-					sceneUuid: sourceSceneUuid,
+					sceneName: sourceSceneName,
 					sourceName: sourceName,
 				})
 
 				if (sceneItem?.sceneItemId) {
 					await self.obs.sendRequest('SetSceneItemTransform', {
-						sceneUuid: sourceSceneUuid,
+						sceneName: sourceSceneName,
 						sceneItemId: sceneItem?.sceneItemId,
 						sceneItemTransform: transform,
 					})
 				} else {
-					logger.warn(`Scene item not found for source: ${sourceUuid} in scene: ${sourceSceneUuid}`)
+					logger.warn(`Scene item not found for source: ${sourceName} in scene: ${sourceSceneName}`)
 					return
 				}
 			} catch (e: any) {
@@ -865,12 +864,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 		learn: (action) => {
 			if (opt<any>(action, 'anyScene')) return undefined
-			const sourceUuid = opt<string>(action, 'source')
-			const sceneUuid = opt<any>(action, 'useCurrentScene')
-				? self.states.programSceneUuid
-				: opt<string>(action, 'scene')
-			const sceneItems = self.states.sceneItems.get(sceneUuid)
-			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
+			const sourceName = opt<string>(action, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
+			if (!source) return undefined
+			const sceneName = opt<any>(action, 'useCurrentScene') ? self.states.programScene : opt<string>(action, 'scene')
+			const sceneItems = self.obsState.findSceneItemsByName(sceneName)
+			const item = sceneItems?.find((i) => i.sourceUuid === source.sourceUuid)
 			if (!item) return undefined
 			return {
 				visible: item.sceneItemEnabled ? 'true' : 'false',

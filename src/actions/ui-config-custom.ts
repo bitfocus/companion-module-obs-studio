@@ -245,7 +245,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputUuid: opt<string>(action, 'source') })
+			await self.obs.sendRequest('OpenInputPropertiesDialog', { inputName: opt<string>(action, 'source') })
 		},
 	}
 	actions['openInputFiltersDialog'] = {
@@ -261,7 +261,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputFiltersDialog', { inputUuid: opt<string>(action, 'source') })
+			await self.obs.sendRequest('OpenInputFiltersDialog', { inputName: opt<string>(action, 'source') })
 		},
 	}
 	actions['openInputInteractDialog'] = {
@@ -277,7 +277,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		],
 		callback: async (action) => {
-			await self.obs.sendRequest('OpenInputInteractDialog', { inputUuid: opt<string>(action, 'source') })
+			await self.obs.sendRequest('OpenInputInteractDialog', { inputName: opt<string>(action, 'source') })
 		},
 	}
 
@@ -357,13 +357,13 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			} else if (opt<any>(action, 'type') === 'Source') {
 				requestType = 'OpenSourceProjector'
 				requestData = {
-					sourceUuid: opt<any>(action, 'source'),
+					sourceName: opt<any>(action, 'source'),
 					monitorIndex: monitor,
 				}
 			} else if (opt<any>(action, 'type') === 'Scene') {
 				requestType = 'OpenSourceProjector'
 				requestData = {
-					sourceUuid: opt<any>(action, 'scene'),
+					sourceName: opt<any>(action, 'scene'),
 					monitorIndex: monitor,
 				}
 			} else {

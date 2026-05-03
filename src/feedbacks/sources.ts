@@ -45,17 +45,17 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = opt<string>(feedback, 'source')
-			const source = self.states.sources.get(sourceUuid)
+			const sourceName = opt<string>(feedback, 'source')
+			const source = self.obsState.findSourceByName(sourceName)
 			if (!source?.active) return false
 
 			if (opt<any>(feedback, 'anyScene')) {
 				return true
 			} else {
-				const sceneUuid = opt<any>(feedback, 'useCurrentScene')
-					? self.states.programSceneUuid
+				const sceneName = opt<any>(feedback, 'useCurrentScene')
+					? self.states.programScene
 					: opt<string>(feedback, 'scene')
-				return sceneUuid === self.states.programSceneUuid
+				return sceneName === self.states.programScene
 			}
 		},
 	}
@@ -78,7 +78,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			return !!self.states.sources.get(opt<string>(feedback, 'source'))?.videoShowing
+			return !!self.obsState.findSourceByName(opt<string>(feedback, 'source'))?.videoShowing
 		},
 	}
 
@@ -114,11 +114,11 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			const sceneUuid = opt<string>(feedback, 'scene')
-			const sourceUuid = opt<string>(feedback, 'source')
+			const sceneName = opt<string>(feedback, 'scene')
+			const sourceName = opt<string>(feedback, 'source')
 
 			if (opt<any>(feedback, 'any')) {
-				const scene = self.states.sceneItems.get(sceneUuid)
+				const scene = self.obsState.findSceneItemsByName(sceneName)
 
 				if (scene) {
 					const enabled = scene.find((item) => item.sceneItemEnabled === true)
@@ -127,20 +127,20 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 					}
 				}
 			} else {
-				const source = self.states.sources.get(sourceUuid)
+				const source = self.obsState.findSourceByName(sourceName)
 				if (source?.groupedSource) {
-					const groupUuid = source.groupName // groupName is now groupUuid
-					if (groupUuid) {
-						const group = self.states.groups.get(groupUuid)
-						const sceneItem = group?.find((item) => item.sourceUuid === sourceUuid)
+					const groupName = source.groupName
+					if (groupName) {
+						const group = self.obsState.findGroupItemsByName(groupName)
+						const sceneItem = group?.find((item) => item.sourceUuid === source.sourceUuid)
 						if (sceneItem) {
 							return sceneItem.sceneItemEnabled
 						}
 					}
 				} else {
-					const scene = self.states.sceneItems.get(sceneUuid)
+					const scene = self.obsState.findSceneItemsByName(sceneName)
 					if (scene) {
-						const sceneItem = scene.find((item) => item.sourceUuid === sourceUuid)
+						const sceneItem = scene.find((item) => item.sourceUuid === source?.sourceUuid)
 						if (sceneItem) {
 							return sceneItem.sceneItemEnabled
 						}
@@ -176,8 +176,8 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
-			const sourceUuid = opt<string>(feedback, 'source')
-			const sourceFilters = self.states.sourceFilters.get(sourceUuid)
+			const sourceName = opt<string>(feedback, 'source')
+			const sourceFilters = self.obsState.findSourceFiltersByName(sourceName)
 			if (sourceFilters) {
 				const filter = sourceFilters.find((item) => item.filterName === opt<string>(feedback, 'filter'))
 				return !!filter?.filterEnabled

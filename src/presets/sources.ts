@@ -8,14 +8,14 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 	const processedSources = new Set<string>()
 
 	for (const scene of self.obsState.sceneChoices) {
-		const sceneUuid = scene.id as string
-		const sceneItems = self.obsState.state.sceneItems.get(sceneUuid) ?? []
+		const sceneName = scene.id as string
+		const sceneItems = self.obsState.findSceneItemsByName(sceneName) ?? []
 
 		if (sceneItems.length > 0) {
 			for (const item of sceneItems) {
 				const sourcesToProcess = []
 				if (item.isGroup) {
-					const groupItems = self.obsState.state.groups.get(item.sourceUuid) ?? []
+					const groupItems = self.obsState.findGroupItemsByName(item.sourceName) ?? []
 					sourcesToProcess.push(...groupItems)
 				} else {
 					sourcesToProcess.push(item)
@@ -23,7 +23,7 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 
 				for (const sourceItem of sourcesToProcess) {
 					processedSources.add(sourceItem.sourceUuid)
-					presets[`sourceStatus_${sceneUuid}_${sourceItem.sourceUuid}`] = {
+					presets[`sourceStatus_${sceneName}_${sourceItem.sourceName}`] = {
 						type: 'simple',
 						name: `${sourceItem.sourceName} Status (${scene.label})`,
 						style: {
@@ -43,7 +43,7 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 							{
 								feedbackId: 'scene_item_previewed',
 								options: {
-									source: sourceItem.sourceUuid,
+									source: sourceItem.sourceName,
 								},
 								style: {
 									bgcolor: Color.Green,
@@ -54,7 +54,7 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 								feedbackId: 'scene_item_active',
 								options: {
 									scene: 'anyScene',
-									source: sourceItem.sourceUuid,
+									source: sourceItem.sourceName,
 								},
 								style: {
 									bgcolor: Color.Red,
@@ -68,7 +68,10 @@ export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions 
 		}
 	}
 
-	const otherSources = self.obsState.sourceChoices.filter((s) => !processedSources.has(s.id as string))
+	const otherSources = self.obsState.sourceChoices.filter((s) => {
+		const source = self.obsState.findSourceByName(s.id as string)
+		return source ? !processedSources.has(source.sourceUuid) : true
+	})
 	if (otherSources.length > 0) {
 		for (const source of otherSources) {
 			presets[`sourceStatus_other_${source.id}`] = {
