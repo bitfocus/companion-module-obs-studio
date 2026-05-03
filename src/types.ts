@@ -2,6 +2,7 @@ export interface ModuleConfig {
 	[key: string]: any
 	host: string
 	port: number
+	scheme?: string
 }
 
 export interface ModuleSecrets {

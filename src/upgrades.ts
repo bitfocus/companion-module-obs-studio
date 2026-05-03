@@ -247,6 +247,23 @@ export default [
 		}
 		return changes
 	},
+	function v3_16_0(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+
+		if (props.config && props.config.scheme === undefined) {
+			props.config.scheme = 'ws'
+			changes.updatedConfig = props.config
+		}
+
+		return changes
+	},
 	function v4_0_0(
 		_context: CompanionUpgradeContext<ModuleConfig>,
 		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,

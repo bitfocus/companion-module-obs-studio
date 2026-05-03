@@ -22,5 +22,16 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Server Password',
 			width: 4,
 		},
+		{
+			type: 'dropdown',
+			id: 'scheme',
+			label: 'Server Scheme',
+			default: 'ws',
+			choices: [
+				{ id: 'ws', label: 'ws' },
+				{ id: 'wss', label: 'wss' },
+			],
+			width: 4,
+		},
 	]
 }

@@ -2,7 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from './main.js'
 
 import { getSourcePresets } from './presets/sources.js'
-import { getPreviewScenePresets, getProgramScenePresets } from './presets/scenes.js'
+import { getPreviewScenePresets, getProgramScenePresets, getSmartScenePresets } from './presets/scenes.js'
 import { getTransitionPresets } from './presets/transitions.js'
 import { getAudioPresets } from './presets/audio.js'
 import { getMediaPresets } from './presets/media.js'
@@ -18,6 +18,7 @@ export function getPresets(this: OBSInstance): {
 	const outputs = getOutputPresets(this)
 	const program = getProgramScenePresets(this)
 	const preview = getPreviewScenePresets(this)
+	const smart = getSmartScenePresets(this)
 	const sources = getSourcePresets(this)
 	const transitions = getTransitionPresets(this)
 	const ui = getUiConfigCustomPresets(this)
@@ -28,6 +29,7 @@ export function getPresets(this: OBSInstance): {
 		...outputs,
 		...program,
 		...preview,
+		...smart,
 		...sources,
 		...transitions,
 		...ui,
@@ -39,6 +41,7 @@ export function getPresets(this: OBSInstance): {
 		{ id: 'outputs', name: 'Streaming & Recording', definitions: Object.keys(outputs) },
 		{ id: 'scenes-program', name: 'Scenes to Program', definitions: Object.keys(program) },
 		{ id: 'scenes-preview', name: 'Scenes to Preview', definitions: Object.keys(preview) },
+		{ id: 'scenes-smart', name: 'Smart Switch Scene', definitions: Object.keys(smart) },
 		{ id: 'sources', name: 'Sources', definitions: Object.keys(sources) },
 		{ id: 'transitions', name: 'Transitions', definitions: Object.keys(transitions) },
 		{ id: 'ui', name: 'General & Profiles', definitions: Object.keys(ui) },

@@ -35,6 +35,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 				id: 'transition',
 				default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
 				choices: self.obsState.transitionList,
+				allowCustom: true,
 			},
 		],
 		callback: (feedback) => {

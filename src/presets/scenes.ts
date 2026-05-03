@@ -91,3 +91,49 @@ export function getPreviewScenePresets(self: OBSInstance): CompanionPresetDefini
 
 	return presets
 }
+
+export function getSmartScenePresets(self: OBSInstance): CompanionPresetDefinitions {
+	const presets: CompanionPresetDefinitions = {}
+
+	for (const scene of self.obsState.sceneChoices) {
+		presets[`smart_${scene.id}`] = {
+			type: 'simple',
+			name: scene.label,
+			style: {
+				text: scene.label,
+				size: 'auto',
+				color: Color.White,
+				bgcolor: Color.Black,
+				show_topbar: false,
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'smart_switcher',
+							options: {
+								scene: scene.id,
+							},
+						},
+					],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'scene_active',
+					options: {
+						scene: scene.id,
+						mode: 'programAndPreview',
+						fg: Color.White,
+						bg: Color.Green,
+						fg_preview: Color.White,
+						bg_preview: Color.Red,
+					},
+				},
+			],
+		}
+	}
+
+	return presets
+}
