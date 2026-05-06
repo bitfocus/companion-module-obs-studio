@@ -674,7 +674,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				default: 0,
 				min: -1,
 				max: 100,
-				range: false,
+				clampValues: true,
 			},
 			{
 				type: 'checkbox',

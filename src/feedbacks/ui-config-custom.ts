@@ -82,7 +82,7 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 				default: 10000,
 				min: 0,
 				max: 1000000,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: (feedback) => {

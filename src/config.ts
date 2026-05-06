@@ -32,7 +32,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 				{ id: 'wss', label: 'Secure WebSocket (wss)' },
 			],
 			tooltip:
-				'By default, WebSocket (ws) is used. Set to wss if you have specifically configured a secure connection via a proxy (wss).',
+				'By default, a WebSocket (ws) connection is used. Set to Secure WebSocket (wss) if you have specifically configured a secure connection.',
 			width: 4,
 		},
 	]

@@ -196,7 +196,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 0,
 				min: 0,
 				max: 100 * 60 * 60 * 1000,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -243,7 +243,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 1,
 				min: -3600,
 				max: 3600,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {

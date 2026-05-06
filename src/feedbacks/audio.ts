@@ -91,7 +91,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				default: 0,
 				min: -100,
 				max: 26,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: (feedback) => {
@@ -124,7 +124,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				default: -20,
 				min: -100,
 				max: 26,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: (feedback) => {

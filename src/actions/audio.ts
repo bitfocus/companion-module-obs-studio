@@ -90,7 +90,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 0,
 				min: VOLUME_MIN_DB,
 				max: VOLUME_MAX_DB,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -127,7 +127,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 1,
 				min: VOLUME_MIN_DB,
 				max: VOLUME_MAX_DB,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -159,9 +159,9 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				label: 'Amount in Percentage',
 				id: 'volume',
 				default: 5,
-				min: VOLUME_MIN_DB,
+				min: -100,
 				max: 100,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -199,7 +199,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 0,
 				min: VOLUME_MIN_DB,
 				max: VOLUME_MAX_DB,
-				range: false,
+				clampValues: true,
 			},
 			{
 				type: 'number',
@@ -208,7 +208,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 1000,
 				min: 10,
 				max: 60000,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -262,7 +262,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 0,
 				min: SYNC_OFFSET_MIN,
 				max: SYNC_OFFSET_MAX,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -299,7 +299,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 50,
 				min: -20000,
 				max: SYNC_OFFSET_MAX,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -335,7 +335,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 0.5,
 				min: BALANCE_MIN,
 				max: BALANCE_MAX,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -373,7 +373,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				default: 0.1,
 				min: -1.0,
 				max: BALANCE_MAX,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {

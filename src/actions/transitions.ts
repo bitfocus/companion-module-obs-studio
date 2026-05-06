@@ -46,7 +46,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				default: 500,
 				min: 0,
 				max: 60 * 1000, //max is required by api
-				range: false,
+				clampValues: true,
 				isVisibleExpression: `$(options:customDuration)`,
 			},
 		],
@@ -169,7 +169,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				default: 500,
 				min: 0,
 				max: 60 * 1000, //max is required by api
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {
@@ -200,7 +200,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				default: 50,
 				min: -60 * 1000,
 				max: 60 * 1000,
-				range: false,
+				clampValues: true,
 			},
 		],
 		callback: async (action) => {

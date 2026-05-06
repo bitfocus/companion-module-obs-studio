@@ -54,7 +54,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				default: 20,
 				min: 0,
 				max: 3600, //max is required by api
-				range: false,
+				clampValues: true,
 			},
 			{
 				type: 'checkbox',
