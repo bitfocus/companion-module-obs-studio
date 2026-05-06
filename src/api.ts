@@ -676,6 +676,24 @@ export class OBSApi {
 
 		// Fetch all scene items for all scenes
 		const sceneUuids = Array.from(this.self.states.scenes.keys())
+		const allSourceUuids = new Set<string>()
+		await this.fetchSceneItemsBatch(sceneUuids, allSourceUuids)
+
+		// Handle Groups separately as they contain sources not directly in scenes
+		const groupUuids = Array.from(this.self.states.sources.values())
+			.filter((s) => s.isGroup)
+			.map((s) => s.sourceUuid)
+
+		await this.fetchGroupItemsBatch(groupUuids, allSourceUuids)
+
+		await this.fetchSourcesData(Array.from(allSourceUuids))
+
+		void this.self.updateActionsFeedbacksVariables()
+	}
+
+	private async fetchSceneItemsBatch(sceneUuids: string[], allSourceUuids: Set<string>): Promise<void> {
+		if (sceneUuids.length === 0) return
+
 		const batch: OBSBatchRequest[] = sceneUuids.map((uuid) => ({
 			requestType: 'GetSceneItemList',
 			requestData: { sceneUuid: uuid },
@@ -683,7 +701,6 @@ export class OBSApi {
 		}))
 
 		const response = await this.sendBatch(batch)
-		const allSourceUuids = new Set<string>()
 
 		if (response) {
 			for (const res of response) {
@@ -699,44 +716,48 @@ export class OBSApi {
 				}
 			}
 		}
+	}
 
-		// Handle Groups separately as they contain sources not directly in scenes
-		const groupUuids = Array.from(this.self.states.sources.values())
-			.filter((s) => s.isGroup)
-			.map((s) => s.sourceUuid)
+	private async fetchGroupItemsBatch(groupUuids: string[], allSourceUuids: Set<string>): Promise<void> {
+		if (groupUuids.length === 0) return
 
-		if (groupUuids.length > 0) {
-			const groupBatch: OBSBatchRequest[] = groupUuids.map((uuid) => ({
-				requestType: 'GetGroupSceneItemList',
-				requestData: { sceneUuid: uuid },
-				requestId: uuid,
-			}))
-			const groupResponse = await this.sendBatch(groupBatch)
-			if (groupResponse) {
-				for (const res of groupResponse) {
-					if (res.requestStatus.result) {
-						const groupUuid = res.requestId
-						const items = res.responseData.sceneItems as any[]
-						this.self.states.groups.set(groupUuid, items)
-						for (const item of items) {
-							allSourceUuids.add(item.sourceUuid)
-							const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind)
-							source.groupedSource = true
-							source.groupName = groupUuid
-						}
+		const groupBatch: OBSBatchRequest[] = groupUuids.map((uuid) => ({
+			requestType: 'GetGroupSceneItemList',
+			requestData: { sceneUuid: uuid },
+			requestId: uuid,
+		}))
+		const groupResponse = await this.sendBatch(groupBatch)
+		if (groupResponse) {
+			for (const res of groupResponse) {
+				if (res.requestStatus.result) {
+					const groupUuid = res.requestId
+					const items = res.responseData.sceneItems as any[]
+					this.self.states.groups.set(groupUuid, items)
+					for (const item of items) {
+						allSourceUuids.add(item.sourceUuid)
+						const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind)
+						source.groupedSource = true
+						source.groupName = groupUuid
 					}
 				}
 			}
 		}
-
-		await this.fetchSourcesData(Array.from(allSourceUuids))
-
-		void this.self.updateActionsFeedbacksVariables()
 	}
 
 	public async fetchSourcesData(sourceUuids: string[]): Promise<void> {
 		if (sourceUuids.length === 0) return
 
+		const batch = this.buildSourceDataBatchRequests(sourceUuids)
+		const responses = await this.sendBatch(batch)
+
+		if (responses) {
+			this.processSourceDataBatchResponses(responses)
+		}
+
+		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
+	}
+
+	private buildSourceDataBatchRequests(sourceUuids: string[]): OBSBatchRequest[] {
 		const batch: OBSBatchRequest[] = []
 		for (const uuid of sourceUuids) {
 			batch.push(
@@ -795,62 +816,64 @@ export class OBSApi {
 				)
 			}
 		}
+		return batch
+	}
 
-		const responses = await this.sendBatch(batch)
-		if (responses) {
-			for (const res of responses) {
-				if (!res.requestStatus.result) continue
+	private processSourceDataBatchResponses(responses: OBSBatchResponse[]): void {
+		for (const res of responses) {
+			if (!res.requestStatus.result) continue
 
-				const requestIdParts = res.requestId.split(':')
-				if (requestIdParts.length < 2) continue
-				const [uuid, type] = requestIdParts
-				const source = this.self.states.sources.get(uuid)
-				if (!source) continue
+			const requestIdParts = res.requestId.split(':')
+			if (requestIdParts.length < 2) continue
+			const [uuid, type] = requestIdParts
+			const source = this.self.states.sources.get(uuid)
+			if (!source) continue
 
-				const data = res.responseData
-				const validName = source.validName ?? utils.validName(source.sourceName)
-				if (!source.validName) source.validName = validName
+			const data = res.responseData
+			const validName = source.validName ?? utils.validName(source.sourceName)
+			if (!source.validName) source.validName = validName
 
-				switch (type) {
-					case 'active':
-						source.active = data.videoActive
-						source.videoShowing = data.videoShowing
-						break
-					case 'filters':
-						this.self.states.sourceFilters.set(uuid, data.filters)
-						break
-					case 'settings':
-						this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
-						if (source.inputKind && this.self.states.inputKindList.has(source.inputKind)) {
-							const kindList = this.self.states.inputKindList.get(source.inputKind)
-							if (kindList?.defaultInputSettings) {
-								this.buildInputSettings(source.sourceUuid, source.inputKind, kindList.defaultInputSettings)
-							}
-						}
-						break
-					case 'mute':
-						this._updateSourceMute(source, data.inputMuted)
-						break
-					case 'volume':
-						this._updateSourceVolume(source, data.inputVolumeDb)
-						break
-					case 'balance':
-						this._updateSourceBalance(source, data.inputAudioBalance)
-						break
-					case 'sync_offset':
-						this._updateSourceSyncOffset(source, data.inputAudioSyncOffset)
-						break
-					case 'monitor':
-						this._updateSourceMonitorType(source, data.monitorType)
-						break
-					case 'tracks':
-						source.inputAudioTracks = data.inputAudioTracks
-						break
-				}
-			}
+			this.processSingleSourceDataResponse(uuid, type, data, source)
 		}
+	}
 
-		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
+	private processSingleSourceDataResponse(uuid: string, type: string, data: any, source: OBSSource): void {
+		switch (type) {
+			case 'active':
+				source.active = data.videoActive
+				source.videoShowing = data.videoShowing
+				break
+			case 'filters':
+				this.self.states.sourceFilters.set(uuid, data.filters)
+				break
+			case 'settings':
+				this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
+				if (source.inputKind && this.self.states.inputKindList.has(source.inputKind)) {
+					const kindList = this.self.states.inputKindList.get(source.inputKind)
+					if (kindList?.defaultInputSettings) {
+						this.buildInputSettings(source.sourceUuid, source.inputKind, kindList.defaultInputSettings)
+					}
+				}
+				break
+			case 'mute':
+				this._updateSourceMute(source, data.inputMuted)
+				break
+			case 'volume':
+				this._updateSourceVolume(source, data.inputVolumeDb)
+				break
+			case 'balance':
+				this._updateSourceBalance(source, data.inputAudioBalance)
+				break
+			case 'sync_offset':
+				this._updateSourceSyncOffset(source, data.inputAudioSyncOffset)
+				break
+			case 'monitor':
+				this._updateSourceMonitorType(source, data.monitorType)
+				break
+			case 'tracks':
+				source.inputAudioTracks = data.inputAudioTracks
+				break
+		}
 	}
 
 	private _updateSourceMute(source: OBSSource, muted: boolean): void {
@@ -969,38 +992,7 @@ export class OBSApi {
 			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
 			for (const response of data) {
 				if (response.requestStatus.result) {
-					const sourceName = response.requestId
-					const source = this.self.obsState.findSourceByName(sourceName)
-					if (!source) continue
-
-					const validName = source.validName ?? sourceName
-					const responseData = response.responseData
-
-					source.OBSMediaStatus = responseData.mediaState
-					source.mediaCursor = responseData.mediaCursor
-					source.mediaDuration = responseData.mediaDuration
-
-					const remainingValue = (responseData.mediaDuration ?? 0) - (responseData.mediaCursor ?? 0)
-					source.timeElapsed = utils.formatTimecode(responseData.mediaCursor)
-					source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(remainingValue) : '--:--:--'
-
-					if (responseData.mediaState === OBSMediaStatus.Playing || responseData.mediaState === OBSMediaStatus.Paused) {
-						if (source.active) {
-							currentMedia.push({
-								name: sourceName,
-								elapsed: source.timeElapsed,
-								remaining: source.timeRemaining,
-							})
-						}
-					}
-
-					let status = OBSMediaStatus.Stopped
-					if (responseData.mediaState === OBSMediaStatus.Playing) status = OBSMediaStatus.Playing
-					else if (responseData.mediaState === OBSMediaStatus.Paused) status = OBSMediaStatus.Paused
-
-					allValues[`media_status_${validName}`] = utils.getOBSMediaStatusLabel(status)
-					allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
-					allValues[`media_time_remaining_${validName}`] = source.timeRemaining
+					this.processMediaStatusResponse(response, allValues, currentMedia)
 				}
 			}
 
@@ -1017,6 +1009,45 @@ export class OBSApi {
 			this.self.setVariableValues(allValues)
 			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining')
 		}
+	}
+
+	private processMediaStatusResponse(
+		response: OBSBatchResponse,
+		allValues: Record<string, string | number | boolean | undefined>,
+		currentMedia: Array<{ name: string; elapsed: string; remaining: string }>,
+	): void {
+		const sourceName = response.requestId
+		const source = this.self.obsState.findSourceByName(sourceName)
+		if (!source) return
+
+		const validName = source.validName ?? sourceName
+		const responseData = response.responseData
+
+		source.OBSMediaStatus = responseData.mediaState
+		source.mediaCursor = responseData.mediaCursor
+		source.mediaDuration = responseData.mediaDuration
+
+		const remainingValue = (responseData.mediaDuration ?? 0) - (responseData.mediaCursor ?? 0)
+		source.timeElapsed = utils.formatTimecode(responseData.mediaCursor)
+		source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(remainingValue) : '--:--:--'
+
+		if (responseData.mediaState === OBSMediaStatus.Playing || responseData.mediaState === OBSMediaStatus.Paused) {
+			if (source.active) {
+				currentMedia.push({
+					name: sourceName,
+					elapsed: source.timeElapsed,
+					remaining: source.timeRemaining,
+				})
+			}
+		}
+
+		let status = OBSMediaStatus.Stopped
+		if (responseData.mediaState === OBSMediaStatus.Playing) status = OBSMediaStatus.Playing
+		else if (responseData.mediaState === OBSMediaStatus.Paused) status = OBSMediaStatus.Paused
+
+		allValues[`media_status_${validName}`] = utils.getOBSMediaStatusLabel(status)
+		allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
+		allValues[`media_time_remaining_${validName}`] = source.timeRemaining
 	}
 
 	public buildInputSettings(sourceUuid: string, inputKind: string, inputSettings: Record<string, any>): void {
@@ -1091,87 +1122,84 @@ export class OBSApi {
 		visible: string,
 		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
 	): Promise<void> {
-		const sources: { sceneUuid: string; sceneItemId: number }[] = []
 		const source = this.self.obsState.findSourceByName(sourceName)
 		if (!source) return
-		const sourceUuid = source.sourceUuid
+
+		const sources = this.findSourceInstances(source.sourceUuid, options)
+		if (sources.length > 0) {
+			const requests = this.buildSourceVisibilityRequests(sources, visible)
+			await this.sendBatch(requests)
+		}
+	}
+
+	private findSourceInstances(
+		sourceUuid: string,
+		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
+	): { sceneUuid: string; sceneItemId: number }[] {
+		const sources: { sceneUuid: string; sceneItemId: number }[] = []
 
 		if (options.anyScene) {
 			for (const [sceneUuid, sceneItems] of this.self.states.sceneItems) {
 				const item = sceneItems.find((i) => i.sourceUuid === sourceUuid)
-				if (item) {
-					sources.push({
-						sceneUuid: sceneUuid,
-						sceneItemId: item.sceneItemId,
-					})
-				}
+				if (item) sources.push({ sceneUuid, sceneItemId: item.sceneItemId })
 			}
 			for (const [groupUuid, groupItems] of this.self.states.groups) {
 				const item = groupItems.find((i) => i.sourceUuid === sourceUuid)
-				if (item) {
-					sources.push({
-						sceneUuid: groupUuid,
-						sceneItemId: item.sceneItemId,
-					})
-				}
+				if (item) sources.push({ sceneUuid: groupUuid, sceneItemId: item.sceneItemId })
 			}
 		} else {
 			const scene = options.useCurrentScene
 				? this.self.states.scenes.get(this.self.states.programSceneUuid)
 				: this.self.obsState.findSceneByName(options.scene)
-			if (!scene) return
+
+			if (!scene) return sources
 			const sceneUuid = scene.sceneUuid
+
 			const sceneItems = this.self.states.sceneItems.get(sceneUuid)
 			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
 			if (item) {
-				sources.push({
-					sceneUuid: sceneUuid,
-					sceneItemId: item.sceneItemId,
-				})
+				sources.push({ sceneUuid, sceneItemId: item.sceneItemId })
 			} else {
 				const groups = this.self.states.groups.get(sceneUuid)
-				const item = groups?.find((i) => i.sourceUuid === sourceUuid)
-				if (item) {
-					sources.push({
-						sceneUuid: sceneUuid,
-						sceneItemId: item.sceneItemId,
-					})
+				const groupItem = groups?.find((i) => i.sourceUuid === sourceUuid)
+				if (groupItem) {
+					sources.push({ sceneUuid, sceneItemId: groupItem.sceneItemId })
 				}
 			}
 		}
 
-		if (sources.length > 0) {
-			const requests: OBSBatchRequest[] = []
-			sources.forEach((source) => {
-				let enabled: boolean
-				if (visible === 'toggle') {
-					const sceneItems = this.self.states.sceneItems.get(source.sceneUuid)
-					const item = sceneItems?.find((i) => i.sceneItemId === source.sceneItemId)
-					if (item) {
-						enabled = !item.sceneItemEnabled
-					} else {
-						const groups = this.self.states.groups.get(source.sceneUuid)
-						const item = groups?.find((i) => i.sceneItemId === source.sceneItemId)
-						if (item) {
-							enabled = !item.sceneItemEnabled
-						} else {
-							enabled = false
-						}
-					}
+		return sources
+	}
+
+	private buildSourceVisibilityRequests(
+		sources: { sceneUuid: string; sceneItemId: number }[],
+		visible: string,
+	): OBSBatchRequest[] {
+		return sources.map((source) => {
+			let enabled: boolean
+			if (visible === 'toggle') {
+				const sceneItems = this.self.states.sceneItems.get(source.sceneUuid)
+				const item = sceneItems?.find((i) => i.sceneItemId === source.sceneItemId)
+				if (item) {
+					enabled = !item.sceneItemEnabled
 				} else {
-					enabled = visible === 'true'
+					const groups = this.self.states.groups.get(source.sceneUuid)
+					const groupItem = groups?.find((i) => i.sceneItemId === source.sceneItemId)
+					enabled = groupItem ? !groupItem.sceneItemEnabled : false
 				}
-				requests.push({
-					requestType: 'SetSceneItemEnabled',
-					requestData: {
-						sceneUuid: source.sceneUuid,
-						sceneItemId: source.sceneItemId,
-						sceneItemEnabled: enabled,
-					},
-				})
-			})
-			await this.sendBatch(requests)
-		}
+			} else {
+				enabled = visible === 'true'
+			}
+
+			return {
+				requestType: 'SetSceneItemEnabled',
+				requestData: {
+					sceneUuid: source.sceneUuid,
+					sceneItemId: source.sceneItemId,
+					sceneItemEnabled: enabled,
+				},
+			}
+		})
 	}
 
 	public async setFilterVisibility(
