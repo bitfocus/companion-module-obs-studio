@@ -17,36 +17,13 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: '!$(options:custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Use Custom Name',
-				id: 'custom',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				label: 'Custom Scene Name',
-				id: 'customSceneName',
-				default: '',
-				useVariables: true,
-				isVisibleExpression: '$(options:custom)',
+				allowCustom: true,
 			},
 		],
 		callback: async (action) => {
-			if (opt<any>(action, 'custom')) {
-				const scene = opt<string>(action, 'customSceneName')
-				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: scene })
-			} else {
-				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: opt<string>(action, 'scene') })
-			}
+			await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: opt<string>(action, 'scene') })
 		},
-		learn: (action) => {
-			if (opt<any>(action, 'custom')) {
-				if (!self.states.programScene) return undefined
-				return { customSceneName: self.states.programScene }
-			}
+		learn: () => {
 			if (!self.states.programScene) return undefined
 			return { scene: self.states.programScene }
 		},
@@ -62,36 +39,13 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: '!$(options:custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Use Custom Name',
-				id: 'custom',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				label: 'Custom Scene Name',
-				id: 'customSceneName',
-				default: '',
-				useVariables: true,
-				isVisibleExpression: '$(options:custom)',
+				allowCustom: true,
 			},
 		],
 		callback: async (action) => {
-			if (opt<any>(action, 'custom')) {
-				const scene = opt<string>(action, 'customSceneName')
-				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
-			} else {
-				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: opt<string>(action, 'scene') })
-			}
+			await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: opt<string>(action, 'scene') })
 		},
-		learn: (action) => {
-			if (opt<any>(action, 'custom')) {
-				if (!self.states.previewScene) return undefined
-				return { customSceneName: self.states.previewScene }
-			}
+		learn: () => {
 			if (!self.states.previewScene) return undefined
 			return { scene: self.states.previewScene }
 		},
@@ -107,46 +61,19 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: '!$(options:custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Use Custom Name',
-				id: 'custom',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				useVariables: true,
-				label: 'Custom Scene Name',
-				id: 'customSceneName',
-				default: '',
-				isVisibleExpression: '$(options:custom)',
+				allowCustom: true,
 			},
 		],
 		callback: async (action) => {
 			const sceneName = opt<string>(action, 'scene')
 
-			if (opt<any>(action, 'custom')) {
-				const scene = opt<string>(action, 'customSceneName')
-				if (self.states.previewScene === scene && self.states.programScene !== scene) {
-					await self.obs.sendRequest('TriggerStudioModeTransition')
-				} else {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: scene })
-				}
+			if (self.states.previewScene === sceneName && self.states.programScene !== sceneName) {
+				await self.obs.sendRequest('TriggerStudioModeTransition')
 			} else {
-				if (self.states.previewScene === sceneName && self.states.programScene !== sceneName) {
-					await self.obs.sendRequest('TriggerStudioModeTransition')
-				} else {
-					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: sceneName })
-				}
+				await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: sceneName })
 			}
 		},
-		learn: (action) => {
-			if (opt<any>(action, 'custom')) {
-				if (!self.states.previewScene) return undefined
-				return { customSceneName: self.states.previewScene }
-			}
+		learn: () => {
 			if (!self.states.previewScene) return undefined
 			return { scene: self.states.previewScene }
 		},

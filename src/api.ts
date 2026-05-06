@@ -96,11 +96,11 @@ export class OBSApi {
 				}
 			}
 		} catch (error) {
-			this.processWebsocketError(error)
+			this.processWebSocketError(error)
 		}
 	}
 
-	public processWebsocketError(error: unknown): void {
+	public processWebSocketError(error: unknown): void {
 		if (!this.self.reconnectionPoll) {
 			let tryReconnect: boolean | null = null
 			const errorMessage = error instanceof Error ? error.message : String(error)
@@ -155,7 +155,7 @@ export class OBSApi {
 		}
 	}
 
-	// ═══ OBS Websocket Commands ═══
+	// ═══ OBS WebSocket Commands ═══
 	private async _call<T extends keyof OBSRequestTypes>(
 		requestType: T,
 		requestData?: OBSRequestTypes[T],
@@ -311,7 +311,7 @@ export class OBSApi {
 
 			this.self.states.version = version
 			logger.debug(
-				`OBS Version: ${version.obsVersion} // OBS Websocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
+				`OBS Version: ${version.obsVersion} // OBS WebSocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
 			)
 			this.self.states.imageFormats = []
 			version.supportedImageFormats.forEach((format: string) => {

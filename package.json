@@ -30,7 +30,7 @@
 		"lint-staged": "^16.4.0",
 		"prettier": "^3.8.3",
 		"rimraf": "^6.1.3",
-		"typescript": "~5.9.3",
+		"typescript": "~6.0.3",
 		"typescript-eslint": "^8.59.1"
 	},
 	"engines": {
@@ -46,9 +46,5 @@
 			"yarn lint:raw --fix"
 		]
 	},
-	"packageManager": "yarn@4.14.1",
-	"resolutions": {
-		"type-fest": "4.33.0",
-		"@types/estree": "1.0.6"
-	}
+	"packageManager": "yarn@4.14.1"
 }

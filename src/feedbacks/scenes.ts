@@ -27,6 +27,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
+				allowCustom: true,
 			},
 			{
 				type: 'colorpicker',
@@ -91,31 +92,12 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: '!$(options:custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Use Custom Name',
-				id: 'custom',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				label: 'Custom Scene Name',
-				id: 'customSceneName',
-				default: '',
-				useVariables: true,
-				isVisibleExpression: '$(options:custom)',
+				allowCustom: true,
 			},
 		],
 		callback: (feedback) => {
-			if (opt<any>(feedback, 'custom')) {
-				const scene = opt<string>(feedback, 'customSceneName')
-				return self.states.programScene === scene
-			} else {
-				const sceneName = opt<string>(feedback, 'scene')
-				return self.states.programScene === sceneName
-			}
+			const sceneName = opt<string>(feedback, 'scene')
+			return self.states.programScene === sceneName
 		},
 	}
 
@@ -134,31 +116,12 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: '!$(options:custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Use Custom Name',
-				id: 'custom',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				label: 'Custom Scene Name',
-				id: 'customSceneName',
-				default: '',
-				useVariables: true,
-				isVisibleExpression: '$(options:custom)',
+				allowCustom: true,
 			},
 		],
 		callback: (feedback) => {
-			if (opt<any>(feedback, 'custom')) {
-				const scene = opt<string>(feedback, 'customSceneName')
-				return self.states.previewScene === scene
-			} else {
-				const sceneName = opt<string>(feedback, 'scene')
-				return self.states.previewScene === sceneName
-			}
+			const sceneName = opt<string>(feedback, 'scene')
+			return self.states.previewScene === sceneName
 		},
 	}
 
@@ -177,31 +140,12 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
 				choices: self.obsState.sceneChoices,
-				isVisibleExpression: '!$(options:custom)',
-			},
-			{
-				type: 'checkbox',
-				label: 'Use Custom Name',
-				id: 'custom',
-				default: false,
-			},
-			{
-				type: 'textinput',
-				label: 'Custom Scene Name',
-				id: 'customSceneName',
-				default: '',
-				useVariables: true,
-				isVisibleExpression: '$(options:custom)',
+				allowCustom: true,
 			},
 		],
 		callback: (feedback) => {
-			if (opt<any>(feedback, 'custom')) {
-				const scene = opt<string>(feedback, 'customSceneName')
-				return self.states.previousScene === scene
-			} else {
-				const sceneName = opt<string>(feedback, 'scene')
-				return self.states.previousScene === sceneName
-			}
+			const sceneName = opt<string>(feedback, 'scene')
+			return self.states.previousScene === sceneName
 		},
 	}
 

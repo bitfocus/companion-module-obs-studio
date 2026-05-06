@@ -292,10 +292,11 @@ export default [
 				action.actionId === 'preview_scene' ||
 				action.actionId === 'smart_switcher'
 			) {
-				setOpt(action.options, 'custom', true)
-				if (getOpt(action.options, 'scene') !== 'customSceneName') {
-					setOpt(action.options, 'customSceneName', getOpt(action.options, 'scene'))
+				if (getOpt(action.options, 'custom') === true) {
+					setOpt(action.options, 'scene', getOpt(action.options, 'customSceneName'))
 				}
+				delete action.options.custom
+				delete action.options.customSceneName
 				actionChanged = true
 			} else if (action.actionId === 'previewNextScene') {
 				action.actionId = 'adjustPreviewScene'
@@ -351,11 +352,12 @@ export default [
 				feedback.feedbackId === 'sceneProgram' ||
 				feedback.feedbackId === 'scenePrevious'
 			) {
-				if (getOpt(feedback.options, 'scene')) {
-					setOpt(feedback.options, 'custom', true)
-					setOpt(feedback.options, 'customSceneName', getOpt(feedback.options, 'scene'))
-					feedbackChanged = true
+				if (getOpt(feedback.options, 'custom') === true) {
+					setOpt(feedback.options, 'scene', getOpt(feedback.options, 'customSceneName'))
 				}
+				delete feedback.options.custom
+				delete feedback.options.customSceneName
+				feedbackChanged = true
 			}
 			if (feedbackChanged) {
 				changes.updatedFeedbacks.push(feedback)

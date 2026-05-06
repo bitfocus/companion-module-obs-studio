@@ -25,12 +25,14 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 		{
 			type: 'dropdown',
 			id: 'scheme',
-			label: 'Server Scheme',
+			label: 'Server Connection Type',
 			default: 'ws',
 			choices: [
-				{ id: 'ws', label: 'ws' },
-				{ id: 'wss', label: 'wss' },
+				{ id: 'ws', label: 'WebSocket (ws)' },
+				{ id: 'wss', label: 'Secure WebSocket (wss)' },
 			],
+			tooltip:
+				'By default, WebSocket (ws) is used. Set to wss if you have specifically configured a secure connection via a proxy (wss).',
 			width: 4,
 		},
 	]

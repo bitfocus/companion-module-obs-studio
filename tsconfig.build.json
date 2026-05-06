@@ -4,10 +4,7 @@
 	"exclude": ["node_modules/**", "src/**/*spec.ts", "src/**/__tests__/*", "src/**/__mocks__/*"],
 	"compilerOptions": {
 		"outDir": "./dist",
-		"baseUrl": "./",
-		"paths": {
-			"*": ["./node_modules/*"]
-		},
+		"rootDir": "./src",
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext"
 	}
