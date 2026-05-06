@@ -121,18 +121,14 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			'scene_item_active',
 			'scene_item_active_in_scene',
 		)
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({ actionId: 'set_scene', options: { scene: data.sceneName } })
-		}
+		self.sendToActionRecorder({ actionId: 'set_scene', options: { scene: data.sceneName } })
 	})
 	obs.on('CurrentPreviewSceneChanged', (data) => {
 		self.states.previewScene = data.sceneName ?? 'None'
 		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
 		self.checkFeedbacks('scene_active', 'scenePreview')
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({ actionId: 'preview_scene', options: { scene: data.sceneName } })
-		}
+		self.sendToActionRecorder({ actionId: 'preview_scene', options: { scene: data.sceneName } })
 	})
 	obs.on('SceneListChanged', (data) => {
 		self.states.scenes.clear()
@@ -181,12 +177,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				[`mute_${name}`]: source.inputMuted ? 'Muted' : 'Unmuted',
 			})
 			self.checkFeedbacks('audio_muted')
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({
-					actionId: 'set_source_mute',
-					options: { source: source.sourceName, mute: data.inputMuted ? 'true' : 'false' },
-				})
-			}
+			self.sendToActionRecorder({
+				actionId: 'set_source_mute',
+				options: { source: source.sourceName, mute: data.inputMuted ? 'true' : 'false' },
+			})
 		}
 	})
 	obs.on('InputVolumeChanged', (data) => {
@@ -196,12 +190,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`volume_${name}`]: source.inputVolume + ' dB' })
 			self.checkFeedbacks('volume')
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({
-					actionId: 'set_volume',
-					options: { source: source.sourceName, volume: source.inputVolume },
-				})
-			}
+			self.sendToActionRecorder({
+				actionId: 'set_volume',
+				options: { source: source.sourceName, volume: source.inputVolume },
+			})
 		}
 	})
 	obs.on('InputAudioBalanceChanged', (data) => {
@@ -210,12 +202,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			source.inputAudioBalance = utils.roundNumber(data.inputAudioBalance, 1)
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`balance_${name}`]: source.inputAudioBalance })
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({
-					actionId: 'set_audio_balance',
-					options: { source: source.sourceName, balance: source.inputAudioBalance },
-				})
-			}
+			self.sendToActionRecorder({
+				actionId: 'set_audio_balance',
+				options: { source: source.sourceName, balance: source.inputAudioBalance },
+			})
 		}
 	})
 	obs.on('InputAudioSyncOffsetChanged', (data) => {
@@ -226,12 +216,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.setVariableValues({
 				[`sync_offset_${name}`]: source.inputAudioSyncOffset + 'ms',
 			})
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({
-					actionId: 'set_audio_offset',
-					options: { source: source.sourceName, offset: data.inputAudioSyncOffset },
-				})
-			}
+			self.sendToActionRecorder({
+				actionId: 'set_audio_offset',
+				options: { source: source.sourceName, offset: data.inputAudioSyncOffset },
+			})
 		}
 	})
 	obs.on('InputAudioTracksChanged', () => {})
@@ -242,12 +230,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`monitor_${name}`]: utils.getMonitorTypeLabel(data.monitorType) })
 			self.checkFeedbacks('audio_monitor_type')
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({
-					actionId: 'set_audio_monitor',
-					options: { source: source.sourceName, monitor: data.monitorType },
-				})
-			}
+			self.sendToActionRecorder({
+				actionId: 'set_audio_monitor',
+				options: { source: source.sourceName, monitor: data.monitorType },
+			})
 		}
 	})
 	obs.on('InputVolumeMeters', (data) => {
@@ -302,18 +288,14 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				void self.obs.buildSceneTransitionList()
 				void self.updateActionsFeedbacksVariables()
 			}
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({ actionId: 'set_transition_type', options: { transitions: data.transitionName } })
-			}
+			self.sendToActionRecorder({ actionId: 'set_transition_type', options: { transitions: data.transitionName } })
 		})()
 	})
 	obs.on('CurrentSceneTransitionDurationChanged', (data) => {
 		self.states.transitionDuration = data.transitionDuration ?? 0
 		self.checkFeedbacks('transition_duration')
 		self.setVariableValues({ transition_duration: self.states.transitionDuration })
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({ actionId: 'set_transition_duration', options: { duration: data.transitionDuration } })
-		}
+		self.sendToActionRecorder({ actionId: 'set_transition_duration', options: { duration: data.transitionDuration } })
 	})
 	obs.on('SceneTransitionStarted', () => {
 		self.states.transitionActive = true
@@ -370,17 +352,15 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 					self.checkFeedbacks('filter_enabled')
 				}
 			}
-			if (self.isRecordingActions) {
-				self.sendToActionRecorder({
-					actionId: 'toggle_filter',
-					options: {
-						allSources: false,
-						source: source.sourceName,
-						filter: data.filterName,
-						visible: data.filterEnabled ? 'true' : 'false',
-					},
-				})
-			}
+			self.sendToActionRecorder({
+				actionId: 'toggle_filter',
+				options: {
+					allSources: false,
+					source: source.sourceName,
+					filter: data.filterName,
+					visible: data.filterEnabled ? 'true' : 'false',
+				},
+			})
 		}
 	})
 }
@@ -434,7 +414,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.checkFeedbacks('scene_item_active_in_scene')
 		const sceneName = self.states.scenes.get(data.sceneUuid)?.sceneName
 		const sourceName = sourceUuid ? self.states.sources.get(sourceUuid)?.sourceName : undefined
-		if (self.isRecordingActions && sourceName && sceneName) {
+		if (sourceName && sceneName) {
 			self.sendToActionRecorder({
 				actionId: 'toggle_scene_item',
 				options: {
@@ -471,9 +451,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				stream_timecode_ss: '00',
 			})
 		}
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({ actionId: data.outputActive ? 'start_streaming' : 'stop_streaming', options: {} })
-		}
+		self.sendToActionRecorder({ actionId: data.outputActive ? 'start_streaming' : 'stop_streaming', options: {} })
 	})
 	obs.on('RecordStateChanged', (data) => {
 		const previousRecordingState = self.states.recording
@@ -489,27 +467,23 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.checkFeedbacks('recording', 'recordingPaused')
 		self.obs.updateRecordingTimecode(data)
 
-		if (self.isRecordingActions) {
-			if (data.outputActive && previousRecordingState === OBSRecordingState.Paused) {
-				self.sendToActionRecorder({ actionId: 'resume_recording', options: {} })
-			} else if (data.outputActive) {
-				self.sendToActionRecorder({ actionId: 'start_recording', options: {} })
-			} else if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
-				self.sendToActionRecorder({ actionId: 'pause_recording', options: {} })
-			} else {
-				self.sendToActionRecorder({ actionId: 'stop_recording', options: {} })
-			}
+		if (data.outputActive && previousRecordingState === OBSRecordingState.Paused) {
+			self.sendToActionRecorder({ actionId: 'resume_recording', options: {} })
+		} else if (data.outputActive) {
+			self.sendToActionRecorder({ actionId: 'start_recording', options: {} })
+		} else if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
+			self.sendToActionRecorder({ actionId: 'pause_recording', options: {} })
+		} else {
+			self.sendToActionRecorder({ actionId: 'stop_recording', options: {} })
 		}
 	})
 	obs.on('ReplayBufferStateChanged', (data) => {
 		self.states.replayBuffer = data.outputActive
 		self.checkFeedbacks('replayBufferActive')
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({
-				actionId: data.outputActive ? 'start_replay_buffer' : 'stop_replay_buffer',
-				options: {},
-			})
-		}
+		self.sendToActionRecorder({
+			actionId: data.outputActive ? 'start_replay_buffer' : 'stop_replay_buffer',
+			options: {},
+		})
 	})
 	obs.on('RecordFileChanged', (data) => {
 		if (data.newOutputPath) {
@@ -524,12 +498,10 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			virtualCam.outputActive = data.outputActive
 			self.checkFeedbacks('output_active')
 		}
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({
-				actionId: data.outputActive ? 'start_output' : 'stop_output',
-				options: { output: 'virtualcam_output' },
-			})
-		}
+		self.sendToActionRecorder({
+			actionId: data.outputActive ? 'start_output' : 'stop_output',
+			options: { output: 'virtualcam_output' },
+		})
 	})
 	obs.on('ReplayBufferSaved', (data) => {
 		self.setVariableValues({ replay_buffer_path: data.savedReplayPath })
@@ -576,27 +548,25 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				})
 			}
 		}
-		if (self.isRecordingActions) {
-			let mediaActionId: string | undefined
-			const mediaOptions: Record<string, unknown> = { source: source?.sourceName, useCurrentMedia: false }
-			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				mediaActionId = 'play_pause_media'
-				mediaOptions.playPause = 'pause'
-			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
-				mediaActionId = 'play_pause_media'
-				mediaOptions.playPause = 'play'
-			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART') {
-				mediaActionId = 'restart_media'
-			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP') {
-				mediaActionId = 'stop_media'
-			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT') {
-				mediaActionId = 'next_media'
-			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS') {
-				mediaActionId = 'previous_media'
-			}
-			if (mediaActionId) {
-				self.recordAction({ actionId: mediaActionId, options: mediaOptions as any })
-			}
+		let mediaActionId: string | undefined
+		const mediaOptions: Record<string, unknown> = { source: source?.sourceName, useCurrentMedia: false }
+		if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
+			mediaActionId = 'play_pause_media'
+			mediaOptions.playPause = 'pause'
+		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
+			mediaActionId = 'play_pause_media'
+			mediaOptions.playPause = 'play'
+		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART') {
+			mediaActionId = 'restart_media'
+		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP') {
+			mediaActionId = 'stop_media'
+		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT') {
+			mediaActionId = 'next_media'
+		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS') {
+			mediaActionId = 'previous_media'
+		}
+		if (mediaActionId) {
+			self.sendToActionRecorder({ actionId: mediaActionId, options: mediaOptions as any })
 		}
 	})
 }
@@ -604,12 +574,10 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 // ═══ UI Listeners ═══
 function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StudioModeStateChanged', (data) => {
-		if (self.isRecordingActions) {
-			self.sendToActionRecorder({
-				actionId: data.studioModeEnabled ? 'enable_studio_mode' : 'disable_studio_mode',
-				options: {},
-			})
-		}
+		self.sendToActionRecorder({
+			actionId: data.studioModeEnabled ? 'enable_studio_mode' : 'disable_studio_mode',
+			options: {},
+		})
 		void (async () => {
 			self.states.studioMode = data.studioModeEnabled ?? false
 			self.checkFeedbacks('studioMode')

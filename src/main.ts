@@ -100,6 +100,7 @@ export default class OBSInstance extends InstanceBase {
 	}
 
 	sendToActionRecorder(action: CompanionRecordedAction, uniquenessId?: string): void {
+		if (!this.isRecordingActions) return
 		const timestamp = Date.now()
 		uniquenessId = uniquenessId ?? timestamp.toString()
 		this.recordAction(action, uniquenessId)
