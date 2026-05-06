@@ -85,6 +85,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Adjust',
 				id: 'adjust',
 				default: 'next',

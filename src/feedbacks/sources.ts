@@ -30,6 +30,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Scene',
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
@@ -38,6 +39,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -71,6 +73,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source name',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -93,6 +96,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Scene',
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
@@ -106,6 +110,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -162,6 +167,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -169,6 +175,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Filter',
 				id: 'filter',
 				default: self.obsState.filterListDefault,

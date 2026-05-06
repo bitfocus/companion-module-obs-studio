@@ -59,6 +59,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Output name',
 				id: 'output',
 				default: 'virtualcam_output',

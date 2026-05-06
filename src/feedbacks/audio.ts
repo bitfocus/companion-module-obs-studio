@@ -17,6 +17,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source name',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -40,6 +41,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -47,6 +49,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Monitor',
 				id: 'monitor',
 				default: ObsAudioMonitorType.None,
@@ -75,6 +78,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source name',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -107,6 +111,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source name',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,

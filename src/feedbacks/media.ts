@@ -17,6 +17,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
@@ -40,6 +41,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source name',
 				id: 'source',
 				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',

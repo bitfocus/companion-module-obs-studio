@@ -40,6 +40,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Profile',
 				id: 'profile',
 				default: self.obsState.profileChoicesDefault,
@@ -56,6 +57,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Scene Collection',
 				id: 'scene_collection',
 				default: self.obsState.sceneCollectionList?.[0] ? self.obsState.sceneCollectionList[0].id : '',
@@ -76,6 +78,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Hotkey ID',
 				id: 'id',
 				default: self.states.hotkeyNames?.[0] ? self.states.hotkeyNames[0].id : '',
@@ -238,6 +241,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -254,6 +258,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -270,6 +275,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -286,6 +292,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Projector Type',
 				id: 'type',
 				default: 'Multiview',
@@ -299,6 +306,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Window Type',
 				id: 'window',
 				default: 'window',
@@ -309,6 +317,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Display',
 				id: 'display',
 				default: 0,
@@ -317,6 +326,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -325,6 +335,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Scene',
 				id: 'scene',
 				default: self.obsState.sceneListDefault,

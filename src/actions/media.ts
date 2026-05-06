@@ -20,6 +20,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -28,6 +29,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Action',
 				id: 'playPause',
 				default: 'toggle',
@@ -67,6 +69,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -94,6 +97,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -121,6 +125,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -148,6 +153,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -176,6 +182,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -222,6 +229,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,
@@ -260,6 +268,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Media Source',
 				id: 'source',
 				default: self.obsState.mediaSourceListDefault,

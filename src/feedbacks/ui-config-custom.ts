@@ -16,7 +16,8 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 		options: [
 			{
 				type: 'dropdown',
-				label: 'Profile name',
+				allowCustom: true,
+				label: 'Profile',
 				id: 'profile',
 				default: self.obsState.profileChoicesDefault,
 				choices: self.obsState.profileChoices,
@@ -38,7 +39,8 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 		options: [
 			{
 				type: 'dropdown',
-				label: 'Scene collection name',
+				allowCustom: true,
+				label: 'Scene Collection',
 				id: 'scene_collection',
 				default: self.obsState.sceneCollectionList?.[0] ? self.obsState.sceneCollectionList[0].id : '',
 				choices: self.obsState.sceneCollectionList,

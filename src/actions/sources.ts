@@ -14,6 +14,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.textSourceList?.[0] ? self.obsState.textSourceList[0].id : 'None',
@@ -49,6 +50,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.textSourceList?.[0]?.id ?? 'None',
@@ -92,6 +94,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Text Transform',
 				id: 'textTransform',
 				default: 0,
@@ -212,6 +215,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Alignment',
 				id: 'alignment',
 				default: 'left',
@@ -225,6 +229,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Vertical Alignment',
 				id: 'verticalAlignment',
 				default: 'top',
@@ -469,6 +474,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -500,6 +506,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -508,6 +515,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Filter',
 				id: 'filter',
 				default: self.obsState.filterListDefault,
@@ -515,6 +523,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Visibility',
 				id: 'visible',
 				default: 'toggle',
@@ -552,6 +561,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -559,6 +569,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Filter',
 				id: 'filter',
 				default: self.obsState.filterListDefault,
@@ -603,6 +614,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -639,6 +651,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -647,6 +660,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Format',
 				id: 'format',
 				default: 'png',
@@ -726,6 +740,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Scene',
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
@@ -734,6 +749,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -829,6 +845,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Scene',
 				id: 'scene',
 				default: self.obsState.sceneListDefault,
@@ -837,6 +854,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.sourceListDefault,
@@ -844,6 +862,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Visibility',
 				id: 'visible',
 				default: 'toggle',

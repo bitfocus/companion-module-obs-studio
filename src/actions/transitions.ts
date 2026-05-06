@@ -27,6 +27,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Transition',
 				id: 'transition',
 				default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
@@ -107,6 +108,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Transitions',
 				id: 'transitions',
 				default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
@@ -129,6 +131,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Adjust',
 				id: 'adjust',
 				default: 'next',

@@ -21,6 +21,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -37,6 +38,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -44,6 +46,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Mute',
 				id: 'mute',
 				default: 'true',
@@ -74,6 +77,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -110,6 +114,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -143,6 +148,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -180,6 +186,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -242,6 +249,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -278,6 +286,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -313,6 +322,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -350,6 +360,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -386,6 +397,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Source',
 				id: 'source',
 				default: self.obsState.audioSourceListDefault,
@@ -393,6 +405,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 			},
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Monitor',
 				id: 'monitor',
 				default: ObsAudioMonitorType.None,

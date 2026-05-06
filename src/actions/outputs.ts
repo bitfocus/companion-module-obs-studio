@@ -110,6 +110,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Stream Type',
 				id: 'streamType',
 				default: 'rtmp_custom',
@@ -252,6 +253,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Output',
 				id: 'output',
 				default: 'virtualcam_output',
@@ -274,6 +276,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Output',
 				id: 'output',
 				default: 'virtualcam_output',
@@ -296,6 +299,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		options: [
 			{
 				type: 'dropdown',
+				allowCustom: true,
 				label: 'Output',
 				id: 'output',
 				default: 'virtualcam_output',

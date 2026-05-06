@@ -12,6 +12,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		options: [
 			{
 				type: 'dropdown',
+				disableAutoExpression: true,
 				label: 'Mode',
 				id: 'mode',
 				default: 'programAndPreview',
