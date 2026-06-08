@@ -847,13 +847,10 @@ export class OBSApi {
 				this.self.states.sourceFilters.set(uuid, data.filters)
 				break
 			case 'settings':
+				// buildInputSettings already merges the input kind's default settings,
+				// so a single call is sufficient (a second call with only defaults would
+				// overwrite the real settings).
 				this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
-				if (source.inputKind && this.self.states.inputKindList.has(source.inputKind)) {
-					const kindList = this.self.states.inputKindList.get(source.inputKind)
-					if (kindList?.defaultInputSettings) {
-						this.buildInputSettings(source.sourceUuid, source.inputKind, kindList.defaultInputSettings)
-					}
-				}
 				break
 			case 'mute':
 				this._updateSourceMute(source, data.inputMuted)

@@ -1,7 +1,54 @@
 import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSource, OBSScene } from './types.js'
 
+interface ChoiceCache {
+	sourceChoices?: ModuleChoice[]
+	sceneChoices?: ModuleChoice[]
+	audioSourceList?: ModuleChoice[]
+	mediaSourceList?: ModuleChoice[]
+	filterList?: ModuleChoice[]
+	textSourceList?: ModuleChoice[]
+	imageSourceList?: ModuleChoice[]
+	transitionList?: ModuleChoice[]
+	profileChoices?: ModuleChoice[]
+	sceneCollectionList?: ModuleChoice[]
+	outputList?: ModuleChoice[]
+	sourceNameIndex?: Map<string, OBSSource>
+	sceneNameIndex?: Map<string, OBSScene>
+}
+
 export class OBSState {
 	public readonly state: OBSNormalizedState
+
+	// During a definitions rebuild the derived choice lists and name indexes are
+	// accessed dozens of times. A rebuild is synchronous, so we memoize these for
+	// the duration of the rebuild and discard the cache immediately afterwards —
+	// no staleness risk, and it collapses repeated O(n log n) work to a single pass.
+	private cacheActive = false
+	private cache: ChoiceCache = {}
+
+	public beginCache(): void {
+		this.cacheActive = true
+		this.cache = {}
+	}
+
+	public endCache(): void {
+		this.cacheActive = false
+		this.cache = {}
+	}
+
+	private cached<K extends keyof ChoiceCache>(
+		key: K,
+		compute: () => NonNullable<ChoiceCache[K]>,
+	): NonNullable<ChoiceCache[K]> {
+		if (this.cacheActive) {
+			const existing = this.cache[key]
+			if (existing !== undefined) return existing
+			const value = compute()
+			this.cache[key] = value
+			return value
+		}
+		return compute()
+	}
 
 	constructor() {
 		this.state = {
@@ -86,104 +133,126 @@ export class OBSState {
 
 	// Derived Choices
 	public get sceneChoices(): ModuleChoice[] {
-		return Array.from(this.state.scenes.values())
-			.map((s) => ({ id: s.sceneName, label: s.sceneName }))
-			.reverse()
+		return this.cached('sceneChoices', () =>
+			Array.from(this.state.scenes.values())
+				.map((s) => ({ id: s.sceneName, label: s.sceneName }))
+				.reverse(),
+		)
 	}
 
 	public get sourceChoices(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.sources.values()),
-			() => true,
-			(s) => ({ id: s.sourceName, label: s.sourceName }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('sourceChoices', () =>
+			this.buildChoices(
+				Array.from(this.state.sources.values()),
+				() => true,
+				(s) => ({ id: s.sourceName, label: s.sourceName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get audioSourceList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.sources.values()),
-			(s) => s.inputMuted !== undefined || s.inputVolume !== undefined,
-			(s) => ({ id: s.sourceName, label: s.sourceName }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('audioSourceList', () =>
+			this.buildChoices(
+				Array.from(this.state.sources.values()),
+				(s) => s.inputMuted !== undefined || s.inputVolume !== undefined,
+				(s) => ({ id: s.sourceName, label: s.sourceName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get mediaSourceList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.sources.values()),
-			(s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source',
-			(s) => ({ id: s.sourceName, label: s.sourceName }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('mediaSourceList', () =>
+			this.buildChoices(
+				Array.from(this.state.sources.values()),
+				(s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source',
+				(s) => ({ id: s.sourceName, label: s.sourceName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get filterList(): ModuleChoice[] {
-		const filters = new Set<string>()
-		for (const sourceFilters of this.state.sourceFilters.values()) {
-			for (const filter of sourceFilters) {
-				filters.add(filter.filterName)
+		return this.cached('filterList', () => {
+			const filters = new Set<string>()
+			for (const sourceFilters of this.state.sourceFilters.values()) {
+				for (const filter of sourceFilters) {
+					filters.add(filter.filterName)
+				}
 			}
-		}
-		return this.buildChoices(
-			Array.from(filters),
-			() => true,
-			(name) => ({ id: name, label: name }),
-			(a, b) => a.label.localeCompare(b.label),
-		)
+			return this.buildChoices(
+				Array.from(filters),
+				() => true,
+				(name) => ({ id: name, label: name }),
+				(a, b) => a.label.localeCompare(b.label),
+			)
+		})
 	}
 
 	public get textSourceList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.sources.values()),
-			(s) => !!s.inputKind?.startsWith('text_'),
-			(s) => ({ id: s.sourceName, label: s.sourceName }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('textSourceList', () =>
+			this.buildChoices(
+				Array.from(this.state.sources.values()),
+				(s) => !!s.inputKind?.startsWith('text_'),
+				(s) => ({ id: s.sourceName, label: s.sourceName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get imageSourceList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.sources.values()),
-			(s) => s.inputKind === 'image_source',
-			(s) => ({ id: s.sourceName, label: s.sourceName }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('imageSourceList', () =>
+			this.buildChoices(
+				Array.from(this.state.sources.values()),
+				(s) => s.inputKind === 'image_source',
+				(s) => ({ id: s.sourceName, label: s.sourceName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get transitionList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.transitions.values()),
-			() => true,
-			(t) => ({ id: t.transitionName, label: t.transitionName }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('transitionList', () =>
+			this.buildChoices(
+				Array.from(this.state.transitions.values()),
+				() => true,
+				(t) => ({ id: t.transitionName, label: t.transitionName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get profileChoices(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.profiles.keys()),
-			() => true,
-			(name) => ({ id: name, label: name }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('profileChoices', () =>
+			this.buildChoices(
+				Array.from(this.state.profiles.keys()),
+				() => true,
+				(name) => ({ id: name, label: name }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get sceneCollectionList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.sceneCollections.keys()),
-			() => true,
-			(name) => ({ id: name, label: name }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('sceneCollectionList', () =>
+			this.buildChoices(
+				Array.from(this.state.sceneCollections.keys()),
+				() => true,
+				(name) => ({ id: name, label: name }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
 	public get outputList(): ModuleChoice[] {
-		return this.buildChoices(
-			Array.from(this.state.outputs.keys()),
-			(id) => !id.includes('file_output') && !id.includes('ffmpeg_output'),
-			(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Camera' : name }),
-			(a, b) => a.label.localeCompare(b.label),
+		return this.cached('outputList', () =>
+			this.buildChoices(
+				Array.from(this.state.outputs.keys()),
+				(id) => !id.includes('file_output') && !id.includes('ffmpeg_output'),
+				(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Camera' : name }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
 		)
 	}
 
@@ -219,10 +288,26 @@ export class OBSState {
 
 	// Name-based lookup helpers
 	public findSourceByName(name: string): OBSSource | undefined {
+		if (this.cacheActive) {
+			if (!this.cache.sourceNameIndex) {
+				const index = new Map<string, OBSSource>()
+				for (const source of this.state.sources.values()) index.set(source.sourceName, source)
+				this.cache.sourceNameIndex = index
+			}
+			return this.cache.sourceNameIndex.get(name)
+		}
 		return Array.from(this.state.sources.values()).find((s) => s.sourceName === name)
 	}
 
 	public findSceneByName(name: string): OBSScene | undefined {
+		if (this.cacheActive) {
+			if (!this.cache.sceneNameIndex) {
+				const index = new Map<string, OBSScene>()
+				for (const scene of this.state.scenes.values()) index.set(scene.sceneName, scene)
+				this.cache.sceneNameIndex = index
+			}
+			return this.cache.sceneNameIndex.get(name)
+		}
 		return Array.from(this.state.scenes.values()).find((s) => s.sceneName === name)
 	}
 

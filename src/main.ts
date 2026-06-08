@@ -24,6 +24,11 @@ export default class OBSInstance extends InstanceBase {
 	public statsPoll?: NodeJS.Timeout
 	public mediaPoll?: NodeJS.Timeout | null
 
+	// Coalesces bursts of definition rebuilds (e.g. many OBS events while loading a
+	// large scene collection) into a single pass.
+	private rebuildTimer?: NodeJS.Timeout
+	private static readonly REBUILD_DEBOUNCE_MS = 100
+
 	public get states(): OBSNormalizedState {
 		return this.obsState.state
 	}
@@ -63,6 +68,10 @@ export default class OBSInstance extends InstanceBase {
 	}
 
 	async destroy(): Promise<void> {
+		if (this.rebuildTimer) {
+			clearTimeout(this.rebuildTimer)
+			this.rebuildTimer = undefined
+		}
 		void this.obs.disconnectOBS()
 		this.obs.stopReconnectionPoll()
 	}
@@ -88,11 +97,26 @@ export default class OBSInstance extends InstanceBase {
 		this.setActionDefinitions(actions)
 	}
 
-	async updateActionsFeedbacksVariables(): Promise<void> {
-		this.initVariables()
-		this.initFeedbacks()
-		this.initActions()
-		this.initPresets()
+	updateActionsFeedbacksVariables(): void {
+		if (this.rebuildTimer) clearTimeout(this.rebuildTimer)
+		this.rebuildTimer = setTimeout(() => {
+			this.rebuildTimer = undefined
+			this.rebuildDefinitions()
+		}, OBSInstance.REBUILD_DEBOUNCE_MS)
+	}
+
+	private rebuildDefinitions(): void {
+		// Memoize derived choice lists / name indexes for the duration of this
+		// synchronous rebuild, then discard so nothing can go stale.
+		this.obsState.beginCache()
+		try {
+			this.initVariables()
+			this.initFeedbacks()
+			this.initActions()
+			this.initPresets()
+		} finally {
+			this.obsState.endCache()
+		}
 	}
 
 	handleStartStopRecordActions(isRecording: boolean): void {

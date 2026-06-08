@@ -145,9 +145,12 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 // ═══ Input Listeners ═══
 function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputCreated', (data) => {
+		// During a scene collection load OBS fires InputCreated for every input;
+		// those are picked up in bulk by buildSceneList, so skip the per-input work.
+		if (self.states.sceneCollectionChanging) return
 		self.obs.addSource(data.inputUuid, data.inputName, data.inputKind)
 		void self.obs.fetchSourcesData([data.inputUuid]).then(() => {
-			void self.updateActionsFeedbacksVariables()
+			self.updateActionsFeedbacksVariables()
 		})
 	})
 	obs.on('InputRemoved', (data) => {
@@ -310,13 +313,9 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneTransitionVideoEnded', () => {})
 }
 
-function findSourceByName(self: OBSInstance, sourceName: string): OBSSource | undefined {
-	return Array.from(self.states.sources.values()).find((s) => s.sourceName === sourceName)
-}
-
 function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {
 	void self.obs.getSourceFilters(sourceUuid).then(() => {
-		void self.updateActionsFeedbacksVariables()
+		self.updateActionsFeedbacksVariables()
 	})
 }
 
@@ -324,25 +323,25 @@ function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {
 function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
-		const source = findSourceByName(self, data.sourceName)
+		const source = self.obsState.findSourceByName(data.sourceName)
 		if (source) {
 			refreshSourceFilters(self, source.sourceUuid)
 		}
 	})
 	obs.on('SourceFilterRemoved', (data) => {
-		const source = findSourceByName(self, data.sourceName)
+		const source = self.obsState.findSourceByName(data.sourceName)
 		if (source) {
 			refreshSourceFilters(self, source.sourceUuid)
 		}
 	})
 	obs.on('SourceFilterNameChanged', (data) => {
-		const source = findSourceByName(self, data.sourceName)
+		const source = self.obsState.findSourceByName(data.sourceName)
 		if (source) {
 			refreshSourceFilters(self, source.sourceUuid)
 		}
 	})
 	obs.on('SourceFilterEnableStateChanged', (data) => {
-		const source = findSourceByName(self, data.sourceName)
+		const source = self.obsState.findSourceByName(data.sourceName)
 		if (source) {
 			const sourceFilters = self.states.sourceFilters.get(source.sourceUuid)
 			if (sourceFilters) {
