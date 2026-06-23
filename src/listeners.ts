@@ -236,7 +236,12 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			})
 		}
 	})
-	obs.on('InputAudioTracksChanged', () => {})
+	obs.on('InputAudioTracksChanged', (data) => {
+		const source = self.states.sources.get(data.inputUuid)
+		if (source) {
+			source.inputAudioTracks = data.inputAudioTracks
+		}
+	})
 	obs.on('InputAudioMonitorTypeChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
@@ -351,6 +356,17 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			refreshSourceFilters(self, source.sourceUuid)
 		}
 	})
+	obs.on('SourceFilterSettingsChanged', (data) => {
+		// Keep the cached filter settings in sync when changed in OBS or by another
+		// client, so reads in the actions layer don't go stale.
+		const source = self.obsState.findSourceByName(data.sourceName)
+		if (source) {
+			const filter = self.states.sourceFilters.get(source.sourceUuid)?.find((f) => f.filterName === data.filterName)
+			if (filter) {
+				filter.filterSettings = data.filterSettings
+			}
+		}
+	})
 	obs.on('SourceFilterEnableStateChanged', (data) => {
 		const source = self.obsState.findSourceByName(data.sourceName)
 		if (source) {
@@ -445,14 +461,19 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 // ═══ Output Listeners ═══
 function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StreamStateChanged', (data) => {
+		const outputState = data.outputState as OBSStreamingState
 		self.states.streaming = data.outputActive
+		self.states.streamReconnecting = outputState === OBSStreamingState.Reconnecting
 
-		self.setVariableValues({
-			streaming: utils.getOBSStreamingStateLabel(
-				self.states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir,
-			),
-		})
-		self.checkFeedbacks('streaming', 'streamCongestion')
+		// Reflect reconnect transitions in the streaming label; otherwise fall back
+		// to the active/off-air boolean.
+		const streamingState = self.states.streamReconnecting
+			? OBSStreamingState.Reconnecting
+			: self.states.streaming
+				? OBSStreamingState.Streaming
+				: OBSStreamingState.OffAir
+		self.setVariableValues({ streaming: utils.getOBSStreamingStateLabel(streamingState) })
+		self.checkFeedbacks('streaming', 'streamCongestion', 'streamReconnecting')
 		if (self.states.streaming === false) {
 			self.setVariableValues({
 				stream_timecode: '00:00:00',
@@ -461,11 +482,23 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				stream_timecode_ss: '00',
 			})
 		}
-		self.sendToActionRecorder({ actionId: data.outputActive ? 'start_streaming' : 'stop_streaming', options: {} })
+		// Reconnect transitions keep the output active but are not start/stop, so
+		// don't record them as actions.
+		const isReconnectTransition =
+			outputState === OBSStreamingState.Reconnecting || outputState === OBSStreamingState.Reconnected
+		if (!isReconnectTransition) {
+			self.sendToActionRecorder({ actionId: data.outputActive ? 'start_streaming' : 'stop_streaming', options: {} })
+		}
 	})
 	obs.on('RecordStateChanged', (data) => {
 		const previousRecordingState = self.states.recording
-		self.states.recording = data.outputState as OBSRecordingState
+		// OBS emits OBS_WEBSOCKET_OUTPUT_RESUMED when a paused recording resumes,
+		// which has no OBSRecordingState member — normalize it to Recording so the
+		// label and `recording` feedback reflect an active recording.
+		self.states.recording =
+			data.outputState === 'OBS_WEBSOCKET_OUTPUT_RESUMED'
+				? OBSRecordingState.Recording
+				: (data.outputState as OBSRecordingState)
 
 		if (data.outputPath) {
 			self.setVariableValues({
@@ -570,6 +603,9 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 // ═══ UI Listeners ═══
 function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
+	obs.on('ScreenshotSaved', (data) => {
+		self.setVariableValues({ screenshot_saved_path: data.savedScreenshotPath })
+	})
 	obs.on('StudioModeStateChanged', (data) => {
 		self.sendToActionRecorder({
 			actionId: data.studioModeEnabled ? 'enable_studio_mode' : 'disable_studio_mode',

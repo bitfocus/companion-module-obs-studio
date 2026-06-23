@@ -66,6 +66,7 @@ export class OBSState {
 	constructor() {
 		this.state = {
 			streaming: false,
+			streamReconnecting: false,
 			recording: OBSRecordingState.Stopped,
 			replayBuffer: false,
 			studioMode: false,

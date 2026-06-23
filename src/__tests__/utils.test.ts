@@ -96,6 +96,8 @@ describe('state label helpers', () => {
 	test('streaming labels', () => {
 		expect(getOBSStreamingStateLabel(OBSStreamingState.Streaming)).toBe('Live')
 		expect(getOBSStreamingStateLabel(OBSStreamingState.OffAir)).toBe('Off-Air')
+		expect(getOBSStreamingStateLabel(OBSStreamingState.Reconnecting)).toBe('Reconnecting')
+		expect(getOBSStreamingStateLabel(OBSStreamingState.Reconnected)).toBe('Live')
 	})
 	test('media status labels', () => {
 		expect(getOBSMediaStatusLabel(OBSMediaStatus.Playing)).toBe('Playing')

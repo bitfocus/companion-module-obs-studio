@@ -28,6 +28,8 @@ export enum OBSStreamingState {
 	Streaming = 'OBS_WEBSOCKET_OUTPUT_STARTED',
 	Starting = 'OBS_WEBSOCKET_OUTPUT_STARTING',
 	Stopping = 'OBS_WEBSOCKET_OUTPUT_STOPPING',
+	Reconnecting = 'OBS_WEBSOCKET_OUTPUT_RECONNECTING',
+	Reconnected = 'OBS_WEBSOCKET_OUTPUT_RECONNECTED',
 }
 
 export enum OBSMediaStatus {
@@ -71,6 +73,7 @@ export enum ObsAudioMonitorType {
 export interface OBSNormalizedState {
 	// Hot state
 	streaming: boolean
+	streamReconnecting: boolean
 	recording: OBSRecordingState
 	replayBuffer: boolean
 	studioMode: boolean

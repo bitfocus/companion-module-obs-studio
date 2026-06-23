@@ -61,12 +61,12 @@ export class OBSApi {
 				`${this.self.config.scheme ?? 'ws'}://${this.self.config.host}:${this.self.config.port}`,
 				this.self.secrets.pass,
 				{
+					// SceneItemTransformChanged is intentionally skipped
 					eventSubscriptions:
 						EventSubscription.All |
 						EventSubscription.InputActiveStateChanged |
 						EventSubscription.InputShowStateChanged |
-						EventSubscription.InputVolumeMeters |
-						EventSubscription.SceneItemTransformChanged,
+						EventSubscription.InputVolumeMeters,
 					rpcVersion: 1,
 				},
 			)
@@ -541,11 +541,16 @@ export class OBSApi {
 					this.self.states.outputBytes = streamStatus.outputBytes
 				}
 
+				// Preserve the reconnecting label set by StreamStateChanged
+				const streamingState = this.self.states.streamReconnecting
+					? OBSStreamingState.Reconnecting
+					: this.self.states.streaming
+						? OBSStreamingState.Streaming
+						: OBSStreamingState.OffAir
+
 				this.self.checkFeedbacks('streaming', 'streamCongestion')
 				this.self.setVariableValues({
-					streaming: utils.getOBSStreamingStateLabel(
-						this.self.states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir,
-					),
+					streaming: utils.getOBSStreamingStateLabel(streamingState),
 					stream_timecode: timecode,
 					stream_timecode_hh: streamingTimecodeSplit.hh,
 					stream_timecode_mm: streamingTimecodeSplit.mm,

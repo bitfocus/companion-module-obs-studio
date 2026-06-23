@@ -20,6 +20,20 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		},
 	}
 
+	feedbacks['streamReconnecting'] = {
+		type: 'boolean',
+		name: 'Streaming - Reconnecting',
+		description: 'If the stream is currently reconnecting, change the style of the button',
+		defaultStyle: {
+			color: Color.White,
+			bgcolor: Color.Orange,
+		},
+		options: [],
+		callback: () => {
+			return !!self.states.streamReconnecting
+		},
+	}
+
 	feedbacks['recording'] = {
 		type: 'boolean',
 		name: 'Recording - Active',

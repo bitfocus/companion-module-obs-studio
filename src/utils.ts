@@ -121,11 +121,14 @@ export function getOBSRecordingStateLabel(state: OBSRecordingState): string {
 export function getOBSStreamingStateLabel(state: OBSStreamingState): string {
 	switch (state) {
 		case OBSStreamingState.Streaming:
+		case OBSStreamingState.Reconnected:
 			return 'Live'
 		case OBSStreamingState.Starting:
 			return 'Starting'
 		case OBSStreamingState.Stopping:
 			return 'Stopping'
+		case OBSStreamingState.Reconnecting:
+			return 'Reconnecting'
 		default:
 			return 'Off-Air'
 	}
