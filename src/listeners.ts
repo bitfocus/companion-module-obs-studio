@@ -92,6 +92,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				sceneUuid: sceneUuid,
 				sceneIndex: self.states.scenes.size,
 			})
+			self.obsState.invalidateSceneNameIndex()
 			void self.obs.buildSourceList(sceneUuid)
 			void self.updateActionsFeedbacksVariables()
 		}
@@ -105,6 +106,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const scene = self.states.scenes.get(data.sceneUuid)
 		if (scene) {
 			scene.sceneName = data.sceneName
+			self.obsState.invalidateSceneNameIndex()
 		}
 		void self.updateActionsFeedbacksVariables()
 	})
@@ -139,6 +141,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				sceneIndex: scene.sceneIndex,
 			})
 		}
+		self.obsState.invalidateSceneNameIndex()
 	})
 }
 
@@ -155,6 +158,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('InputRemoved', (data) => {
 		self.states.sources.delete(data.inputUuid)
+		self.obsState.invalidateSourceNameIndex()
 		void self.updateActionsFeedbacksVariables()
 	})
 	obs.on('InputNameChanged', (data) => {
@@ -162,6 +166,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (source) {
 			source.sourceName = data.inputName
 			source.validName = utils.validName(data.inputName)
+			self.obsState.invalidateSourceNameIndex()
 		}
 		void self.updateActionsFeedbacksVariables()
 	})

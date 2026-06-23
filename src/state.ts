@@ -12,8 +12,6 @@ interface ChoiceCache {
 	profileChoices?: ModuleChoice[]
 	sceneCollectionList?: ModuleChoice[]
 	outputList?: ModuleChoice[]
-	sourceNameIndex?: Map<string, OBSSource>
-	sceneNameIndex?: Map<string, OBSScene>
 }
 
 export class OBSState {
@@ -25,6 +23,21 @@ export class OBSState {
 	// no staleness risk, and it collapses repeated O(n log n) work to a single pass.
 	private cacheActive = false
 	private cache: ChoiceCache = {}
+
+	// Persistent name → object indexes for O(1) lookups from runtime event
+	// handlers (filter/media events, visibility actions). Rebuilt lazily and
+	// invalidated explicitly whenever a source/scene is added, removed, or
+	// renamed. Unlike the rebuild cache above these outlive a single rebuild.
+	private sourceNameIndex?: Map<string, OBSSource>
+	private sceneNameIndex?: Map<string, OBSScene>
+
+	public invalidateSourceNameIndex(): void {
+		this.sourceNameIndex = undefined
+	}
+
+	public invalidateSceneNameIndex(): void {
+		this.sceneNameIndex = undefined
+	}
 
 	public beginCache(): void {
 		this.cacheActive = true
@@ -115,6 +128,8 @@ export class OBSState {
 		this.state.sourceFilters.clear()
 		this.state.groups.clear()
 		this.state.sceneItems.clear()
+		this.invalidateSourceNameIndex()
+		this.invalidateSceneNameIndex()
 	}
 
 	// Internal helper to build choice lists
@@ -288,27 +303,21 @@ export class OBSState {
 
 	// Name-based lookup helpers
 	public findSourceByName(name: string): OBSSource | undefined {
-		if (this.cacheActive) {
-			if (!this.cache.sourceNameIndex) {
-				const index = new Map<string, OBSSource>()
-				for (const source of this.state.sources.values()) index.set(source.sourceName, source)
-				this.cache.sourceNameIndex = index
-			}
-			return this.cache.sourceNameIndex.get(name)
+		if (!this.sourceNameIndex) {
+			const index = new Map<string, OBSSource>()
+			for (const source of this.state.sources.values()) index.set(source.sourceName, source)
+			this.sourceNameIndex = index
 		}
-		return Array.from(this.state.sources.values()).find((s) => s.sourceName === name)
+		return this.sourceNameIndex.get(name)
 	}
 
 	public findSceneByName(name: string): OBSScene | undefined {
-		if (this.cacheActive) {
-			if (!this.cache.sceneNameIndex) {
-				const index = new Map<string, OBSScene>()
-				for (const scene of this.state.scenes.values()) index.set(scene.sceneName, scene)
-				this.cache.sceneNameIndex = index
-			}
-			return this.cache.sceneNameIndex.get(name)
+		if (!this.sceneNameIndex) {
+			const index = new Map<string, OBSScene>()
+			for (const scene of this.state.scenes.values()) index.set(scene.sceneName, scene)
+			this.sceneNameIndex = index
 		}
-		return Array.from(this.state.scenes.values()).find((s) => s.sceneName === name)
+		return this.sceneNameIndex.get(name)
 	}
 
 	public findSourceFiltersByName(sourceName: string): import('./types.js').OBSFilter[] | undefined {

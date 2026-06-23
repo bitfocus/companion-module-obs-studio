@@ -29,6 +29,9 @@ export class OBSApi {
 	private static readonly STATS_POLL_INTERVAL = POLL_INTERVALS.STATS
 	private static readonly MEDIA_POLL_INTERVAL = POLL_INTERVALS.MEDIA
 
+	// Guards against overlapping connection attempts
+	private connecting = false
+
 	constructor(self: OBSInstance) {
 		this.self = self
 	}
@@ -41,6 +44,12 @@ export class OBSApi {
 	}
 
 	public async connectOBS(): Promise<void> {
+		// Skip if a previous attempt is still in flight
+		if (this.connecting) {
+			logger.debug('Connection attempt already in progress, skipping')
+			return
+		}
+		this.connecting = true
 		if (this.self.socket) {
 			this.self.socket.removeAllListeners()
 			await this.self.socket.disconnect()
@@ -97,12 +106,14 @@ export class OBSApi {
 			}
 		} catch (error) {
 			this.processWebSocketError(error)
+		} finally {
+			this.connecting = false
 		}
 	}
 
 	public processWebSocketError(error: unknown): void {
 		if (!this.self.reconnectionPoll) {
-			let tryReconnect: boolean | null = null
+			let tryReconnect: boolean
 			const errorMessage = error instanceof Error ? error.message : String(error)
 			if (errorMessage.match(/(Server sent no subprotocol)/i)) {
 				tryReconnect = false
@@ -229,6 +240,7 @@ export class OBSApi {
 				inputKind: inputKind ?? undefined,
 			}
 			this.self.states.sources.set(sourceUuid, source)
+			this.self.obsState.invalidateSourceNameIndex()
 		}
 		return source
 	}
@@ -239,6 +251,7 @@ export class OBSApi {
 			sceneUuid: sceneUuid,
 			sceneIndex: sceneIndex ?? Number(this.self.states.scenes.size),
 		})
+		this.self.obsState.invalidateSceneNameIndex()
 	}
 
 	// ═══ Polls ═══
@@ -649,6 +662,8 @@ export class OBSApi {
 		this.self.states.sources.clear()
 		this.self.states.sceneItems.clear()
 		this.self.states.groups.clear()
+		this.self.obsState.invalidateSourceNameIndex()
+		this.self.obsState.invalidateSceneNameIndex()
 
 		const sceneList = await this.sendRequest('GetSceneList')
 		if (!sceneList) return
@@ -969,6 +984,7 @@ export class OBSApi {
 	public async removeScene(sceneUuid: string): Promise<void> {
 		this.self.states.scenes.delete(sceneUuid)
 		this.self.states.sceneItems.delete(sceneUuid)
+		this.self.obsState.invalidateSceneNameIndex()
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
@@ -1095,6 +1111,7 @@ export class OBSApi {
 		inputs: Array<{ inputUuid: string; inputLevelsMul: Array<[number, number, number]> }>
 	}): void {
 		this.self.states.audioPeak.clear()
+		let updated = false
 		data.inputs.forEach((input) => {
 			const channel = input.inputLevelsMul[0]
 			if (channel) {
@@ -1107,11 +1124,15 @@ export class OBSApi {
 						if (source) {
 							source.peak = dbPeak
 						}
-						this.self.checkFeedbacks('audioPeaking', 'audioMeter')
+						updated = true
 					}
 				}
 			}
 		})
+		// Re-evaluate feedbacks once per meter tick rather than once per input
+		if (updated) {
+			this.self.checkFeedbacks('audioPeaking', 'audioMeter')
+		}
 	}
 
 	public async setSourceVisibility(
