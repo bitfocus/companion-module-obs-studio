@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { CompanionButtonPresetDefinition } from '@companion-module/base'
-import { getPresets } from './presets.js'
-import { getActions } from './actions.js'
-import { getFeedbacks } from './feedbacks.js'
-import { makeMockInstance, seedFullState, type MockInstance } from './__tests__/mock/instance.js'
+import { getPresets } from '../presets.js'
+import { getActions } from '../actions.js'
+import { getFeedbacks } from '../feedbacks.js'
+import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 
 function isButtonPreset(preset: unknown): preset is CompanionButtonPresetDefinition {
 	return !!preset && typeof preset === 'object' && (preset as { type?: string }).type !== 'text'

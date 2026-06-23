@@ -3,6 +3,7 @@ import {
 	clamp,
 	validName,
 	formatTimecode,
+	splitTimecode,
 	roundNumber,
 	rgbaToObsColor,
 	obsColorToRgba,
@@ -10,8 +11,8 @@ import {
 	getOBSStreamingStateLabel,
 	getOBSMediaStatusLabel,
 	getMonitorTypeLabel,
-} from './utils.js'
-import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
+} from '../utils.js'
+import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from '../types.js'
 
 describe('clamp', () => {
 	test('returns the value when within range', () => {
@@ -46,6 +47,16 @@ describe('formatTimecode', () => {
 	})
 	test('formats hours', () => {
 		expect(formatTimecode(3_661_000)).toBe('01:01:01')
+	})
+})
+
+describe('splitTimecode', () => {
+	test('splits a full timecode into parts', () => {
+		expect(splitTimecode('01:23:45')).toEqual({ hh: '01', mm: '23', ss: '45' })
+	})
+	test('defaults missing parts to 00', () => {
+		expect(splitTimecode('12')).toEqual({ hh: '12', mm: '00', ss: '00' })
+		expect(splitTimecode('')).toEqual({ hh: '', mm: '00', ss: '00' })
 	})
 })
 

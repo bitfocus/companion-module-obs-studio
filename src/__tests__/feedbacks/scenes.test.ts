@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { CompanionFeedbackInfo } from '@companion-module/base'
-import { getSceneFeedbacks } from './scenes.js'
-import { Color } from '../utils.js'
-import { makeMockInstance, seedScene, type MockInstance } from '../__tests__/mock/instance.js'
-import { MockContext } from '../__tests__/mock-context.js'
+import { getSceneFeedbacks } from '../../feedbacks/scenes.js'
+import { Color } from '../../utils.js'
+import { makeMockInstance, seedScene, type MockInstance } from '../mock/instance.js'
+import { MockContext } from '../mock-context.js'
 
 function feedback(options: Record<string, unknown>): CompanionFeedbackInfo {
 	return { id: 'test', controlId: 'control', feedbackId: 'scene_active', options } as unknown as CompanionFeedbackInfo

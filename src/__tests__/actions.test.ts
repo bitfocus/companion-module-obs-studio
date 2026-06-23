@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { CompanionActionDefinition, CompanionActionEvent, CompanionOptionValues } from '@companion-module/base'
-import { getActions } from './actions.js'
-import { makeMockInstance, seedFullState, type MockInstance } from './__tests__/mock/instance.js'
-import { MockContext } from './__tests__/mock-context.js'
+import { getActions } from '../actions.js'
+import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
+import { MockContext } from './mock-context.js'
 
 /** Build an options object from each option's declared default. */
 function defaultOptions(def: CompanionActionDefinition): CompanionOptionValues {

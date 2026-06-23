@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { getVariables, updateVariableValues } from './variables.js'
-import { makeMockInstance, seedFullState, type MockInstance } from './__tests__/mock/instance.js'
+import { getVariables, updateVariableValues } from '../variables.js'
+import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 
 describe('variables', () => {
 	let self: MockInstance

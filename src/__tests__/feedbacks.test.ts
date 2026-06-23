@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { CompanionFeedbackDefinition, CompanionFeedbackInfo, CompanionOptionValues } from '@companion-module/base'
-import { getFeedbacks } from './feedbacks.js'
-import { makeMockInstance, seedFullState, type MockInstance } from './__tests__/mock/instance.js'
-import { MockContext } from './__tests__/mock-context.js'
+import { getFeedbacks } from '../feedbacks.js'
+import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
+import { MockContext } from './mock-context.js'
 
 function defaultOptions(def: CompanionFeedbackDefinition): CompanionOptionValues {
 	const options: CompanionOptionValues = {}

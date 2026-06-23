@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { makeMockInstance, type MockInstance } from './__tests__/mock/instance.js'
+import { makeMockInstance, type MockInstance } from './mock/instance.js'
 
 describe('OBSApi.buildProfileList', () => {
 	let self: MockInstance

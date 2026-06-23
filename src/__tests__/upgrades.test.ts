@@ -4,8 +4,8 @@ import type {
 	CompanionUpgradeContext,
 	CompanionMigrationAction,
 } from '@companion-module/base'
-import upgrades from './upgrades.js'
-import type { ModuleConfig, ModuleSecrets } from './types.js'
+import upgrades from '../upgrades.js'
+import type { ModuleConfig, ModuleSecrets } from '../types.js'
 
 const context = {} as CompanionUpgradeContext<ModuleConfig>
 

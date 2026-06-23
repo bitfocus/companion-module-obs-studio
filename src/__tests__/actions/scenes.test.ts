@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { CompanionActionEvent } from '@companion-module/base'
-import { getSceneActions } from './scenes.js'
-import { makeMockInstance, seedScene, type MockInstance } from '../__tests__/mock/instance.js'
-import { MockContext } from '../__tests__/mock-context.js'
+import { getSceneActions } from '../../actions/scenes.js'
+import { makeMockInstance, seedScene, type MockInstance } from '../mock/instance.js'
+import { MockContext } from '../mock-context.js'
 
 function event(actionId: string, options: Record<string, unknown>): CompanionActionEvent {
 	return { id: 'test', controlId: 'control', actionId, options } as unknown as CompanionActionEvent

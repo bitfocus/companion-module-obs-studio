@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { initOBSListeners } from './listeners.js'
-import { makeMockInstance, seedScene, type MockInstance } from './__tests__/mock/instance.js'
+import { initOBSListeners } from '../listeners.js'
+import { makeMockInstance, seedScene, type MockInstance } from './mock/instance.js'
 
 describe('scene change listeners', () => {
 	let self: MockInstance
