@@ -529,7 +529,7 @@ export class OBSApi {
 				const timecode = timecodeMatch?.[0] ?? '00:00:00'
 				this.self.states.streaming = streamStatus.outputActive
 				this.self.states.streamingTimecode = timecode
-				const streamingTimecodeSplit = timecode.split(':')
+				const streamingTimecodeSplit = utils.splitTimecode(timecode)
 
 				this.self.states.streamCongestion = streamStatus.outputCongestion
 
@@ -547,9 +547,9 @@ export class OBSApi {
 						this.self.states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir,
 					),
 					stream_timecode: timecode,
-					stream_timecode_hh: streamingTimecodeSplit[0] ?? '00',
-					stream_timecode_mm: streamingTimecodeSplit[1] ?? '00',
-					stream_timecode_ss: streamingTimecodeSplit[2] ?? '00',
+					stream_timecode_hh: streamingTimecodeSplit.hh,
+					stream_timecode_mm: streamingTimecodeSplit.mm,
+					stream_timecode_ss: streamingTimecodeSplit.ss,
 					output_skipped_frames: streamStatus.outputSkippedFrames,
 					output_total_frames: streamStatus.outputTotalFrames,
 					kbits_per_sec: kbits,
@@ -591,13 +591,13 @@ export class OBSApi {
 		if (outputTimecode) {
 			const timecode = String(outputTimecode).split('.')[0]
 			this.self.states.recordingTimecode = timecode
-			const recordingTimecodeSplit = timecode.split(':')
+			const recordingTimecodeSplit = utils.splitTimecode(timecode)
 			this.self.setVariableValues({
 				recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
 				recording_timecode: timecode,
-				recording_timecode_hh: recordingTimecodeSplit[0] ?? '00',
-				recording_timecode_mm: recordingTimecodeSplit[1] ?? '00',
-				recording_timecode_ss: recordingTimecodeSplit[2] ?? '00',
+				recording_timecode_hh: recordingTimecodeSplit.hh,
+				recording_timecode_mm: recordingTimecodeSplit.mm,
+				recording_timecode_ss: recordingTimecodeSplit.ss,
 			})
 		} else if (this.self.states.recording === OBSRecordingState.Stopped) {
 			this.self.setVariableValues({

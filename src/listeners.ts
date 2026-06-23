@@ -3,7 +3,13 @@ import type OBSInstance from './main.js'
 import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
-import { OBSMediaStatus, OBSRecordingState, OBSStreamingState, ObsAudioMonitorType } from './types.js'
+import {
+	OBSMediaStatus,
+	OBSMediaInputAction,
+	OBSRecordingState,
+	OBSStreamingState,
+	ObsAudioMonitorType,
+} from './types.js'
 
 const logger = createModuleLogger('Listeners')
 
@@ -512,65 +518,52 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
+// Sets a source's media status and its corresponding `media_status_*` variable.
+function setMediaStatus(self: OBSInstance, source: OBSSource, uuid: string, status: OBSMediaStatus): void {
+	source.OBSMediaStatus = status
+	const name = source.validName ?? uuid
+	self.setVariableValues({ [`media_status_${name}`]: utils.getOBSMediaStatusLabel(status) })
+}
+
+// Maps an OBS media action to the action-recorder entry it should emit.
+const MEDIA_ACTION_RECORDER_MAP: Partial<
+	Record<OBSMediaInputAction, { actionId: string; playPause?: 'play' | 'pause' }>
+> = {
+	[OBSMediaInputAction.Pause]: { actionId: 'play_pause_media', playPause: 'pause' },
+	[OBSMediaInputAction.Play]: { actionId: 'play_pause_media', playPause: 'play' },
+	[OBSMediaInputAction.Restart]: { actionId: 'restart_media' },
+	[OBSMediaInputAction.Stop]: { actionId: 'stop_media' },
+	[OBSMediaInputAction.Next]: { actionId: 'next_media' },
+	[OBSMediaInputAction.Previous]: { actionId: 'previous_media' },
+}
+
 // ═══ Media Listeners ═══
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('MediaInputPlaybackStarted', (data) => {
 		self.states.currentMedia = data.inputUuid
-
 		const source = self.states.sources.get(data.inputUuid)
-		if (source) {
-			source.OBSMediaStatus = OBSMediaStatus.Playing
-			const name = source.validName ?? data.inputUuid
-			self.setVariableValues({
-				[`media_status_${name}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
-			})
-		}
+		if (source) setMediaStatus(self, source, data.inputUuid, OBSMediaStatus.Playing)
 	})
 	obs.on('MediaInputPlaybackEnded', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
-		if (source) {
-			source.OBSMediaStatus = OBSMediaStatus.Ended
-			const name = source.validName ?? data.inputUuid
-			self.setVariableValues({
-				[`media_status_${name}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
-			})
-		}
+		if (source) setMediaStatus(self, source, data.inputUuid, OBSMediaStatus.Ended)
 	})
 	obs.on('MediaInputActionTriggered', (data) => {
+		const action = data.mediaAction as OBSMediaInputAction
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			const name = source.validName ?? data.inputUuid
-			if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-				source.OBSMediaStatus = OBSMediaStatus.Paused
-				self.setVariableValues({
-					[`media_status_${name}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
-				})
-			} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
-				source.OBSMediaStatus = OBSMediaStatus.Playing
-				self.setVariableValues({
-					[`media_status_${name}`]: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
-				})
+			if (action === OBSMediaInputAction.Pause) {
+				setMediaStatus(self, source, data.inputUuid, OBSMediaStatus.Paused)
+			} else if (action === OBSMediaInputAction.Play) {
+				setMediaStatus(self, source, data.inputUuid, OBSMediaStatus.Playing)
 			}
 		}
-		let mediaActionId: string | undefined
-		const mediaOptions: Record<string, unknown> = { source: source?.sourceName, useCurrentMedia: false }
-		if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PAUSE') {
-			mediaActionId = 'play_pause_media'
-			mediaOptions.playPause = 'pause'
-		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PLAY') {
-			mediaActionId = 'play_pause_media'
-			mediaOptions.playPause = 'play'
-		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART') {
-			mediaActionId = 'restart_media'
-		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP') {
-			mediaActionId = 'stop_media'
-		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_NEXT') {
-			mediaActionId = 'next_media'
-		} else if (data.mediaAction === 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS') {
-			mediaActionId = 'previous_media'
-		}
-		if (mediaActionId) {
-			self.sendToActionRecorder({ actionId: mediaActionId, options: mediaOptions as any })
+
+		const mapping = MEDIA_ACTION_RECORDER_MAP[action]
+		if (mapping) {
+			const mediaOptions: Record<string, unknown> = { source: source?.sourceName, useCurrentMedia: false }
+			if (mapping.playPause) mediaOptions.playPause = mapping.playPause
+			self.sendToActionRecorder({ actionId: mapping.actionId, options: mediaOptions as any })
 		}
 	})
 }

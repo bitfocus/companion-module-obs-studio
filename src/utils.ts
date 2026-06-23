@@ -37,6 +37,16 @@ export function validName(name: string): string {
 	}
 }
 
+export function splitTimecode(timecode: string): { hh: string; mm: string; ss: string } {
+	//Splits an "hh:mm:ss" timecode into padded parts, defaulting each to '00'
+	const parts = timecode.split(':')
+	return {
+		hh: parts[0] ?? '00',
+		mm: parts[1] ?? '00',
+		ss: parts[2] ?? '00',
+	}
+}
+
 export function formatTimecode(data: number): string {
 	//Converts milliseconds into a readable time format (hh:mm:ss)
 	try {
