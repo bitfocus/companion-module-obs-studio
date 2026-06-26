@@ -85,6 +85,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 			variables[`sync_offset_${sourceName}`] = { name: `${sourceName} - Sync offset` }
 			variables[`balance_${sourceName}`] = { name: `${sourceName} - Audio balance` }
 		}
+		variables[`source_active_${sourceName}`] = { name: `${sourceName} - Active in program output` }
 	}
 
 	//Scene Variables
@@ -159,6 +160,7 @@ export function updateVariableValues(this: OBSInstance): void {
 				source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : ''
 			updates[`balance_${sourceName}`] = source.inputAudioBalance !== undefined ? source.inputAudioBalance : ''
 		}
+		updates[`source_active_${sourceName}`] = source.active
 	}
 
 	//Scene Variables

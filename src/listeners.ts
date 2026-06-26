@@ -178,6 +178,11 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('InputActiveStateChanged', (data) => {
 		updateSourceProperty(self, data.inputUuid, 'active', data.videoActive, 'scene_item_active')
+		const source = self.states.sources.get(data.inputUuid)
+		if (source) {
+			const sourceName = source.validName ?? utils.validName(source.sourceName)
+			self.setVariableValues({ [`source_active_${sourceName}`]: data.videoActive })
+		}
 	})
 	obs.on('InputShowStateChanged', (data) => {
 		updateSourceProperty(self, data.inputUuid, 'videoShowing', data.videoShowing, 'scene_item_previewed')
