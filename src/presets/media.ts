@@ -1,76 +1,83 @@
-import { CompanionPresetDefinitions } from '@companion-module/base'
-import { Color } from '../utils.js'
+import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { baseStyle, styleActive, styleCaution } from './style.js'
 
-export function getMediaPresets(self: OBSInstance): CompanionPresetDefinitions {
+/**
+ * Media presets: a single "current media" control, plus per-media-source template
+ * families (play/pause and time-remaining status) keyed on the button-local `source`.
+ */
+export function getMediaPresets(self: OBSInstance): {
+	presets: CompanionPresetDefinitions
+	sections: CompanionPresetSection[]
+} {
 	const presets: CompanionPresetDefinitions = {}
 
 	presets['playPauseCurrentMedia'] = {
 		type: 'simple',
 		name: 'Play/Pause Current Media',
-		style: {
-			text: 'Play/\\nPause:\\n$(obs:current_media_name)',
-			size: 'auto',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
+		style: baseStyle({ text: 'Play/\nPause:\n$(obs:current_media_name)' }),
 		steps: [
-			{
-				down: [
-					{
-						actionId: 'play_pause_media',
-						options: {
-							useCurrentMedia: true,
-							playPause: 'toggle',
-						},
-					},
-				],
-				up: [],
-			},
+			{ down: [{ actionId: 'play_pause_media', options: { useCurrentMedia: true, playPause: 'toggle' } }], up: [] },
 		],
 		feedbacks: [],
 	}
 
-	for (const mediaSource of self.obsState.mediaSourceList) {
-		const sourceName = mediaSource.label.replace(/[\W]/gi, '_')
-		presets[`toggleMedia_${mediaSource.id}`] = {
-			type: 'simple',
-			name: `Play Pause ${mediaSource.label}`,
-			style: {
-				text: `${mediaSource.label}\\n$(obs:media_status_${sourceName})`,
-				size: 'auto',
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
+	presets['tpl_mediaToggle'] = {
+		type: 'simple',
+		name: 'Play / Pause Media',
+		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Media source' }],
+		style: baseStyle({ text: '$(local:source)' }),
+		steps: [
+			{
+				down: [{ actionId: 'play_pause_media', options: { source: '$(local:source)', playPause: 'toggle' } }],
+				up: [],
 			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'play_pause_media',
-							options: {
-								source: mediaSource.id,
-								playPause: 'toggle',
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'media_playing',
-					options: {
-						source: mediaSource.id,
-					},
-					style: {
-						bgcolor: Color.Green,
-						color: Color.White,
-					},
-				},
-			],
-		}
+		],
+		feedbacks: [{ feedbackId: 'media_playing', options: { source: '$(local:source)' }, style: styleActive() }],
 	}
-	return presets
+
+	presets['tpl_mediaStatus'] = {
+		type: 'simple',
+		name: 'Media Time Remaining',
+		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Media source' }],
+		style: baseStyle({ text: '$(local:source)' }),
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: 'media_source_time_remaining',
+				options: { source: '$(local:source)', rtThreshold: 20, onlyIfSourceIsPlaying: true },
+				style: styleCaution(),
+			},
+		],
+	}
+
+	const mediaValues = self.obsState.mediaSourceList.map((s) => ({ name: s.label, value: s.id }))
+
+	const sections: CompanionPresetSection[] = [
+		{
+			id: 'media',
+			name: 'Media',
+			definitions: [
+				{ id: 'media-current', name: 'Current Media', type: 'simple', presets: ['playPauseCurrentMedia'] },
+				{
+					id: 'media-control',
+					name: 'Play / Pause',
+					type: 'template',
+					presetId: 'tpl_mediaToggle',
+					templateVariableName: 'source',
+					templateValues: mediaValues,
+				},
+				{
+					id: 'media-status',
+					name: 'Status',
+					type: 'template',
+					presetId: 'tpl_mediaStatus',
+					templateVariableName: 'source',
+					templateValues: mediaValues,
+				},
+			],
+		},
+	]
+
+	return { presets, sections }
 }

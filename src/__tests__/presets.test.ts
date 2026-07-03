@@ -70,13 +70,39 @@ describe('presets', () => {
 		for (const section of structure) {
 			expect(typeof section.id).toBe('string')
 			expect(typeof section.name).toBe('string')
-			// definitions are either preset-reference strings or nested group objects;
-			// this module uses plain string references
+			// definitions are either bare preset-reference strings or group objects.
+			// Groups are 'simple' (a list of preset ids) or 'template' (one preset id
+			// instantiated per value). Validate every referenced preset id exists.
 			for (const definition of section.definitions) {
-				if (typeof definition !== 'string') continue
-				if (!(definition in presets)) missing.push(`${section.id} -> ${definition}`)
+				if (typeof definition === 'string') {
+					if (!(definition in presets)) missing.push(`${section.id} -> ${definition}`)
+					continue
+				}
+				if (definition.type === 'template') {
+					if (!(definition.presetId in presets)) {
+						missing.push(`${section.id}/${definition.id} -> ${definition.presetId}`)
+					}
+				} else {
+					for (const ref of definition.presets) {
+						if (!(ref in presets)) missing.push(`${section.id}/${definition.id} -> ${ref}`)
+					}
+				}
 			}
 		}
 		expect(missing).toEqual([])
+	})
+
+	test('every template group references a preset that declares its template variable', () => {
+		const mismatched: string[] = []
+		for (const section of structure) {
+			for (const definition of section.definitions) {
+				if (typeof definition === 'string' || definition.type !== 'template') continue
+				const preset = presets[definition.presetId]
+				const localVars = (preset as { localVariables?: { variableName: string }[] } | undefined)?.localVariables
+				const hasVar = localVars?.some((v) => v.variableName === definition.templateVariableName)
+				if (!hasVar) mismatched.push(`${section.id}/${definition.id} -> ${definition.templateVariableName}`)
+			}
+		}
+		expect(mismatched).toEqual([])
 	})
 })

@@ -1,139 +1,115 @@
-import { CompanionPresetDefinitions } from '@companion-module/base'
-import { Color } from '../utils.js'
+import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { baseStyle, styleProgram, stylePreview, Style, Color } from './style.js'
 
-export function getProgramScenePresets(self: OBSInstance): CompanionPresetDefinitions {
+/**
+ * Scene presets. The per-scene families (to program / to preview / smart switch) are
+ * defined ONCE as template presets keyed on the button-local `scene` variable, then
+ * instantiated per scene by a `template` group. Companion injects each scene id into
+ * `local:scene`, which the action + feedback options reference via expression.
+ */
+export function getScenePresets(self: OBSInstance): {
+	presets: CompanionPresetDefinitions
+	sections: CompanionPresetSection[]
+} {
 	const presets: CompanionPresetDefinitions = {}
 
-	for (const scene of self.obsState.sceneChoices) {
-		presets[`toProgram_${scene.id}`] = {
-			type: 'simple',
-			name: scene.label,
-			style: {
-				text: scene.label,
-				size: 'auto',
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
-			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'set_scene',
-							options: {
-								scene: scene.id,
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'sceneProgram',
-					options: {
-						scene: scene.id,
-					},
-					style: {
-						bgcolor: Color.Red,
-						color: Color.White,
-					},
-				},
-			],
-		}
+	presets['tpl_sceneProgram'] = {
+		type: 'simple',
+		name: 'Scene to Program',
+		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
+		style: baseStyle({ text: '$(local:scene)' }),
+		steps: [{ down: [{ actionId: 'set_scene', options: { scene: '$(local:scene)' } }], up: [] }],
+		feedbacks: [{ feedbackId: 'sceneProgram', options: { scene: '$(local:scene)' }, style: styleProgram() }],
 	}
 
-	return presets
-}
-
-export function getPreviewScenePresets(self: OBSInstance): CompanionPresetDefinitions {
-	const presets: CompanionPresetDefinitions = {}
-
-	for (const scene of self.obsState.sceneChoices) {
-		presets[`toPreview_${scene.id}`] = {
-			type: 'simple',
-			name: scene.label,
-			style: {
-				text: scene.label,
-				size: 'auto',
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
-			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'preview_scene',
-							options: {
-								scene: scene.id,
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'scenePreview',
-					options: {
-						scene: scene.id,
-					},
-					style: {
-						bgcolor: Color.Green,
-						color: Color.White,
-					},
-				},
-			],
-		}
+	presets['tpl_scenePreview'] = {
+		type: 'simple',
+		name: 'Scene to Preview',
+		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
+		style: baseStyle({ text: '$(local:scene)' }),
+		steps: [{ down: [{ actionId: 'preview_scene', options: { scene: '$(local:scene)' } }], up: [] }],
+		feedbacks: [{ feedbackId: 'scenePreview', options: { scene: '$(local:scene)' }, style: stylePreview() }],
 	}
 
-	return presets
-}
-
-export function getSmartScenePresets(self: OBSInstance): CompanionPresetDefinitions {
-	const presets: CompanionPresetDefinitions = {}
-
-	for (const scene of self.obsState.sceneChoices) {
-		presets[`smart_${scene.id}`] = {
-			type: 'simple',
-			name: scene.label,
-			style: {
-				text: scene.label,
-				size: 'auto',
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
+	presets['tpl_sceneSmart'] = {
+		type: 'simple',
+		name: 'Smart Switch Scene',
+		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
+		style: baseStyle({ text: '$(local:scene)' }),
+		steps: [{ down: [{ actionId: 'smart_switcher', options: { scene: '$(local:scene)' } }], up: [] }],
+		// scene_active is an advanced feedback — its colors live in options, not `style`.
+		feedbacks: [
+			{
+				feedbackId: 'scene_active',
+				options: {
+					scene: '$(local:scene)',
+					mode: 'programAndPreview',
+					fg: Color.White,
+					bg: Style.program,
+					fg_preview: Color.White,
+					bg_preview: Style.preview,
+				},
 			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'smart_switcher',
-							options: {
-								scene: scene.id,
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'scene_active',
-					options: {
-						scene: scene.id,
-						mode: 'programAndPreview',
-						fg: Color.White,
-						bg: Color.Red,
-						fg_preview: Color.White,
-						bg_preview: Color.Green,
-					},
-				},
-			],
-		}
+		],
 	}
 
-	return presets
+	presets['scenePreviewNext'] = {
+		type: 'simple',
+		name: 'Preview Next Scene',
+		style: baseStyle({ text: 'Preview\nNext' }),
+		steps: [{ down: [{ actionId: 'adjustPreviewScene', options: { adjust: 'next' } }], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['scenePreviewPrevious'] = {
+		type: 'simple',
+		name: 'Preview Previous Scene',
+		style: baseStyle({ text: 'Preview\nPrevious' }),
+		steps: [{ down: [{ actionId: 'adjustPreviewScene', options: { adjust: 'previous' } }], up: [] }],
+		feedbacks: [],
+	}
+
+	const sceneValues = self.obsState.sceneChoices.map((s) => ({ name: s.label, value: s.id }))
+
+	const sections: CompanionPresetSection[] = [
+		{
+			id: 'scenes',
+			name: 'Scenes',
+			definitions: [
+				{
+					id: 'scenes-program',
+					name: 'Scene to Program',
+					type: 'template',
+					presetId: 'tpl_sceneProgram',
+					templateVariableName: 'scene',
+					templateValues: sceneValues,
+				},
+				{
+					id: 'scenes-preview',
+					name: 'Scene to Preview',
+					type: 'template',
+					presetId: 'tpl_scenePreview',
+					templateVariableName: 'scene',
+					templateValues: sceneValues,
+				},
+				{
+					id: 'scenes-smart',
+					name: 'Smart Switch Scene',
+					type: 'template',
+					presetId: 'tpl_sceneSmart',
+					templateVariableName: 'scene',
+					templateValues: sceneValues,
+				},
+				{
+					id: 'scenes-nav',
+					name: 'Navigation',
+					type: 'simple',
+					presets: ['scenePreviewNext', 'scenePreviewPrevious'],
+				},
+			],
+		},
+	]
+
+	return { presets, sections }
 }

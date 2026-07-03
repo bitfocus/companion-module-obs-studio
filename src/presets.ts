@@ -1,51 +1,40 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from './main.js'
 
-import { getSourcePresets } from './presets/sources.js'
-import { getPreviewScenePresets, getProgramScenePresets, getSmartScenePresets } from './presets/scenes.js'
+import { getScenePresets } from './presets/scenes.js'
 import { getTransitionPresets } from './presets/transitions.js'
 import { getAudioPresets } from './presets/audio.js'
 import { getMediaPresets } from './presets/media.js'
+import { getSourcePresets } from './presets/sources.js'
+import { getRecordingPresets } from './presets/recording.js'
+import { getStreamingPresets } from './presets/streaming.js'
+import { getReplayPresets } from './presets/replay.js'
 import { getOutputPresets } from './presets/outputs.js'
-import { getUiConfigCustomPresets } from './presets/ui-config-custom.js'
+import { getStudioConfigPresets } from './presets/studio-config.js'
+import { getSystemPresets } from './presets/system.js'
 
 export function getPresets(this: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	structure: CompanionPresetSection[]
 } {
-	const audio = getAudioPresets(this)
-	const media = getMediaPresets(this)
-	const outputs = getOutputPresets(this)
-	const program = getProgramScenePresets(this)
-	const preview = getPreviewScenePresets(this)
-	const smart = getSmartScenePresets(this)
-	const sources = getSourcePresets(this)
-	const transitions = getTransitionPresets(this)
-	const ui = getUiConfigCustomPresets(this)
-
-	const presets: CompanionPresetDefinitions = {
-		...audio,
-		...media,
-		...outputs,
-		...program,
-		...preview,
-		...smart,
-		...sources,
-		...transitions,
-		...ui,
-	}
-
-	const structure: CompanionPresetSection[] = [
-		{ id: 'audio', name: 'Audio Sources', definitions: Object.keys(audio) },
-		{ id: 'media', name: 'Media Sources', definitions: Object.keys(media) },
-		{ id: 'outputs', name: 'Streaming & Recording', definitions: Object.keys(outputs) },
-		{ id: 'scenes-program', name: 'Scenes to Program', definitions: Object.keys(program) },
-		{ id: 'scenes-preview', name: 'Scenes to Preview', definitions: Object.keys(preview) },
-		{ id: 'scenes-smart', name: 'Smart Switch Scene', definitions: Object.keys(smart) },
-		{ id: 'sources', name: 'Sources', definitions: Object.keys(sources) },
-		{ id: 'transitions', name: 'Transitions', definitions: Object.keys(transitions) },
-		{ id: 'ui', name: 'General & Profiles', definitions: Object.keys(ui) },
+	// Each module owns its preset definitions AND the section(s) that arrange them
+	// (as section -> group -> template/preset). Assemble both halves here.
+	const parts = [
+		getRecordingPresets(this),
+		getStreamingPresets(this),
+		getScenePresets(this),
+		getTransitionPresets(this),
+		getSourcePresets(this),
+		getAudioPresets(this),
+		getMediaPresets(this),
+		getReplayPresets(this),
+		getOutputPresets(this),
+		getStudioConfigPresets(this),
+		getSystemPresets(this),
 	]
+
+	const presets: CompanionPresetDefinitions = Object.assign({}, ...parts.map((p) => p.presets))
+	const structure: CompanionPresetSection[] = parts.flatMap((p) => p.sections)
 
 	return { presets, structure }
 }

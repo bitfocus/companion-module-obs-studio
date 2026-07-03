@@ -1,316 +1,157 @@
-import { CompanionPresetDefinitions } from '@companion-module/base'
-import { Color } from '../utils.js'
+import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { baseStyle, styleActive } from './style.js'
 
-export function getTransitionPresets(self: OBSInstance): CompanionPresetDefinitions {
+/**
+ * Transition presets: a global Auto button, per-transition template families (set type /
+ * quick transition) keyed on the button-local `transition`, plus fixed duration controls.
+ */
+export function getTransitionPresets(self: OBSInstance): {
+	presets: CompanionPresetDefinitions
+	sections: CompanionPresetSection[]
+} {
 	const presets: CompanionPresetDefinitions = {}
 
 	presets['transitionAuto'] = {
 		type: 'simple',
 		name: 'Send previewed scene to program',
-		style: {
-			text: 'AUTO',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'do_transition',
-						options: {},
-					},
-				],
-				up: [],
-			},
+		style: baseStyle({ text: 'AUTO' }),
+		steps: [{ down: [{ actionId: 'do_transition', options: {} }], up: [] }],
+		feedbacks: [{ feedbackId: 'transition_active', options: {}, style: styleActive() }],
+	}
+
+	presets['tpl_setTransition'] = {
+		type: 'simple',
+		name: 'Set Transition Type',
+		localVariables: [
+			{ variableType: 'simple', variableName: 'transition', startupValue: '', headline: 'Transition name' },
 		],
+		style: baseStyle({ text: '$(local:transition)' }),
+		// set_transition_type uses the (historically plural) option key `transitions`.
+		steps: [{ down: [{ actionId: 'set_transition_type', options: { transitions: '$(local:transition)' } }], up: [] }],
 		feedbacks: [
-			{
-				feedbackId: 'transition_active',
-				options: {},
-				style: {
-					bgcolor: Color.Green,
-					color: Color.White,
-				},
-			},
+			{ feedbackId: 'current_transition', options: { transition: '$(local:transition)' }, style: styleActive() },
 		],
 	}
-	presets['transitionCurrentInfo'] = {
+
+	presets['tpl_quickTransition'] = {
 		type: 'simple',
-		name: 'Current Transition Info',
-		style: {
-			text: 'Current Transition $(obs:current_transition)\\n$(obs:transition_duration)ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [],
-				up: [],
-			},
+		name: 'Quick Transition',
+		localVariables: [
+			{ variableType: 'simple', variableName: 'transition', startupValue: '', headline: 'Transition name' },
 		],
-		feedbacks: [],
-	}
-
-	for (let time = 500; time < 5100; time += 500) {
-		presets[`transitionDurationSet${time}`] = {
-			type: 'simple',
-			name: `Transition Set ${time}ms`,
-			style: {
-				text: `${time}ms`,
-				size: '14',
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
-			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'set_transition_duration',
-							options: {
-								duration: time,
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'transition_duration',
-					options: {
-						duration: time,
-					},
-					style: {
-						bgcolor: Color.Green,
-						color: Color.White,
-					},
-				},
-			],
-		}
-	}
-
-	presets['transitionDecreaseDuration'] = {
-		type: 'simple',
-		name: 'Decrease transition time',
-		style: {
-			text: 'Adjust Duration\\n-50ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
+		style: baseStyle({ text: '$(local:transition)' }),
 		steps: [
 			{
 				down: [
 					{
-						actionId: 'adjust_transition_duration',
-						options: {
-							amount: -50,
-						},
+						actionId: 'quick_transition',
+						options: { transition: '$(local:transition)', customDuration: false, transition_time: 500 },
 					},
 				],
 				up: [],
 			},
 		],
-		feedbacks: [],
+		feedbacks: [{ feedbackId: 'transition_active', options: {}, style: styleActive() }],
 	}
 
-	presets['transitionDuration'] = {
+	presets['transitionNext'] = {
 		type: 'simple',
-		name: 'Current Duration',
-		style: {
-			text: 'Current Duration $(obs:transition_duration)ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [],
-				up: [],
-			},
-		],
+		name: 'Next Transition Type',
+		style: baseStyle({ text: 'Next\nTransition' }),
+		steps: [{ down: [{ actionId: 'adjustTransitionType', options: { adjust: 'next' } }], up: [] }],
 		feedbacks: [],
-	}
-	presets['transitionIncreaseDuration'] = {
-		type: 'simple',
-		name: 'Increase transition time',
-		style: {
-			text: 'Adjust Duration\\n+50ms',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'adjust_transition_duration',
-						options: {
-							amount: 50,
-						},
-					},
-				],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
-
-	for (const transition of self.obsState.transitionList) {
-		presets[`setTransition_${transition.id}`] = {
-			type: 'simple',
-			name: transition.label,
-			style: {
-				text: transition.label,
-				size: 14,
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
-			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'set_transition_type',
-							options: {
-								transitions: transition.id,
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'current_transition',
-					options: {
-						transition: transition.id,
-					},
-					style: {
-						bgcolor: Color.Green,
-						color: Color.White,
-					},
-				},
-			],
-		}
 	}
 
 	presets['transitionPrevious'] = {
 		type: 'simple',
-		name: 'Previous Transition',
-		style: {
-			text: 'Previous Transition',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'adjustTransitionType',
-						options: {
-							adjust: 'previous',
-						},
-					},
-				],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
-	presets['transitionAdjustCurrent'] = {
-		type: 'simple',
-		name: 'Current Transition',
-		style: {
-			text: 'Current Transition $(obs:current_transition)',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
-	presets['transitionNext'] = {
-		type: 'simple',
-		name: 'Next Transition',
-		style: {
-			text: 'Next Transition',
-			size: '14',
-			color: Color.White,
-			bgcolor: Color.Black,
-			show_topbar: false,
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'adjustTransitionType',
-						options: {
-							adjust: 'next',
-						},
-					},
-				],
-				up: [],
-			},
-		],
+		name: 'Previous Transition Type',
+		style: baseStyle({ text: 'Previous\nTransition' }),
+		steps: [{ down: [{ actionId: 'adjustTransitionType', options: { adjust: 'previous' } }], up: [] }],
 		feedbacks: [],
 	}
 
-	for (const transition of self.obsState.transitionList) {
-		presets[`quickTransition_${transition.id}`] = {
+	presets['transitionCurrentInfo'] = {
+		type: 'simple',
+		name: 'Current Transition Info',
+		style: baseStyle({ text: 'Transition\n$(obs:current_transition)\n$(obs:transition_duration)ms' }),
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['transitionDecreaseDuration'] = {
+		type: 'simple',
+		name: 'Decrease transition time (-50ms)',
+		style: baseStyle({ text: 'Duration\n-50ms' }),
+		steps: [{ down: [{ actionId: 'adjust_transition_duration', options: { amount: -50 } }], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['transitionIncreaseDuration'] = {
+		type: 'simple',
+		name: 'Increase transition time (+50ms)',
+		style: baseStyle({ text: 'Duration\n+50ms' }),
+		steps: [{ down: [{ actionId: 'adjust_transition_duration', options: { amount: 50 } }], up: [] }],
+		feedbacks: [],
+	}
+
+	const durationIds: string[] = []
+	for (let time = 500; time < 5100; time += 500) {
+		const id = `transitionDurationSet${time}`
+		durationIds.push(id)
+		presets[id] = {
 			type: 'simple',
-			name: transition.label,
-			style: {
-				text: transition.label,
-				size: 14,
-				color: Color.White,
-				bgcolor: Color.Black,
-				show_topbar: false,
-			},
-			steps: [
-				{
-					down: [
-						{
-							actionId: 'quick_transition',
-							options: {
-								transition: transition.id,
-								customDuration: false,
-								transition_time: 500,
-							},
-						},
-					],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'transition_active',
-					options: {},
-					style: {
-						bgcolor: Color.Green,
-						color: Color.White,
-					},
-				},
-			],
+			name: `Transition Set ${time}ms`,
+			style: baseStyle({ text: `${time}ms` }),
+			steps: [{ down: [{ actionId: 'set_transition_duration', options: { duration: time } }], up: [] }],
+			feedbacks: [{ feedbackId: 'transition_duration', options: { duration: time }, style: styleActive() }],
 		}
 	}
 
-	return presets
+	const transitionValues = self.obsState.transitionList.map((t) => ({ name: t.label, value: t.id }))
+
+	const sections: CompanionPresetSection[] = [
+		{
+			id: 'transitions',
+			name: 'Transitions',
+			definitions: [
+				{ id: 'transitions-do', name: 'Auto', type: 'simple', presets: ['transitionAuto'] },
+				{
+					id: 'transitions-type',
+					name: 'Set Type',
+					type: 'template',
+					presetId: 'tpl_setTransition',
+					templateVariableName: 'transition',
+					templateValues: transitionValues,
+				},
+				{
+					id: 'transitions-quick',
+					name: 'Quick Transition',
+					type: 'template',
+					presetId: 'tpl_quickTransition',
+					templateVariableName: 'transition',
+					templateValues: transitionValues,
+				},
+				{
+					id: 'transitions-type-nav',
+					name: 'Navigation',
+					type: 'simple',
+					presets: ['transitionNext', 'transitionPrevious'],
+				},
+				{
+					id: 'transitions-duration',
+					name: 'Duration',
+					type: 'simple',
+					presets: [
+						'transitionCurrentInfo',
+						'transitionDecreaseDuration',
+						'transitionIncreaseDuration',
+						...durationIds,
+					],
+				},
+			],
+		},
+	]
+
+	return { presets, sections }
 }

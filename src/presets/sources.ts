@@ -1,120 +1,102 @@
-import { CompanionPresetDefinitions } from '@companion-module/base'
-import { Color } from '../utils.js'
+import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { baseStyle, styleProgram, stylePreview } from './style.js'
 
-export function getSourcePresets(self: OBSInstance): CompanionPresetDefinitions {
+/**
+ * Source presets. A per-source status template shows program/preview tally (across any
+ * scene), plus a few example action buttons the user points at a specific source.
+ * Filter and scene-item-visibility families are intentionally omitted — they need an
+ * extra argument (scene / source+filter) a single template variable can't supply.
+ */
+export function getSourcePresets(self: OBSInstance): {
+	presets: CompanionPresetDefinitions
+	sections: CompanionPresetSection[]
+} {
 	const presets: CompanionPresetDefinitions = {}
 
-	const processedSources = new Set<string>()
-
-	for (const scene of self.obsState.sceneChoices) {
-		const sceneName = scene.id as string
-		const sceneItems = self.obsState.findSceneItemsByName(sceneName) ?? []
-
-		if (sceneItems.length > 0) {
-			for (const item of sceneItems) {
-				const sourcesToProcess = []
-				if (item.isGroup) {
-					const groupItems = self.obsState.findGroupItemsByName(item.sourceName) ?? []
-					sourcesToProcess.push(...groupItems)
-				} else {
-					sourcesToProcess.push(item)
-				}
-
-				for (const sourceItem of sourcesToProcess) {
-					processedSources.add(sourceItem.sourceUuid)
-					presets[`sourceStatus_${sceneName}_${sourceItem.sourceName}`] = {
-						type: 'simple',
-						name: `${sourceItem.sourceName} Status (${scene.label})`,
-						style: {
-							text: sourceItem.sourceName,
-							size: 'auto',
-							color: Color.White,
-							bgcolor: Color.Black,
-							show_topbar: false,
-						},
-						steps: [
-							{
-								down: [],
-								up: [],
-							},
-						],
-						feedbacks: [
-							{
-								feedbackId: 'scene_item_previewed',
-								options: {
-									source: sourceItem.sourceName,
-								},
-								style: {
-									bgcolor: Color.Green,
-									color: Color.White,
-								},
-							},
-							{
-								feedbackId: 'scene_item_active',
-								options: {
-									scene: 'anyScene',
-									source: sourceItem.sourceName,
-								},
-								style: {
-									bgcolor: Color.Red,
-									color: Color.White,
-								},
-							},
-						],
-					}
-				}
-			}
-		}
+	presets['tpl_sourceStatus'] = {
+		type: 'simple',
+		name: 'Source Status (tally)',
+		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Source name' }],
+		style: baseStyle({ text: '$(local:source)' }),
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			// Preview first so program (red) wins when a source is live in both.
+			{ feedbackId: 'scene_item_previewed', options: { source: '$(local:source)' }, style: stylePreview() },
+			{
+				feedbackId: 'scene_item_active',
+				options: { anyScene: true, source: '$(local:source)' },
+				style: styleProgram(),
+			},
+		],
 	}
 
-	const otherSources = self.obsState.sourceChoices.filter((s) => {
-		const source = self.obsState.findSourceByName(s.id as string)
-		return source ? !processedSources.has(source.sourceUuid) : true
-	})
-	if (otherSources.length > 0) {
-		for (const source of otherSources) {
-			presets[`sourceStatus_other_${source.id}`] = {
-				type: 'simple',
-				name: `${source.label} Status`,
-				style: {
-					text: source.label,
-					size: 'auto',
-					color: Color.White,
-					bgcolor: Color.Black,
+	// Example action presets — the user selects the specific source after dropping them.
+	presets['refreshBrowserSource'] = {
+		type: 'simple',
+		name: 'Refresh Browser Source (example)',
+		style: baseStyle({ text: 'Refresh\nBrowser' }),
+		steps: [{ down: [{ actionId: 'refresh_browser_source', options: {} }], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['resetCaptureDevice'] = {
+		type: 'simple',
+		name: 'Reset Capture Device (example)',
+		style: baseStyle({ text: 'Reset\nCapture' }),
+		steps: [{ down: [{ actionId: 'resetCaptureDevice', options: {} }], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['takeScreenshot'] = {
+		type: 'simple',
+		name: 'Take Screenshot (Program)',
+		style: baseStyle({ text: 'Take\nScreenshot' }),
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'take_screenshot',
+						options: {
+							useProgramScene: true,
+							format: 'png',
+							compression: 0,
+							customName: false,
+							path: '',
+							prefix: 'Screenshot_$(internal:date_iso)_$(internal:time_hms) ',
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	const sourceValues = self.obsState.sourceChoices.map((s) => ({ name: s.label, value: s.id }))
+
+	const sections: CompanionPresetSection[] = [
+		{
+			id: 'sources',
+			name: 'Sources',
+			definitions: [
+				{
+					id: 'sources-status',
+					name: 'Status (tally)',
+					type: 'template',
+					presetId: 'tpl_sourceStatus',
+					templateVariableName: 'source',
+					templateValues: sourceValues,
 				},
-				steps: [
-					{
-						down: [],
-						up: [],
-					},
-				],
-				feedbacks: [
-					{
-						feedbackId: 'scene_item_previewed',
-						options: {
-							source: source.id,
-						},
-						style: {
-							bgcolor: Color.Green,
-							color: Color.White,
-						},
-					},
-					{
-						feedbackId: 'scene_item_active',
-						options: {
-							scene: 'anyScene',
-							source: source.id,
-						},
-						style: {
-							bgcolor: Color.Red,
-							color: Color.White,
-						},
-					},
-				],
-			}
-		}
-	}
+				{
+					id: 'sources-actions',
+					name: 'Actions',
+					type: 'simple',
+					presets: ['refreshBrowserSource', 'resetCaptureDevice', 'takeScreenshot'],
+				},
+			],
+		},
+	]
 
-	return presets
+	return { presets, sections }
 }
