@@ -9,6 +9,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 		type: 'advanced',
 		name: 'Scene - Preview / Program',
 		description: 'If a scene is in preview or program, change colors of the button. Useful for tally.',
+		affectedProperties: ['color', 'bgcolor'],
 		options: [
 			{
 				type: 'dropdown',
