@@ -699,6 +699,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				isVisibleExpression: `!$(options:customName)`,
 			},
 		],
+		hasResult: true,
 		callback: async (action) => {
 			let sourceName: string
 			if (opt<any>(action, 'useProgramScene')) {
@@ -719,12 +720,15 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 
 			const quality = opt<any>(action, 'compression') === 0 ? -1 : opt<any>(action, 'compression')
 
-			await self.obs.sendRequest('SaveSourceScreenshot', {
+			const res = await self.obs.sendRequest('SaveSourceScreenshot', {
 				sourceName: sourceName,
 				imageFormat: opt<string>(action, 'format'),
 				imageFilePath: filePath,
 				imageCompressionQuality: quality as number,
 			})
+			// SaveSourceScreenshot returns no data; surface the path it was written to so a
+			// following action can reference the file.
+			return res !== undefined ? (filePath ?? null) : null
 		},
 	}
 

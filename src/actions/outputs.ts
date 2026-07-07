@@ -50,8 +50,10 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		name: 'Recording - Toggle',
 		description: 'Toggles between recording and stopped states',
 		options: [],
+		hasResult: true,
 		callback: async () => {
-			await self.obs.sendRequest('ToggleRecord')
+			const res = await self.obs.sendRequest('ToggleRecord')
+			return res?.outputActive ?? null
 		},
 	}
 	actions['SplitRecordFile'] = {
@@ -101,8 +103,10 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		name: 'Stream - Toggle',
 		description: 'Toggles between streaming and off-air states',
 		options: [],
+		hasResult: true,
 		callback: async () => {
-			await self.obs.sendRequest('ToggleStream')
+			const res = await self.obs.sendRequest('ToggleStream')
+			return res?.outputActive ?? null
 		},
 	}
 	actions['set_stream_settings'] = {
@@ -242,8 +246,10 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 		name: 'Replay Buffer - Toggle',
 		description: 'Toggles the replay buffer output state',
 		options: [],
+		hasResult: true,
 		callback: async () => {
-			await self.obs.sendRequest('ToggleReplayBuffer')
+			const res = await self.obs.sendRequest('ToggleReplayBuffer')
+			return res?.outputActive ?? null
 		},
 	}
 	//Outputs
@@ -306,13 +312,16 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 				choices: self.obsState.outputList,
 			},
 		],
+		hasResult: true,
 		callback: async (action) => {
 			if (opt<any>(action, 'output') === 'virtualcam_output') {
-				await self.obs.sendRequest('ToggleVirtualCam')
+				const res = await self.obs.sendRequest('ToggleVirtualCam')
+				return res?.outputActive ?? null
 			} else {
-				await self.obs.sendRequest('ToggleOutput', {
+				const res = await self.obs.sendRequest('ToggleOutput', {
 					outputName: opt<string>(action, 'output'),
 				})
+				return res?.outputActive ?? null
 			}
 		},
 	}

@@ -162,6 +162,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				default: '{"sceneName": "Scene 1"}',
 			},
 		],
+		hasResult: true,
 		callback: async (action) => {
 			const command = opt<string>(action, 'command').replace(/ /g, '')
 			let arg: any = ''
@@ -172,15 +173,17 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 					arg = JSON.parse(arg)
 				} catch (e: any) {
 					logger.warn(`Request data must be formatted as valid JSON. ${e.message}`)
-					return
+					return null
 				}
 			}
 
 			try {
 				const res = await self.obs.sendRequest(command as any, arg ? arg : {})
 				logger.debug(`Custom Command Response: ${JSON.stringify(res)}`)
+				return res ?? null
 			} catch (e: any) {
 				logger.warn(`Custom Command Error: ${e.message}`)
+				return null
 			}
 		},
 	}
@@ -222,7 +225,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 					requestData = JSON.parse(requestData)
 				} catch (e: any) {
 					logger.warn(`Request data must be formatted as valid JSON. ${e.message}`)
-					return
+					return null
 				}
 			}
 			const data = {
@@ -230,8 +233,10 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				requestType: requestType,
 				requestData: requestData,
 			}
-			await self.obs.sendRequest('CallVendorRequest', data)
+			const res = await self.obs.sendRequest('CallVendorRequest', data)
+			return res?.responseData ?? null
 		},
+		hasResult: true,
 	}
 
 	//Open Windows

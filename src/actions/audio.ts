@@ -28,8 +28,10 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
 				choices: self.obsState.audioSourceList,
 			},
 		],
+		hasResult: true,
 		callback: async (action) => {
-			await self.obs.sendRequest('ToggleInputMute', { inputName: opt<string>(action, 'source') })
+			const res = await self.obs.sendRequest('ToggleInputMute', { inputName: opt<string>(action, 'source') })
+			return res?.inputMuted ?? null
 		},
 	}
 	actions['set_source_mute'] = {
