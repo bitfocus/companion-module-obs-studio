@@ -134,9 +134,10 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			} else {
 				const source = self.obsState.findSourceByName(sourceName)
 				if (source?.groupedSource) {
-					const groupName = source.groupName
-					if (groupName) {
-						const group = self.obsState.findGroupItemsByName(groupName)
+					// source.groupName holds the group's UUID, so look up groups by UUID.
+					const groupUuid = source.groupName
+					if (groupUuid) {
+						const group = self.obsState.getGroupItems(groupUuid)
 						const sceneItem = group?.find((item) => item.sourceUuid === source.sourceUuid)
 						if (sceneItem) {
 							return sceneItem.sceneItemEnabled

@@ -32,6 +32,20 @@ export class OBSApi {
 	// Guards against overlapping connection attempts
 	private connecting = false
 
+	// Volume meters are only subscribed while at least one audioPeaking/audioMeter
+	// feedback exists. Keyed by feedback instance id so repeated subscribes (e.g. on a
+	// definitions rebuild) are idempotent.
+	private meterSubscribers = new Set<string>()
+	private metersActive = false
+	private lastMeterFeedbackCheck = 0
+	private meterFeedbackPending = false
+	private static readonly METER_FEEDBACK_THROTTLE_MS = 100
+
+	// Everything except the high-frequency volume meters, which are toggled on demand.
+	private get baseEventSubscriptions(): number {
+		return EventSubscription.All | EventSubscription.InputActiveStateChanged | EventSubscription.InputShowStateChanged
+	}
+
 	constructor(self: OBSInstance) {
 		this.self = self
 	}
@@ -50,26 +64,28 @@ export class OBSApi {
 			return
 		}
 		this.connecting = true
-		if (this.self.socket) {
-			this.self.socket.removeAllListeners()
-			await this.self.socket.disconnect()
-		} else {
-			this.self.socket = new OBSWebSocket()
-		}
 		try {
+			// Disconnecting is inside the try so a rejected disconnect can't leave
+			// `connecting` stuck true (which would wedge every future reconnect attempt).
+			if (this.self.socket) {
+				this.self.socket.removeAllListeners()
+				await this.self.socket.disconnect()
+			} else {
+				this.self.socket = new OBSWebSocket()
+			}
+			const metersNeeded = this.meterSubscribers.size > 0
 			const { obsWebSocketVersion } = await this.self.socket.connect(
 				`${this.self.config.scheme ?? 'ws'}://${this.self.config.host}:${this.self.config.port}`,
 				this.self.secrets.pass,
 				{
 					// SceneItemTransformChanged is intentionally skipped
-					eventSubscriptions:
-						EventSubscription.All |
-						EventSubscription.InputActiveStateChanged |
-						EventSubscription.InputShowStateChanged |
-						EventSubscription.InputVolumeMeters,
+					eventSubscriptions: metersNeeded
+						? this.baseEventSubscriptions | EventSubscription.InputVolumeMeters
+						: this.baseEventSubscriptions,
 					rpcVersion: 1,
 				},
 			)
+			this.metersActive = metersNeeded
 			if (obsWebSocketVersion) {
 				this.self.updateStatus(InstanceStatus.Ok)
 				this.stopReconnectionPoll()
@@ -97,8 +113,10 @@ export class OBSApi {
 
 					//Build Scene Collection Parameters
 					await this.buildSceneTransitionList()
-					await this.buildSpecialInputs()
+					// buildSceneList clears the source map, so the special (global audio)
+					// inputs must be (re)added afterwards or they vanish from choices/variables.
 					await this.buildSceneList()
+					await this.buildSpecialInputs()
 				} else {
 					//throw an error if initial info returns false.
 					throw new Error('could not get OBS info')
@@ -145,6 +163,10 @@ export class OBSApi {
 	}
 
 	public async disconnectOBS(): Promise<void> {
+		// Always stop the reconnection poll, even without a socket — otherwise a config
+		// change made while reconnecting leaves the old poll hammering a stale address.
+		this.stopReconnectionPoll()
+		this.metersActive = false
 		if (this.self.socket) {
 			//Clear all active polls
 			this.stopStatsPoll()
@@ -154,6 +176,29 @@ export class OBSApi {
 			//Disconnect from OBS
 			await this.self.socket.disconnect()
 		}
+	}
+
+	// ═══ Volume Meter Subscription (audioPeaking / audioMeter feedbacks) ═══
+	public addMeterSubscriber(feedbackId: string): void {
+		const wasEmpty = this.meterSubscribers.size === 0
+		this.meterSubscribers.add(feedbackId)
+		if (wasEmpty) this.applyMeterSubscription(true)
+	}
+
+	public removeMeterSubscriber(feedbackId: string): void {
+		this.meterSubscribers.delete(feedbackId)
+		if (this.meterSubscribers.size === 0) this.applyMeterSubscription(false)
+	}
+
+	private applyMeterSubscription(enable: boolean): void {
+		if (!this.self.socket || this.metersActive === enable) return
+		this.metersActive = enable
+		const subscriptions = enable
+			? this.baseEventSubscriptions | EventSubscription.InputVolumeMeters
+			: this.baseEventSubscriptions
+		void this.self.socket.reidentify({ eventSubscriptions: subscriptions }).catch((error: any) => {
+			logger.debug(`Failed to update meter subscription (${error?.message ?? error})`)
+		})
 	}
 
 	public async connectionLost(): Promise<void> {
@@ -422,7 +467,9 @@ export class OBSApi {
 					const inputName = input
 					const inputInfo = inputMap.get(inputName)
 					const inputUuid = inputInfo?.inputUuid ?? inputName
-					this.addSource(inputUuid, inputName)
+					// Forward the input kind so fetchSourcesData requests audio state (mute,
+					// volume, monitor) for these global audio inputs.
+					this.addSource(inputUuid, inputName, inputInfo?.inputKind)
 					specialUuids.push(inputUuid)
 				}
 			}
@@ -438,8 +485,9 @@ export class OBSApi {
 		if (outputData) {
 			outputData.outputs?.forEach((output: any) => {
 				if (output) this.self.states.outputs.set(output.outputName, output)
-				void this.getOutputStatus(output.outputName)
 			})
+			// One batched status request instead of N individual GetOutputStatus calls.
+			void this.getAllOutputStatuses()
 			void this.self.updateActionsFeedbacksVariables()
 		}
 	}
@@ -460,37 +508,33 @@ export class OBSApi {
 	}
 
 	public async getStats(): Promise<void> {
-		try {
-			const data = await this.sendRequest('GetStats')
-			if (data) {
-				this.self.states.stats = data as any
+		// Note: sendRequest swallows errors and returns undefined, so connection loss is
+		// handled via the ConnectionClosed listener, not a catch here.
+		const data = await this.sendRequest('GetStats')
+		if (data) {
+			this.self.states.stats = data as any
 
-				const freeSpaceMB = utils.roundNumber(data.availableDiskSpace, 0)
-				let freeSpace: number | string = freeSpaceMB
-				if (freeSpace > 1000) {
-					freeSpace = `${utils.roundNumber(freeSpace / 1000, 0)} GB`
-				} else {
-					freeSpace = `${utils.roundNumber(freeSpace, 0)} MB`
-				}
+			const freeSpaceMB = utils.roundNumber(data.availableDiskSpace, 0)
+			let freeSpace: number | string = freeSpaceMB
+			if (freeSpace > 1000) {
+				freeSpace = `${utils.roundNumber(freeSpace / 1000, 0)} GB`
+			} else {
+				freeSpace = `${utils.roundNumber(freeSpace, 0)} MB`
+			}
 
-				this.self.setVariableValues({
-					fps: utils.roundNumber(data.activeFps, 2),
-					render_total_frames: data.renderTotalFrames,
-					render_missed_frames: data.renderSkippedFrames,
-					output_total_frames: data.outputTotalFrames,
-					output_skipped_frames: data.outputSkippedFrames,
-					average_frame_time: utils.roundNumber(data.averageFrameRenderTime, 2),
-					cpu_usage: `${utils.roundNumber(data.cpuUsage, 2)}%`,
-					memory_usage: `${utils.roundNumber(data.memoryUsage, 0)} MB`,
-					free_disk_space: freeSpace,
-					free_disk_space_mb: freeSpaceMB,
-				})
-				this.self.checkFeedbacks('freeDiskSpaceRemaining')
-			}
-		} catch (error: any) {
-			if (error?.message.match(/(Not connected)/i)) {
-				void this.connectionLost()
-			}
+			this.self.setVariableValues({
+				fps: utils.roundNumber(data.activeFps, 2),
+				render_total_frames: data.renderTotalFrames,
+				render_missed_frames: data.renderSkippedFrames,
+				output_total_frames: data.outputTotalFrames,
+				output_skipped_frames: data.outputSkippedFrames,
+				average_frame_time: utils.roundNumber(data.averageFrameRenderTime, 2),
+				cpu_usage: `${utils.roundNumber(data.cpuUsage, 2)}%`,
+				memory_usage: `${utils.roundNumber(data.memoryUsage, 0)} MB`,
+				free_disk_space: freeSpace,
+				free_disk_space_mb: freeSpaceMB,
+			})
+			this.self.checkFeedbacks('freeDiskSpaceRemaining')
 		}
 	}
 
@@ -931,6 +975,22 @@ export class OBSApi {
 		}
 	}
 
+	// Handles a single SceneItemCreated: refresh the scene's item list (one request) but
+	// only fetch full source data for the new source, instead of re-fetching every source
+	// in the scene as buildSourceList does. Matters when adding one item to a large scene.
+	public async addSceneItem(sceneUuid: string, sourceUuid: string): Promise<void> {
+		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
+		if (data) {
+			this.self.states.sceneItems.set(sceneUuid, data.sceneItems as any)
+			const sceneItems = data.sceneItems as any[]
+			// addSource is a no-op for sources already known, so this only registers the new one.
+			for (const item of sceneItems) {
+				this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
+			}
+			await this.fetchSourcesData([sourceUuid])
+		}
+	}
+
 	public async getGroupInfo(groupUuid: string): Promise<void> {
 		const data = await this.sendRequest('GetGroupSceneItemList', { sceneUuid: groupUuid })
 		if (data) {
@@ -1090,6 +1150,15 @@ export class OBSApi {
 			this.self.setVariableValues({ [`current_text_${name}`]: source.text })
 		} else if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 			if (!this.self.mediaPoll) void this.startMediaPoll()
+			// Keep the media file name variable in sync when settings change, rather than
+			// waiting for the next full definitions rebuild.
+			let file = ''
+			if (settings?.playlist) {
+				file = settings.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
+			} else if (settings?.local_file) {
+				file = settings.local_file.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
+			}
+			this.self.setVariableValues({ [`media_file_name_${name}`]: file })
 		} else if (inputKind === 'image_source') {
 			source.imageFile = settings?.file ? (settings.file.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '') : ''
 			this.self.setVariableValues({ [`image_file_name_${name}`]: source.imageFile })
@@ -1116,26 +1185,32 @@ export class OBSApi {
 		inputs: Array<{ inputUuid: string; inputLevelsMul: Array<[number, number, number]> }>
 	}): void {
 		this.self.states.audioPeak.clear()
-		let updated = false
+		let changed = false
 		data.inputs.forEach((input) => {
 			const channel = input.inputLevelsMul[0]
-			if (channel) {
-				const channelPeak = channel?.[1]
-				if (channelPeak && channelPeak > 0) {
-					const dbPeak = Math.round(20.0 * Math.log10(channelPeak))
-					if (isFinite(dbPeak)) {
-						this.self.states.audioPeak.set(input.inputUuid, dbPeak)
-						const source = this.self.states.sources.get(input.inputUuid)
-						if (source) {
-							source.peak = dbPeak
-						}
-						updated = true
-					}
-				}
+			// Floor silent/absent inputs to the bottom of the range so a source that goes
+			// quiet resets instead of keeping its last loud peak (which left audioPeaking on).
+			let dbPeak = -100
+			const channelPeak = channel?.[1]
+			if (channelPeak && channelPeak > 0) {
+				const computed = Math.round(20.0 * Math.log10(channelPeak))
+				if (isFinite(computed)) dbPeak = computed
+			}
+			this.self.states.audioPeak.set(input.inputUuid, dbPeak)
+			const source = this.self.states.sources.get(input.inputUuid)
+			if (source) {
+				if (source.peak !== dbPeak) changed = true
+				source.peak = dbPeak
 			}
 		})
-		// Re-evaluate feedbacks once per meter tick rather than once per input
-		if (updated) {
+		// Meters arrive ~20×/second; only re-evaluate feedbacks when a level actually
+		// changed, and throttle to ~10Hz. Meters keep firing (even in silence) so a pending
+		// change always flushes on a later tick.
+		if (changed) this.meterFeedbackPending = true
+		const now = Date.now()
+		if (this.meterFeedbackPending && now - this.lastMeterFeedbackCheck >= OBSApi.METER_FEEDBACK_THROTTLE_MS) {
+			this.lastMeterFeedbackCheck = now
+			this.meterFeedbackPending = false
 			this.self.checkFeedbacks('audioPeaking', 'audioMeter')
 		}
 	}

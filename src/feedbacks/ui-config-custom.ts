@@ -90,5 +90,57 @@ export function getUiConfigCustomFeedbacks(self: OBSInstance): CompanionFeedback
 		},
 	}
 
+	feedbacks['vendorEvent'] = {
+		type: 'boolean',
+		name: 'Vendor Event',
+		description: 'Change the style of the button based on third party vendor events',
+		defaultStyle: {
+			color: Color.White,
+			bgcolor: Color.Green,
+		},
+		options: [
+			{
+				type: 'textinput',
+				label: 'vendorName',
+				id: 'vendorName',
+				default: 'downstream-keyer',
+			},
+			{
+				type: 'textinput',
+				label: 'eventType',
+				id: 'eventType',
+				default: 'dsk_scene_changed',
+			},
+			{
+				type: 'textinput',
+				label: 'eventData Key',
+				id: 'eventDataKey',
+				default: 'new_scene',
+			},
+			{
+				type: 'textinput',
+				label: 'eventData Value',
+				id: 'eventDataValue',
+				default: 'Scene 1',
+			},
+		],
+		callback: (feedback) => {
+			const event = self.states.vendorEvent as {
+				vendorName?: string
+				eventType?: string
+				eventData?: Record<string, unknown>
+			}
+			if (
+				event?.vendorName === opt<string>(feedback, 'vendorName') &&
+				event?.eventType === opt<string>(feedback, 'eventType') &&
+				event?.eventData
+			) {
+				const key = event.eventData[opt<string>(feedback, 'eventDataKey')]
+				return key !== undefined && key === opt<string>(feedback, 'eventDataValue')
+			}
+			return false
+		},
+	}
+
 	return feedbacks
 }

@@ -68,7 +68,11 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.setVariableValues({ scene_collection: self.states.currentSceneCollection })
 		self.states.sceneCollectionChanging = false
 		self.obsState.resetSceneSourceStates()
-		void self.obs.buildSceneList()
+		// buildSceneList clears sources; re-add the special (global audio) inputs after it
+		// resolves so they survive a scene collection switch.
+		void self.obs.buildSceneList().then(() => {
+			void self.obs.buildSpecialInputs()
+		})
 		void self.obs.buildSceneTransitionList()
 		void self.obs.obsInfo()
 	})
@@ -400,7 +404,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemCreated', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
-			void self.obs.buildSourceList(data.sceneUuid).then(() => {
+			void self.obs.addSceneItem(data.sceneUuid, data.sourceUuid).then(() => {
 				void self.updateActionsFeedbacksVariables()
 			})
 		}
@@ -578,8 +582,10 @@ const MEDIA_ACTION_RECORDER_MAP: Partial<
 // ═══ Media Listeners ═══
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('MediaInputPlaybackStarted', (data) => {
-		self.states.currentMedia = data.inputUuid
 		const source = self.states.sources.get(data.inputUuid)
+		// currentMedia is consumed by media actions as an input *name* (via findSourceByName
+		// and inputName), so store the name, not the UUID.
+		self.states.currentMedia = source?.sourceName ?? ''
 		if (source) setMediaStatus(self, source, data.inputUuid, OBSMediaStatus.Playing)
 	})
 	obs.on('MediaInputPlaybackEnded', (data) => {

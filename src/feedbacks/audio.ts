@@ -128,6 +128,9 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
+			// Registering here (idempotent via a Set) tells the API to keep the volume-meter
+			// event subscription alive while this feedback exists; unsubscribe drops it.
+			self.obs.addMeterSubscriber(feedback.id)
 			const sourceName = opt<string>(feedback, 'source')
 			const source = self.obsState.findSourceByName(sourceName)
 			if (source?.peak && source.peak > opt<number>(feedback, 'threshold')) {
@@ -135,6 +138,51 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			}
 			return false
 		},
+		unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
+	}
+
+	feedbacks['audioMeter'] = {
+		type: 'advanced',
+		name: 'Audio - Meter',
+		description: 'Change the style of the button to show colors based on peak values, similar to the OBS audio meter',
+		affectedProperties: ['bgcolor'],
+		options: [
+			{
+				type: 'dropdown',
+				allowCustom: true,
+				label: 'Source name',
+				id: 'source',
+				default: self.obsState.audioSourceListDefault,
+				choices: self.obsState.audioSourceList,
+			},
+			{
+				type: 'number',
+				label: 'Threshold (dB)',
+				tooltip:
+					'Minimum value (between -100dB and -21dB) for the feedback to turn green. Color defaults to black for values below this.',
+				id: 'threshold',
+				default: -60,
+				min: -100,
+				max: -21,
+				clampValues: true,
+			},
+		],
+		callback: (feedback) => {
+			self.obs.addMeterSubscriber(feedback.id)
+			const sourceName = opt<string>(feedback, 'source')
+			const peak = self.obsState.findSourceByName(sourceName)?.peak ?? -100
+			const threshold = opt<number>(feedback, 'threshold') ?? -60
+			if (peak > -9) {
+				return { bgcolor: Color.Red }
+			} else if (peak > -20) {
+				return { bgcolor: Color.Orange }
+			} else if (peak > threshold) {
+				return { bgcolor: Color.Green }
+			} else {
+				return { bgcolor: Color.Black }
+			}
+		},
+		unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
 	}
 
 	return feedbacks

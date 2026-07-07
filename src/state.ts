@@ -338,4 +338,9 @@ export class OBSState {
 		if (source) return this.state.groups.get(source.sourceUuid)
 		return undefined
 	}
+
+	// groups are keyed by group UUID; used where a source already carries its group's UUID.
+	public getGroupItems(groupUuid: string): import('./types.js').OBSSceneItem[] | undefined {
+		return this.state.groups.get(groupUuid)
+	}
 }

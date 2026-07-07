@@ -14,6 +14,7 @@ export type MockOBSWebSocket = OBSWebSocket & {
 	callBatch: Mock
 	connect: Mock
 	disconnect: Mock
+	reidentify: Mock
 	/** Emit an OBS event to any listeners registered via `socket.on(...)`. */
 	emit(event: string, ...args: unknown[]): boolean
 }
@@ -24,5 +25,6 @@ export function makeMockSocket(): MockOBSWebSocket {
 	socket.callBatch = vi.fn().mockResolvedValue([])
 	socket.connect = vi.fn().mockResolvedValue({ obsWebSocketVersion: '5.0.0', rpcVersion: 1 })
 	socket.disconnect = vi.fn().mockResolvedValue(undefined)
+	socket.reidentify = vi.fn().mockResolvedValue(undefined)
 	return socket
 }
