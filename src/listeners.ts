@@ -13,9 +13,7 @@ import {
 
 const logger = createModuleLogger('Listeners')
 
-// ══════════════════════════════════════════════════════════════════════════
-// ═══ OBS Listeners ════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════════════
+// OBS Listeners
 export function initOBSListeners(self: OBSInstance): void {
 	const obs = self.socket
 
@@ -31,7 +29,7 @@ export function initOBSListeners(self: OBSInstance): void {
 	setupUIListeners(self, obs)
 }
 
-// ═══ General Listeners ═══
+// General Listeners
 function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.once('ExitStarted', () => {
 		void self.obs.connectionLost()
@@ -56,7 +54,7 @@ function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
-// ═══ Config Listeners ═══
+// Config Listeners
 function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('CurrentSceneCollectionChanging', () => {
 		self.obs.stopMediaPoll()
@@ -67,8 +65,7 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		void self.checkFeedbacks('scene_collection_active')
 		self.setVariableValues({ scene_collection: self.states.currentSceneCollection })
 		self.states.sceneCollectionChanging = false
-		// buildSceneList resets scene/source state itself (bumping the epoch, so stale
-		// in-flight responses are discarded) and registers all inputs via GetInputList.
+		// buildSceneList resets state and registers all inputs.
 		void self.obs.buildSceneList()
 		void self.obs.buildSceneTransitionList()
 		void self.obs.obsInfo()
@@ -88,7 +85,7 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
-// ═══ Scene Listeners ═══
+// Scene Listeners
 function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneCreated', (data) => {
 		if (data?.isGroup === false && self.states.sceneCollectionChanging === false) {
@@ -142,17 +139,15 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			})
 		}
 		self.obsState.invalidateSceneNameIndex()
-		// Reorders change the scene_N position variables and choice ordering; refresh
-		// the (debounced) definitions so they don't go stale until the next event.
+		// Refresh definitions so reordered scene positions don't go stale.
 		void self.updateActionsFeedbacksVariables()
 	})
 }
 
-// ═══ Input Listeners ═══
+// Input Listeners
 function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputCreated', (data) => {
-		// During a scene collection load OBS fires InputCreated for every input;
-		// those are picked up in bulk by buildSceneList, so skip the per-input work.
+		// Skip per-input work during bulk scene collection loads.
 		if (self.states.sceneCollectionChanging) return
 		self.obs.addSource(data.inputUuid, data.inputName, data.inputKind)
 		void self.obs.fetchSourcesData([data.inputUuid]).then(() => {
@@ -161,8 +156,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('InputRemoved', (data) => {
 		self.states.sources.delete(data.inputUuid)
-		// Drop associated state too, or filters/peaks of removed inputs linger in the
-		// filter choice list and peak map until the next scene collection change.
+		// Clear filters and peak state for removed input.
 		self.states.sourceFilters.delete(data.inputUuid)
 		self.states.audioPeak.delete(data.inputUuid)
 		self.obsState.invalidateSourceNameIndex()
@@ -294,7 +288,7 @@ function updateSourceProperty(
 	}
 }
 
-// ═══ Transition Listeners ═══
+// Transition Listeners
 function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('CurrentSceneTransitionChanged', (data) => {
 		void (async () => {
@@ -341,7 +335,7 @@ function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {
 	})
 }
 
-// ═══ Filter Listeners ═══
+// Filter Listeners
 function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
@@ -363,8 +357,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		}
 	})
 	obs.on('SourceFilterSettingsChanged', (data) => {
-		// Keep the cached filter settings in sync when changed in OBS or by another
-		// client, so reads in the actions layer don't go stale.
+		// Sync cached filter settings to prevent stale reads in the actions layer.
 		const source = self.obsState.findSourceByName(data.sourceName)
 		if (source) {
 			const filter = self.states.sourceFilters.get(source.sourceUuid)?.find((f) => f.filterName === data.filterName)
@@ -397,7 +390,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
-// ═══ Scene Item Listeners ═══
+// Scene Item Listeners
 function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemCreated', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
@@ -408,8 +401,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('SceneItemRemoved', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
-			// data.sceneUuid is the container (scene or group) the item was in; both live
-			// in the one sceneItems map.
+			// sceneUuid represents the container (scene or group) in the sceneItems map.
 			const items = self.states.sceneItems.get(data.sceneUuid)
 			if (items) {
 				const itemIndex = items.findIndex((item) => item.sceneItemId === data.sceneItemId)
@@ -450,15 +442,14 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemTransformChanged', () => {})
 }
 
-// ═══ Output Listeners ═══
+// Output Listeners
 function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StreamStateChanged', (data) => {
 		const outputState = data.outputState as OBSStreamingState
 		self.states.streaming = data.outputActive
 		self.states.streamReconnecting = outputState === OBSStreamingState.Reconnecting
 
-		// Reflect reconnect transitions in the streaming label; otherwise fall back
-		// to the active/off-air boolean.
+		// Reflect reconnect transitions or fall back to active status.
 		const streamingState = self.states.streamReconnecting
 			? OBSStreamingState.Reconnecting
 			: self.states.streaming
@@ -474,8 +465,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				stream_timecode_ss: '00',
 			})
 		}
-		// Reconnect transitions keep the output active but are not start/stop, so
-		// don't record them as actions.
+		// Skip recording reconnect transitions as start/stop actions.
 		const isReconnectTransition =
 			outputState === OBSStreamingState.Reconnecting || outputState === OBSStreamingState.Reconnected
 		if (!isReconnectTransition) {
@@ -484,9 +474,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('RecordStateChanged', (data) => {
 		const previousRecordingState = self.states.recording
-		// OBS emits OBS_WEBSOCKET_OUTPUT_RESUMED when a paused recording resumes,
-		// which has no OBSRecordingState member — normalize it to Recording so the
-		// label and `recording` feedback reflect an active recording.
+		// Normalize OBS_WEBSOCKET_OUTPUT_RESUMED to Recording state.
 		self.states.recording =
 			data.outputState === 'OBS_WEBSOCKET_OUTPUT_RESUMED'
 				? OBSRecordingState.Recording
@@ -543,14 +531,14 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
-// Sets a source's media status and its corresponding `media_status_*` variable.
+// Set source media status and variable.
 function setMediaStatus(self: OBSInstance, source: OBSSource, uuid: string, status: OBSMediaStatus): void {
 	source.OBSMediaStatus = status
 	const name = source.validName ?? uuid
 	self.setVariableValues({ [`media_status_${name}`]: utils.getOBSMediaStatusLabel(status) })
 }
 
-// Maps an OBS media action to the action-recorder entry it should emit.
+// Map media action to recorder entry.
 const MEDIA_ACTION_RECORDER_MAP: Partial<
 	Record<OBSMediaInputAction, { actionId: string; playPause?: 'play' | 'pause' }>
 > = {
@@ -562,12 +550,11 @@ const MEDIA_ACTION_RECORDER_MAP: Partial<
 	[OBSMediaInputAction.Previous]: { actionId: 'previous_media' },
 }
 
-// ═══ Media Listeners ═══
+// Media Listeners
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('MediaInputPlaybackStarted', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
-		// currentMedia is consumed by media actions as an input *name* (via findSourceByName
-		// and inputName), so store the name, not the UUID.
+		// Store name instead of UUID since currentMedia is consumed as input name.
 		self.states.currentMedia = source?.sourceName ?? ''
 		if (source) setMediaStatus(self, source, data.inputUuid, OBSMediaStatus.Playing)
 	})
@@ -595,7 +582,7 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
-// ═══ UI Listeners ═══
+// UI Listeners
 function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('ScreenshotSaved', (data) => {
 		self.setVariableValues({ screenshot_saved_path: data.savedScreenshotPath })

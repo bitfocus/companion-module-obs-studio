@@ -7,7 +7,7 @@ const logger = createModuleLogger('Actions/Custom')
 export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
-	//Studio Mode
+	// Studio Mode
 	actions['enable_studio_mode'] = {
 		name: 'Studio Mode - Enable',
 		description: 'Enables Studio Mode, which allows for previewing changes before they go live',
@@ -33,7 +33,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
-	//Profile + Scene Collection
+	// Profile + Scene Collection
 	actions['set_profile'] = {
 		name: 'Set Profile',
 		description: 'Switches the current OBS profile',
@@ -71,7 +71,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
-	//Hotkeys
+	// Hotkeys
 	actions['trigger-hotkey'] = {
 		name: 'Hotkey - Trigger by ID',
 		description: 'Triggers a hotkey by its internal name in OBS',
@@ -142,7 +142,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 	}
 
-	//Custom + Vendor Commands
+	// Custom + Vendor Commands
 	actions['custom_command'] = {
 		name: 'Custom Command',
 		description: 'Sends a custom raw request to OBS WebSocket',
@@ -239,7 +239,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		hasResult: true,
 	}
 
-	//Open Windows
+	// Open Windows
 	actions['openInputPropertiesDialog'] = {
 		name: 'Open Window - Source Properties',
 		description: 'Opens the properties dialog for a source within the OBS UI',

@@ -1,34 +1,27 @@
 import type { CompanionButtonStyleProps } from '@companion-module/base'
 import { Color } from '../utils.js'
 
-// Re-export so preset files import colors + style helpers from one place.
+// Re-export colors and style helpers.
 export { Color }
 
-/**
- * Shared styling for all presets. Every preset file builds its button style and
- * feedback styles through these helpers so the look stays consistent: no top bar,
- * one palette, numeric font sizes, and a single multiline convention (`\n`).
- */
+/** Shared styling helpers to ensure consistent preset look and feel. */
 
-// Semantic palette: maps an OBS state to one of the module's base colors.
+// Semantic palette mapping OBS state to base colors.
 export const Style = {
 	idleBg: Color.Black,
 	idleFg: Color.White,
-	program: Color.Red, // on-air / active in program
-	preview: Color.Green, // in preview
-	active: Color.Green, // generic "on" (output active, transition active, unmuted, playing)
-	warning: Color.Orange, // paused / degraded
-	alert: Color.Red, // muted / error / low disk
-	caution: Color.Yellow, // threshold warning
+	program: Color.Red, // Active in program
+	preview: Color.Green, // In preview
+	active: Color.Green, // Generic on/active
+	warning: Color.Orange, // Paused/degraded
+	alert: Color.Red, // Muted/error
+	caution: Color.Yellow, // Threshold warning
 } as const
 
-// Numeric font sizes only — avoids the historical `'14'` (string) vs `14` (number) drift.
+// Numeric font sizes to avoid type drift.
 export const SIZE = { default: 14, auto: 'auto' } as const
 
-/**
- * Base button style. Always white-on-black with the top bar hidden; callers override
- * `text` (and occasionally `size`) via `over`.
- */
+/** Base button style (white-on-black with hidden top bar). */
 export function baseStyle(over: Partial<CompanionButtonStyleProps> = {}): CompanionButtonStyleProps {
 	return {
 		text: '',
@@ -40,7 +33,7 @@ export function baseStyle(over: Partial<CompanionButtonStyleProps> = {}): Compan
 	}
 }
 
-// Feedback style fragments — the style applied to a button while a feedback is active.
+// Feedback style fragments applied when feedback is active.
 type FeedbackStyle = { bgcolor: number; color: number }
 export const styleProgram = (): FeedbackStyle => ({ bgcolor: Style.program, color: Color.White })
 export const stylePreview = (): FeedbackStyle => ({ bgcolor: Style.preview, color: Color.White })

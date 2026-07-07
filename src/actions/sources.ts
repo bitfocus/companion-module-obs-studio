@@ -8,7 +8,7 @@ const logger = createModuleLogger('Actions/Sources')
 export function getSourceActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
-	//Text Sources
+	// Text Sources
 	actions['setText'] = {
 		name: 'Set Source Text',
 		options: [
@@ -282,16 +282,16 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 			const source = self.obsState.findSourceByName(sourceName)
 			const existingSettings = { ...(source?.settings || {}) }
 
-			// Start with all existing settings, then overlay changes
+			// Start with existing settings, then overlay changes.
 			const inputSettings: Record<string, any> = { ...existingSettings }
-			// Always copy font if it exists, as object, even if not changing
+			// Always copy font object if it exists.
 			const existingFont = existingSettings.font ? { ...existingSettings.font } : {}
 			const kind = source?.inputKind || ''
 
 			for (const prop of props) {
 				if (prop === 'text') {
 					let val = opt<string>(action, 'text')
-					// Unescape \n for newlines
+					// Unescape \n for newlines.
 					if (typeof val === 'string') {
 						val = val.replace(/\\n/g, '\n')
 					}
@@ -402,7 +402,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				}
 			}
 
-			// If editing any font property, always send font object including existing settings
+			// Send font object including existing settings when editing font properties.
 			if (
 				props.some((prop) => ['fontSize', 'fontFace', 'fontStyle'].includes(prop)) &&
 				Object.keys(existingFont).length > 0
@@ -493,7 +493,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 		},
 	}
 
-	//Filters
+	// Filters
 	actions['toggle_filter'] = {
 		name: 'Filter - Set Visibility',
 		description: 'Shows, hides, or toggles the enabled state of a filter on a source',
@@ -726,8 +726,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions 
 				imageFilePath: filePath,
 				imageCompressionQuality: quality as number,
 			})
-			// SaveSourceScreenshot returns no data; surface the path it was written to so a
-			// following action can reference the file.
+			// SaveSourceScreenshot returns no data; surface the path for reference.
 			return res !== undefined ? (filePath ?? null) : null
 		},
 	}

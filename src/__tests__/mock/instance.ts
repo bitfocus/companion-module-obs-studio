@@ -6,14 +6,7 @@ import { OBSState } from '../../state.js'
 import { OBSApi } from '../../api.js'
 import { makeMockSocket, type MockOBSWebSocket } from './socket.js'
 
-/**
- * An `OBSInstance` stand-in for tests. It wires the real `OBSApi` and `OBSState` to a
- * {@link MockOBSWebSocket}, and replaces the Companion `InstanceBase` methods that actions,
- * feedbacks, the API layer and listeners call with vitest mocks so they can be asserted on.
- *
- * Because the real `OBSApi` and `OBSState` are used, tests exercise actual request building
- * and state mutation — only the network (socket) and the Companion runtime are faked.
- */
+/** Mock OBSInstance implementation for testing request building and state mutations. */
 export type MockInstance = OBSInstance & {
 	socket: MockOBSWebSocket
 	setVariableValues: Mock
@@ -41,7 +34,7 @@ export function makeMockInstance(config?: Partial<ModuleConfig>, secrets?: Parti
 		get states() {
 			return obsState.state
 		},
-		// InstanceBase methods exercised by the module under test
+		// Mocks for InstanceBase methods used during tests.
 		setVariableValues: vi.fn(),
 		setVariableDefinitions: vi.fn(),
 		setActionDefinitions: vi.fn(),
@@ -55,7 +48,7 @@ export function makeMockInstance(config?: Partial<ModuleConfig>, secrets?: Parti
 		log: vi.fn(),
 	} as unknown as MockInstance
 
-	// OBSApi captures `self` in its constructor; safe to attach after the object exists.
+	// Create and attach the OBSApi instance.
 	self.obs = new OBSApi(self)
 	return self
 }
@@ -80,11 +73,7 @@ export function seedSource(self: MockInstance, sourceName: string, sourceUuid = 
 	})
 }
 
-/**
- * Populate a representative slice of every state collection the choice lists, variables and
- * presets read from. Used by the contract/smoke tests so that every action, feedback and
- * preset has real options to iterate over and lookups resolve.
- */
+/** Populate mock state collections with test data. */
 export function seedFullState(self: MockInstance): void {
 	const s = self.states
 

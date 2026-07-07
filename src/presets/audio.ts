@@ -3,10 +3,7 @@ import type OBSInstance from '../main.js'
 import { ObsAudioMonitorType } from '../types.js'
 import { baseStyle, styleActive, styleMuted, Color } from './style.js'
 
-/**
- * Audio presets. Each per-source family is a single template preset keyed on the
- * button-local `source` variable, instantiated per audio source by a template group.
- */
+/** Audio presets: per-source controls for volume, mute, and monitoring. */
 export function getAudioPresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	sections: CompanionPresetSection[]

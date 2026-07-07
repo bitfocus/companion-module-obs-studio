@@ -133,8 +133,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				}
 			} else {
 				const source = self.obsState.findSourceByName(sourceName)
-				// A grouped source lives in its group's container; otherwise look in the
-				// selected scene's items. Both come from the one container map.
+				// Find item in group container, or selected scene items.
 				const items = source?.parentGroupUuid
 					? self.obsState.getContainerItems(source.parentGroupUuid)
 					: self.obsState.findSceneItemsByName(sceneName)

@@ -3,10 +3,7 @@ import type { CompanionActionContext, CompanionFeedbackContext, CompanionVariabl
 // https://github.com/bitfocus/companion/blob/bfe2e89d2fdbddf0d2347e73305e866c659ae412/companion/lib/Variables/Util.ts#L22
 const VARIABLE_REGEX = /\$\(([^:$)]+):([^)$]+)\)/
 
-/**
- * Minimal stand-in for the Companion action/feedback context used in tests, so callbacks
- * that resolve variables can be exercised without a live OBS instance.
- */
+/** Mock Companion context for action/feedback variable resolution in tests. */
 export class MockContext implements CompanionActionContext, CompanionFeedbackContext {
 	#variables = new Map<string, string>()
 	#customVariables = new Map<string, CompanionVariableValue>()

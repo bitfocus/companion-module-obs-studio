@@ -17,8 +17,7 @@ export function getPresets(this: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	structure: CompanionPresetSection[]
 } {
-	// Each module owns its preset definitions AND the section(s) that arrange them
-	// (as section -> group -> template/preset). Assemble both halves here.
+	// Assemble preset definitions and sections.
 	const parts = [
 		getRecordingPresets(this),
 		getStreamingPresets(this),

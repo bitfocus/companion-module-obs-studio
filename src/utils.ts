@@ -3,16 +3,12 @@ import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorTy
 
 const logger = createModuleLogger('Utils')
 
-/**
- * Safely extract an option value with a generic type parameter.
- */
+/** Safely extract an option value. */
 export function opt<T>(event: { options: any }, key: string): T {
 	return event.options[key] as T
 }
 
-/**
- * Clamp a number between a minimum and maximum value.
- */
+/** Clamp a number between min and max. */
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max)
 }
@@ -28,7 +24,7 @@ export const Color = {
 }
 
 export function validName(name: string): string {
-	//Generate a valid name for use as a variable ID
+	// Generate a valid name for use as a variable ID
 	try {
 		return name.replace(/[^a-z0-9-_.]+/gi, '_')
 	} catch (error) {
@@ -38,7 +34,7 @@ export function validName(name: string): string {
 }
 
 export function splitTimecode(timecode: string): { hh: string; mm: string; ss: string } {
-	//Splits an "hh:mm:ss" timecode into padded parts, defaulting each to '00'
+	// Splits an "hh:mm:ss" timecode into padded parts.
 	const parts = timecode.split(':')
 	return {
 		hh: parts[0] ?? '00',
@@ -48,7 +44,7 @@ export function splitTimecode(timecode: string): { hh: string; mm: string; ss: s
 }
 
 export function formatTimecode(data: number): string {
-	//Converts milliseconds into a readable time format (hh:mm:ss)
+	// Converts milliseconds into a readable time format (hh:mm:ss).
 	try {
 		const totalSeconds = Math.floor(data / 1000)
 		const hours = Math.floor(totalSeconds / 3600)
@@ -62,7 +58,7 @@ export function formatTimecode(data: number): string {
 }
 
 export function roundNumber(number: number, decimalPlaces: number): number {
-	//Rounds a number to a specified number of decimal places
+	// Rounds a number to a specified number of decimal places.
 	try {
 		const multiplier = Math.pow(10, decimalPlaces ?? 0)
 		return Math.round(number * multiplier) / multiplier
@@ -73,11 +69,10 @@ export function roundNumber(number: number, decimalPlaces: number): number {
 }
 
 export function rgbaToObsColor(rgbaString: string): number {
-	// OBS expects colors as 32-bit integers: (alpha << 24) | (blue << 16) | (green << 8) | red
-	// Parse rgba(r, g, b, a) format
+	// Parse rgba(r, g, b, a) to 32-bit integer for OBS: (A << 24) | (B << 16) | (G << 8) | R.
 	const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
 	if (!match) {
-		// If not in expected format, try to parse as integer or return 0
+		// Try to parse as integer or return 0 if format is unexpected.
 		const parsed = parseInt(rgbaString, 10)
 		return isNaN(parsed) ? 0 : parsed
 	}
@@ -91,8 +86,7 @@ export function rgbaToObsColor(rgbaString: string): number {
 }
 
 export function obsColorToRgba(obsColor: number): string {
-	// OBS provides colors as 32-bit integers: (alpha << 24) | (blue << 16) | (green << 8) | red
-	// We need to convert this to rgba(r, g, b, a) string
+	// Convert 32-bit OBS integer color to rgba(r, g, b, a) string.
 	const a = ((obsColor >> 24) & 0xff) / 255
 	const b = (obsColor >> 16) & 0xff
 	const g = (obsColor >> 8) & 0xff

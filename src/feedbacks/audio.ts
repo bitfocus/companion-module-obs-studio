@@ -128,8 +128,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			},
 		],
 		callback: (feedback) => {
-			// Registering here (idempotent via a Set) tells the API to keep the volume-meter
-			// event subscription alive while this feedback exists; unsubscribe drops it.
+			// Tell the API to subscribe to volume-meters while this feedback exists.
 			self.obs.addMeterSubscriber(feedback.id)
 			const sourceName = opt<string>(feedback, 'source')
 			const source = self.obsState.findSourceByName(sourceName)

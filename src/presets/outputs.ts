@@ -2,10 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
-/**
- * Custom output presets (Virtual Camera, Decklink, etc). Per-output families are
- * templates keyed on the button-local `output` variable.
- */
+/** Custom output presets (Virtual Camera, Decklink, etc.) templates. */
 export function getOutputPresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	sections: CompanionPresetSection[]

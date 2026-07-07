@@ -18,30 +18,26 @@ import { POLL_INTERVALS } from './constants.js'
 
 const logger = createModuleLogger('OBSApi')
 
-// ══════════════════════════════════════════════════════════════════════════
-// ═══ OBS Api Class ════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════════════
+// OBS Api Class
 export class OBSApi {
 	private self: OBSInstance
 
-	// Poll intervals (in milliseconds)
+	// Poll intervals in milliseconds.
 	private static readonly RECONNECTION_POLL_INTERVAL = POLL_INTERVALS.RECONNECTION
 	private static readonly STATS_POLL_INTERVAL = POLL_INTERVALS.STATS
 	private static readonly MEDIA_POLL_INTERVAL = POLL_INTERVALS.MEDIA
 
-	// Guards against overlapping connection attempts
+	// Guard against overlapping connection attempts.
 	private connecting = false
 
-	// Volume meters are only subscribed while at least one audioPeaking/audioMeter
-	// feedback exists. Keyed by feedback instance id so repeated subscribes (e.g. on a
-	// definitions rebuild) are idempotent.
+	// Subscription tracking for volume meters (keyed by feedback ID).
 	private meterSubscribers = new Set<string>()
 	private metersActive = false
 	private lastMeterFeedbackCheck = 0
 	private meterFeedbackPending = false
 	private static readonly METER_FEEDBACK_THROTTLE_MS = 100
 
-	// Everything except the high-frequency volume meters, which are toggled on demand.
+	// Event subscriptions except high-frequency volume meters.
 	private get baseEventSubscriptions(): number {
 		return EventSubscription.All | EventSubscription.InputActiveStateChanged | EventSubscription.InputShowStateChanged
 	}
@@ -50,23 +46,22 @@ export class OBSApi {
 		this.self = self
 	}
 
-	// ═══ Initialization & Connection ═══
+	// Initialization and Connection
 	public initializeStates(): void {
 		this.self.obsState.resetSceneSourceStates()
-		// Basic Info
+		// Reset state
 		this.self.states.sceneCollectionChanging = false
 	}
 
 	public async connectOBS(): Promise<void> {
-		// Skip if a previous attempt is still in flight
+		// Skip if connection attempt is in flight.
 		if (this.connecting) {
 			logger.debug('Connection attempt already in progress, skipping')
 			return
 		}
 		this.connecting = true
 		try {
-			// Disconnecting is inside the try so a rejected disconnect can't leave
-			// `connecting` stuck true (which would wedge every future reconnect attempt).
+			// Run disconnect inside try so connecting flag isn't wedged on failure.
 			if (this.self.socket) {
 				this.self.socket.removeAllListeners()
 				await this.self.socket.disconnect()
@@ -78,7 +73,7 @@ export class OBSApi {
 				`${this.self.config.scheme ?? 'ws'}://${this.self.config.host}:${this.self.config.port}`,
 				this.self.secrets.pass,
 				{
-					// SceneItemTransformChanged is intentionally skipped
+					// Skip SceneItemTransformChanged.
 					eventSubscriptions: metersNeeded
 						? this.baseEventSubscriptions | EventSubscription.InputVolumeMeters
 						: this.baseEventSubscriptions,
@@ -91,32 +86,32 @@ export class OBSApi {
 				this.stopReconnectionPoll()
 				logger.info('Connected to OBS')
 
-				//Setup Initial State Objects
+				// Setup initial state.
 				this.initializeStates()
 
-				//Get Initial OBS Info
+				// Get initial OBS info.
 				const initialInfo = await this.obsInfo()
 
 				if (initialInfo) {
-					//Start Listeners
+					// Start listeners.
 					initOBSListeners(this.self)
 
-					//Get Project Info
+					// Get project info.
 					await this.getStats()
 					await this.getRecordStatus()
 					await this.getStreamStatus()
 					this.startStatsPoll()
 
-					//Build General Parameters
+					// Build general parameters.
 					await this.buildProfileList()
 					await this.buildSceneCollectionList()
 
-					//Build Scene Collection Parameters
+					// Build scene collection parameters.
 					await this.buildSceneTransitionList()
-					// Registers all inputs (via GetInputList) and all scene containment
+					// Build scene list (registers inputs and scene containment).
 					await this.buildSceneList()
 				} else {
-					//throw an error if initial info returns false.
+					// Fail connection if initial info could not be fetched.
 					throw new Error('could not get OBS info')
 				}
 			}
@@ -161,22 +156,21 @@ export class OBSApi {
 	}
 
 	public async disconnectOBS(): Promise<void> {
-		// Always stop the reconnection poll, even without a socket — otherwise a config
-		// change made while reconnecting leaves the old poll hammering a stale address.
+		// Stop reconnection poll to prevent hammering stale address on config change.
 		this.stopReconnectionPoll()
 		this.metersActive = false
 		if (this.self.socket) {
-			//Clear all active polls
+			// Clear active polls.
 			this.stopStatsPoll()
 			this.stopMediaPoll()
-			//Remove listeners, will recreate on connection
+			// Remove event listeners.
 			this.self.socket.removeAllListeners()
-			//Disconnect from OBS
+			// Disconnect socket.
 			await this.self.socket.disconnect()
 		}
 	}
 
-	// ═══ Volume Meter Subscription (audioPeaking / audioMeter feedbacks) ═══
+	// Volume Meter Subscription
 	public addMeterSubscriber(feedbackId: string): void {
 		const wasEmpty = this.meterSubscribers.size === 0
 		this.meterSubscribers.add(feedbackId)
@@ -209,7 +203,7 @@ export class OBSApi {
 		}
 	}
 
-	// ═══ OBS WebSocket Commands ═══
+	// OBS WebSocket Commands
 	private async _call<T extends keyof OBSRequestTypes>(
 		requestType: T,
 		requestData?: OBSRequestTypes[T],
@@ -272,9 +266,7 @@ export class OBSApi {
 		}
 	}
 
-	// Upserts a source: creates it if unknown, otherwise backfills identity fields the
-	// caller has fresher knowledge of (a source first seen via a scene item may lack its
-	// kind; a group flag may arrive later). Never downgrades existing information.
+	// Upserts a source, preserving existing information.
 	public addSource(sourceUuid: string, sourceName: string, inputKind?: string | null, isGroup?: boolean): OBSSource {
 		let source = this.self.states.sources.get(sourceUuid)
 		if (!source) {
@@ -308,7 +300,7 @@ export class OBSApi {
 		this.self.obsState.invalidateSceneNameIndex()
 	}
 
-	// ═══ Polls ═══
+	// Polls
 	public startReconnectionPoll(): void {
 		this.stopReconnectionPoll()
 		this.self.reconnectionPoll = setInterval(() => {
@@ -327,10 +319,10 @@ export class OBSApi {
 		this.stopStatsPoll()
 		if (this.self.socket) {
 			this.self.statsPoll = setInterval(() => {
-				// Build array of promises for parallel execution
+				// Build parallel requests array.
 				const promises: Promise<void>[] = [this.getStats()]
 
-				// Conditionally add streaming and recording status
+				// Add stream/record status if active.
 				if (this.self.states.streaming) {
 					promises.push(this.getStreamStatus())
 				}
@@ -338,12 +330,12 @@ export class OBSApi {
 					promises.push(this.getRecordStatus())
 				}
 
-				// Batch all output status requests
+				// Add outputs status request.
 				if (this.self.states.outputs.size > 0 && !this.self.states.sceneCollectionChanging) {
 					promises.push(this.getAllOutputStatuses())
 				}
 
-				// Execute all requests in parallel
+				// Run poll requests in parallel.
 				void Promise.all(promises)
 			}, OBSApi.STATS_POLL_INTERVAL)
 		}
@@ -370,7 +362,7 @@ export class OBSApi {
 		}
 	}
 
-	// ═══ General OBS Project Info ═══
+	// General OBS Project Info
 	public async obsInfo(): Promise<boolean> {
 		try {
 			const version = await this.sendRequest('GetVersion')
@@ -390,7 +382,7 @@ export class OBSApi {
 				this.self.states.studioMode = studioMode.studioModeEnabled ?? false
 			}
 
-			// Parallelize independent operations for better performance
+			// Fetch config lists in parallel.
 			await Promise.all([
 				this.buildHotkeyList(),
 				this.buildOutputList(),
@@ -461,10 +453,7 @@ export class OBSApi {
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
-	// Registers every input from the authoritative GetInputList (name, uuid, and kind in
-	// one request). This covers global audio devices and inputs not placed in any scene,
-	// which never appear in scene item walks. Returns the registered input UUIDs, or an
-	// empty list if the state was reset while the request was in flight.
+	// Register all inputs from authoritative list.
 	private async buildInputList(): Promise<string[]> {
 		const epoch = this.self.obsState.epoch
 		const data = await this.sendRequest('GetInputList')
@@ -489,7 +478,7 @@ export class OBSApi {
 			outputData.outputs?.forEach((output: any) => {
 				if (output) this.self.states.outputs.set(output.outputName, output)
 			})
-			// One batched status request instead of N individual GetOutputStatus calls.
+			// Fetch statuses for all outputs in one request.
 			void this.getAllOutputStatuses()
 			void this.self.updateActionsFeedbacksVariables()
 		}
@@ -511,8 +500,7 @@ export class OBSApi {
 	}
 
 	public async getStats(): Promise<void> {
-		// Note: sendRequest swallows errors and returns undefined, so connection loss is
-		// handled via the ConnectionClosed listener, not a catch here.
+		// Connection loss is handled via listener, not a catch block.
 		const data = await this.sendRequest('GetStats')
 		if (data) {
 			this.self.states.stats = data as any
@@ -559,7 +547,7 @@ export class OBSApi {
 		}
 	}
 
-	// ═══ Outputs, Streams, Recordings ═══
+	// Outputs, Streams, Recordings
 	public async getStreamStatus(): Promise<void> {
 		const batch = [
 			{ requestType: 'GetStreamStatus', requestId: 'status' },
@@ -588,7 +576,7 @@ export class OBSApi {
 					this.self.states.outputBytes = streamStatus.outputBytes
 				}
 
-				// Preserve the reconnecting label set by StreamStateChanged
+				// Preserve reconnecting label.
 				const streamingState = this.self.states.streamReconnecting
 					? OBSStreamingState.Reconnecting
 					: this.self.states.streaming
@@ -677,7 +665,7 @@ export class OBSApi {
 			return
 		}
 
-		// Batch all output status requests into a single batch call
+		// Batch all output status requests.
 		const outputNames = Array.from(this.self.states.outputs.keys())
 		const batch: OBSBatchRequest[] = outputNames.map((outputName) => ({
 			requestType: 'GetOutputStatus',
@@ -708,10 +696,9 @@ export class OBSApi {
 		}
 	}
 
-	// ═══ Scene Collection Specific Info ═══
+	// Scene Collection Specific Info
 	public async buildSceneList(): Promise<void> {
-		// Reset bumps the state epoch: any responses still in flight from before this
-		// point are discarded by the fetchers below rather than written into fresh state.
+		// Reset state epoch to discard older in-flight responses.
 		this.self.obsState.resetSceneSourceStates()
 		const epoch = this.self.obsState.epoch
 
@@ -736,14 +723,11 @@ export class OBSApi {
 			scene_active: this.self.states.programScene,
 		})
 
-		// Register every input from the authoritative input list first (covers global
-		// audio devices and inputs not placed in any scene), then walk scene items for
-		// containment. Scene items still register nested scenes and groups via addSource.
+		// Register inputs from input list, then scene items for containment.
 		const allSourceUuids = new Set<string>(await this.buildInputList())
 		if (this.self.obsState.epoch !== epoch) return
 
-		// Walk scenes for containment first; that reveals which sources are groups, whose
-		// own contents are then fetched. Scenes and groups land in the same sceneItems map.
+		// Walk scenes to find groups, then fetch group contents.
 		const sceneUuids = Array.from(this.self.states.scenes.keys())
 		await this.fetchContainerItems(sceneUuids, false, allSourceUuids)
 		if (this.self.obsState.epoch !== epoch) return
@@ -760,9 +744,7 @@ export class OBSApi {
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
-	// Fetches the item lists for a batch of containers (all scenes, or all groups) into the
-	// unified sceneItems map. A group's items get their parentGroupUuid stamped so consumers
-	// can resolve a grouped source back to its container.
+	// Fetch container item lists and set parentGroupUuid on group items.
 	private async fetchContainerItems(
 		containerUuids: string[],
 		isGroup: boolean,
@@ -833,7 +815,7 @@ export class OBSApi {
 					requestId: `${uuid}:settings`,
 				})
 
-				// Optimistically try to get audio info for all inputs
+				// Optimistically fetch input audio info.
 				batch.push(
 					{
 						requestType: 'GetInputMute',
@@ -899,9 +881,7 @@ export class OBSApi {
 				this.self.states.sourceFilters.set(uuid, data.filters)
 				break
 			case 'settings':
-				// buildInputSettings already merges the input kind's default settings,
-				// so a single call is sufficient (a second call with only defaults would
-				// overwrite the real settings).
+				// buildInputSettings merges default settings.
 				this.buildInputSettings(uuid, data.inputKind ?? '', data.inputSettings)
 				break
 			case 'mute':
@@ -950,10 +930,7 @@ export class OBSApi {
 		this.self.setVariableValues({ [`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType) })
 	}
 
-	// Refreshes a single container's item list (routing to the group or scene request based
-	// on whether the UUID is a known group) and returns the contained source UUIDs. This is
-	// what lets SceneItemCreated inside a group work — it needs GetGroupSceneItemList, which
-	// GetSceneItemList rejects. Returns undefined if the request failed or state was reset.
+	// Refresh container item list and return contained source UUIDs.
 	private async refreshContainerItemList(containerUuid: string): Promise<string[] | undefined> {
 		const epoch = this.self.obsState.epoch
 		const isGroup = this.self.states.sources.get(containerUuid)?.isGroup ?? false
@@ -978,9 +955,7 @@ export class OBSApi {
 		if (sourceUuids) await this.fetchSourcesData(sourceUuids)
 	}
 
-	// Handles a single SceneItemCreated: refresh the container's item list (one request) but
-	// only fetch full source data for the new source, instead of re-fetching every source in
-	// the container as buildSourceList does. Matters when adding one item to a large scene.
+	// Refresh container item list and fetch data only for the new source.
 	public async addSceneItem(containerUuid: string, sourceUuid: string): Promise<void> {
 		const sourceUuids = await this.refreshContainerItemList(containerUuid)
 		if (sourceUuids) await this.fetchSourcesData([sourceUuid])
@@ -1130,8 +1105,7 @@ export class OBSApi {
 			this.self.setVariableValues({ [`current_text_${name}`]: source.text })
 		} else if (inputKind === 'ffmpeg_source' || inputKind === 'vlc_source') {
 			if (!this.self.mediaPoll) void this.startMediaPoll()
-			// Keep the media file name variable in sync when settings change, rather than
-			// waiting for the next full definitions rebuild.
+			// Sync media file name variable when settings change.
 			let file = ''
 			if (settings?.playlist) {
 				file = settings.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
@@ -1169,8 +1143,7 @@ export class OBSApi {
 		let changed = false
 		data.inputs.forEach((input) => {
 			const channel = input.inputLevelsMul[0]
-			// Floor silent/absent inputs to the bottom of the range so a source that goes
-			// quiet resets instead of keeping its last loud peak (which left audioPeaking on).
+			// Floor silent inputs to -100 so quiet sources reset correctly.
 			let dbPeak = -100
 			const channelPeak = channel?.[1]
 			if (channelPeak && channelPeak > 0) {
@@ -1184,9 +1157,7 @@ export class OBSApi {
 				source.peak = dbPeak
 			}
 		})
-		// Meters arrive ~20×/second; only re-evaluate feedbacks when a level actually
-		// changed, and throttle to ~10Hz. Meters keep firing (even in silence) so a pending
-		// change always flushes on a later tick.
+		// Re-evaluate level feedbacks only when changed, throttled to 10Hz.
 		if (changed) this.meterFeedbackPending = true
 		const now = Date.now()
 		if (this.meterFeedbackPending && now - this.lastMeterFeedbackCheck >= OBSApi.METER_FEEDBACK_THROTTLE_MS) {
@@ -1218,7 +1189,7 @@ export class OBSApi {
 		const instances: { containerUuid: string; sceneItemId: number }[] = []
 
 		if (options.anyScene) {
-			// Scenes and groups share one map, so a single walk covers both.
+			// Search both scenes and groups since they share the same map.
 			for (const [containerUuid, items] of this.self.states.sceneItems) {
 				const item = items.find((i) => i.sourceUuid === sourceUuid)
 				if (item) instances.push({ containerUuid, sceneItemId: item.sceneItemId })
@@ -1230,7 +1201,7 @@ export class OBSApi {
 
 			if (!scene) return instances
 
-			// A grouped source lives in its group's container, not directly in the scene.
+			// Resolve grouped source container via parent group.
 			const source = this.self.states.sources.get(sourceUuid)
 			const containerUuid = source?.parentGroupUuid ?? scene.sceneUuid
 			const item = this.self.states.sceneItems.get(containerUuid)?.find((i) => i.sourceUuid === sourceUuid)
@@ -1258,7 +1229,7 @@ export class OBSApi {
 			return {
 				requestType: 'SetSceneItemEnabled',
 				requestData: {
-					// SetSceneItemEnabled accepts a group UUID in its sceneUuid field.
+					// setSceneItemEnabled accepts group UUID in sceneUuid.
 					sceneUuid: instance.containerUuid,
 					sceneItemId: instance.sceneItemId,
 					sceneItemEnabled: enabled,

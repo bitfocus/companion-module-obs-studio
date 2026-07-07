@@ -24,8 +24,7 @@ export default class OBSInstance extends InstanceBase {
 	public statsPoll?: NodeJS.Timeout
 	public mediaPoll?: NodeJS.Timeout | null
 
-	// Coalesces bursts of definition rebuilds (e.g. many OBS events while loading a
-	// large scene collection) into a single pass.
+	// Coalesces definition rebuilds into a single pass.
 	private rebuildTimer?: NodeJS.Timeout
 	private static readonly REBUILD_DEBOUNCE_MS = 100
 
@@ -37,7 +36,7 @@ export default class OBSInstance extends InstanceBase {
 		super(internal)
 	}
 
-	//Companion Internal and Configuration
+	// Companion configuration and lifecycle
 	async init(config: ModuleConfig, _isFirstInit: boolean, secrets: ModuleSecrets): Promise<void> {
 		this.updateStatus(InstanceStatus.Connecting)
 		this.config = config
@@ -106,8 +105,7 @@ export default class OBSInstance extends InstanceBase {
 	}
 
 	private rebuildDefinitions(): void {
-		// Memoize derived choice lists / name indexes for the duration of this
-		// synchronous rebuild, then discard so nothing can go stale.
+		// Cache choices/indexes for rebuild, then clear to avoid stale state.
 		this.obsState.beginCache()
 		try {
 			this.initVariables()

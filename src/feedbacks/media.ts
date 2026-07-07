@@ -53,7 +53,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				id: 'rtThreshold',
 				default: 20,
 				min: 0,
-				max: 3600, //max is required by api
+				max: 3600, // Max is required by API
 				clampValues: true,
 			},
 			{

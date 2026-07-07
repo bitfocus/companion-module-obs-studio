@@ -61,7 +61,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 				id: 'duration',
 				default: 500,
 				min: 0,
-				max: 60 * 1000, //max is required by api
+				max: 60 * 1000, // Max is required by API
 				clampValues: true,
 			},
 		],

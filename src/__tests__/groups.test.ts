@@ -36,9 +36,7 @@ function seedGroup(self: MockInstance, groupUuid: string, sceneUuid: string, mem
 		validName: groupUuid,
 		isGroup: true,
 	})
-	// The group appears as an item inside the scene...
-	self.states.sceneItems.set(sceneUuid, [sceneItem({ sceneItemId: 100, sourceUuid: groupUuid, isGroup: true })])
-	// ...and its members live in the group's own container, keyed by group UUID.
+	// The group is an item in the scene, and its members live in the group container.
 	self.states.sceneItems.set(
 		groupUuid,
 		memberUuids.map((uuid, i) => sceneItem({ sceneItemId: 200 + i, sourceUuid: uuid })),
@@ -70,7 +68,7 @@ describe('container model — scene item creation routing', () => {
 
 		expect(self.socket.call).toHaveBeenCalledWith('GetGroupSceneItemList', { sceneUuid: 'group-1' })
 		expect(self.socket.call).not.toHaveBeenCalledWith('GetSceneItemList', { sceneUuid: 'group-1' })
-		// New member registered and stamped with its parent group
+		// New member registered with parent group.
 		expect(self.states.sources.get('member-2')?.parentGroupUuid).toBe('group-1')
 	})
 
@@ -97,10 +95,10 @@ describe('container model — grouped source feedback', () => {
 		const feedbacks = getSourceFeedbacks(self)
 		const cb = feedbacks['scene_item_active_in_scene']!.callback
 
-		// Enabled member -> true
+		// Enabled member matches.
 		expect(cb(feedbackEvent({ scene: 'Scene A', any: false, source: 'member-1' }), new MockContext())).toBe(true)
 
-		// Disable it in the group container and re-check
+		// Disable in group container and re-check.
 		self.states.sceneItems.get('group-1')![0].sceneItemEnabled = false
 		expect(cb(feedbackEvent({ scene: 'Scene A', any: false, source: 'member-1' }), new MockContext())).toBe(false)
 	})
@@ -127,7 +125,7 @@ describe('container model — visibility resolution', () => {
 		expect(batch).toHaveLength(1)
 		expect(batch[0].requestData.sceneUuid).toBe('group-1')
 		expect(batch[0].requestData.sceneItemId).toBe(200)
-		// member-1 was enabled, so toggle -> disabled
+		// Toggle enabled member to disabled.
 		expect(batch[0].requestData.sceneItemEnabled).toBe(false)
 	})
 

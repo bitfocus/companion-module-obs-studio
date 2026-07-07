@@ -45,7 +45,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				id: 'transition_time',
 				default: 500,
 				min: 0,
-				max: 60 * 1000, //max is required by api
+				max: 60 * 1000, // Max is required by API
 				clampValues: true,
 				isVisibleExpression: `$(options:customDuration)`,
 			},
@@ -168,7 +168,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				id: 'duration',
 				default: 500,
 				min: 0,
-				max: 60 * 1000, //max is required by api
+				max: 60 * 1000, // Max is required by API
 				clampValues: true,
 			},
 		],

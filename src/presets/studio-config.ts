@@ -2,10 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
-/**
- * Studio Mode + configuration presets. Profile and scene-collection switching are
- * per-item templates keyed on the button-local `profile` / `collection` variable.
- */
+/** Studio Mode and configuration presets for profiles and scene collections. */
 export function getStudioConfigPresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	sections: CompanionPresetSection[]

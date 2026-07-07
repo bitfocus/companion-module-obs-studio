@@ -5,7 +5,7 @@ import type OBSInstance from '../main.js'
 export function getOutputActions(self: OBSInstance): CompanionActionDefinitions {
 	const actions: CompanionActionDefinitions = {}
 
-	//Recording
+	// Recording
 	actions['start_recording'] = {
 		name: 'Recording - Start',
 		description: 'Starts recording the current program output',
@@ -82,7 +82,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			await self.obs.sendRequest('CreateRecordChapter', { chapterName: chapterName })
 		},
 	}
-	//Streaming
+	// Streaming
 	actions['start_streaming'] = {
 		name: 'Stream - Start',
 		description: 'Starts streaming to the currently configured service',
@@ -217,7 +217,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			}
 		},
 	}
-	//Replay Buffer
+	// Replay Buffer
 	actions['start_replay_buffer'] = {
 		name: 'Replay Buffer - Start',
 		description: 'Starts the replay buffer output',
@@ -252,7 +252,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 			return res?.outputActive ?? null
 		},
 	}
-	//Outputs
+	// Outputs
 	actions['start_output'] = {
 		name: 'Start Output',
 		description: 'Starts a specific output (e.g., Virtual Cam, Decklink)',

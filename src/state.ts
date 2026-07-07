@@ -17,24 +17,15 @@ interface ChoiceCache {
 export class OBSState {
 	public readonly state: OBSNormalizedState
 
-	// During a definitions rebuild the derived choice lists and name indexes are
-	// accessed dozens of times. A rebuild is synchronous, so we memoize these for
-	// the duration of the rebuild and discard the cache immediately afterwards —
-	// no staleness risk, and it collapses repeated O(n log n) work to a single pass.
+	// Cache active during synchronous rebuilds to memoize choice list calculations.
 	private cacheActive = false
 	private cache: ChoiceCache = {}
 
-	// Persistent name → object indexes for O(1) lookups from runtime event
-	// handlers (filter/media events, visibility actions). Rebuilt lazily and
-	// invalidated explicitly whenever a source/scene is added, removed, or
-	// renamed. Unlike the rebuild cache above these outlive a single rebuild.
+	// Persistent name-to-object indexes for O(1) event handler lookups.
 	private sourceNameIndex?: Map<string, OBSSource>
 	private sceneNameIndex?: Map<string, OBSScene>
 
-	// Generation counter for the scene/source maps. Bumped on every reset so that
-	// async fetchers can detect that the world changed while their request was in
-	// flight (scene collection switch, reconnect) and discard the stale response
-	// instead of resurrecting cleared state.
+	// Generation counter to detect and discard stale in-flight async responses.
 	private stateEpoch = 0
 
 	public get epoch(): number {
@@ -143,7 +134,7 @@ export class OBSState {
 		this.invalidateSceneNameIndex()
 	}
 
-	// Internal helper to build choice lists
+	// Helper to filter, map, and sort choice lists.
 	private buildChoices<T>(
 		items: T[],
 		filterFn: (item: T) => boolean,
@@ -343,7 +334,7 @@ export class OBSState {
 		return undefined
 	}
 
-	// Items of a container (scene or group) by its UUID. Scenes and groups share one map.
+	// Items of a container (scene or group) by UUID (shared map).
 	public getContainerItems(containerUuid: string | undefined): import('./types.js').OBSSceneItem[] | undefined {
 		if (!containerUuid) return undefined
 		return this.state.sceneItems.get(containerUuid)

@@ -2,12 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from '../main.js'
 import { baseStyle, styleProgram, stylePreview, Style, Color } from './style.js'
 
-/**
- * Scene presets. The per-scene families (to program / to preview / smart switch) are
- * defined ONCE as template presets keyed on the button-local `scene` variable, then
- * instantiated per scene by a `template` group. Companion injects each scene id into
- * `local:scene`, which the action + feedback options reference via expression.
- */
+/** Scene presets: program, preview, and smart switch template presets. */
 export function getScenePresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	sections: CompanionPresetSection[]
@@ -38,7 +33,7 @@ export function getScenePresets(self: OBSInstance): {
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
 		style: baseStyle({ text: '$(local:scene)' }),
 		steps: [{ down: [{ actionId: 'smart_switcher', options: { scene: '$(local:scene)' } }], up: [] }],
-		// scene_active is an advanced feedback — its colors live in options, not `style`.
+		// scene_active colors live in options because it is an advanced feedback.
 		feedbacks: [
 			{
 				feedbackId: 'scene_active',

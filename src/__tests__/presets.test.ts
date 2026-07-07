@@ -70,9 +70,7 @@ describe('presets', () => {
 		for (const section of structure) {
 			expect(typeof section.id).toBe('string')
 			expect(typeof section.name).toBe('string')
-			// definitions are either bare preset-reference strings or group objects.
-			// Groups are 'simple' (a list of preset ids) or 'template' (one preset id
-			// instantiated per value). Validate every referenced preset id exists.
+			// Validate that every preset ID referenced in the structure exists.
 			for (const definition of section.definitions) {
 				if (typeof definition === 'string') {
 					if (!(definition in presets)) missing.push(`${section.id} -> ${definition}`)

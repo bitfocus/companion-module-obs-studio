@@ -69,8 +69,7 @@ describe('state epoch guard', () => {
 		seedSource(self, 'Mic', 'Mic', 'wasapi_input_capture')
 
 		self.socket.callBatch.mockImplementation(async () => {
-			// World changes while the batch is in flight; the new collection happens to
-			// contain a source with the same UUID.
+			// World resets while request in flight, then source is re-seeded.
 			self.obsState.resetSceneSourceStates()
 			seedSource(self, 'Mic', 'Mic', 'wasapi_input_capture')
 			return [

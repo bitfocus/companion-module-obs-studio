@@ -92,7 +92,7 @@ export function getSystemPresets(_self: OBSInstance): {
 		],
 	}
 
-	// Example window/projector presets — the user sets the source/scene/monitor after dropping.
+	// Example window/projector presets (set target options after dropping).
 	presets['openMultiviewProjector'] = {
 		type: 'simple',
 		name: 'Open Multiview Projector (example)',

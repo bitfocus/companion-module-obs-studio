@@ -2,10 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from '../main.js'
 import { baseStyle, styleActive, styleCaution } from './style.js'
 
-/**
- * Media presets: a single "current media" control, plus per-media-source template
- * families (play/pause and time-remaining status) keyed on the button-local `source`.
- */
+/** Media presets: play/pause, time-remaining, and current media controls. */
 export function getMediaPresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	sections: CompanionPresetSection[]

@@ -286,7 +286,7 @@ export default [
 
 		for (const action of props.actions) {
 			let actionChanged = false
-			//Scene Actions
+			// Scene Actions
 			if (
 				action.actionId === 'set_scene' ||
 				action.actionId === 'preview_scene' ||
@@ -307,7 +307,7 @@ export default [
 				setOpt(action.options, 'adjust', 'previous')
 				actionChanged = true
 			} else if (action.actionId === 'set_source_visible') {
-				//UNTESTED BELOW
+				// Untested below
 				if (getOpt(action.options, 'scene') === 'anyScene') {
 					setOpt(action.options, 'anyScene', true)
 					actionChanged = true

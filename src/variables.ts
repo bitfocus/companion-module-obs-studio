@@ -13,9 +13,7 @@ interface VariableEntry {
 
 const FILE_NAME_REGEX = /[^\\/]+(?=\.[\w]+$)|[^\\/]+$/
 
-// Single source of truth for per-source variables: each entry carries both its
-// definition (id + name) and its current value, so `getVariables` and
-// `updateVariableValues` can never drift apart.
+// Single source of truth for per-source variable definitions and values.
 function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 	const entries: VariableEntry[] = []
 	const sourceName = source.validName ?? source.sourceName
@@ -38,7 +36,7 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 		case 'vlc_source': {
 			let file = ''
 			if (settings?.playlist) {
-				//Use first value in playlist until support for determining currently playing cue
+				// Use first playlist value until cue determination is supported.
 				file = settings.playlist[0]?.value?.match(FILE_NAME_REGEX)?.[0] ?? ''
 			} else if (settings?.local_file) {
 				file = settings.local_file.match(FILE_NAME_REGEX)?.[0] ?? ''
@@ -113,8 +111,7 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 	return entries
 }
 
-// scene_1 is the scene shown at the top of the OBS UI (highest sceneIndex), so walk
-// the list back-to-front.
+// Walk scene list back-to-front (top-most OBS scene is scene_1).
 function sceneVariableEntries(scenes: OBSScene[]): VariableEntry[] {
 	const entries: VariableEntry[] = []
 	let index = 0

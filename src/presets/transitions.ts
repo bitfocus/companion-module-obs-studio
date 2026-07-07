@@ -2,10 +2,7 @@ import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-m
 import type OBSInstance from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
-/**
- * Transition presets: a global Auto button, per-transition template families (set type /
- * quick transition) keyed on the button-local `transition`, plus fixed duration controls.
- */
+/** Transition presets: Auto button, transitions templates, and duration controls. */
 export function getTransitionPresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions
 	sections: CompanionPresetSection[]
@@ -27,7 +24,7 @@ export function getTransitionPresets(self: OBSInstance): {
 			{ variableType: 'simple', variableName: 'transition', startupValue: '', headline: 'Transition name' },
 		],
 		style: baseStyle({ text: '$(local:transition)' }),
-		// set_transition_type uses the (historically plural) option key `transitions`.
+		// Uses the (historically plural) option key 'transitions'.
 		steps: [{ down: [{ actionId: 'set_transition_type', options: { transitions: '$(local:transition)' } }], up: [] }],
 		feedbacks: [
 			{ feedbackId: 'current_transition', options: { transition: '$(local:transition)' }, style: styleActive() },

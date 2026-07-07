@@ -2,20 +2,14 @@ import { EventEmitter } from 'node:events'
 import { vi, type Mock } from 'vitest'
 import type OBSWebSocket from 'obs-websocket-js'
 
-/**
- * A fake `OBSWebSocket` for tests. The request surface (`call` / `callBatch`) is replaced
- * with vitest mocks so tests can stub responses and assert on outgoing requests, while the
- * event surface (`on` / `once` / `emit` / `removeAllListeners`) is backed by a real
- * EventEmitter so listener registration in `initOBSListeners` can be exercised by emitting
- * events directly.
- */
+/** Fake OBSWebSocket implementation for mocking requests and triggering events in tests. */
 export type MockOBSWebSocket = OBSWebSocket & {
 	call: Mock
 	callBatch: Mock
 	connect: Mock
 	disconnect: Mock
 	reidentify: Mock
-	/** Emit an OBS event to any listeners registered via `socket.on(...)`. */
+	/** Emit an OBS event to listeners. */
 	emit(event: string, ...args: unknown[]): boolean
 }
 
