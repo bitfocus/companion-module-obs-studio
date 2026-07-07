@@ -120,8 +120,10 @@ export interface OBSNormalizedState {
 	transitions: Map<string, OBSTransition>
 	profiles: Map<string, Record<string, unknown>>
 	sceneCollections: Map<string, Record<string, unknown>>
-	sceneItems: Map<string, OBSSceneItem[]> // Keyed by sceneUuid
-	groups: Map<string, OBSSceneItem[]> // Keyed by groupUuid
+	// Keyed by container UUID — a scene UUID or a group UUID. Both are containers of
+	// scene items and are treated identically; a UUID is a group when its source entry
+	// has isGroup set.
+	sceneItems: Map<string, OBSSceneItem[]>
 	inputKindList: Map<string, Record<string, unknown>>
 	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid
 	audioPeak: Map<string, number>
@@ -143,8 +145,9 @@ export interface OBSSource {
 	sourceUuid: string
 	isGroup?: boolean
 	inputKind?: string
-	groupedSource?: boolean
-	groupName?: string
+	// Set when this source is a member of a group; holds the group's UUID (a key into
+	// the sceneItems container map). Absent means the source is not inside a group.
+	parentGroupUuid?: string
 	settings?: Record<string, any>
 	OBSMediaStatus?: OBSMediaStatus
 	mediaCursor?: number

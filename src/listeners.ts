@@ -67,12 +67,9 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		void self.checkFeedbacks('scene_collection_active')
 		self.setVariableValues({ scene_collection: self.states.currentSceneCollection })
 		self.states.sceneCollectionChanging = false
-		self.obsState.resetSceneSourceStates()
-		// buildSceneList clears sources; re-add the special (global audio) inputs after it
-		// resolves so they survive a scene collection switch.
-		void self.obs.buildSceneList().then(() => {
-			void self.obs.buildSpecialInputs()
-		})
+		// buildSceneList resets scene/source state itself (bumping the epoch, so stale
+		// in-flight responses are discarded) and registers all inputs via GetInputList.
+		void self.obs.buildSceneList()
 		void self.obs.buildSceneTransitionList()
 		void self.obs.obsInfo()
 	})
@@ -95,15 +92,8 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneCreated', (data) => {
 		if (data?.isGroup === false && self.states.sceneCollectionChanging === false) {
-			const sceneName = data.sceneName
-			const sceneUuid = data.sceneUuid
-			self.states.scenes.set(sceneUuid, {
-				sceneName: sceneName,
-				sceneUuid: sceneUuid,
-				sceneIndex: self.states.scenes.size,
-			})
-			self.obsState.invalidateSceneNameIndex()
-			void self.obs.buildSourceList(sceneUuid)
+			self.obs.registerScene(data.sceneUuid, data.sceneName)
+			void self.obs.buildSourceList(data.sceneUuid)
 			void self.updateActionsFeedbacksVariables()
 		}
 	})
@@ -152,6 +142,9 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			})
 		}
 		self.obsState.invalidateSceneNameIndex()
+		// Reorders change the scene_N position variables and choice ordering; refresh
+		// the (debounced) definitions so they don't go stale until the next event.
+		void self.updateActionsFeedbacksVariables()
 	})
 }
 
@@ -168,6 +161,10 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('InputRemoved', (data) => {
 		self.states.sources.delete(data.inputUuid)
+		// Drop associated state too, or filters/peaks of removed inputs linger in the
+		// filter choice list and peak map until the next scene collection change.
+		self.states.sourceFilters.delete(data.inputUuid)
+		self.states.audioPeak.delete(data.inputUuid)
 		self.obsState.invalidateSourceNameIndex()
 		void self.updateActionsFeedbacksVariables()
 	})
@@ -411,18 +408,13 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('SceneItemRemoved', (data) => {
 		if (self.states.sceneCollectionChanging === false) {
-			const sceneItems = self.states.sceneItems.get(data.sceneUuid)
-			if (sceneItems) {
-				const itemIndex = sceneItems.findIndex((item) => item.sceneItemId === data.sceneItemId)
+			// data.sceneUuid is the container (scene or group) the item was in; both live
+			// in the one sceneItems map.
+			const items = self.states.sceneItems.get(data.sceneUuid)
+			if (items) {
+				const itemIndex = items.findIndex((item) => item.sceneItemId === data.sceneItemId)
 				if (itemIndex > -1) {
-					sceneItems.splice(itemIndex, 1)
-				}
-			}
-			const groups = self.states.groups.get(data.sceneUuid)
-			if (groups) {
-				const itemIndex = groups.findIndex((item) => item.sceneItemId === data.sceneItemId)
-				if (itemIndex > -1) {
-					groups.splice(itemIndex, 1)
+					items.splice(itemIndex, 1)
 				}
 			}
 			void self.updateActionsFeedbacksVariables()
@@ -430,21 +422,12 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('SceneItemListReindexed', () => {})
 	obs.on('SceneItemEnableStateChanged', (data) => {
-		const groups = self.states.groups.get(data.sceneUuid)
-		const sceneItems = self.states.sceneItems.get(data.sceneUuid)
+		const items = self.states.sceneItems.get(data.sceneUuid)
 		let sourceUuid: string | undefined
-		if (groups) {
-			const sceneItem = groups.find((item) => item.sceneItemId === data.sceneItemId)
-			if (sceneItem) {
-				sceneItem.sceneItemEnabled = data.sceneItemEnabled
-				sourceUuid = sceneItem.sourceUuid
-			}
-		} else if (sceneItems) {
-			const sceneItem = sceneItems.find((item) => item.sceneItemId === data.sceneItemId)
-			if (sceneItem) {
-				sceneItem.sceneItemEnabled = data.sceneItemEnabled
-				sourceUuid = sceneItem.sourceUuid
-			}
+		const sceneItem = items?.find((item) => item.sceneItemId === data.sceneItemId)
+		if (sceneItem) {
+			sceneItem.sceneItemEnabled = data.sceneItemEnabled
+			sourceUuid = sceneItem.sourceUuid
 		}
 		self.checkFeedbacks('scene_item_active_in_scene')
 		const sceneName = self.states.scenes.get(data.sceneUuid)?.sceneName

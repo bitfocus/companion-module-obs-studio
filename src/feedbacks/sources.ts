@@ -133,24 +133,14 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				}
 			} else {
 				const source = self.obsState.findSourceByName(sourceName)
-				if (source?.groupedSource) {
-					// source.groupName holds the group's UUID, so look up groups by UUID.
-					const groupUuid = source.groupName
-					if (groupUuid) {
-						const group = self.obsState.getGroupItems(groupUuid)
-						const sceneItem = group?.find((item) => item.sourceUuid === source.sourceUuid)
-						if (sceneItem) {
-							return sceneItem.sceneItemEnabled
-						}
-					}
-				} else {
-					const scene = self.obsState.findSceneItemsByName(sceneName)
-					if (scene) {
-						const sceneItem = scene.find((item) => item.sourceUuid === source?.sourceUuid)
-						if (sceneItem) {
-							return sceneItem.sceneItemEnabled
-						}
-					}
+				// A grouped source lives in its group's container; otherwise look in the
+				// selected scene's items. Both come from the one container map.
+				const items = source?.parentGroupUuid
+					? self.obsState.getContainerItems(source.parentGroupUuid)
+					: self.obsState.findSceneItemsByName(sceneName)
+				const sceneItem = items?.find((item) => item.sourceUuid === source?.sourceUuid)
+				if (sceneItem) {
+					return sceneItem.sceneItemEnabled
 				}
 			}
 			return false

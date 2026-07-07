@@ -31,6 +31,16 @@ export class OBSState {
 	private sourceNameIndex?: Map<string, OBSSource>
 	private sceneNameIndex?: Map<string, OBSScene>
 
+	// Generation counter for the scene/source maps. Bumped on every reset so that
+	// async fetchers can detect that the world changed while their request was in
+	// flight (scene collection switch, reconnect) and discard the stale response
+	// instead of resurrecting cleared state.
+	private stateEpoch = 0
+
+	public get epoch(): number {
+		return this.stateEpoch
+	}
+
 	public invalidateSourceNameIndex(): void {
 		this.sourceNameIndex = undefined
 	}
@@ -113,7 +123,6 @@ export class OBSState {
 			profiles: new Map(),
 			sceneCollections: new Map(),
 			sceneItems: new Map(),
-			groups: new Map(),
 			inputKindList: new Map(),
 			sourceFilters: new Map(),
 			audioPeak: new Map(),
@@ -124,11 +133,12 @@ export class OBSState {
 	}
 
 	public resetSceneSourceStates(): void {
+		this.stateEpoch++
 		this.state.scenes.clear()
 		this.state.sources.clear()
 		this.state.sourceFilters.clear()
-		this.state.groups.clear()
 		this.state.sceneItems.clear()
+		this.state.audioPeak.clear()
 		this.invalidateSourceNameIndex()
 		this.invalidateSceneNameIndex()
 	}
@@ -333,14 +343,9 @@ export class OBSState {
 		return undefined
 	}
 
-	public findGroupItemsByName(sourceName: string): import('./types.js').OBSSceneItem[] | undefined {
-		const source = this.findSourceByName(sourceName)
-		if (source) return this.state.groups.get(source.sourceUuid)
-		return undefined
-	}
-
-	// groups are keyed by group UUID; used where a source already carries its group's UUID.
-	public getGroupItems(groupUuid: string): import('./types.js').OBSSceneItem[] | undefined {
-		return this.state.groups.get(groupUuid)
+	// Items of a container (scene or group) by its UUID. Scenes and groups share one map.
+	public getContainerItems(containerUuid: string | undefined): import('./types.js').OBSSceneItem[] | undefined {
+		if (!containerUuid) return undefined
+		return this.state.sceneItems.get(containerUuid)
 	}
 }

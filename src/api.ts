@@ -113,10 +113,8 @@ export class OBSApi {
 
 					//Build Scene Collection Parameters
 					await this.buildSceneTransitionList()
-					// buildSceneList clears the source map, so the special (global audio)
-					// inputs must be (re)added afterwards or they vanish from choices/variables.
+					// Registers all inputs (via GetInputList) and all scene containment
 					await this.buildSceneList()
-					await this.buildSpecialInputs()
 				} else {
 					//throw an error if initial info returns false.
 					throw new Error('could not get OBS info')
@@ -274,6 +272,9 @@ export class OBSApi {
 		}
 	}
 
+	// Upserts a source: creates it if unknown, otherwise backfills identity fields the
+	// caller has fresher knowledge of (a source first seen via a scene item may lack its
+	// kind; a group flag may arrive later). Never downgrades existing information.
 	public addSource(sourceUuid: string, sourceName: string, inputKind?: string | null, isGroup?: boolean): OBSSource {
 		let source = this.self.states.sources.get(sourceUuid)
 		if (!source) {
@@ -286,11 +287,19 @@ export class OBSApi {
 			}
 			this.self.states.sources.set(sourceUuid, source)
 			this.self.obsState.invalidateSourceNameIndex()
+		} else {
+			if (sourceName && source.sourceName !== sourceName) {
+				source.sourceName = sourceName
+				source.validName = utils.validName(sourceName)
+				this.self.obsState.invalidateSourceNameIndex()
+			}
+			if (inputKind && !source.inputKind) source.inputKind = inputKind
+			if (isGroup) source.isGroup = true
 		}
 		return source
 	}
 
-	private _addScene(sceneUuid: string, sceneName: string, sceneIndex?: number): void {
+	public registerScene(sceneUuid: string, sceneName: string, sceneIndex?: number): void {
 		this.self.states.scenes.set(sceneUuid, {
 			sceneName: sceneName,
 			sceneUuid: sceneUuid,
@@ -452,29 +461,23 @@ export class OBSApi {
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
-	public async buildSpecialInputs(): Promise<void> {
-		const specialInputs = await this.sendRequest('GetSpecialInputs')
-		if (specialInputs) {
-			const inputs = await this.sendRequest('GetInputList')
-			const inputMap = new Map<string, any>()
-			inputs?.inputs?.forEach((input: any) => {
-				inputMap.set(input.inputName, input)
-			})
+	// Registers every input from the authoritative GetInputList (name, uuid, and kind in
+	// one request). This covers global audio devices and inputs not placed in any scene,
+	// which never appear in scene item walks. Returns the registered input UUIDs, or an
+	// empty list if the state was reset while the request was in flight.
+	private async buildInputList(): Promise<string[]> {
+		const epoch = this.self.obsState.epoch
+		const data = await this.sendRequest('GetInputList')
+		if (!data || this.self.obsState.epoch !== epoch) return []
 
-			const specialUuids = []
-			for (const input of Object.values(specialInputs)) {
-				if (input) {
-					const inputName = input
-					const inputInfo = inputMap.get(inputName)
-					const inputUuid = inputInfo?.inputUuid ?? inputName
-					// Forward the input kind so fetchSourcesData requests audio state (mute,
-					// volume, monitor) for these global audio inputs.
-					this.addSource(inputUuid, inputName, inputInfo?.inputKind)
-					specialUuids.push(inputUuid)
-				}
+		const uuids: string[] = []
+		for (const input of (data.inputs ?? []) as any[]) {
+			if (input?.inputUuid && input?.inputName) {
+				this.addSource(input.inputUuid, input.inputName, input.inputKind)
+				uuids.push(input.inputUuid)
 			}
-			await this.fetchSourcesData(specialUuids)
 		}
+		return uuids
 	}
 
 	public async buildOutputList(): Promise<void> {
@@ -707,19 +710,17 @@ export class OBSApi {
 
 	// ═══ Scene Collection Specific Info ═══
 	public async buildSceneList(): Promise<void> {
-		this.self.states.scenes.clear()
-		this.self.states.sources.clear()
-		this.self.states.sceneItems.clear()
-		this.self.states.groups.clear()
-		this.self.obsState.invalidateSourceNameIndex()
-		this.self.obsState.invalidateSceneNameIndex()
+		// Reset bumps the state epoch: any responses still in flight from before this
+		// point are discarded by the fetchers below rather than written into fresh state.
+		this.self.obsState.resetSceneSourceStates()
+		const epoch = this.self.obsState.epoch
 
 		const sceneList = await this.sendRequest('GetSceneList')
-		if (!sceneList) return
+		if (!sceneList || this.self.obsState.epoch !== epoch) return
 
 		if (Array.isArray(sceneList.scenes)) {
 			for (const scene of sceneList.scenes) {
-				this._addScene(scene.sceneUuid as string, scene.sceneName as string, scene.sceneIndex as number)
+				this.registerScene(scene.sceneUuid as string, scene.sceneName as string, scene.sceneIndex as number)
 			}
 		}
 
@@ -728,9 +729,6 @@ export class OBSApi {
 		if (sceneList.currentProgramSceneName) {
 			this.self.states.programScene = sceneList.currentProgramSceneName ?? 'None'
 		}
-		if (sceneList.currentPreviewSceneName) {
-			this.self.states.previewScene = sceneList.currentPreviewSceneName
-		}
 		this.self.states.programSceneUuid = sceneList.currentProgramSceneUuid ?? ''
 
 		this.self.setVariableValues({
@@ -738,81 +736,71 @@ export class OBSApi {
 			scene_active: this.self.states.programScene,
 		})
 
-		// Fetch all scene items for all scenes
-		const sceneUuids = Array.from(this.self.states.scenes.keys())
-		const allSourceUuids = new Set<string>()
-		await this.fetchSceneItemsBatch(sceneUuids, allSourceUuids)
+		// Register every input from the authoritative input list first (covers global
+		// audio devices and inputs not placed in any scene), then walk scene items for
+		// containment. Scene items still register nested scenes and groups via addSource.
+		const allSourceUuids = new Set<string>(await this.buildInputList())
+		if (this.self.obsState.epoch !== epoch) return
 
-		// Handle Groups separately as they contain sources not directly in scenes
+		// Walk scenes for containment first; that reveals which sources are groups, whose
+		// own contents are then fetched. Scenes and groups land in the same sceneItems map.
+		const sceneUuids = Array.from(this.self.states.scenes.keys())
+		await this.fetchContainerItems(sceneUuids, false, allSourceUuids)
+		if (this.self.obsState.epoch !== epoch) return
+
 		const groupUuids = Array.from(this.self.states.sources.values())
 			.filter((s) => s.isGroup)
 			.map((s) => s.sourceUuid)
 
-		await this.fetchGroupItemsBatch(groupUuids, allSourceUuids)
+		await this.fetchContainerItems(groupUuids, true, allSourceUuids)
+		if (this.self.obsState.epoch !== epoch) return
 
 		await this.fetchSourcesData(Array.from(allSourceUuids))
 
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
-	private async fetchSceneItemsBatch(sceneUuids: string[], allSourceUuids: Set<string>): Promise<void> {
-		if (sceneUuids.length === 0) return
+	// Fetches the item lists for a batch of containers (all scenes, or all groups) into the
+	// unified sceneItems map. A group's items get their parentGroupUuid stamped so consumers
+	// can resolve a grouped source back to its container.
+	private async fetchContainerItems(
+		containerUuids: string[],
+		isGroup: boolean,
+		allSourceUuids: Set<string>,
+	): Promise<void> {
+		if (containerUuids.length === 0) return
+		const epoch = this.self.obsState.epoch
 
-		const batch: OBSBatchRequest[] = sceneUuids.map((uuid) => ({
-			requestType: 'GetSceneItemList',
+		const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
+		const batch: OBSBatchRequest[] = containerUuids.map((uuid) => ({
+			requestType,
 			requestData: { sceneUuid: uuid },
 			requestId: uuid,
 		}))
 
 		const response = await this.sendBatch(batch)
+		if (!response || this.self.obsState.epoch !== epoch) return
 
-		if (response) {
-			for (const res of response) {
-				if (res.requestStatus.result) {
-					const sceneUuid = res.requestId
-					const items = res.responseData.sceneItems as OBSSceneItem[]
-					this.self.states.sceneItems.set(sceneUuid, items)
-
-					for (const item of items) {
-						allSourceUuids.add(item.sourceUuid)
-						this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
-					}
-				}
-			}
-		}
-	}
-
-	private async fetchGroupItemsBatch(groupUuids: string[], allSourceUuids: Set<string>): Promise<void> {
-		if (groupUuids.length === 0) return
-
-		const groupBatch: OBSBatchRequest[] = groupUuids.map((uuid) => ({
-			requestType: 'GetGroupSceneItemList',
-			requestData: { sceneUuid: uuid },
-			requestId: uuid,
-		}))
-		const groupResponse = await this.sendBatch(groupBatch)
-		if (groupResponse) {
-			for (const res of groupResponse) {
-				if (res.requestStatus.result) {
-					const groupUuid = res.requestId
-					const items = res.responseData.sceneItems as any[]
-					this.self.states.groups.set(groupUuid, items)
-					for (const item of items) {
-						allSourceUuids.add(item.sourceUuid)
-						const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind)
-						source.groupedSource = true
-						source.groupName = groupUuid
-					}
-				}
+		for (const res of response) {
+			if (!res.requestStatus.result) continue
+			const containerUuid = res.requestId
+			const items = (res.responseData?.sceneItems ?? []) as OBSSceneItem[]
+			this.self.states.sceneItems.set(containerUuid, items)
+			for (const item of items) {
+				allSourceUuids.add(item.sourceUuid)
+				const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
+				if (isGroup) source.parentGroupUuid = containerUuid
 			}
 		}
 	}
 
 	public async fetchSourcesData(sourceUuids: string[]): Promise<void> {
 		if (sourceUuids.length === 0) return
+		const epoch = this.self.obsState.epoch
 
 		const batch = this.buildSourceDataBatchRequests(sourceUuids)
 		const responses = await this.sendBatch(batch)
+		if (this.self.obsState.epoch !== epoch) return
 
 		if (responses) {
 			this.processSourceDataBatchResponses(responses)
@@ -962,48 +950,40 @@ export class OBSApi {
 		this.self.setVariableValues({ [`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType) })
 	}
 
-	public async buildSourceList(sceneUuid: string): Promise<void> {
-		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
-		if (data) {
-			this.self.states.sceneItems.set(sceneUuid, data.sceneItems as any)
-			const sceneItems = data.sceneItems as any[]
-			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
-			for (const item of sceneItems) {
-				this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
-			}
-			await this.fetchSourcesData(sourceUuids)
+	// Refreshes a single container's item list (routing to the group or scene request based
+	// on whether the UUID is a known group) and returns the contained source UUIDs. This is
+	// what lets SceneItemCreated inside a group work — it needs GetGroupSceneItemList, which
+	// GetSceneItemList rejects. Returns undefined if the request failed or state was reset.
+	private async refreshContainerItemList(containerUuid: string): Promise<string[] | undefined> {
+		const epoch = this.self.obsState.epoch
+		const isGroup = this.self.states.sources.get(containerUuid)?.isGroup ?? false
+		const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
+		const data = await this.sendRequest(requestType, { sceneUuid: containerUuid })
+		if (!data || this.self.obsState.epoch !== epoch) return undefined
+
+		const items = (data.sceneItems ?? []) as OBSSceneItem[]
+		this.self.states.sceneItems.set(containerUuid, items)
+		const sourceUuids: string[] = []
+		for (const item of items) {
+			sourceUuids.push(item.sourceUuid)
+			// addSource upserts, so known sources are refreshed, not duplicated.
+			const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
+			if (isGroup) source.parentGroupUuid = containerUuid
 		}
+		return sourceUuids
 	}
 
-	// Handles a single SceneItemCreated: refresh the scene's item list (one request) but
-	// only fetch full source data for the new source, instead of re-fetching every source
-	// in the scene as buildSourceList does. Matters when adding one item to a large scene.
-	public async addSceneItem(sceneUuid: string, sourceUuid: string): Promise<void> {
-		const data = await this.sendRequest('GetSceneItemList', { sceneUuid: sceneUuid })
-		if (data) {
-			this.self.states.sceneItems.set(sceneUuid, data.sceneItems as any)
-			const sceneItems = data.sceneItems as any[]
-			// addSource is a no-op for sources already known, so this only registers the new one.
-			for (const item of sceneItems) {
-				this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
-			}
-			await this.fetchSourcesData([sourceUuid])
-		}
+	public async buildSourceList(containerUuid: string): Promise<void> {
+		const sourceUuids = await this.refreshContainerItemList(containerUuid)
+		if (sourceUuids) await this.fetchSourcesData(sourceUuids)
 	}
 
-	public async getGroupInfo(groupUuid: string): Promise<void> {
-		const data = await this.sendRequest('GetGroupSceneItemList', { sceneUuid: groupUuid })
-		if (data) {
-			this.self.states.sceneItems.set(groupUuid, data.sceneItems as any)
-			const sceneItems = data.sceneItems as any[]
-			const sourceUuids = sceneItems.map((item) => item.sourceUuid)
-			for (const item of sceneItems) {
-				const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind)
-				source.groupedSource = true
-				source.groupName = groupUuid
-			}
-			await this.fetchSourcesData(sourceUuids)
-		}
+	// Handles a single SceneItemCreated: refresh the container's item list (one request) but
+	// only fetch full source data for the new source, instead of re-fetching every source in
+	// the container as buildSourceList does. Matters when adding one item to a large scene.
+	public async addSceneItem(containerUuid: string, sourceUuid: string): Promise<void> {
+		const sourceUuids = await this.refreshContainerItemList(containerUuid)
+		if (sourceUuids) await this.fetchSourcesData([sourceUuid])
 	}
 
 	public async buildSceneTransitionList(): Promise<void> {
@@ -1040,7 +1020,7 @@ export class OBSApi {
 	public async addScene(sceneName: string): Promise<void> {
 		const scene = await this.sendRequest('CreateScene', { sceneName: sceneName })
 		if (scene) {
-			this._addScene(scene.sceneUuid, sceneName)
+			this.registerScene(scene.sceneUuid, sceneName)
 			await this.buildSourceList(scene.sceneUuid)
 			void this.self.updateActionsFeedbacksVariables()
 		}
@@ -1175,8 +1155,9 @@ export class OBSApi {
 	}
 
 	public async getSourceFilters(sourceUuid: string): Promise<void> {
+		const epoch = this.self.obsState.epoch
 		const data = await this.sendRequest('GetSourceFilterList', { sourceUuid: sourceUuid })
-		if (data) {
+		if (data && this.self.obsState.epoch === epoch) {
 			this.self.states.sourceFilters.set(sourceUuid, data.filters as any)
 		}
 	}
@@ -1233,58 +1214,43 @@ export class OBSApi {
 	private findSourceInstances(
 		sourceUuid: string,
 		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
-	): { sceneUuid: string; sceneItemId: number }[] {
-		const sources: { sceneUuid: string; sceneItemId: number }[] = []
+	): { containerUuid: string; sceneItemId: number }[] {
+		const instances: { containerUuid: string; sceneItemId: number }[] = []
 
 		if (options.anyScene) {
-			for (const [sceneUuid, sceneItems] of this.self.states.sceneItems) {
-				const item = sceneItems.find((i) => i.sourceUuid === sourceUuid)
-				if (item) sources.push({ sceneUuid, sceneItemId: item.sceneItemId })
-			}
-			for (const [groupUuid, groupItems] of this.self.states.groups) {
-				const item = groupItems.find((i) => i.sourceUuid === sourceUuid)
-				if (item) sources.push({ sceneUuid: groupUuid, sceneItemId: item.sceneItemId })
+			// Scenes and groups share one map, so a single walk covers both.
+			for (const [containerUuid, items] of this.self.states.sceneItems) {
+				const item = items.find((i) => i.sourceUuid === sourceUuid)
+				if (item) instances.push({ containerUuid, sceneItemId: item.sceneItemId })
 			}
 		} else {
 			const scene = options.useCurrentScene
 				? this.self.states.scenes.get(this.self.states.programSceneUuid)
 				: this.self.obsState.findSceneByName(options.scene)
 
-			if (!scene) return sources
-			const sceneUuid = scene.sceneUuid
+			if (!scene) return instances
 
-			const sceneItems = this.self.states.sceneItems.get(sceneUuid)
-			const item = sceneItems?.find((i) => i.sourceUuid === sourceUuid)
-			if (item) {
-				sources.push({ sceneUuid, sceneItemId: item.sceneItemId })
-			} else {
-				const groups = this.self.states.groups.get(sceneUuid)
-				const groupItem = groups?.find((i) => i.sourceUuid === sourceUuid)
-				if (groupItem) {
-					sources.push({ sceneUuid, sceneItemId: groupItem.sceneItemId })
-				}
-			}
+			// A grouped source lives in its group's container, not directly in the scene.
+			const source = this.self.states.sources.get(sourceUuid)
+			const containerUuid = source?.parentGroupUuid ?? scene.sceneUuid
+			const item = this.self.states.sceneItems.get(containerUuid)?.find((i) => i.sourceUuid === sourceUuid)
+			if (item) instances.push({ containerUuid, sceneItemId: item.sceneItemId })
 		}
 
-		return sources
+		return instances
 	}
 
 	private buildSourceVisibilityRequests(
-		sources: { sceneUuid: string; sceneItemId: number }[],
+		instances: { containerUuid: string; sceneItemId: number }[],
 		visible: string,
 	): OBSBatchRequest[] {
-		return sources.map((source) => {
+		return instances.map((instance) => {
 			let enabled: boolean
 			if (visible === 'toggle') {
-				const sceneItems = this.self.states.sceneItems.get(source.sceneUuid)
-				const item = sceneItems?.find((i) => i.sceneItemId === source.sceneItemId)
-				if (item) {
-					enabled = !item.sceneItemEnabled
-				} else {
-					const groups = this.self.states.groups.get(source.sceneUuid)
-					const groupItem = groups?.find((i) => i.sceneItemId === source.sceneItemId)
-					enabled = groupItem ? !groupItem.sceneItemEnabled : false
-				}
+				const item = this.self.states.sceneItems
+					.get(instance.containerUuid)
+					?.find((i) => i.sceneItemId === instance.sceneItemId)
+				enabled = item ? !item.sceneItemEnabled : false
 			} else {
 				enabled = visible === 'true'
 			}
@@ -1292,8 +1258,9 @@ export class OBSApi {
 			return {
 				requestType: 'SetSceneItemEnabled',
 				requestData: {
-					sceneUuid: source.sceneUuid,
-					sceneItemId: source.sceneItemId,
+					// SetSceneItemEnabled accepts a group UUID in its sceneUuid field.
+					sceneUuid: instance.containerUuid,
+					sceneItemId: instance.sceneItemId,
 					sceneItemEnabled: enabled,
 				},
 			}

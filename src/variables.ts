@@ -1,6 +1,138 @@
 import type OBSInstance from './main.js'
 import type { CompanionVariableDefinitions } from '@companion-module/base'
+import type { OBSScene, OBSSource } from './types.js'
 import * as utils from './utils.js'
+
+type VariableValue = string | number | boolean | undefined
+
+interface VariableEntry {
+	id: string
+	name: string
+	value: VariableValue
+}
+
+const FILE_NAME_REGEX = /[^\\/]+(?=\.[\w]+$)|[^\\/]+$/
+
+// Single source of truth for per-source variables: each entry carries both its
+// definition (id + name) and its current value, so `getVariables` and
+// `updateVariableValues` can never drift apart.
+function sourceVariableEntries(source: OBSSource): VariableEntry[] {
+	const entries: VariableEntry[] = []
+	const sourceName = source.validName ?? source.sourceName
+	const settings = source.settings
+
+	switch (source.inputKind) {
+		case 'text_ft2_source_v2':
+		case 'text_gdiplus_v2':
+		case 'text_gdiplus_v3': {
+			let text: VariableValue
+			if (settings?.from_file || settings?.read_from_file) {
+				text = `Text from file: ${settings.text_file ?? settings.file}`
+			} else {
+				text = settings?.text ?? ''
+			}
+			entries.push({ id: `current_text_${sourceName}`, name: `${sourceName} - Current text`, value: text })
+			break
+		}
+		case 'ffmpeg_source':
+		case 'vlc_source': {
+			let file = ''
+			if (settings?.playlist) {
+				//Use first value in playlist until support for determining currently playing cue
+				file = settings.playlist[0]?.value?.match(FILE_NAME_REGEX)?.[0] ?? ''
+			} else if (settings?.local_file) {
+				file = settings.local_file.match(FILE_NAME_REGEX)?.[0] ?? ''
+			}
+			entries.push(
+				{
+					id: `media_status_${sourceName}`,
+					name: `${sourceName} - Media status`,
+					value: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
+				},
+				{ id: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name`, value: file },
+				{
+					id: `media_time_elapsed_${sourceName}`,
+					name: `${sourceName} - Time elapsed`,
+					value: source.timeElapsed ?? '00:00:00',
+				},
+				{
+					id: `media_time_remaining_${sourceName}`,
+					name: `${sourceName} - Time remaining`,
+					value: source.timeRemaining ?? '00:00:00',
+				},
+			)
+			break
+		}
+		case 'image_source':
+			entries.push({
+				id: `image_file_name_${sourceName}`,
+				name: `${sourceName} - Image file name`,
+				value: settings?.file ? (settings.file.match(FILE_NAME_REGEX)?.[0] ?? '') : '',
+			})
+			break
+		default:
+			break
+	}
+
+	if (source.inputAudioTracks) {
+		entries.push(
+			{
+				id: `volume_${sourceName}`,
+				name: `${sourceName} - Volume`,
+				value: source.inputVolume !== undefined ? source.inputVolume + ' dB' : '',
+			},
+			{
+				id: `mute_${sourceName}`,
+				name: `${sourceName} - Mute status`,
+				value: source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : '',
+			},
+			{
+				id: `monitor_${sourceName}`,
+				name: `${sourceName} - Audio monitor`,
+				value: utils.getMonitorTypeLabel(source.monitorType),
+			},
+			{
+				id: `sync_offset_${sourceName}`,
+				name: `${sourceName} - Sync offset`,
+				value: source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : '',
+			},
+			{
+				id: `balance_${sourceName}`,
+				name: `${sourceName} - Audio balance`,
+				value: source.inputAudioBalance !== undefined ? source.inputAudioBalance : '',
+			},
+		)
+	}
+
+	entries.push({
+		id: `source_active_${sourceName}`,
+		name: `${sourceName} - Active in program output`,
+		value: source.active,
+	})
+
+	return entries
+}
+
+// scene_1 is the scene shown at the top of the OBS UI (highest sceneIndex), so walk
+// the list back-to-front.
+function sceneVariableEntries(scenes: OBSScene[]): VariableEntry[] {
+	const entries: VariableEntry[] = []
+	let index = 0
+	for (let s = scenes.length - 1; s >= 0; s--) {
+		index++
+		entries.push({ id: `scene_${index}`, name: `Scene Position ${index} - Name`, value: scenes[s].sceneName })
+	}
+	return entries
+}
+
+function dynamicVariableEntries(self: OBSInstance): VariableEntry[] {
+	const entries: VariableEntry[] = []
+	for (const source of self.states.sources.values()) {
+		entries.push(...sourceVariableEntries(source))
+	}
+	entries.push(...sceneVariableEntries(Array.from(self.states.scenes.values())))
+	return entries
+}
 
 export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 	const variables: CompanionVariableDefinitions = {
@@ -53,53 +185,15 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 		vendor_event_data: { name: 'Latest Vendor Event data received from obs-websocket' },
 	}
 
-	//Source Specific Variables
-	for (const source of this.states.sources.values()) {
-		const sourceName = source.validName ?? source.sourceName
-		if (source.inputKind) {
-			switch (source.inputKind) {
-				case 'text_ft2_source_v2':
-				case 'text_gdiplus_v2':
-				case 'text_gdiplus_v3':
-					variables[`current_text_${sourceName}`] = { name: `${sourceName} - Current text` }
-					break
-				case 'ffmpeg_source':
-				case 'vlc_source': {
-					variables[`media_status_${sourceName}`] = { name: `${sourceName} - Media status` }
-					variables[`media_file_name_${sourceName}`] = { name: `${sourceName} - Media file name` }
-					variables[`media_time_elapsed_${sourceName}`] = { name: `${sourceName} - Time elapsed` }
-					variables[`media_time_remaining_${sourceName}`] = { name: `${sourceName} - Time remaining` }
-					break
-				}
-				case 'image_source':
-					variables[`image_file_name_${sourceName}`] = { name: `${sourceName} - Image file name` }
-					break
-				default:
-					break
-			}
-		}
-		if (source.inputAudioTracks) {
-			variables[`volume_${sourceName}`] = { name: `${sourceName} - Volume` }
-			variables[`mute_${sourceName}`] = { name: `${sourceName} - Mute status` }
-			variables[`monitor_${sourceName}`] = { name: `${sourceName} - Audio monitor` }
-			variables[`sync_offset_${sourceName}`] = { name: `${sourceName} - Sync offset` }
-			variables[`balance_${sourceName}`] = { name: `${sourceName} - Audio balance` }
-		}
-		variables[`source_active_${sourceName}`] = { name: `${sourceName} - Active in program output` }
+	for (const entry of dynamicVariableEntries(this)) {
+		variables[entry.id] = { name: entry.name }
 	}
 
-	//Scene Variables
-	let sceneIndex = 0
-	const sceneList = Array.from(this.states.scenes.values())
-	for (let s = sceneList.length - 1; s >= 0; s--) {
-		const index = ++sceneIndex
-		variables[`scene_${index}`] = { name: `Scene Position ${index} - Name` }
-	}
 	return variables
 }
 
 export function updateVariableValues(this: OBSInstance): void {
-	const updates: Record<string, string | number | boolean | undefined> = {
+	const updates: Record<string, VariableValue> = {
 		current_media_name: 'None',
 		recording_file_name: 'None',
 		replay_buffer_path: 'None',
@@ -111,65 +205,8 @@ export function updateVariableValues(this: OBSInstance): void {
 		scene_previous: this.states.previousScene ?? 'None',
 	}
 
-	//Source Specific Variables
-	for (const source of this.states.sources.values()) {
-		const sourceName = source.validName ?? source.sourceName
-		const inputSettings = source.settings
-		if (source.inputKind) {
-			switch (source.inputKind) {
-				case 'text_ft2_source_v2':
-				case 'text_gdiplus_v2':
-				case 'text_gdiplus_v3':
-					if (inputSettings?.from_file || inputSettings?.read_from_file) {
-						updates[`current_text_${sourceName}`] = `Text from file: ${inputSettings.text_file ?? inputSettings.file}`
-					} else {
-						updates[`current_text_${sourceName}`] = inputSettings?.text ?? ''
-					}
-					break
-				case 'ffmpeg_source':
-				case 'vlc_source': {
-					let file = ''
-					if (inputSettings?.playlist) {
-						file = inputSettings?.playlist[0]?.value?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
-						//Use first value in playlist until support for determining currently playing cue
-					} else if (inputSettings?.local_file) {
-						file = inputSettings?.local_file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
-					}
-					updates[`media_status_${sourceName}`] = utils.getOBSMediaStatusLabel(source.OBSMediaStatus)
-					updates[`media_file_name_${sourceName}`] = file
-					updates[`media_time_elapsed_${sourceName}`] = source.timeElapsed ?? '00:00:00'
-					updates[`media_time_remaining_${sourceName}`] = source.timeRemaining ?? '00:00:00'
-
-					break
-				}
-				case 'image_source':
-					updates[`image_file_name_${sourceName}`] = inputSettings?.file
-						? (inputSettings?.file?.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? '')
-						: ''
-					break
-				default:
-					break
-			}
-		}
-
-		if (source.inputAudioTracks) {
-			updates[`volume_${sourceName}`] = source.inputVolume !== undefined ? source.inputVolume + ' dB' : ''
-			updates[`mute_${sourceName}`] = source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : ''
-			updates[`monitor_${sourceName}`] = utils.getMonitorTypeLabel(source.monitorType)
-			updates[`sync_offset_${sourceName}`] =
-				source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : ''
-			updates[`balance_${sourceName}`] = source.inputAudioBalance !== undefined ? source.inputAudioBalance : ''
-		}
-		updates[`source_active_${sourceName}`] = source.active
-	}
-
-	//Scene Variables
-	let sceneIndex = 0
-	const sceneList = Array.from(this.states.scenes.values())
-	for (let s = sceneList.length - 1; s >= 0; s--) {
-		const index = ++sceneIndex
-		const sceneName = sceneList[s].sceneName
-		updates[`scene_${index}`] = sceneName
+	for (const entry of dynamicVariableEntries(this)) {
+		updates[entry.id] = entry.value
 	}
 
 	this.setVariableValues(updates)
