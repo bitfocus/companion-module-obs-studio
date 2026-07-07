@@ -633,12 +633,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^26.0.1":
-  version: 26.0.1
-  resolution: "@types/node@npm:26.0.1"
+"@types/node@npm:^26.1.0":
+  version: 26.1.0
+  resolution: "@types/node@npm:26.1.0"
   dependencies:
     undici-types: "npm:~8.3.0"
-  checksum: 10c0/31d204333c70124da6bcac7d1f27d8980149fe3f95a8419bfcd19c3e5823705c0e370d71ac34399352e1263b2d5fc41c87af964ec81e5a05a32224d65d8d224e
+  checksum: 10c0/61c22ad1ef215e24138cb8b7368fb68bab9de4c123b3f23d411749b015ba1b7d22f878ad54add26a0b69068d7e07c04af665069d8571b6c6c3b9b2fb73b7bd91
   languageName: node
   linkType: hard
 
@@ -860,9 +860,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/eslint-plugin@npm:^1.6.20":
-  version: 1.6.20
-  resolution: "@vitest/eslint-plugin@npm:1.6.20"
+"@vitest/eslint-plugin@npm:^1.6.21":
+  version: 1.6.21
+  resolution: "@vitest/eslint-plugin@npm:1.6.21"
   dependencies:
     "@typescript-eslint/scope-manager": "npm:^8.58.0"
     "@typescript-eslint/utils": "npm:^8.58.0"
@@ -878,7 +878,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/9c1b3697fec30304aea3c28efe0077b74f6b9423d0bed51c63e11ef7287a13cf3d3a4ce0a6ba853a91781da80820bd9b43cbf02766b6abe4ae054c93046ee36e
+  checksum: 10c0/b89b7e8ee72a974760a2f0b34a85f772216bc9973c955985777314c5e1aa036bb3377bfadd0253b13e018c0384db90bce13e2634b89e4c2bb3837e5ee89e86b6
   languageName: node
   linkType: hard
 
@@ -2132,8 +2132,8 @@ __metadata:
   dependencies:
     "@companion-module/base": "npm:~2.1.1"
     "@companion-module/tools": "npm:^3.0.2"
-    "@types/node": "npm:^26.0.1"
-    "@vitest/eslint-plugin": "npm:^1.6.20"
+    "@types/node": "npm:^26.1.0"
+    "@vitest/eslint-plugin": "npm:^1.6.21"
     eslint: "npm:^10.6.0"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^17.0.8"

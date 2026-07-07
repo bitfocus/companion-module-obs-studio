@@ -25,8 +25,8 @@
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^3.0.2",
-		"@types/node": "^26.0.1",
-		"@vitest/eslint-plugin": "^1.6.20",
+		"@types/node": "^26.1.0",
+		"@vitest/eslint-plugin": "^1.6.21",
 		"eslint": "^10.6.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.0.8",
