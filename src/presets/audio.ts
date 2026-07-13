@@ -15,17 +15,24 @@ export function getAudioPresets(self: OBSInstance): {
 		name: 'Toggle Mute',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
 		style: baseStyle({ text: '$(local:source)' }),
-		steps: [{ down: [{ actionId: 'toggle_source_mute', options: { source: '$(local:source)' } }], up: [] }],
+		steps: [
+			{
+				down: [
+					{ actionId: 'toggle_source_mute', options: { source: { value: '$(local:source)', isExpression: true } } },
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
 				feedbackId: 'audio_muted',
-				options: { source: '$(local:source)' },
+				options: { source: { value: '$(local:source)', isExpression: true } },
 				style: { ...styleMuted(), text: '$(local:source)\nMuted' },
 			},
 			{
 				feedbackId: 'audio_muted',
 				isInverted: true,
-				options: { source: '$(local:source)' },
+				options: { source: { value: '$(local:source)', isExpression: true } },
 				style: { ...styleActive(), text: '$(local:source)\nUnmuted' },
 			},
 		],
@@ -36,7 +43,17 @@ export function getAudioPresets(self: OBSInstance): {
 		name: 'Volume +3 dB',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
 		style: baseStyle({ text: '$(local:source)\n+3 dB' }),
-		steps: [{ down: [{ actionId: 'adjust_volume', options: { source: '$(local:source)', volume: 3 } }], up: [] }],
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjust_volume',
+						options: { source: { value: '$(local:source)', isExpression: true }, volume: 3 },
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [],
 	}
 
@@ -45,7 +62,17 @@ export function getAudioPresets(self: OBSInstance): {
 		name: 'Volume -3 dB',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
 		style: baseStyle({ text: '$(local:source)\n-3 dB' }),
-		steps: [{ down: [{ actionId: 'adjust_volume', options: { source: '$(local:source)', volume: -3 } }], up: [] }],
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'adjust_volume',
+						options: { source: { value: '$(local:source)', isExpression: true }, volume: -3 },
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [],
 	}
 
@@ -59,7 +86,10 @@ export function getAudioPresets(self: OBSInstance): {
 				down: [
 					{
 						actionId: 'set_audio_monitor',
-						options: { source: '$(local:source)', monitor: ObsAudioMonitorType.MonitorAndOutput },
+						options: {
+							source: { value: '$(local:source)', isExpression: true },
+							monitor: ObsAudioMonitorType.MonitorAndOutput,
+						},
 					},
 				],
 				up: [],
@@ -68,7 +98,10 @@ export function getAudioPresets(self: OBSInstance): {
 		feedbacks: [
 			{
 				feedbackId: 'audio_monitor_type',
-				options: { source: '$(local:source)', monitor: ObsAudioMonitorType.MonitorAndOutput },
+				options: {
+					source: { value: '$(local:source)', isExpression: true },
+					monitor: ObsAudioMonitorType.MonitorAndOutput,
+				},
 				style: styleActive(),
 			},
 		],
@@ -81,10 +114,14 @@ export function getAudioPresets(self: OBSInstance): {
 		style: baseStyle({ text: '$(local:source)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [
-			{ feedbackId: 'audioPeaking', options: { source: '$(local:source)', threshold: -20 }, style: styleActive() },
+			{
+				feedbackId: 'audioPeaking',
+				options: { source: { value: '$(local:source)', isExpression: true }, threshold: -20 },
+				style: styleActive(),
+			},
 			{
 				feedbackId: 'audio_muted',
-				options: { source: '$(local:source)' },
+				options: { source: { value: '$(local:source)', isExpression: true } },
 				style: { bgcolor: Color.Red, color: Color.White },
 			},
 		],

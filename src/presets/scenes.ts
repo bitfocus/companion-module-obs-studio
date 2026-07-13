@@ -14,8 +14,19 @@ export function getScenePresets(self: OBSInstance): {
 		name: 'Scene to Program',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
 		style: baseStyle({ text: '$(local:scene)' }),
-		steps: [{ down: [{ actionId: 'set_scene', options: { scene: '$(local:scene)' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'sceneProgram', options: { scene: '$(local:scene)' }, style: styleProgram() }],
+		steps: [
+			{
+				down: [{ actionId: 'set_scene', options: { scene: { value: '$(local:scene)', isExpression: true } } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'sceneProgram',
+				options: { scene: { value: '$(local:scene)', isExpression: true } },
+				style: styleProgram(),
+			},
+		],
 	}
 
 	presets['tpl_scenePreview'] = {
@@ -23,8 +34,19 @@ export function getScenePresets(self: OBSInstance): {
 		name: 'Scene to Preview',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
 		style: baseStyle({ text: '$(local:scene)' }),
-		steps: [{ down: [{ actionId: 'preview_scene', options: { scene: '$(local:scene)' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'scenePreview', options: { scene: '$(local:scene)' }, style: stylePreview() }],
+		steps: [
+			{
+				down: [{ actionId: 'preview_scene', options: { scene: { value: '$(local:scene)', isExpression: true } } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'scenePreview',
+				options: { scene: { value: '$(local:scene)', isExpression: true } },
+				style: stylePreview(),
+			},
+		],
 	}
 
 	presets['tpl_sceneSmart'] = {
@@ -32,13 +54,18 @@ export function getScenePresets(self: OBSInstance): {
 		name: 'Smart Switch Scene',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
 		style: baseStyle({ text: '$(local:scene)' }),
-		steps: [{ down: [{ actionId: 'smart_switcher', options: { scene: '$(local:scene)' } }], up: [] }],
+		steps: [
+			{
+				down: [{ actionId: 'smart_switcher', options: { scene: { value: '$(local:scene)', isExpression: true } } }],
+				up: [],
+			},
+		],
 		// scene_active colors live in options because it is an advanced feedback.
 		feedbacks: [
 			{
 				feedbackId: 'scene_active',
 				options: {
-					scene: '$(local:scene)',
+					scene: { value: '$(local:scene)', isExpression: true },
 					mode: 'programAndPreview',
 					fg: Color.White,
 					bg: Style.program,

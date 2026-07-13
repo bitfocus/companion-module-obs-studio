@@ -22,8 +22,19 @@ export function getStudioConfigPresets(self: OBSInstance): {
 		name: 'Set Profile',
 		localVariables: [{ variableType: 'simple', variableName: 'profile', startupValue: '', headline: 'Profile name' }],
 		style: baseStyle({ text: '$(local:profile)' }),
-		steps: [{ down: [{ actionId: 'set_profile', options: { profile: '$(local:profile)' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'profile_active', options: { profile: '$(local:profile)' }, style: styleActive() }],
+		steps: [
+			{
+				down: [{ actionId: 'set_profile', options: { profile: { value: '$(local:profile)', isExpression: true } } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'profile_active',
+				options: { profile: { value: '$(local:profile)', isExpression: true } },
+				style: styleActive(),
+			},
+		],
 	}
 
 	presets['tpl_sceneCollection'] = {
@@ -34,12 +45,20 @@ export function getStudioConfigPresets(self: OBSInstance): {
 		],
 		style: baseStyle({ text: '$(local:collection)' }),
 		steps: [
-			{ down: [{ actionId: 'set_scene_collection', options: { scene_collection: '$(local:collection)' } }], up: [] },
+			{
+				down: [
+					{
+						actionId: 'set_scene_collection',
+						options: { scene_collection: { value: '$(local:collection)', isExpression: true } },
+					},
+				],
+				up: [],
+			},
 		],
 		feedbacks: [
 			{
 				feedbackId: 'scene_collection_active',
-				options: { scene_collection: '$(local:collection)' },
+				options: { scene_collection: { value: '$(local:collection)', isExpression: true } },
 				style: styleActive(),
 			},
 		],

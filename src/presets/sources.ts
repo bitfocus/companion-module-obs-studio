@@ -17,10 +17,14 @@ export function getSourcePresets(self: OBSInstance): {
 		steps: [{ down: [], up: [] }],
 		feedbacks: [
 			// Preview feedback runs first so program (red) wins if live in both.
-			{ feedbackId: 'scene_item_previewed', options: { source: '$(local:source)' }, style: stylePreview() },
+			{
+				feedbackId: 'scene_item_previewed',
+				options: { source: { value: '$(local:source)', isExpression: true } },
+				style: stylePreview(),
+			},
 			{
 				feedbackId: 'scene_item_active',
-				options: { anyScene: true, source: '$(local:source)' },
+				options: { anyScene: true, source: { value: '$(local:source)', isExpression: true } },
 				style: styleProgram(),
 			},
 		],

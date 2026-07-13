@@ -14,11 +14,18 @@ export function getOutputPresets(self: OBSInstance): {
 		name: 'Toggle Output',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
 		style: baseStyle({ text: '$(local:output)' }),
-		steps: [{ down: [{ actionId: 'start_stop_output', options: { output: '$(local:output)' } }], up: [] }],
+		steps: [
+			{
+				down: [
+					{ actionId: 'start_stop_output', options: { output: { value: '$(local:output)', isExpression: true } } },
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
 			{
 				feedbackId: 'output_active',
-				options: { output: '$(local:output)' },
+				options: { output: { value: '$(local:output)', isExpression: true } },
 				style: { ...styleActive(), text: '$(local:output)\nActive' },
 			},
 		],
@@ -29,8 +36,19 @@ export function getOutputPresets(self: OBSInstance): {
 		name: 'Start Output',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
 		style: baseStyle({ text: 'START\n$(local:output)' }),
-		steps: [{ down: [{ actionId: 'start_output', options: { output: '$(local:output)' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'output_active', options: { output: '$(local:output)' }, style: styleActive() }],
+		steps: [
+			{
+				down: [{ actionId: 'start_output', options: { output: { value: '$(local:output)', isExpression: true } } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'output_active',
+				options: { output: { value: '$(local:output)', isExpression: true } },
+				style: styleActive(),
+			},
+		],
 	}
 
 	presets['tpl_outputStop'] = {
@@ -38,7 +56,12 @@ export function getOutputPresets(self: OBSInstance): {
 		name: 'Stop Output',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
 		style: baseStyle({ text: 'STOP\n$(local:output)' }),
-		steps: [{ down: [{ actionId: 'stop_output', options: { output: '$(local:output)' } }], up: [] }],
+		steps: [
+			{
+				down: [{ actionId: 'stop_output', options: { output: { value: '$(local:output)', isExpression: true } } }],
+				up: [],
+			},
+		],
 		feedbacks: [],
 	}
 
@@ -51,7 +74,7 @@ export function getOutputPresets(self: OBSInstance): {
 		feedbacks: [
 			{
 				feedbackId: 'output_active',
-				options: { output: '$(local:output)' },
+				options: { output: { value: '$(local:output)', isExpression: true } },
 				style: { ...styleActive(), text: '$(local:output)\nActive' },
 			},
 		],

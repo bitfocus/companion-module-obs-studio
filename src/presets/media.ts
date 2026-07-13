@@ -26,11 +26,22 @@ export function getMediaPresets(self: OBSInstance): {
 		style: baseStyle({ text: '$(local:source)' }),
 		steps: [
 			{
-				down: [{ actionId: 'play_pause_media', options: { source: '$(local:source)', playPause: 'toggle' } }],
+				down: [
+					{
+						actionId: 'play_pause_media',
+						options: { source: { value: '$(local:source)', isExpression: true }, playPause: 'toggle' },
+					},
+				],
 				up: [],
 			},
 		],
-		feedbacks: [{ feedbackId: 'media_playing', options: { source: '$(local:source)' }, style: styleActive() }],
+		feedbacks: [
+			{
+				feedbackId: 'media_playing',
+				options: { source: { value: '$(local:source)', isExpression: true } },
+				style: styleActive(),
+			},
+		],
 	}
 
 	presets['tpl_mediaStatus'] = {
@@ -42,7 +53,11 @@ export function getMediaPresets(self: OBSInstance): {
 		feedbacks: [
 			{
 				feedbackId: 'media_source_time_remaining',
-				options: { source: '$(local:source)', rtThreshold: 20, onlyIfSourceIsPlaying: true },
+				options: {
+					source: { value: '$(local:source)', isExpression: true },
+					rtThreshold: 20,
+					onlyIfSourceIsPlaying: true,
+				},
 				style: styleCaution(),
 			},
 		],
