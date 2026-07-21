@@ -9,7 +9,7 @@ export function getSourcePresets(self: OBSInstance): {
 } {
 	const presets: CompanionPresetDefinitions = {}
 
-	presets['tpl_sourceStatus'] = {
+	presets['tmp_sourceStatus'] = {
 		type: 'simple',
 		name: 'Source Status (Program / Preview Tally)',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Source name' }],
@@ -83,7 +83,7 @@ export function getSourcePresets(self: OBSInstance): {
 					id: 'sources-status',
 					name: 'Status (Program / Preview Tally)',
 					type: 'template',
-					presetId: 'tpl_sourceStatus',
+					presetId: 'tmp_sourceStatus',
 					templateVariableName: 'source',
 					templateValues: sourceValues,
 				},

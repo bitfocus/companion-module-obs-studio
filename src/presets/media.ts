@@ -19,7 +19,7 @@ export function getMediaPresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	presets['tpl_mediaToggle'] = {
+	presets['tmp_mediaToggle'] = {
 		type: 'simple',
 		name: 'Play / Pause Media',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Media source' }],
@@ -44,7 +44,7 @@ export function getMediaPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_mediaStatus'] = {
+	presets['tmp_mediaStatus'] = {
 		type: 'simple',
 		name: 'Media Time Remaining',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Media source' }],
@@ -75,7 +75,7 @@ export function getMediaPresets(self: OBSInstance): {
 					id: 'media-control',
 					name: 'Play / Pause',
 					type: 'template',
-					presetId: 'tpl_mediaToggle',
+					presetId: 'tmp_mediaToggle',
 					templateVariableName: 'source',
 					templateValues: mediaValues,
 				},
@@ -83,7 +83,7 @@ export function getMediaPresets(self: OBSInstance): {
 					id: 'media-status',
 					name: 'Status',
 					type: 'template',
-					presetId: 'tpl_mediaStatus',
+					presetId: 'tmp_mediaStatus',
 					templateVariableName: 'source',
 					templateValues: mediaValues,
 				},

@@ -17,7 +17,7 @@ export function getTransitionPresets(self: OBSInstance): {
 		feedbacks: [{ feedbackId: 'transition_active', options: {}, style: styleActive() }],
 	}
 
-	presets['tpl_setTransition'] = {
+	presets['tmp_setTransition'] = {
 		type: 'simple',
 		name: 'Set Transition Type',
 		localVariables: [
@@ -45,7 +45,7 @@ export function getTransitionPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_quickTransition'] = {
+	presets['tmp_quickTransition'] = {
 		type: 'simple',
 		name: 'Quick Transition',
 		localVariables: [
@@ -135,7 +135,7 @@ export function getTransitionPresets(self: OBSInstance): {
 					id: 'transitions-type',
 					name: 'Set Type',
 					type: 'template',
-					presetId: 'tpl_setTransition',
+					presetId: 'tmp_setTransition',
 					templateVariableName: 'transition',
 					templateValues: transitionValues,
 				},
@@ -143,7 +143,7 @@ export function getTransitionPresets(self: OBSInstance): {
 					id: 'transitions-quick',
 					name: 'Quick Transition',
 					type: 'template',
-					presetId: 'tpl_quickTransition',
+					presetId: 'tmp_quickTransition',
 					templateVariableName: 'transition',
 					templateValues: transitionValues,
 				},

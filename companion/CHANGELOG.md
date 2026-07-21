@@ -8,15 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 > **Note:** 4.0.0 is a major rewrite focused on performance and stability. It
-> updates the underlying module API to v2.0.0 to take advantage of new features
-> and improvements, which requires Companion v4.3.0 or newer.
+> updates the underlying module API to v2.1.0 to take advantage of new features
+> and improvements, which requires Companion v5.0.0 or newer.
 
 ### Added
 
 - WebSocket Server password is now securely stored and hidden by default
 - "Streaming - Reconnecting" feedback that activates while a stream is reconnecting
-- `screenshot_saved_path` variable containing the path of the most recently saved screenshot
 - Streaming status variable now reports "Reconnecting" during stream reconnection
+- `screenshot_saved_path` variable containing the path of the most recently saved screenshot
 
 ### Changed
 

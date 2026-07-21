@@ -9,7 +9,7 @@ export function getScenePresets(self: OBSInstance): {
 } {
 	const presets: CompanionPresetDefinitions = {}
 
-	presets['tpl_sceneProgram'] = {
+	presets['tmp_sceneProgram'] = {
 		type: 'simple',
 		name: 'Scene to Program',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
@@ -29,7 +29,7 @@ export function getScenePresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_scenePreview'] = {
+	presets['tmp_scenePreview'] = {
 		type: 'simple',
 		name: 'Scene to Preview',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
@@ -49,7 +49,7 @@ export function getScenePresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_sceneSmart'] = {
+	presets['tmp_sceneSmart'] = {
 		type: 'simple',
 		name: 'Smart Switch Scene',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
@@ -103,7 +103,7 @@ export function getScenePresets(self: OBSInstance): {
 					id: 'scenes-program',
 					name: 'Scene to Program',
 					type: 'template',
-					presetId: 'tpl_sceneProgram',
+					presetId: 'tmp_sceneProgram',
 					templateVariableName: 'scene',
 					templateValues: sceneValues,
 				},
@@ -111,7 +111,7 @@ export function getScenePresets(self: OBSInstance): {
 					id: 'scenes-preview',
 					name: 'Scene to Preview',
 					type: 'template',
-					presetId: 'tpl_scenePreview',
+					presetId: 'tmp_scenePreview',
 					templateVariableName: 'scene',
 					templateValues: sceneValues,
 				},
@@ -119,7 +119,7 @@ export function getScenePresets(self: OBSInstance): {
 					id: 'scenes-smart',
 					name: 'Smart Switch Scene',
 					type: 'template',
-					presetId: 'tpl_sceneSmart',
+					presetId: 'tmp_sceneSmart',
 					templateVariableName: 'scene',
 					templateValues: sceneValues,
 				},

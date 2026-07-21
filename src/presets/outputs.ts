@@ -9,7 +9,7 @@ export function getOutputPresets(self: OBSInstance): {
 } {
 	const presets: CompanionPresetDefinitions = {}
 
-	presets['tpl_outputToggle'] = {
+	presets['tmp_outputToggle'] = {
 		type: 'simple',
 		name: 'Toggle Output',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
@@ -31,7 +31,7 @@ export function getOutputPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_outputStart'] = {
+	presets['tmp_outputStart'] = {
 		type: 'simple',
 		name: 'Start Output',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
@@ -51,7 +51,7 @@ export function getOutputPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_outputStop'] = {
+	presets['tmp_outputStop'] = {
 		type: 'simple',
 		name: 'Stop Output',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
@@ -65,7 +65,7 @@ export function getOutputPresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	presets['tpl_outputStatus'] = {
+	presets['tmp_outputStatus'] = {
 		type: 'simple',
 		name: 'Output Status',
 		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
@@ -91,7 +91,7 @@ export function getOutputPresets(self: OBSInstance): {
 					id: 'outputs-control',
 					name: 'Toggle',
 					type: 'template',
-					presetId: 'tpl_outputToggle',
+					presetId: 'tmp_outputToggle',
 					templateVariableName: 'output',
 					templateValues: outputValues,
 				},
@@ -99,7 +99,7 @@ export function getOutputPresets(self: OBSInstance): {
 					id: 'outputs-start',
 					name: 'Start',
 					type: 'template',
-					presetId: 'tpl_outputStart',
+					presetId: 'tmp_outputStart',
 					templateVariableName: 'output',
 					templateValues: outputValues,
 				},
@@ -107,7 +107,7 @@ export function getOutputPresets(self: OBSInstance): {
 					id: 'outputs-stop',
 					name: 'Stop',
 					type: 'template',
-					presetId: 'tpl_outputStop',
+					presetId: 'tmp_outputStop',
 					templateVariableName: 'output',
 					templateValues: outputValues,
 				},
@@ -115,7 +115,7 @@ export function getOutputPresets(self: OBSInstance): {
 					id: 'outputs-status',
 					name: 'Status',
 					type: 'template',
-					presetId: 'tpl_outputStatus',
+					presetId: 'tmp_outputStatus',
 					templateVariableName: 'output',
 					templateValues: outputValues,
 				},

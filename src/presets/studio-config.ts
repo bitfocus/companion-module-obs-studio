@@ -17,7 +17,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 		feedbacks: [{ feedbackId: 'studioMode', options: {}, style: { ...styleActive(), text: 'DISABLE\nStudio Mode' } }],
 	}
 
-	presets['tpl_profile'] = {
+	presets['tmp_profile'] = {
 		type: 'simple',
 		name: 'Set Profile',
 		localVariables: [{ variableType: 'simple', variableName: 'profile', startupValue: '', headline: 'Profile name' }],
@@ -37,7 +37,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_sceneCollection'] = {
+	presets['tmp_sceneCollection'] = {
 		type: 'simple',
 		name: 'Set Scene Collection',
 		localVariables: [
@@ -77,7 +77,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 					id: 'config-profile',
 					name: 'Profile',
 					type: 'template',
-					presetId: 'tpl_profile',
+					presetId: 'tmp_profile',
 					templateVariableName: 'profile',
 					templateValues: profileValues,
 				},
@@ -85,7 +85,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 					id: 'config-collection',
 					name: 'Scene Collection',
 					type: 'template',
-					presetId: 'tpl_sceneCollection',
+					presetId: 'tmp_sceneCollection',
 					templateVariableName: 'collection',
 					templateValues: collectionValues,
 				},

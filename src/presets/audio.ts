@@ -10,7 +10,7 @@ export function getAudioPresets(self: OBSInstance): {
 } {
 	const presets: CompanionPresetDefinitions = {}
 
-	presets['tpl_audioMute'] = {
+	presets['tmp_audioMute'] = {
 		type: 'simple',
 		name: 'Toggle Mute',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
@@ -38,7 +38,7 @@ export function getAudioPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_audioVolUp'] = {
+	presets['tmp_audioVolUp'] = {
 		type: 'simple',
 		name: 'Volume +3 dB',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
@@ -57,7 +57,7 @@ export function getAudioPresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	presets['tpl_audioVolDown'] = {
+	presets['tmp_audioVolDown'] = {
 		type: 'simple',
 		name: 'Volume -3 dB',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
@@ -76,7 +76,7 @@ export function getAudioPresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	presets['tpl_audioMonitor'] = {
+	presets['tmp_audioMonitor'] = {
 		type: 'simple',
 		name: 'Monitor + Output',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
@@ -107,7 +107,7 @@ export function getAudioPresets(self: OBSInstance): {
 		],
 	}
 
-	presets['tpl_audioStatus'] = {
+	presets['tmp_audioStatus'] = {
 		type: 'simple',
 		name: 'Audio Status',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
@@ -138,7 +138,7 @@ export function getAudioPresets(self: OBSInstance): {
 					id: 'audio-mute',
 					name: 'Toggle Mute',
 					type: 'template',
-					presetId: 'tpl_audioMute',
+					presetId: 'tmp_audioMute',
 					templateVariableName: 'source',
 					templateValues: audioValues,
 				},
@@ -146,7 +146,7 @@ export function getAudioPresets(self: OBSInstance): {
 					id: 'audio-volume-up',
 					name: 'Volume Up',
 					type: 'template',
-					presetId: 'tpl_audioVolUp',
+					presetId: 'tmp_audioVolUp',
 					templateVariableName: 'source',
 					templateValues: audioValues,
 				},
@@ -154,7 +154,7 @@ export function getAudioPresets(self: OBSInstance): {
 					id: 'audio-volume-down',
 					name: 'Volume Down',
 					type: 'template',
-					presetId: 'tpl_audioVolDown',
+					presetId: 'tmp_audioVolDown',
 					templateVariableName: 'source',
 					templateValues: audioValues,
 				},
@@ -162,7 +162,7 @@ export function getAudioPresets(self: OBSInstance): {
 					id: 'audio-monitor',
 					name: 'Monitoring',
 					type: 'template',
-					presetId: 'tpl_audioMonitor',
+					presetId: 'tmp_audioMonitor',
 					templateVariableName: 'source',
 					templateValues: audioValues,
 				},
@@ -170,7 +170,7 @@ export function getAudioPresets(self: OBSInstance): {
 					id: 'audio-status',
 					name: 'Status',
 					type: 'template',
-					presetId: 'tpl_audioStatus',
+					presetId: 'tmp_audioStatus',
 					templateVariableName: 'source',
 					templateValues: audioValues,
 				},

@@ -126,7 +126,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - streaming
 - stream_timecode
 - stream_service
-- kbits_per_sec (Amount of data per second (in kilobits) transmitted by the stream encoder)
+- kbits_per_sec (Amount of data per second transmitted by the stream encoder)
 - render_missed_frames
 - render_total_frames
 - output_skipped_frames
