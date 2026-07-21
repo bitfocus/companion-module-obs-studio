@@ -45,7 +45,7 @@ export function getReplayPresets(_self: OBSInstance): {
 	presets['replayStatus'] = {
 		type: 'simple',
 		name: 'Replay Buffer Status',
-		style: baseStyle({ text: 'REPLAY\nBUFFER' }),
+		style: baseStyle({ text: 'REPLAY\nBUFFER STATUS' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'REPLAY\nACTIVE' } }],
 	}

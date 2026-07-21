@@ -25,7 +25,7 @@ export const SIZE = { default: 14, auto: 'auto' } as const
 export function baseStyle(over: Partial<CompanionButtonStyleProps> = {}): CompanionButtonStyleProps {
 	return {
 		text: '',
-		size: SIZE.auto,
+		size: SIZE.default,
 		color: Style.idleFg,
 		bgcolor: Style.idleBg,
 		show_topbar: false,

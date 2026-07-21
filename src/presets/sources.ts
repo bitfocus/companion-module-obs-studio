@@ -11,7 +11,7 @@ export function getSourcePresets(self: OBSInstance): {
 
 	presets['tpl_sourceStatus'] = {
 		type: 'simple',
-		name: 'Source Status (tally)',
+		name: 'Source Status (Program / Preview Tally)',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Source name' }],
 		style: baseStyle({ text: '$(local:source)' }),
 		steps: [{ down: [], up: [] }],
@@ -81,7 +81,7 @@ export function getSourcePresets(self: OBSInstance): {
 			definitions: [
 				{
 					id: 'sources-status',
-					name: 'Status (tally)',
+					name: 'Status (Program / Preview Tally)',
 					type: 'template',
 					presetId: 'tpl_sourceStatus',
 					templateVariableName: 'source',
@@ -89,7 +89,7 @@ export function getSourcePresets(self: OBSInstance): {
 				},
 				{
 					id: 'sources-actions',
-					name: 'Actions',
+					name: 'Source Specific Actions',
 					type: 'simple',
 					presets: ['refreshBrowserSource', 'resetCaptureDevice', 'takeScreenshot'],
 				},

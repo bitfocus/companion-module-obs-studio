@@ -12,7 +12,7 @@ export function getSystemPresets(_self: OBSInstance): {
 	presets['cpuRamUsage'] = {
 		type: 'simple',
 		name: 'CPU/RAM Usage',
-		style: baseStyle({ text: 'CPU:\n$(obs:cpu_usage)\nRAM:\n$(obs:memory_usage)' }),
+		style: baseStyle({ text: 'CPU:\n$(obs:cpu_usage)\nRAM:\n$(obs:memory_usage) MB' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
@@ -20,7 +20,7 @@ export function getSystemPresets(_self: OBSInstance): {
 	presets['cpuUsage'] = {
 		type: 'simple',
 		name: 'CPU Usage',
-		style: baseStyle({ text: 'CPU:\n$(obs:cpu_usage)' }),
+		style: baseStyle({ text: 'CPU:\n$(obs:cpu_usage) %' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
@@ -154,7 +154,7 @@ export function getSystemPresets(_self: OBSInstance): {
 				{ id: 'system-disk', name: 'Disk', type: 'simple', presets: ['remainingDiskSpace'] },
 				{
 					id: 'system-dialogs',
-					name: 'Windows',
+					name: 'Open OBS UI Windows',
 					type: 'simple',
 					presets: ['openMultiviewProjector', 'openSourceProperties', 'openSourceFilters', 'openSourceInteract'],
 				},

@@ -25,9 +25,23 @@ export function getTransitionPresets(self: OBSInstance): {
 		],
 		style: baseStyle({ text: '$(local:transition)' }),
 		// Uses the (historically plural) option key 'transitions'.
-		steps: [{ down: [{ actionId: 'set_transition_type', options: { transitions: '$(local:transition)' } }], up: [] }],
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'set_transition_type',
+						options: { transitions: { value: '$(local:transition)', isExpression: true } },
+					},
+				],
+				up: [],
+			},
+		],
 		feedbacks: [
-			{ feedbackId: 'current_transition', options: { transition: '$(local:transition)' }, style: styleActive() },
+			{
+				feedbackId: 'current_transition',
+				options: { transition: { value: '$(local:transition)', isExpression: true } },
+				style: styleActive(),
+			},
 		],
 	}
 
@@ -43,7 +57,11 @@ export function getTransitionPresets(self: OBSInstance): {
 				down: [
 					{
 						actionId: 'quick_transition',
-						options: { transition: '$(local:transition)', customDuration: false, transition_time: 500 },
+						options: {
+							transition: { value: '$(local:transition)', isExpression: true },
+							customDuration: false,
+							transition_time: 500,
+						},
 					},
 				],
 				up: [],
