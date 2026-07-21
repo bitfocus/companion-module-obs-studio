@@ -520,8 +520,8 @@ export class OBSApi {
 				output_total_frames: data.outputTotalFrames,
 				output_skipped_frames: data.outputSkippedFrames,
 				average_frame_time: utils.roundNumber(data.averageFrameRenderTime, 2),
-				cpu_usage: `${utils.roundNumber(data.cpuUsage, 2)}%`,
-				memory_usage: `${utils.roundNumber(data.memoryUsage, 0)} MB`,
+				cpu_usage: utils.roundNumber(data.cpuUsage, 2),
+				memory_usage: utils.roundNumber(data.memoryUsage, 0),
 				free_disk_space: freeSpace,
 				free_disk_space_mb: freeSpaceMB,
 			})

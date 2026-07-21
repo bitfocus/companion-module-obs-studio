@@ -76,8 +76,8 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 		entries.push(
 			{
 				id: `volume_${sourceName}`,
-				name: `${sourceName} - Volume`,
-				value: source.inputVolume !== undefined ? source.inputVolume + ' dB' : '',
+				name: `${sourceName} - Volume (dB)`,
+				value: source.inputVolume,
 			},
 			{
 				id: `mute_${sourceName}`,
@@ -91,8 +91,8 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 			},
 			{
 				id: `sync_offset_${sourceName}`,
-				name: `${sourceName} - Sync offset`,
-				value: source.inputAudioSyncOffset !== undefined ? source.inputAudioSyncOffset + 'ms' : '',
+				name: `${sourceName} - Sync offset (ms)`,
+				value: source.inputAudioSyncOffset,
 			},
 			{
 				id: `balance_${sourceName}`,
@@ -137,8 +137,8 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 		output_resolution: { name: 'Current output (scaled) resolution' },
 		target_framerate: { name: 'Current profile framerate' },
 		fps: { name: 'Current actual framerate' },
-		cpu_usage: { name: 'Current CPU usage (percentage)' },
-		memory_usage: { name: 'Current RAM usage (in MB)' },
+		cpu_usage: { name: 'Current CPU usage (%)' },
+		memory_usage: { name: 'Current RAM usage (MB)' },
 		free_disk_space: { name: 'Free recording disk space' },
 		free_disk_space_mb: { name: 'Free recording disk space in MB, with no unit text' },
 		render_missed_frames: { name: 'Number of frames missed due to rendering lag' },
@@ -166,7 +166,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 		profile: { name: 'Current profile' },
 		scene_collection: { name: 'Current scene collection' },
 		current_transition: { name: 'Current transition' },
-		transition_duration: { name: 'Current transition duration' },
+		transition_duration: { name: 'Current transition duration (ms)' },
 		transition_active: { name: 'Transition in progress' },
 		transition_list: { name: 'List of available transition types' },
 		current_media_name: { name: 'Source name(s) for currently playing media source(s)' },
@@ -191,8 +191,21 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 
 export function updateVariableValues(this: OBSInstance): void {
 	const updates: Record<string, VariableValue> = {
-		current_media_name: 'None',
+		recording: 'Unknown',
 		recording_file_name: 'None',
+		recording_path: 'None',
+		recording_timecode: '00:00:00',
+		recording_timecode_hh: '00',
+		recording_timecode_mm: '00',
+		recording_timecode_ss: '00',
+		stream_timecode: '00:00:00',
+		stream_timecode_hh: '00',
+		stream_timecode_mm: '00',
+		stream_timecode_ss: '00',
+		stream_service: 'None',
+		streaming: 'Off-Air',
+		kbits_per_sec: 0,
+		current_media_name: 'None',
 		replay_buffer_path: 'None',
 		screenshot_saved_path: 'None',
 		current_media_time_elapsed: '00:00:00',
@@ -200,6 +213,15 @@ export function updateVariableValues(this: OBSInstance): void {
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
 		scene_previous: this.states.previousScene ?? 'None',
+		current_transition: this.states.currentTransition ?? 'None',
+		transition_duration: this.states.transitionDuration ?? 0,
+		transition_active: this.states.transitionActive ?? false,
+		transition_list: this.obsState.transitionList?.map((item) => item.id).join(', ') ?? '',
+		profile: this.states.currentProfile ?? 'None',
+		scene_collection: this.states.currentSceneCollection ?? 'None',
+		base_resolution: this.states.resolution ?? '',
+		output_resolution: this.states.outputResolution ?? '',
+		target_framerate: this.states.framerate ?? '',
 	}
 
 	for (const entry of dynamicVariableEntries(this)) {
