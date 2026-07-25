@@ -74,7 +74,7 @@ export function getVariables() {
 	//Source Specific Variables
 	for (let s in this.sources) {
 		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+		let sourceName = this.validName(source.sourceName)
 		if (source.inputKind) {
 			switch (source.inputKind) {
 				case 'text_ft2_source_v2':
@@ -138,7 +138,7 @@ export function updateVariableValues() {
 	//Source Specific Variables
 	for (let s in this.sources) {
 		let source = this.sources[s]
-		let sourceName = source.validName ? source.validName : this.validName(source.sourceName)
+		let sourceName = this.validName(source.sourceName)
 		let inputSettings = source.settings
 		if (source.inputKind) {
 			switch (source.inputKind) {
