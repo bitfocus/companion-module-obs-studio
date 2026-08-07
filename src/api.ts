@@ -1,5 +1,10 @@
 import { InstanceStatus, createModuleLogger } from '@companion-module/base'
-import OBSWebSocket, { EventSubscription, OBSRequestTypes, OBSResponseTypes } from 'obs-websocket-js'
+import OBSWebSocket, {
+	EventSubscription,
+	OBSRequestTypes,
+	OBSResponseTypes,
+	RequestBatchExecutionType,
+} from 'obs-websocket-js'
 import { initOBSListeners } from './listeners.js'
 import type OBSInstance from './main.js'
 import * as utils from './utils.js'
@@ -36,6 +41,11 @@ export class OBSApi {
 	private lastMeterFeedbackCheck = 0
 	private meterFeedbackPending = false
 	private static readonly METER_FEEDBACK_THROTTLE_MS = 100
+
+	// Subscription tracking for output-status polling (keyed by feedback ID).
+	private outputStatusSubscribers = new Set<string>()
+	// Outputs with a dedicated state-changed event don't need polling.
+	private static readonly OUTPUTS_WITH_DEDICATED_EVENTS = new Set(['virtualcam_output'])
 
 	// Event subscriptions except high-frequency volume meters.
 	private get baseEventSubscriptions(): number {
@@ -89,29 +99,29 @@ export class OBSApi {
 				// Setup initial state.
 				this.initializeStates()
 
-				// Get initial OBS info.
-				const initialInfo = await this.obsInfo()
+				// Get capabilities that only depend on the OBS installation, not the loaded profile.
+				const capabilities = await this.getObsCapabilities()
 
-				if (initialInfo) {
+				if (capabilities) {
 					// Start listeners.
 					initOBSListeners(this.self)
 
-					// Get project info.
-					await this.getStats()
-					await this.getRecordStatus()
-					await this.getStreamStatus()
+					// None of these depend on one another, so fetch them together.
+					await Promise.all([
+						this.getStats(),
+						this.getRecordStatus(),
+						this.getStreamStatus(),
+						this.profileInfo(),
+						this.buildProfileList(),
+						this.buildSceneCollectionList(),
+						this.buildSceneTransitionList(),
+					])
 					this.startStatsPoll()
 
-					// Build general parameters.
-					await this.buildProfileList()
-					await this.buildSceneCollectionList()
-
-					// Build scene collection parameters.
-					await this.buildSceneTransitionList()
 					// Build scene list (registers inputs and scene containment).
 					await this.buildSceneList()
 				} else {
-					// Fail connection if initial info could not be fetched.
+					// Fail connection if OBS capabilities could not be fetched.
 					throw new Error('could not get OBS info')
 				}
 			}
@@ -182,6 +192,15 @@ export class OBSApi {
 		if (this.meterSubscribers.size === 0) this.applyMeterSubscription(false)
 	}
 
+	// Output-status polling only runs while an output_active feedback is on a button.
+	public addOutputStatusSubscriber(feedbackId: string): void {
+		this.outputStatusSubscribers.add(feedbackId)
+	}
+
+	public removeOutputStatusSubscriber(feedbackId: string): void {
+		this.outputStatusSubscribers.delete(feedbackId)
+	}
+
 	private applyMeterSubscription(enable: boolean): void {
 		if (!this.self.socket || this.metersActive === enable) return
 		this.metersActive = enable
@@ -246,9 +265,13 @@ export class OBSApi {
 		return data
 	}
 
-	public async sendBatch(batch: OBSBatchRequest[]): Promise<OBSBatchResponse[] | undefined> {
+	// Parallel is only safe for read-only batches with no ordering dependency and no Sleep entries.
+	public async sendBatch(
+		batch: OBSBatchRequest[],
+		options?: { executionType?: RequestBatchExecutionType },
+	): Promise<OBSBatchResponse[] | undefined> {
 		try {
-			const data = (await this.self.socket.callBatch(batch as any)) as unknown as OBSBatchResponse[]
+			const data = (await this.self.socket.callBatch(batch as any, options)) as unknown as OBSBatchResponse[]
 			const errors = data.filter(
 				(request) =>
 					request.requestStatus.result === false &&
@@ -363,7 +386,10 @@ export class OBSApi {
 	}
 
 	// General OBS Project Info
-	public async obsInfo(): Promise<boolean> {
+
+	// Data that only changes with the OBS installation itself, not the loaded profile or scene
+	// collection — fetched once per connection.
+	public async getObsCapabilities(): Promise<boolean> {
 		try {
 			const version = await this.sendRequest('GetVersion')
 			if (!version) return false
@@ -382,21 +408,26 @@ export class OBSApi {
 				this.self.states.studioMode = studioMode.studioModeEnabled ?? false
 			}
 
-			// Fetch config lists in parallel.
-			await Promise.all([
-				this.buildHotkeyList(),
-				this.buildOutputList(),
-				this.buildMonitorList(),
-				this.getVideoSettings(),
-				this.getReplayBufferStatus(),
-				this.getInputKindList(),
-			])
+			await Promise.all([this.buildMonitorList(), this.getInputKindList()])
 
 			return true
 		} catch (error) {
 			logger.debug(error as any)
 			return false
 		}
+	}
+
+	// Data scoped to the current profile / scene collection — refreshed on connect and again
+	// whenever the profile or scene collection changes.
+	public async profileInfo(): Promise<void> {
+		await Promise.all([
+			this.buildHotkeyList(),
+			this.buildOutputList(),
+			this.getVideoSettings(),
+			this.getReplayBufferStatus(),
+			this.getRecordDirectory(),
+			this.getStreamServiceSettings(),
+		])
 	}
 
 	public async buildHotkeyList(): Promise<void> {
@@ -410,16 +441,26 @@ export class OBSApi {
 
 	public async getInputKindList(): Promise<void> {
 		const inputKindList = await this.sendRequest('GetInputKindList')
-		if (inputKindList && inputKindList.inputKinds) {
-			await Promise.all(
-				inputKindList.inputKinds.map(async (inputKind: string) => {
-					this.self.states.inputKindList.set(inputKind, {})
-					const defaultSettings = await this.sendRequest('GetInputDefaultSettings', { inputKind: inputKind })
-					if (defaultSettings) {
-						this.self.states.inputKindList.set(inputKind, defaultSettings.defaultInputSettings)
-					}
-				}),
-			)
+		const kinds = inputKindList?.inputKinds
+		if (!kinds || kinds.length === 0) return
+
+		for (const inputKind of kinds) {
+			this.self.states.inputKindList.set(inputKind, {})
+		}
+
+		const batch: OBSBatchRequest[] = kinds.map((inputKind: string) => ({
+			requestType: 'GetInputDefaultSettings',
+			requestData: { inputKind },
+			requestId: inputKind,
+		}))
+
+		const responses = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
+		if (!responses) return
+
+		for (const res of responses) {
+			if (res.requestStatus.result && res.responseData) {
+				this.self.states.inputKindList.set(res.requestId, res.responseData.defaultInputSettings)
+			}
 		}
 	}
 
@@ -549,84 +590,73 @@ export class OBSApi {
 
 	// Outputs, Streams, Recordings
 	public async getStreamStatus(): Promise<void> {
-		const batch = [
-			{ requestType: 'GetStreamStatus', requestId: 'status' },
-			{ requestType: 'GetStreamServiceSettings', requestId: 'settings' },
-		]
-		const data = await this.sendBatch(batch)
+		const streamStatus = await this.sendRequest('GetStreamStatus')
 
-		if (data) {
-			const streamStatus = data.find((res) => res.requestId === 'status')?.responseData
-			const streamService = data.find((res) => res.requestId === 'settings')?.responseData
+		if (streamStatus) {
+			const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
+			const timecode = timecodeMatch?.[0] ?? '00:00:00'
+			this.self.states.streaming = streamStatus.outputActive
+			this.self.states.streamingTimecode = timecode
+			const streamingTimecodeSplit = utils.splitTimecode(timecode)
 
-			if (streamStatus) {
-				const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
-				const timecode = timecodeMatch?.[0] ?? '00:00:00'
-				this.self.states.streaming = streamStatus.outputActive
-				this.self.states.streamingTimecode = timecode
-				const streamingTimecodeSplit = utils.splitTimecode(timecode)
+			this.self.states.streamCongestion = streamStatus.outputCongestion
 
-				this.self.states.streamCongestion = streamStatus.outputCongestion
-
-				let kbits = 0
-				if (streamStatus.outputBytes > this.self.states.outputBytes) {
-					kbits = Math.round(((streamStatus.outputBytes - this.self.states.outputBytes) * 8) / 1000)
-					this.self.states.outputBytes = streamStatus.outputBytes
-				} else {
-					this.self.states.outputBytes = streamStatus.outputBytes
-				}
-
-				// Preserve reconnecting label.
-				const streamingState = this.self.states.streamReconnecting
-					? OBSStreamingState.Reconnecting
-					: this.self.states.streaming
-						? OBSStreamingState.Streaming
-						: OBSStreamingState.OffAir
-
-				this.self.checkFeedbacks('streaming', 'streamCongestion')
-				this.self.setVariableValues({
-					streaming: utils.getOBSStreamingStateLabel(streamingState),
-					stream_timecode: timecode,
-					stream_timecode_hh: streamingTimecodeSplit.hh,
-					stream_timecode_mm: streamingTimecodeSplit.mm,
-					stream_timecode_ss: streamingTimecodeSplit.ss,
-					output_skipped_frames: streamStatus.outputSkippedFrames,
-					output_total_frames: streamStatus.outputTotalFrames,
-					kbits_per_sec: kbits,
-					stream_service: streamService?.streamServiceSettings?.service ?? 'Custom',
-				})
+			let kbits = 0
+			if (streamStatus.outputBytes > this.self.states.outputBytes) {
+				kbits = Math.round(((streamStatus.outputBytes - this.self.states.outputBytes) * 8) / 1000)
+				this.self.states.outputBytes = streamStatus.outputBytes
+			} else {
+				this.self.states.outputBytes = streamStatus.outputBytes
 			}
+
+			// Preserve reconnecting label.
+			const streamingState = this.self.states.streamReconnecting
+				? OBSStreamingState.Reconnecting
+				: this.self.states.streaming
+					? OBSStreamingState.Streaming
+					: OBSStreamingState.OffAir
+
+			this.self.checkFeedbacks('streaming', 'streamCongestion')
+			this.self.setVariableValues({
+				streaming: utils.getOBSStreamingStateLabel(streamingState),
+				stream_timecode: timecode,
+				stream_timecode_hh: streamingTimecodeSplit.hh,
+				stream_timecode_mm: streamingTimecodeSplit.mm,
+				stream_timecode_ss: streamingTimecodeSplit.ss,
+				output_skipped_frames: streamStatus.outputSkippedFrames,
+				output_total_frames: streamStatus.outputTotalFrames,
+				kbits_per_sec: kbits,
+			})
 		}
 	}
 
+	// The active stream service only changes on profile switch or Set Stream Settings; not worth polling.
+	public async getStreamServiceSettings(): Promise<void> {
+		const streamService = await this.sendRequest('GetStreamServiceSettings')
+		this.self.setVariableValues({ stream_service: streamService?.streamServiceSettings?.service ?? 'Custom' })
+	}
+
 	public async getRecordStatus(): Promise<void> {
-		const batch = [
-			{ requestType: 'GetRecordStatus', requestId: 'status' },
-			{ requestType: 'GetRecordDirectory', requestId: 'directory' },
-		]
-		const data = await this.sendBatch(batch)
+		const recordStatus = await this.sendRequest('GetRecordStatus')
 
-		if (data) {
-			const recordStatus = data.find((res) => res.requestId === 'status')?.responseData
-			const recordDirectory = data.find((res) => res.requestId === 'directory')?.responseData
-
-			if (recordStatus) {
-				if (recordStatus.outputActive === true && recordStatus.outputPaused === false) {
-					this.self.states.recording = OBSRecordingState.Recording
-				} else {
-					this.self.states.recording = recordStatus.outputPaused ? OBSRecordingState.Paused : OBSRecordingState.Stopped
-				}
-
-				this.self.states.recordDirectory = recordDirectory?.recordDirectory
-
-				this.self.checkFeedbacks('recording', 'recordingPaused')
-				this.updateRecordingTimecode(recordStatus)
-				this.self.setVariableValues({
-					recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
-					recording_path: this.self.states.recordDirectory || 'None',
-				})
+		if (recordStatus) {
+			if (recordStatus.outputActive === true && recordStatus.outputPaused === false) {
+				this.self.states.recording = OBSRecordingState.Recording
+			} else {
+				this.self.states.recording = recordStatus.outputPaused ? OBSRecordingState.Paused : OBSRecordingState.Stopped
 			}
+
+			this.self.checkFeedbacks('recording', 'recordingPaused')
+			this.updateRecordingTimecode(recordStatus)
+			this.self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(this.self.states.recording) })
 		}
+	}
+
+	// The record directory only changes on profile switch; not worth polling every second.
+	public async getRecordDirectory(): Promise<void> {
+		const recordDirectory = await this.sendRequest('GetRecordDirectory')
+		this.self.states.recordDirectory = recordDirectory?.recordDirectory ?? ''
+		this.self.setVariableValues({ recording_path: this.self.states.recordDirectory || 'None' })
 	}
 
 	public updateRecordingTimecode(data: unknown): void {
@@ -667,16 +697,25 @@ export class OBSApi {
 		if (this.self.states.outputs.size === 0 || this.self.states.sceneCollectionChanging) {
 			return
 		}
+		// Nothing reads output_active, so there's nothing to keep fresh.
+		if (this.outputStatusSubscribers.size === 0) return
 
-		// Batch all output status requests.
-		const outputNames = Array.from(this.self.states.outputs.keys())
+		// Skip outputs with a dedicated state-changed event and file/ffmpeg outputs, which aren't offered as feedback targets.
+		const outputNames = Array.from(this.self.states.outputs.keys()).filter(
+			(name) =>
+				!OBSApi.OUTPUTS_WITH_DEDICATED_EVENTS.has(name) &&
+				!name.includes('file_output') &&
+				!name.includes('ffmpeg_output'),
+		)
+		if (outputNames.length === 0) return
+
 		const batch: OBSBatchRequest[] = outputNames.map((outputName) => ({
 			requestType: 'GetOutputStatus',
 			requestData: { outputName },
 			requestId: outputName,
 		}))
 
-		const responses = await this.sendBatch(batch)
+		const responses = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
 		if (responses) {
 			for (const res of responses) {
 				if (res.requestStatus.result && res.responseData) {
@@ -762,7 +801,7 @@ export class OBSApi {
 			requestId: uuid,
 		}))
 
-		const responses = await this.sendBatch(batch)
+		const responses = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
 		if (!responses || this.self.obsState.epoch !== epoch) return
 
 		for (const res of responses) {
@@ -788,7 +827,7 @@ export class OBSApi {
 			requestId: uuid,
 		}))
 
-		const response = await this.sendBatch(batch)
+		const response = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
 		if (!response || this.self.obsState.epoch !== epoch) return
 
 		for (const res of response) {
@@ -809,7 +848,7 @@ export class OBSApi {
 		const epoch = this.self.obsState.epoch
 
 		const batch = this.buildSourceDataBatchRequests(sourceUuids)
-		const responses = await this.sendBatch(batch)
+		const responses = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
 		if (this.self.obsState.epoch !== epoch) return
 
 		if (responses) {
@@ -1006,14 +1045,19 @@ export class OBSApi {
 	public async buildSceneTransitionList(): Promise<void> {
 		this.self.states.transitions.clear()
 
-		const sceneTransitionList = await this.sendRequest('GetSceneTransitionList')
-		const currentTransition = await this.sendRequest('GetCurrentSceneTransition')
+		const batch = [
+			{ requestType: 'GetSceneTransitionList', requestId: 'list' },
+			{ requestType: 'GetCurrentSceneTransition', requestId: 'current' },
+		]
+		const data = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
+		const sceneTransitionList = data?.find((res) => res.requestId === 'list')?.responseData
+		const currentTransition = data?.find((res) => res.requestId === 'current')?.responseData
 
 		if (sceneTransitionList) {
 			if (Array.isArray(sceneTransitionList.transitions)) {
 				for (const item of sceneTransitionList.transitions) {
 					if (item.transitionName) {
-						this.self.states.transitions.set(item.transitionName as string, item as any)
+						this.self.states.transitions.set(item.transitionName as string, item)
 					}
 				}
 			}
@@ -1044,24 +1088,37 @@ export class OBSApi {
 	}
 
 	public async removeScene(sceneUuid: string): Promise<void> {
+		// Groups aren't shared across scenes, so a group contained in the removed scene is gone too;
+		// clean up its item list and source entry rather than leaving them orphaned.
+		const items = this.self.states.sceneItems.get(sceneUuid)
+		if (items) {
+			for (const item of items) {
+				if (item.isGroup) {
+					this.self.states.sceneItems.delete(item.sourceUuid)
+					this.self.states.sources.delete(item.sourceUuid)
+				}
+			}
+		}
+
 		this.self.states.scenes.delete(sceneUuid)
 		this.self.states.sceneItems.delete(sceneUuid)
 		this.self.obsState.invalidateSceneNameIndex()
+		this.self.obsState.invalidateSourceNameIndex()
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
 	// Source Info
 	public async getOBSMediaStatus(): Promise<void> {
-		const mediaSourceList = this.self.obsState.mediaSourceList
-		if (mediaSourceList.length === 0) return
+		const mediaSourceUuids = this.self.obsState.mediaSourceUuids
+		if (mediaSourceUuids.length === 0) return
 
-		const batch = mediaSourceList.map((source) => ({
-			requestId: source.id as string,
+		const batch: OBSBatchRequest[] = mediaSourceUuids.map((uuid) => ({
+			requestId: uuid,
 			requestType: 'GetMediaInputStatus',
-			requestData: { inputName: source.id },
+			requestData: { inputUuid: uuid },
 		}))
 
-		const data = await this.sendBatch(batch)
+		const data = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
 		if (data) {
 			const allValues: Record<string, string | number | boolean | undefined> = {}
 			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
@@ -1091,10 +1148,11 @@ export class OBSApi {
 		allValues: Record<string, string | number | boolean | undefined>,
 		currentMedia: Array<{ name: string; elapsed: string; remaining: string }>,
 	): void {
-		const sourceName = response.requestId
-		const source = this.self.obsState.findSourceByName(sourceName)
+		const sourceUuid = response.requestId
+		const source = this.self.states.sources.get(sourceUuid)
 		if (!source) return
 
+		const sourceName = source.sourceName
 		const validName = source.validName ?? sourceName
 		const responseData = response.responseData
 

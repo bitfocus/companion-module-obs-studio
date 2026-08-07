@@ -181,27 +181,13 @@ describe('recording_path variable', () => {
 	})
 
 	test('is set from the GetRecordDirectory response', async () => {
-		self.socket.callBatch.mockResolvedValue([
-			{
-				requestType: 'GetRecordStatus',
-				requestId: 'status',
-				requestStatus: { result: true, code: 100 },
-				responseData: { outputActive: false, outputPaused: false, outputTimecode: '00:00:00.000' },
-			},
-			{
-				requestType: 'GetRecordDirectory',
-				requestId: 'directory',
-				requestStatus: { result: true, code: 100 },
-				responseData: { recordDirectory: '/Users/test/Movies' },
-			},
-		])
+		self.socket.call.mockResolvedValue({ recordDirectory: '/Users/test/Movies' })
 
-		await self.obs.getRecordStatus()
+		await self.obs.getRecordDirectory()
 
+		expect(self.socket.call).toHaveBeenCalledWith('GetRecordDirectory', undefined)
 		expect(self.states.recordDirectory).toBe('/Users/test/Movies')
-		expect(self.setVariableValues).toHaveBeenCalledWith(
-			expect.objectContaining({ recording_path: '/Users/test/Movies' }),
-		)
+		expect(self.setVariableValues).toHaveBeenCalledWith({ recording_path: '/Users/test/Movies' })
 	})
 })
 
@@ -316,9 +302,10 @@ describe('groups added after connect', () => {
 		await self.obs.addSceneItem('scene-a', 'group-1')
 
 		// The group's own item list was requested and cached.
-		expect(self.socket.callBatch).toHaveBeenCalledWith([
-			{ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' }, requestId: 'group-1' },
-		])
+		expect(self.socket.callBatch).toHaveBeenCalledWith(
+			[{ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' }, requestId: 'group-1' }],
+			expect.anything(),
+		)
 		expect(self.states.sceneItems.get('group-1')).toHaveLength(1)
 		expect(self.states.sources.get('member-1')!.parentGroupUuid).toBe('group-1')
 	})

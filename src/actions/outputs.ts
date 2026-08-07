@@ -197,6 +197,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions 
 				streamServiceSettings: streamServiceSettings as Record<string, string>,
 			})
 			void self.obs.getStreamStatus()
+			void self.obs.getStreamServiceSettings()
 		},
 	}
 	actions['SendStreamCaption'] = {

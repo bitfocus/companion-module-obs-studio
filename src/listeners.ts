@@ -68,7 +68,7 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		// buildSceneList resets state and registers all inputs.
 		void self.obs.buildSceneList()
 		void self.obs.buildSceneTransitionList()
-		void self.obs.obsInfo()
+		void self.obs.profileInfo()
 	})
 	obs.on('SceneCollectionListChanged', () => {
 		void self.obs.buildSceneCollectionList()
@@ -78,7 +78,7 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.currentProfile = data.profileName
 		void self.checkFeedbacks('profile_active')
 		self.setVariableValues({ profile: self.states.currentProfile })
-		void self.obs.obsInfo()
+		void self.obs.profileInfo()
 	})
 	obs.on('ProfileListChanged', () => {
 		void self.obs.buildProfileList()
@@ -412,7 +412,17 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			void self.updateActionsFeedbacksVariables()
 		}
 	})
-	obs.on('SceneItemListReindexed', () => {})
+	obs.on('SceneItemListReindexed', (data) => {
+		// OBS sends minimal item objects here (sceneItemId + sceneItemIndex); only update ordering
+		// on the cached items rather than replacing them, to avoid dropping other cached fields.
+		const items = self.states.sceneItems.get(data.sceneUuid)
+		if (!items) return
+		const indexByItemId = new Map((data.sceneItems as any[]).map((item) => [item.sceneItemId, item.sceneItemIndex]))
+		for (const item of items) {
+			const newIndex = indexByItemId.get(item.sceneItemId)
+			if (newIndex !== undefined) item.sceneItemIndex = newIndex
+		}
+	})
 	obs.on('SceneItemEnableStateChanged', (data) => {
 		const items = self.states.sceneItems.get(data.sceneUuid)
 		let sourceUuid: string | undefined

@@ -81,8 +81,11 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		],
 		callback: (feedback) => {
+			// Tell the API to keep polling output statuses while this feedback exists.
+			self.obs.addOutputStatusSubscriber(feedback.id)
 			return !!self.states.outputs.get(opt<string>(feedback, 'output'))?.outputActive
 		},
+		unsubscribe: (feedback) => self.obs.removeOutputStatusSubscriber(feedback.id),
 	}
 
 	feedbacks['replayBufferActive'] = {

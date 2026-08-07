@@ -25,6 +25,9 @@ export class OBSState {
 	private sourceNameIndex?: Map<string, OBSSource>
 	private sceneNameIndex?: Map<string, OBSScene>
 
+	// Persistent membership list for the media-status poll, so it isn't recomputed every tick.
+	private mediaSourceUuidCache?: string[]
+
 	// Generation counter to detect and discard stale in-flight async responses.
 	private stateEpoch = 0
 
@@ -34,6 +37,19 @@ export class OBSState {
 
 	public invalidateSourceNameIndex(): void {
 		this.sourceNameIndex = undefined
+		// Kind (and so media-list membership) is only set on creation/removal, but this cache is
+		// cheap to rebuild, so piggyback on the same invalidation points rather than tracking separately.
+		this.mediaSourceUuidCache = undefined
+	}
+
+	// UUIDs of media (ffmpeg/vlc) inputs, for polling GetMediaInputStatus without a per-tick scan.
+	public get mediaSourceUuids(): string[] {
+		if (!this.mediaSourceUuidCache) {
+			this.mediaSourceUuidCache = Array.from(this.state.sources.values())
+				.filter((s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source')
+				.map((s) => s.sourceUuid)
+		}
+		return this.mediaSourceUuidCache
 	}
 
 	public invalidateSceneNameIndex(): void {
