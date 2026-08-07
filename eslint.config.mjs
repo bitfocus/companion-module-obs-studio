@@ -16,6 +16,10 @@ export default [
 			...vitest.configs.recommended.rules,
 			// Test files may import devDependencies (vitest)
 			'n/no-unpublished-import': 'off',
+			// @typescript-eslint/unbound-method false-positives on expect(obj.method).toHaveBeenCalled*()
+			// patterns. Disable it and use the vitest-aware replacement instead.
+			'@typescript-eslint/unbound-method': 'off',
+			'vitest/unbound-method': 'error',
 		},
 	},
 ]
