@@ -177,14 +177,8 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				}
 			}
 
-			try {
-				const res = await self.obs.sendRequest(command as any, arg ? arg : {})
-				logger.debug(`Custom Command Response: ${JSON.stringify(res)}`)
-				return res ?? null
-			} catch (e: any) {
-				logger.warn(`Custom Command Error: ${e.message}`)
-				return null
-			}
+			const res = await self.obs.sendCustomRequest(command as any, arg ? arg : {})
+			return res ?? null
 		},
 	}
 

@@ -122,8 +122,9 @@ export interface OBSNormalizedState {
 	sceneCollections: Map<string, Record<string, unknown>>
 	// Keyed by container (scene or group) UUID.
 	sceneItems: Map<string, OBSSceneItem[]>
+	// Keyed by input kind; value is that kind's default input settings.
 	inputKindList: Map<string, Record<string, unknown>>
-	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid
+	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid or sceneUuid
 	audioPeak: Map<string, number>
 	monitors: ModuleChoice[]
 	imageFormats: ModuleChoice[]

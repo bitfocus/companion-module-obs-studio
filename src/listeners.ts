@@ -339,37 +339,37 @@ function refreshSourceFilters(self: OBSInstance, sourceUuid: string): void {
 function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SourceFilterListReindexed', () => {})
 	obs.on('SourceFilterCreated', (data) => {
-		const source = self.obsState.findSourceByName(data.sourceName)
-		if (source) {
-			refreshSourceFilters(self, source.sourceUuid)
+		const uuid = self.obsState.findFilterTargetUuid(data.sourceName)
+		if (uuid) {
+			refreshSourceFilters(self, uuid)
 		}
 	})
 	obs.on('SourceFilterRemoved', (data) => {
-		const source = self.obsState.findSourceByName(data.sourceName)
-		if (source) {
-			refreshSourceFilters(self, source.sourceUuid)
+		const uuid = self.obsState.findFilterTargetUuid(data.sourceName)
+		if (uuid) {
+			refreshSourceFilters(self, uuid)
 		}
 	})
 	obs.on('SourceFilterNameChanged', (data) => {
-		const source = self.obsState.findSourceByName(data.sourceName)
-		if (source) {
-			refreshSourceFilters(self, source.sourceUuid)
+		const uuid = self.obsState.findFilterTargetUuid(data.sourceName)
+		if (uuid) {
+			refreshSourceFilters(self, uuid)
 		}
 	})
 	obs.on('SourceFilterSettingsChanged', (data) => {
 		// Sync cached filter settings to prevent stale reads in the actions layer.
-		const source = self.obsState.findSourceByName(data.sourceName)
-		if (source) {
-			const filter = self.states.sourceFilters.get(source.sourceUuid)?.find((f) => f.filterName === data.filterName)
+		const uuid = self.obsState.findFilterTargetUuid(data.sourceName)
+		if (uuid) {
+			const filter = self.states.sourceFilters.get(uuid)?.find((f) => f.filterName === data.filterName)
 			if (filter) {
 				filter.filterSettings = data.filterSettings
 			}
 		}
 	})
 	obs.on('SourceFilterEnableStateChanged', (data) => {
-		const source = self.obsState.findSourceByName(data.sourceName)
-		if (source) {
-			const sourceFilters = self.states.sourceFilters.get(source.sourceUuid)
+		const uuid = self.obsState.findFilterTargetUuid(data.sourceName)
+		if (uuid) {
+			const sourceFilters = self.states.sourceFilters.get(uuid)
 			if (sourceFilters) {
 				const filter = sourceFilters.find((item) => item.filterName === data.filterName)
 				if (filter) {
@@ -381,7 +381,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				actionId: 'toggle_filter',
 				options: {
 					allSources: false,
-					source: source.sourceName,
+					source: data.sourceName,
 					filter: data.filterName,
 					visible: data.filterEnabled ? 'true' : 'false',
 				},

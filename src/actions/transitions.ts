@@ -1,6 +1,7 @@
-import { opt } from '../utils.js'
+import { clamp, opt } from '../utils.js'
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { SLEEP_MAX_MS } from '../constants.js'
 
 const logger = createModuleLogger('Actions/Transitions')
 
@@ -82,7 +83,8 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 						},
 						{
 							requestType: 'Sleep',
-							requestData: { sleepMillis: duration + 100 },
+							// sleepMillis is capped by the protocol; exceeding it fails the Sleep and reverts early.
+							requestData: { sleepMillis: clamp(duration + 100, 0, SLEEP_MAX_MS) },
 						},
 						{
 							requestType: 'SetCurrentSceneTransition',

@@ -621,7 +621,10 @@ export class OBSApi {
 
 				this.self.checkFeedbacks('recording', 'recordingPaused')
 				this.updateRecordingTimecode(recordStatus)
-				this.self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(this.self.states.recording) })
+				this.self.setVariableValues({
+					recording: utils.getOBSRecordingStateLabel(this.self.states.recording),
+					recording_path: this.self.states.recordDirectory || 'None',
+				})
 			}
 		}
 	}
@@ -740,8 +743,33 @@ export class OBSApi {
 		if (this.self.obsState.epoch !== epoch) return
 
 		await this.fetchSourcesData(Array.from(allSourceUuids))
+		if (this.self.obsState.epoch !== epoch) return
+
+		// Scenes can carry filters too, and are not part of the source map.
+		await this.fetchSceneFilters(sceneUuids)
 
 		void this.self.updateActionsFeedbacksVariables()
+	}
+
+	// Fetch filter lists for scenes, which fetchSourcesData does not cover.
+	public async fetchSceneFilters(sceneUuids: string[]): Promise<void> {
+		if (sceneUuids.length === 0) return
+		const epoch = this.self.obsState.epoch
+
+		const batch: OBSBatchRequest[] = sceneUuids.map((uuid) => ({
+			requestType: 'GetSourceFilterList',
+			requestData: { sourceUuid: uuid },
+			requestId: uuid,
+		}))
+
+		const responses = await this.sendBatch(batch)
+		if (!responses || this.self.obsState.epoch !== epoch) return
+
+		for (const res of responses) {
+			if (res.requestStatus.result && res.responseData) {
+				this.self.states.sourceFilters.set(res.requestId, res.responseData.filters)
+			}
+		}
 	}
 
 	// Fetch container item lists and set parentGroupUuid on group items.
@@ -941,12 +969,23 @@ export class OBSApi {
 		const items = (data.sceneItems ?? []) as OBSSceneItem[]
 		this.self.states.sceneItems.set(containerUuid, items)
 		const sourceUuids: string[] = []
+		const groupUuids: string[] = []
 		for (const item of items) {
 			sourceUuids.push(item.sourceUuid)
 			// addSource upserts, so known sources are refreshed, not duplicated.
 			const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
 			if (isGroup) source.parentGroupUuid = containerUuid
+			if (item.isGroup && !isGroup) groupUuids.push(item.sourceUuid)
 		}
+
+		// Groups nested in this container hold their own items; OBS does not nest groups further.
+		if (groupUuids.length > 0) {
+			const contained = new Set<string>()
+			await this.fetchContainerItems(groupUuids, true, contained)
+			if (this.self.obsState.epoch !== epoch) return undefined
+			sourceUuids.push(...contained)
+		}
+
 		return sourceUuids
 	}
 
@@ -955,10 +994,13 @@ export class OBSApi {
 		if (sourceUuids) await this.fetchSourcesData(sourceUuids)
 	}
 
-	// Refresh container item list and fetch data only for the new source.
+	// Refresh container item list and fetch data for the new source plus any group contents it pulled in.
 	public async addSceneItem(containerUuid: string, sourceUuid: string): Promise<void> {
 		const sourceUuids = await this.refreshContainerItemList(containerUuid)
-		if (sourceUuids) await this.fetchSourcesData([sourceUuid])
+		if (!sourceUuids) return
+		// A newly added group contributes its children, which have no data cached yet.
+		const groupChildren = sourceUuids.filter((uuid) => this.self.states.sources.get(uuid)?.parentGroupUuid)
+		await this.fetchSourcesData(Array.from(new Set([sourceUuid, ...groupChildren])))
 	}
 
 	public async buildSceneTransitionList(): Promise<void> {
@@ -1087,10 +1129,9 @@ export class OBSApi {
 		const source = this.self.states.sources.get(sourceUuid)
 		if (!source) return
 
-		const kindList = this.self.states.inputKindList.get(inputKind)
-		source.settings = kindList?.defaultInputSettings
-			? { ...kindList.defaultInputSettings, ...inputSettings }
-			: inputSettings
+		// inputKindList holds the default settings object itself, keyed by kind.
+		const defaultSettings = this.self.states.inputKindList.get(inputKind)
+		source.settings = defaultSettings ? { ...defaultSettings, ...inputSettings } : inputSettings
 
 		const name = source.validName ?? source.sourceName
 		if (!source.settings) source.settings = {}
@@ -1267,9 +1308,8 @@ export class OBSApi {
 
 			await this.sendBatch(requests)
 		} else {
-			const source = this.self.obsState.findSourceByName(options.source)
-			if (!source) return
-			const sourceUuid = source.sourceUuid
+			const sourceUuid = this.self.obsState.findFilterTargetUuid(options.source)
+			if (!sourceUuid) return
 			let filterVisibility: boolean
 			if (visible === 'toggle') {
 				const filters = this.self.states.sourceFilters.get(sourceUuid)

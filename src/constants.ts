@@ -6,6 +6,11 @@ export const SYNC_OFFSET_MIN = -950
 export const SYNC_OFFSET_MAX = 20000
 export const DEFAULT_TIMECODE = '00:00:00'
 
+// Interval between volume steps when fading a source.
+export const FADE_STEP_MS = 50
+// Protocol maximum for the Sleep request's sleepMillis field.
+export const SLEEP_MAX_MS = 50000
+
 export const POLL_INTERVALS = {
 	RECONNECTION: 5000,
 	STATS: 1000,

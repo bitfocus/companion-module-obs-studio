@@ -322,9 +322,14 @@ export class OBSState {
 		return this.sceneNameIndex.get(name)
 	}
 
+	// Filters attach to inputs or scenes, so resolve against both maps.
+	public findFilterTargetUuid(name: string): string | undefined {
+		return this.findSourceByName(name)?.sourceUuid ?? this.findSceneByName(name)?.sceneUuid
+	}
+
 	public findSourceFiltersByName(sourceName: string): import('./types.js').OBSFilter[] | undefined {
-		const source = this.findSourceByName(sourceName)
-		if (source) return this.state.sourceFilters.get(source.sourceUuid)
+		const uuid = this.findFilterTargetUuid(sourceName)
+		if (uuid) return this.state.sourceFilters.get(uuid)
 		return undefined
 	}
 
