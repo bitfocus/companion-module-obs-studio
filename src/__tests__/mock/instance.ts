@@ -143,7 +143,7 @@ export function seedFullState(self: MockInstance): void {
 	s.currentProfile = 'Profile 1'
 	s.sceneCollections.set('Collection 1', {})
 	s.currentSceneCollection = 'Collection 1'
-	s.outputs.set('virtualcam_output', {})
+	s.outputs.set('virtualcam_output', { outputName: 'virtualcam_output', outputActive: false })
 
 	s.sourceFilters.set('Mic', [
 		{ filterName: 'Gain', filterEnabled: true, filterIndex: 0, filterKind: 'gain_filter', filterSettings: {} },

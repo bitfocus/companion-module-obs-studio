@@ -4,6 +4,7 @@ import { getSceneFeedbacks } from '../../feedbacks/scenes.js'
 import { Color } from '../../utils.js'
 import { makeMockInstance, seedScene, type MockInstance } from '../mock/instance.js'
 import { MockContext } from '../mock-context.js'
+import { looseFeedbacks } from '../loose-definitions.js'
 
 function feedback(options: Record<string, unknown>): CompanionFeedbackInfo {
 	return { id: 'test', controlId: 'control', feedbackId: 'scene_active', options } as unknown as CompanionFeedbackInfo
@@ -20,7 +21,7 @@ describe('scene_active feedback', () => {
 
 	test('returns program colors when the scene is on program', () => {
 		self.states.programScene = 'Scene A'
-		const fb = getSceneFeedbacks(self)['scene_active']!
+		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
 
 		const result = fb.callback(
 			feedback({ mode: 'program', scene: 'Scene A', fg: Color.White, bg: Color.Red }),
@@ -32,7 +33,7 @@ describe('scene_active feedback', () => {
 	test('returns preview colors when the scene is on preview in studio mode', () => {
 		self.states.previewScene = 'Scene B'
 		self.states.studioMode = true
-		const fb = getSceneFeedbacks(self)['scene_active']!
+		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
 
 		const result = fb.callback(
 			feedback({ mode: 'preview', scene: 'Scene B', fg_preview: Color.White, bg_preview: Color.Green }),
@@ -43,7 +44,7 @@ describe('scene_active feedback', () => {
 
 	test('returns empty object when the scene is neither program nor preview', () => {
 		self.states.programScene = 'Scene A'
-		const fb = getSceneFeedbacks(self)['scene_active']!
+		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
 
 		const result = fb.callback(feedback({ mode: 'programAndPreview', scene: 'Scene B' }), new MockContext())
 		expect(result).toEqual({})

@@ -5,6 +5,8 @@ import { getOutputFeedbacks } from '../feedbacks/outputs.js'
 import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
 import type { OBSBatchRequest, OBSSceneItem } from '../types.js'
 import { RequestBatchExecutionType } from 'obs-websocket-js'
+import { looseFeedbacks } from './loose-definitions.js'
+import { MockContext } from './mock-context.js'
 
 function sceneItem(partial: Partial<OBSSceneItem> & { sceneItemId: number; sourceUuid: string }): OBSSceneItem {
 	return {
@@ -157,8 +159,8 @@ describe('output status polling', () => {
 		await self.obs.getAllOutputStatuses()
 		expect(self.socket.callBatch).not.toHaveBeenCalled()
 
-		const feedbacks = getOutputFeedbacks(self)
-		feedbacks['output_active']!.callback!(feedbackEvent('output_active', { output: 'adv_stream' }), {} as any)
+		const feedbacks = looseFeedbacks(getOutputFeedbacks(self))
+		await feedbacks['output_active'].callback(feedbackEvent('output_active', { output: 'adv_stream' }), {} as any)
 
 		self.socket.callBatch.mockResolvedValue([])
 		await self.obs.getAllOutputStatuses()
@@ -166,8 +168,8 @@ describe('output status polling', () => {
 	})
 
 	test('excludes outputs with a dedicated state-changed event from the poll', async () => {
-		const feedbacks = getOutputFeedbacks(self)
-		feedbacks['output_active']!.callback!(feedbackEvent('output_active', { output: 'adv_stream' }), {} as any)
+		const feedbacks = looseFeedbacks(getOutputFeedbacks(self))
+		await feedbacks['output_active'].callback(feedbackEvent('output_active', { output: 'adv_stream' }), {} as any)
 
 		self.socket.callBatch.mockResolvedValue([])
 		await self.obs.getAllOutputStatuses()
@@ -177,9 +179,12 @@ describe('output status polling', () => {
 	})
 
 	test('stops polling once the last output_active feedback unsubscribes', async () => {
-		const feedbacks = getOutputFeedbacks(self)
-		feedbacks['output_active']!.callback!(feedbackEvent('output_active', { output: 'adv_stream' }), {} as any)
-		feedbacks['output_active']!.unsubscribe!(feedbackEvent('output_active', { output: 'adv_stream' }) as any)
+		const feedbacks = looseFeedbacks(getOutputFeedbacks(self))
+		await feedbacks['output_active'].callback(feedbackEvent('output_active', { output: 'adv_stream' }), {} as any)
+		await feedbacks['output_active'].unsubscribe!(
+			feedbackEvent('output_active', { output: 'adv_stream' }),
+			new MockContext('feedback'),
+		)
 
 		await self.obs.getAllOutputStatuses()
 		expect(self.socket.callBatch).not.toHaveBeenCalled()

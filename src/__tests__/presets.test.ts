@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import type { CompanionButtonPresetDefinition } from '@companion-module/base'
+import type { CompanionPresetDefinition, CompanionSomePresetDefinition } from '@companion-module/base'
 import { getPresets } from '../presets.js'
 import { getActions } from '../actions.js'
 import { getFeedbacks } from '../feedbacks.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 
-function isButtonPreset(preset: unknown): preset is CompanionButtonPresetDefinition {
-	return !!preset && typeof preset === 'object' && (preset as { type?: string }).type !== 'text'
+/** Narrows away the `alternatives` grouping, leaving the simple/layered button presets. */
+function isButtonPreset(
+	preset: CompanionSomePresetDefinition<OBSInstanceTypes> | undefined,
+): preset is CompanionPresetDefinition<OBSInstanceTypes> {
+	return !!preset && preset.type !== 'alternatives'
 }
 
 describe('presets', () => {
@@ -34,8 +38,10 @@ describe('presets', () => {
 		for (const preset of Object.values(presets)) {
 			expect(preset).toBeDefined()
 			expect(typeof preset!.type).toBe('string')
-			expect(typeof preset!.name).toBe('string')
-			expect(preset!.name.length).toBeGreaterThan(0)
+			// `alternatives` entries group variants and carry no name of their own.
+			if (!isButtonPreset(preset)) continue
+			expect(typeof preset.name).toBe('string')
+			expect(preset.name.length).toBeGreaterThan(0)
 		}
 	})
 

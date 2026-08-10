@@ -5,6 +5,7 @@ import { getSourceFeedbacks } from '../feedbacks/sources.js'
 import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
 import { MockContext } from './mock-context.js'
 import type { OBSSceneItem } from '../types.js'
+import { looseFeedbacks } from './loose-definitions.js'
 
 function feedbackEvent(options: Record<string, unknown>): CompanionFeedbackBooleanEvent {
 	return {
@@ -28,15 +29,15 @@ function sceneItem(partial: Partial<OBSSceneItem> & { sceneItemId: number; sourc
 	}
 }
 
-/** Seed a group source plus its membership in a scene and its own item list. */
-function seedGroup(self: MockInstance, groupUuid: string, sceneUuid: string, memberUuids: string[]): void {
+/** Seed a group source and its own item list of members. */
+function seedGroup(self: MockInstance, groupUuid: string, memberUuids: string[]): void {
 	self.states.sources.set(groupUuid, {
 		sourceName: groupUuid,
 		sourceUuid: groupUuid,
 		validName: groupUuid,
 		isGroup: true,
 	})
-	// The group is an item in the scene, and its members live in the group container.
+	// Members live in the group container, keyed by the group's own uuid.
 	self.states.sceneItems.set(
 		groupUuid,
 		memberUuids.map((uuid, i) => sceneItem({ sceneItemId: 200 + i, sourceUuid: uuid })),
@@ -56,7 +57,7 @@ describe('container model — scene item creation routing', () => {
 	})
 
 	test('SceneItemCreated inside a group uses GetGroupSceneItemList, not GetSceneItemList', async () => {
-		seedGroup(self, 'group-1', 'scene-a', ['member-1'])
+		seedGroup(self, 'group-1', ['member-1'])
 		self.socket.call.mockResolvedValue({
 			sceneItems: [
 				{ sceneItemId: 200, sourceUuid: 'member-1', sourceName: 'member-1', sceneItemEnabled: true },
@@ -88,12 +89,12 @@ describe('container model — grouped source feedback', () => {
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedScene(self, 'Scene A', 'scene-a')
-		seedGroup(self, 'group-1', 'scene-a', ['member-1'])
+		seedGroup(self, 'group-1', ['member-1'])
 	})
 
 	test('scene_item_active_in_scene resolves a grouped source through its group container', () => {
-		const feedbacks = getSourceFeedbacks(self)
-		const cb = feedbacks['scene_item_active_in_scene']!.callback
+		const feedbacks = looseFeedbacks(getSourceFeedbacks(self))
+		const cb = feedbacks['scene_item_active_in_scene'].callback
 
 		// Enabled member matches.
 		expect(cb(feedbackEvent({ scene: 'Scene A', any: false, source: 'member-1' }), new MockContext())).toBe(true)
@@ -110,7 +111,7 @@ describe('container model — visibility resolution', () => {
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedScene(self, 'Scene A', 'scene-a')
-		seedGroup(self, 'group-1', 'scene-a', ['member-1'])
+		seedGroup(self, 'group-1', ['member-1'])
 	})
 
 	test('toggling a grouped source (any scene) targets the group container', async () => {
