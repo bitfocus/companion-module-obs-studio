@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleProgram, stylePreview } from './style.js'
 
 /** Source presets: status template for tally, plus example action buttons. */
 export function getSourcePresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['tmp_sourceStatus'] = {
 		type: 'simple',
@@ -24,7 +25,12 @@ export function getSourcePresets(self: OBSInstance): {
 			},
 			{
 				feedbackId: 'scene_item_active',
-				options: { anyScene: true, source: { value: '$(local:source)', isExpression: true } },
+				options: {
+					anyScene: true,
+					useCurrentScene: false,
+					scene: '',
+					source: { value: '$(local:source)', isExpression: true },
+				},
 				style: styleProgram(),
 			},
 		],
@@ -35,7 +41,7 @@ export function getSourcePresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Refresh Browser Source (example)',
 		style: baseStyle({ text: 'Refresh\nBrowser' }),
-		steps: [{ down: [{ actionId: 'refresh_browser_source', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'refresh_browser_source', options: { source: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -43,7 +49,7 @@ export function getSourcePresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Reset Capture Device (example)',
 		style: baseStyle({ text: 'Reset\nCapture' }),
-		steps: [{ down: [{ actionId: 'resetCaptureDevice', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'resetCaptureDevice', options: { source: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -58,6 +64,8 @@ export function getSourcePresets(self: OBSInstance): {
 						actionId: 'take_screenshot',
 						options: {
 							useProgramScene: true,
+							usePreviewScene: false,
+							source: '',
 							format: 'png',
 							compression: 0,
 							customName: false,
@@ -74,7 +82,7 @@ export function getSourcePresets(self: OBSInstance): {
 
 	const sourceValues = self.obsState.sourceChoices.map((s) => ({ name: s.label, value: s.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'sources',
 			name: 'Sources',

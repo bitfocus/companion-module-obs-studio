@@ -3,6 +3,7 @@ import type { CompanionActionDefinition, CompanionActionEvent, CompanionOptionVa
 import { getActions } from '../actions.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 import { MockContext } from './mock-context.js'
+import { looseActions, type LooseActions } from './loose-definitions.js'
 
 /** Build an options object from each option's declared default. */
 function defaultOptions(def: CompanionActionDefinition): CompanionOptionValues {
@@ -21,12 +22,12 @@ function event(actionId: string, options: CompanionOptionValues): CompanionActio
 
 describe('actions', () => {
 	let self: MockInstance
-	let actions: ReturnType<typeof getActions>
+	let actions: LooseActions
 
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedFullState(self)
-		actions = getActions.call(self)
+		actions = looseActions(getActions.call(self))
 	})
 
 	test('produces a non-empty action set', () => {
@@ -34,8 +35,8 @@ describe('actions', () => {
 	})
 
 	describe('every action definition is well-formed', () => {
-		test.each(Object.keys(getActions.call(makeMockInstanceSeeded())))('%s', (id) => {
-			const def = actions[id]!
+		test.each(Object.keys(looseActions(getActions.call(makeMockInstanceSeeded()))))('%s', (id) => {
+			const def = actions[id]
 			expect(def).toBeDefined()
 			expect(typeof def.name).toBe('string')
 			expect(def.name.length).toBeGreaterThan(0)
@@ -46,8 +47,8 @@ describe('actions', () => {
 	})
 
 	describe('every action callback runs without throwing', () => {
-		test.each(Object.keys(getActions.call(makeMockInstanceSeeded())))('%s', async (id) => {
-			const def = actions[id]!
+		test.each(Object.keys(looseActions(getActions.call(makeMockInstanceSeeded()))))('%s', async (id) => {
+			const def = actions[id]
 			await expect(
 				Promise.resolve(def.callback(event(id, defaultOptions(def)), new MockContext())),
 			).resolves.not.toThrow()
@@ -55,10 +56,10 @@ describe('actions', () => {
 	})
 
 	describe('every learn callback runs without throwing', () => {
-		const seeded = getActions.call(makeMockInstanceSeeded())
-		const withLearn = Object.keys(seeded).filter((id) => seeded[id]!.learn !== undefined)
+		const seeded = looseActions(getActions.call(makeMockInstanceSeeded()))
+		const withLearn = Object.keys(seeded).filter((id) => seeded[id].learn !== undefined)
 		test.each(withLearn)('%s', async (id) => {
-			const def = actions[id]!
+			const def = actions[id]
 			await expect(
 				Promise.resolve(def.learn!(event(id, defaultOptions(def)), new MockContext())),
 			).resolves.not.toThrow()

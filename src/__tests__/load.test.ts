@@ -4,6 +4,7 @@ import { initOBSListeners } from '../listeners.js'
 import { getActions } from '../actions.js'
 import { getFeedbacks } from '../feedbacks.js'
 import { getVariables } from '../variables.js'
+import { looseActions, looseFeedbacks } from './loose-definitions.js'
 
 function seedMassiveState(self: MockInstance, numScenes: number, numSources: number) {
 	const s = self.states
@@ -117,8 +118,8 @@ describe('Load & Performance Tests', () => {
 		const heapBefore = process.memoryUsage().heapUsed
 		const start = performance.now()
 
-		const actions = getActions.call(self)
-		const feedbacks = getFeedbacks.call(self)
+		const actions = looseActions(getActions.call(self))
+		const feedbacks = looseFeedbacks(getFeedbacks.call(self))
 		const variables = getVariables.call(self)
 
 		self.setActionDefinitions(actions)

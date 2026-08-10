@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleCaution, styleAlert } from './style.js'
 
 /** System stats, disk space, and window/projector example presets. */
 export function getSystemPresets(_self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['cpuRamUsage'] = {
 		type: 'simple',
@@ -99,7 +100,12 @@ export function getSystemPresets(_self: OBSInstance): {
 		style: baseStyle({ text: 'Open\nMultiview' }),
 		steps: [
 			{
-				down: [{ actionId: 'open_projector', options: { type: 'Multiview', window: 'fullscreen', display: 0 } }],
+				down: [
+					{
+						actionId: 'open_projector',
+						options: { type: 'Multiview', window: 'fullscreen', display: 0, source: '', scene: '' },
+					},
+				],
 				up: [],
 			},
 		],
@@ -110,7 +116,7 @@ export function getSystemPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Open Source Properties (example)',
 		style: baseStyle({ text: 'Source\nProperties' }),
-		steps: [{ down: [{ actionId: 'openInputPropertiesDialog', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'openInputPropertiesDialog', options: { source: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -118,7 +124,7 @@ export function getSystemPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Open Source Filters (example)',
 		style: baseStyle({ text: 'Source\nFilters' }),
-		steps: [{ down: [{ actionId: 'openInputFiltersDialog', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'openInputFiltersDialog', options: { source: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -126,11 +132,11 @@ export function getSystemPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Open Source Interact (example)',
 		style: baseStyle({ text: 'Source\nInteract' }),
-		steps: [{ down: [{ actionId: 'openInputInteractDialog', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'openInputInteractDialog', options: { source: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'system',
 			name: 'System / Stats',

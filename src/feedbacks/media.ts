@@ -1,110 +1,122 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { OBSMediaStatus } from '../types.js'
-import { opt, Color } from '../utils.js'
+import { Color } from '../utils.js'
 
-export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions {
-	const feedbacks: CompanionFeedbackDefinitions = {}
-
-	feedbacks['media_playing'] = {
-		type: 'boolean',
-		name: 'Media - Playing',
-		description: 'If a specific media source is currently playing, change the style of the button',
-		defaultStyle: {
-			color: Color.White,
-			bgcolor: Color.Green,
-		},
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Media Source',
-				id: 'source',
-				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
-				choices: self.obsState.mediaSourceList,
-			},
-		],
-		callback: (feedback) => {
-			const sourceName = opt<string>(feedback, 'source')
-			return self.obsState.findSourceByName(sourceName)?.OBSMediaStatus === OBSMediaStatus.Playing
-		},
+export type MediaFeedbackSchemas = {
+	media_playing: { type: 'boolean'; options: { source: string } }
+	media_source_time_remaining: {
+		type: 'boolean'
+		options: {
+			source: string
+			rtThreshold: number
+			onlyIfSourceIsOnProgram: boolean
+			onlyIfSourceIsPlaying: boolean
+			blinkingEnabled: boolean
+		}
 	}
+}
 
-	feedbacks['media_source_time_remaining'] = {
-		type: 'boolean',
-		name: 'Media - Remaining Time',
-		description: 'If remaining time of a media source is below a threshold, change the style of the button',
-		defaultStyle: {
-			color: Color.Black,
-			bgcolor: Color.Red,
+export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions<MediaFeedbackSchemas> {
+	return {
+		media_playing: {
+			type: 'boolean',
+			name: 'Media - Playing',
+			description: 'If a specific media source is currently playing, change the style of the button',
+			defaultStyle: {
+				color: Color.White,
+				bgcolor: Color.Green,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Media Source',
+					id: 'source',
+					default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+					choices: self.obsState.mediaSourceList,
+				},
+			],
+			callback: (feedback) => {
+				const sourceName = feedback.options.source
+				return self.obsState.findSourceByName(sourceName)?.OBSMediaStatus === OBSMediaStatus.Playing
+			},
 		},
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source name',
-				id: 'source',
-				default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
-				choices: self.obsState.mediaSourceList,
-			},
-			{
-				type: 'number',
-				label: 'Remaining time threshold (in seconds)',
-				id: 'rtThreshold',
-				default: 20,
-				min: 0,
-				max: 3600, // Max is required by API
-				clampValues: true,
-			},
-			{
-				type: 'checkbox',
-				label: 'Feedback only if source is on program',
-				id: 'onlyIfSourceIsOnProgram',
-				default: false,
-			},
-			{
-				type: 'checkbox',
-				label: 'Feedback only if source is playing',
-				id: 'onlyIfSourceIsPlaying',
-				default: false,
-			},
-			{
-				type: 'checkbox',
-				label: 'Blinking',
-				id: 'blinkingEnabled',
-				default: false,
-			},
-		],
-		callback: (feedback) => {
-			const sourceName = opt<string>(feedback, 'source')
-			const source = self.obsState.findSourceByName(sourceName)
-			if (source) {
-				const remainingTime = Math.round(((source.mediaDuration ?? 0) - (source.mediaCursor ?? 0)) / 1000)
-				const status = source.OBSMediaStatus
 
-				if (opt<any>(feedback, 'onlyIfSourceIsOnProgram') && !source.active) {
-					return false
-				}
+		media_source_time_remaining: {
+			type: 'boolean',
+			name: 'Media - Remaining Time',
+			description: 'If remaining time of a media source is below a threshold, change the style of the button',
+			defaultStyle: {
+				color: Color.Black,
+				bgcolor: Color.Red,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source name',
+					id: 'source',
+					default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+					choices: self.obsState.mediaSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Remaining time threshold (in seconds)',
+					id: 'rtThreshold',
+					default: 20,
+					min: 0,
+					max: 3600, // Max is required by API
+					clampValues: true,
+				},
+				{
+					type: 'checkbox',
+					label: 'Feedback only if source is on program',
+					id: 'onlyIfSourceIsOnProgram',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Feedback only if source is playing',
+					id: 'onlyIfSourceIsPlaying',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Blinking',
+					id: 'blinkingEnabled',
+					default: false,
+				},
+			],
+			callback: (feedback) => {
+				const sourceName = feedback.options.source
+				const source = self.obsState.findSourceByName(sourceName)
+				if (source) {
+					const remainingTime = Math.round(((source.mediaDuration ?? 0) - (source.mediaCursor ?? 0)) / 1000)
+					const status = source.OBSMediaStatus
 
-				if (opt<any>(feedback, 'onlyIfSourceIsPlaying') && status !== OBSMediaStatus.Playing) {
-					return false
-				}
-
-				if (status === OBSMediaStatus.Stopped) {
-					return false
-				}
-
-				const threshold = opt<number>(feedback, 'rtThreshold')
-				if (remainingTime <= threshold) {
-					if (opt<any>(feedback, 'blinkingEnabled') && status === OBSMediaStatus.Playing) {
-						return !!(Math.floor(Date.now() / 500) % 2)
+					if (feedback.options.onlyIfSourceIsOnProgram && !source.active) {
+						return false
 					}
-					return true
+
+					if (feedback.options.onlyIfSourceIsPlaying && status !== OBSMediaStatus.Playing) {
+						return false
+					}
+
+					if (status === OBSMediaStatus.Stopped) {
+						return false
+					}
+
+					const threshold = feedback.options.rtThreshold
+					if (remainingTime <= threshold) {
+						if (feedback.options.blinkingEnabled && status === OBSMediaStatus.Playing) {
+							return !!(Math.floor(Date.now() / 500) % 2)
+						}
+						return true
+					}
 				}
-			}
-			return false
+				return false
+			},
 		},
 	}
-
-	return feedbacks
 }

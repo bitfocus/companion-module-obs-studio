@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
 /** Transition presets: Auto button, transitions templates, and duration controls. */
 export function getTransitionPresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['transitionAuto'] = {
 		type: 'simple',
@@ -125,7 +126,7 @@ export function getTransitionPresets(self: OBSInstance): {
 
 	const transitionValues = self.obsState.transitionList.map((t) => ({ name: t.label, value: t.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'transitions',
 			name: 'Transitions',

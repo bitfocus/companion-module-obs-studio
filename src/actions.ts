@@ -1,15 +1,24 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from './main.js'
 
-import { getAudioActions } from './actions/audio.js'
-import { getMediaActions } from './actions/media.js'
-import { getOutputActions } from './actions/outputs.js'
-import { getSceneActions } from './actions/scenes.js'
-import { getSourceActions } from './actions/sources.js'
-import { getTransitionActions } from './actions/transitions.js'
-import { getUiConfigCustomActions } from './actions/ui-config-custom.js'
+import { getAudioActions, type AudioActionSchemas } from './actions/audio.js'
+import { getMediaActions, type MediaActionSchemas } from './actions/media.js'
+import { getOutputActions, type OutputActionSchemas } from './actions/outputs.js'
+import { getSceneActions, type SceneActionSchemas } from './actions/scenes.js'
+import { getSourceActions, type SourceActionSchemas } from './actions/sources.js'
+import { getTransitionActions, type TransitionActionSchemas } from './actions/transitions.js'
+import { getUiConfigCustomActions, type UiConfigCustomActionSchemas } from './actions/ui-config-custom.js'
 
-export function getActions(this: OBSInstance): CompanionActionDefinitions {
+/** The full set of action schemas, used as `InstanceTypes['actions']`. */
+export type OBSActionSchemas = AudioActionSchemas &
+	MediaActionSchemas &
+	OutputActionSchemas &
+	SceneActionSchemas &
+	SourceActionSchemas &
+	TransitionActionSchemas &
+	UiConfigCustomActionSchemas
+
+export function getActions(this: OBSInstance): CompanionActionDefinitions<OBSActionSchemas> {
 	return {
 		...getAudioActions(this),
 		...getMediaActions(this),

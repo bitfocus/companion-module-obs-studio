@@ -1,5 +1,6 @@
 import { createModuleLogger } from '@companion-module/base'
 import type OBSInstance from './main.js'
+import type { OBSFeedbackId } from './feedbacks.js'
 import type { OBSSource } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
@@ -271,7 +272,7 @@ function updateSourceProperty(
 	uuid: string,
 	property: keyof OBSSource,
 	value: unknown,
-	feedback?: string | string[],
+	feedback?: OBSFeedbackId | OBSFeedbackId[],
 ): void {
 	const source = self.states.sources.get(uuid)
 	if (source) {

@@ -1,14 +1,15 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { ObsAudioMonitorType } from '../types.js'
 import { baseStyle, styleActive, styleMuted, Color } from './style.js'
 
 /** Audio presets: per-source controls for volume, mute, and monitoring. */
 export function getAudioPresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['tmp_audioMute'] = {
 		type: 'simple',
@@ -129,7 +130,7 @@ export function getAudioPresets(self: OBSInstance): {
 
 	const audioValues = self.obsState.audioSourceList.map((s) => ({ name: s.label, value: s.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'audio',
 			name: 'Audio',

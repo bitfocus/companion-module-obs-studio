@@ -1,5 +1,6 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from './main.js'
+import type { OBSInstanceTypes } from './main.js'
 
 import { getScenePresets } from './presets/scenes.js'
 import { getTransitionPresets } from './presets/transitions.js'
@@ -14,8 +15,8 @@ import { getStudioConfigPresets } from './presets/studio-config.js'
 import { getSystemPresets } from './presets/system.js'
 
 export function getPresets(this: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	structure: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	structure: CompanionPresetSection<OBSInstanceTypes>[]
 } {
 	// Assemble preset definitions and sections.
 	const parts = [
@@ -32,8 +33,8 @@ export function getPresets(this: OBSInstance): {
 		getSystemPresets(this),
 	]
 
-	const presets: CompanionPresetDefinitions = Object.assign({}, ...parts.map((p) => p.presets))
-	const structure: CompanionPresetSection[] = parts.flatMap((p) => p.sections)
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = Object.assign({}, ...parts.map((p) => p.presets))
+	const structure: CompanionPresetSection<OBSInstanceTypes>[] = parts.flatMap((p) => p.sections)
 
 	return { presets, structure }
 }

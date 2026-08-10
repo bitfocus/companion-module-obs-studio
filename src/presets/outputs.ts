@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
 /** Custom output presets (Virtual Camera, Decklink, etc.) templates. */
 export function getOutputPresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['tmp_outputToggle'] = {
 		type: 'simple',
@@ -82,7 +83,7 @@ export function getOutputPresets(self: OBSInstance): {
 
 	const outputValues = self.obsState.outputList.map((o) => ({ name: o.label, value: o.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'outputs',
 			name: 'Custom Outputs',

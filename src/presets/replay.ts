@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
 /** Replay buffer control + status presets. */
 export function getReplayPresets(_self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['replayToggle'] = {
 		type: 'simple',
@@ -50,7 +51,7 @@ export function getReplayPresets(_self: OBSInstance): {
 		feedbacks: [{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'REPLAY\nACTIVE' } }],
 	}
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'replay',
 			name: 'Replay Buffer',

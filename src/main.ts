@@ -1,9 +1,16 @@
-import { CompanionRecordedAction, InstanceBase, InstanceStatus, SomeCompanionConfigField } from '@companion-module/base'
+import {
+	CompanionRecordedAction,
+	type CompanionVariableValues,
+	InstanceBase,
+	InstanceStatus,
+	type InstanceTypes,
+	SomeCompanionConfigField,
+} from '@companion-module/base'
 import { GetConfigFields } from './config.js'
-import { getActions } from './actions.js'
+import { getActions, type OBSActionSchemas } from './actions.js'
 import { getPresets } from './presets.js'
 import { getVariables, updateVariableValues } from './variables.js'
-import { getFeedbacks } from './feedbacks.js'
+import { getFeedbacks, type OBSFeedbackSchemas } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
 import { ModuleConfig, ModuleSecrets, OBSNormalizedState } from './types.js'
 import { OBSState } from './state.js'
@@ -11,7 +18,16 @@ import { OBSState } from './state.js'
 import OBSWebSocket from 'obs-websocket-js'
 import { OBSApi } from './api.js'
 
-export default class OBSInstance extends InstanceBase {
+export interface OBSInstanceTypes extends InstanceTypes {
+	config: ModuleConfig
+	secrets: ModuleSecrets
+	actions: OBSActionSchemas
+	feedbacks: OBSFeedbackSchemas
+	// Variables stay untyped: many are built from dynamic per-source keys.
+	variables: CompanionVariableValues
+}
+
+export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 	public socket!: OBSWebSocket
 	public obs!: OBSApi
 	public obsState!: OBSState

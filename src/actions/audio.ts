@@ -1,6 +1,6 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { clamp, opt } from '../utils.js'
+import { clamp } from '../utils.js'
 import * as utils from '../utils.js'
 import { ObsAudioMonitorType, type OBSBatchRequest } from '../types.js'
 import {
@@ -13,431 +13,443 @@ import {
 	FADE_STEP_MS,
 } from '../constants.js'
 
-export function getAudioActions(self: OBSInstance): CompanionActionDefinitions {
-	const actions: CompanionActionDefinitions = {}
+export type AudioActionSchemas = {
+	toggle_source_mute: { options: { source: string }; result: boolean | null }
+	set_source_mute: { options: { source: string; mute: 'true' | 'false' } }
+	set_volume: { options: { source: string; volume: number } }
+	adjust_volume: { options: { source: string; volume: number } }
+	adjust_volume_percent: { options: { source: string; volume: number } }
+	fadeVolume: { options: { source: string; volume: number; duration: number } }
+	set_audio_offset: { options: { source: string; offset: number } }
+	adjust_audio_offset: { options: { source: string; amount: number } }
+	set_audio_balance: { options: { source: string; balance: number } }
+	adjust_audio_balance: { options: { source: string; amount: number } }
+	set_audio_monitor: { options: { source: string; monitor: ObsAudioMonitorType } }
+}
 
-	actions['toggle_source_mute'] = {
-		name: 'Audio - Toggle Source Mute',
-		description: 'Toggles the mute state of a specific audio source',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
+export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<AudioActionSchemas> {
+	return {
+		toggle_source_mute: {
+			name: 'Audio - Toggle Source Mute',
+			description: 'Toggles the mute state of a specific audio source',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+			],
+			hasResult: true,
+			callback: async (action) => {
+				const res = await self.obs.sendRequest('ToggleInputMute', { inputName: action.options.source })
+				return res?.inputMuted ?? null
 			},
-		],
-		hasResult: true,
-		callback: async (action) => {
-			const res = await self.obs.sendRequest('ToggleInputMute', { inputName: opt<string>(action, 'source') })
-			return res?.inputMuted ?? null
 		},
-	}
-	actions['set_source_mute'] = {
-		name: 'Audio - Set Mute',
-		description: 'Sets the mute state of a specific audio source (deprecated, use audio actions instead)',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
+		set_source_mute: {
+			name: 'Audio - Set Mute',
+			description: 'Sets the mute state of a specific audio source (deprecated, use audio actions instead)',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Mute',
+					id: 'mute',
+					default: 'true',
+					choices: [
+						{ id: 'true', label: 'Mute' },
+						{ id: 'false', label: 'Unmute' },
+					],
+				},
+			],
+			callback: async (action) => {
+				await self.obs.sendRequest('SetInputMute', {
+					inputName: action.options.source,
+					inputMuted: action.options.mute === 'true',
+				})
 			},
-			{
-				type: 'dropdown',
-				disableAutoExpression: true,
-				label: 'Mute',
-				id: 'mute',
-				default: 'true',
-				choices: [
-					{ id: 'true', label: 'Mute' },
-					{ id: 'false', label: 'Unmute' },
-				],
+			learn: (action) => {
+				const sourceName = action.options.source
+				const source = self.obsState.findSourceByName(sourceName)
+				if (!source) return undefined
+				return {
+					mute: source.inputMuted ? 'true' : 'false',
+				}
 			},
-		],
-		callback: async (action) => {
-			await self.obs.sendRequest('SetInputMute', {
-				inputName: opt<string>(action, 'source'),
-				inputMuted: opt<any>(action, 'mute') === 'true',
-			})
 		},
-		learn: (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const source = self.obsState.findSourceByName(sourceName)
-			if (!source) return undefined
-			return {
-				mute: source.inputMuted ? 'true' : 'false',
-			}
+		set_volume: {
+			name: 'Audio - Set Source Volume',
+			description: 'Sets the volume of a specific audio source in decibels',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Volume in dB (-100 to 26)',
+					id: 'volume',
+					default: 0,
+					min: VOLUME_MIN_DB,
+					max: VOLUME_MAX_DB,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				await self.obs.sendRequest('SetInputVolume', {
+					inputName: action.options.source,
+					inputVolumeDb: action.options.volume,
+				})
+			},
+			learn: (action) => {
+				const sourceName = action.options.source
+				const source = self.obsState.findSourceByName(sourceName)
+				if (!source) return undefined
+				return {
+					volume: source.inputVolume,
+				}
+			},
 		},
-	}
-	actions['set_volume'] = {
-		name: 'Audio - Set Source Volume',
-		description: 'Sets the volume of a specific audio source in decibels',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
+		adjust_volume: {
+			name: 'Audio - Adjust Source Volume',
+			description: 'Increases or decreases the volume of a specific audio source by a set amount of decibels',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Amount in dB',
+					id: 'volume',
+					default: 1,
+					min: VOLUME_MIN_DB,
+					max: VOLUME_MAX_DB,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				const sourceName = action.options.source
+				const currentVolume = self.obsState.findSourceByName(sourceName)?.inputVolume
+				const newVolume = clamp(
+					(currentVolume !== undefined ? currentVolume : 0) + action.options.volume,
+					VOLUME_MIN_DB,
+					VOLUME_MAX_DB,
+				)
+
+				await self.obs.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newVolume })
 			},
-			{
-				type: 'number',
-				label: 'Volume in dB (-100 to 26)',
-				id: 'volume',
-				default: 0,
-				min: VOLUME_MIN_DB,
-				max: VOLUME_MAX_DB,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			await self.obs.sendRequest('SetInputVolume', {
-				inputName: opt<string>(action, 'source'),
-				inputVolumeDb: opt<number>(action, 'volume'),
-			})
 		},
-		learn: (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const source = self.obsState.findSourceByName(sourceName)
-			if (!source) return undefined
-			return {
-				volume: source.inputVolume,
-			}
+		adjust_volume_percent: {
+			name: 'Audio - Adjust Source Volume (Percentage)',
+			description: 'Increases or decreases the volume of a specific audio source by a percentage of its range',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Amount in Percentage',
+					id: 'volume',
+					default: 5,
+					min: -100,
+					max: 100,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				const sourceName = action.options.source
+				const currentVolume = self.obsState.findSourceByName(sourceName)?.inputVolume ?? -100
+
+				const LOG_OFFSET_DB = 0
+				const currentPercentage = Math.pow(10, (currentVolume - LOG_OFFSET_DB) / 20) * 100
+				let newPercentage = currentPercentage + action.options.volume
+
+				newPercentage = clamp(newPercentage, 0, 100)
+
+				let newDb = 20 * Math.log10(newPercentage / 100) + LOG_OFFSET_DB
+				newDb = clamp(newDb, VOLUME_MIN_DB, VOLUME_MAX_DB)
+
+				await self.obs.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newDb })
+			},
 		},
-	}
-	actions['adjust_volume'] = {
-		name: 'Audio - Adjust Source Volume',
-		description: 'Increases or decreases the volume of a specific audio source by a set amount of decibels',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
-			},
-			{
-				type: 'number',
-				label: 'Amount in dB',
-				id: 'volume',
-				default: 1,
-				min: VOLUME_MIN_DB,
-				max: VOLUME_MAX_DB,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const currentVolume = self.obsState.findSourceByName(sourceName)?.inputVolume
-			const newVolume = clamp(
-				(currentVolume !== undefined ? currentVolume : 0) + opt<number>(action, 'volume'),
-				VOLUME_MIN_DB,
-				VOLUME_MAX_DB,
-			)
+		fadeVolume: {
+			name: 'Audio - Fade Source Volume',
+			description: 'Fades the volume of a source to a target value over a specific duration',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Target Volume in dB',
+					id: 'volume',
+					default: 0,
+					min: VOLUME_MIN_DB,
+					max: VOLUME_MAX_DB,
+					clampValues: true,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (in ms)',
+					id: 'duration',
+					default: 1000,
+					min: 10,
+					max: 60000,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				const sourceName = action.options.source
+				const targetVolume = action.options.volume
+				const duration = action.options.duration
+				const source = self.obsState.findSourceByName(sourceName)
 
-			await self.obs.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newVolume })
-		},
-	}
-	actions['adjust_volume_percent'] = {
-		name: 'Audio - Adjust Source Volume (Percentage)',
-		description: 'Increases or decreases the volume of a specific audio source by a percentage of its range',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
-			},
-			{
-				type: 'number',
-				label: 'Amount in Percentage',
-				id: 'volume',
-				default: 5,
-				min: -100,
-				max: 100,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const currentVolume = self.obsState.findSourceByName(sourceName)?.inputVolume ?? -100
+				if (source && !source.audioFadeActive) {
+					const currentVolume = source.inputVolume ?? -100
+					const frames = Math.max(1, Math.floor(duration / FADE_STEP_MS))
+					const volStep = (targetVolume - currentVolume) / frames
+					const fadeBatch: OBSBatchRequest[] = []
 
-			const LOG_OFFSET_DB = 0
-			const currentPercentage = Math.pow(10, (currentVolume - LOG_OFFSET_DB) / 20) * 100
-			let newPercentage = currentPercentage + opt<number>(action, 'volume')
-
-			newPercentage = clamp(newPercentage, 0, 100)
-
-			let newDb = 20 * Math.log10(newPercentage / 100) + LOG_OFFSET_DB
-			newDb = clamp(newDb, VOLUME_MIN_DB, VOLUME_MAX_DB)
-
-			await self.obs.sendRequest('SetInputVolume', { inputName: sourceName, inputVolumeDb: newDb })
-		},
-	}
-	actions['fadeVolume'] = {
-		name: 'Audio - Fade Source Volume',
-		description: 'Fades the volume of a source to a target value over a specific duration',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
-			},
-			{
-				type: 'number',
-				label: 'Target Volume in dB',
-				id: 'volume',
-				default: 0,
-				min: VOLUME_MIN_DB,
-				max: VOLUME_MAX_DB,
-				clampValues: true,
-			},
-			{
-				type: 'number',
-				label: 'Fade Duration (in ms)',
-				id: 'duration',
-				default: 1000,
-				min: 10,
-				max: 60000,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const targetVolume = opt<number>(action, 'volume')
-			const duration = opt<number>(action, 'duration')
-			const source = self.obsState.findSourceByName(sourceName)
-
-			if (source && !source.audioFadeActive) {
-				const currentVolume = source.inputVolume ?? -100
-				const frames = Math.max(1, Math.floor(duration / FADE_STEP_MS))
-				const volStep = (targetVolume - currentVolume) / frames
-				const fadeBatch: OBSBatchRequest[] = []
-
-				// Sleep requests provide the delay between steps; a `sleep` field on a request is not part of the protocol.
-				for (let i = 1; i <= frames; i++) {
-					if (i > 1) {
-						fadeBatch.push({ requestType: 'Sleep', requestData: { sleepMillis: FADE_STEP_MS } })
+					// Sleep requests provide the delay between steps; a `sleep` field on a request is not part of the protocol.
+					for (let i = 1; i <= frames; i++) {
+						if (i > 1) {
+							fadeBatch.push({ requestType: 'Sleep', requestData: { sleepMillis: FADE_STEP_MS } })
+						}
+						fadeBatch.push({
+							requestType: 'SetInputVolume',
+							requestData: {
+								inputName: sourceName,
+								inputVolumeDb: utils.roundNumber(currentVolume + volStep * i, 1),
+							},
+						})
 					}
-					fadeBatch.push({
-						requestType: 'SetInputVolume',
-						requestData: {
-							inputName: sourceName,
-							inputVolumeDb: utils.roundNumber(currentVolume + volStep * i, 1),
-						},
-					})
+
+					source.audioFadeActive = true
+					try {
+						await self.obs.sendBatch(fadeBatch)
+					} finally {
+						source.audioFadeActive = false
+					}
 				}
-
-				source.audioFadeActive = true
-				try {
-					await self.obs.sendBatch(fadeBatch)
-				} finally {
-					source.audioFadeActive = false
+			},
+		},
+		set_audio_offset: {
+			name: 'Audio - Set Source Audio Offset',
+			description: 'Sets the audio sync offset for a specific source in milliseconds',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Offset in ms',
+					id: 'offset',
+					default: 0,
+					min: SYNC_OFFSET_MIN,
+					max: SYNC_OFFSET_MAX,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				await self.obs.sendRequest('SetInputAudioSyncOffset', {
+					inputName: action.options.source,
+					inputAudioSyncOffset: action.options.offset,
+				})
+			},
+			learn: (action) => {
+				const sourceName = action.options.source
+				const source = self.obsState.findSourceByName(sourceName)
+				if (!source) return undefined
+				return {
+					offset: source.inputAudioSyncOffset,
 				}
-			}
+			},
 		},
-	}
-	actions['set_audio_offset'] = {
-		name: 'Audio - Set Source Audio Offset',
-		description: 'Sets the audio sync offset for a specific source in milliseconds',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
+		adjust_audio_offset: {
+			name: 'Audio - Adjust Source Audio Offset',
+			description: 'Increases or decreases the audio sync offset of a specific source by a set amount of milliseconds',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Amount in ms',
+					id: 'amount',
+					default: 50,
+					min: -20000,
+					max: SYNC_OFFSET_MAX,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				const sourceName = action.options.source
+				const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioSyncOffset
+				const newOffset = clamp(
+					(currentOffset !== undefined ? currentOffset : 0) + action.options.amount,
+					SYNC_OFFSET_MIN,
+					SYNC_OFFSET_MAX,
+				)
+				await self.obs.sendRequest('SetInputAudioSyncOffset', {
+					inputName: sourceName,
+					inputAudioSyncOffset: newOffset,
+				})
 			},
-			{
-				type: 'number',
-				label: 'Offset in ms',
-				id: 'offset',
-				default: 0,
-				min: SYNC_OFFSET_MIN,
-				max: SYNC_OFFSET_MAX,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			await self.obs.sendRequest('SetInputAudioSyncOffset', {
-				inputName: opt<string>(action, 'source'),
-				inputAudioSyncOffset: opt<number>(action, 'offset'),
-			})
 		},
-		learn: (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const source = self.obsState.findSourceByName(sourceName)
-			if (!source) return undefined
-			return {
-				offset: source.inputAudioSyncOffset,
-			}
+		set_audio_balance: {
+			name: 'Audio - Set Source Audio Balance',
+			description: 'Sets the audio balance for a specific source (0.0 for Left, 0.5 for Center, 1.0 for Right)',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Balance (0.0 to 1.0)',
+					id: 'balance',
+					default: 0.5,
+					min: BALANCE_MIN,
+					max: BALANCE_MAX,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				const sourceName = action.options.source
+				await self.obs.sendRequest('SetInputAudioBalance', {
+					inputName: sourceName,
+					inputAudioBalance: action.options.balance,
+				})
+			},
+			learn: (action) => {
+				const sourceName = action.options.source
+				const source = self.obsState.findSourceByName(sourceName)
+				if (!source) return undefined
+				return {
+					balance: source.inputAudioBalance,
+				}
+			},
 		},
-	}
-	actions['adjust_audio_offset'] = {
-		name: 'Audio - Adjust Source Audio Offset',
-		description: 'Increases or decreases the audio sync offset of a specific source by a set amount of milliseconds',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
+		adjust_audio_balance: {
+			name: 'Audio - Adjust Source Audio Balance',
+			description: 'Increases or decreases the audio balance of a specific source by a set percentage',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'number',
+					label: 'Amount (percentage of range)',
+					id: 'amount',
+					default: 0.1,
+					min: -1.0,
+					max: BALANCE_MAX,
+					clampValues: true,
+				},
+			],
+			callback: async (action) => {
+				const sourceName = action.options.source
+				const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioBalance
+				const newOffset = clamp(
+					(currentOffset !== undefined ? currentOffset : 0.5) + action.options.amount,
+					BALANCE_MIN,
+					BALANCE_MAX,
+				)
+				await self.obs.sendRequest('SetInputAudioBalance', {
+					inputName: sourceName,
+					inputAudioBalance: newOffset,
+				})
 			},
-			{
-				type: 'number',
-				label: 'Amount in ms',
-				id: 'amount',
-				default: 50,
-				min: -20000,
-				max: SYNC_OFFSET_MAX,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioSyncOffset
-			const newOffset = clamp(
-				(currentOffset !== undefined ? currentOffset : 0) + opt<number>(action, 'amount'),
-				SYNC_OFFSET_MIN,
-				SYNC_OFFSET_MAX,
-			)
-			await self.obs.sendRequest('SetInputAudioSyncOffset', {
-				inputName: sourceName,
-				inputAudioSyncOffset: newOffset,
-			})
 		},
-	}
-	actions['set_audio_balance'] = {
-		name: 'Audio - Set Source Audio Balance',
-		description: 'Sets the audio balance for a specific source (0.0 for Left, 0.5 for Center, 1.0 for Right)',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
-			},
-			{
-				type: 'number',
-				label: 'Balance (0.0 to 1.0)',
-				id: 'balance',
-				default: 0.5,
-				min: BALANCE_MIN,
-				max: BALANCE_MAX,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			const sourceName = opt<string>(action, 'source')
-			await self.obs.sendRequest('SetInputAudioBalance', {
-				inputName: sourceName,
-				inputAudioBalance: opt<number>(action, 'balance'),
-			})
-		},
-		learn: (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const source = self.obsState.findSourceByName(sourceName)
-			if (!source) return undefined
-			return {
-				balance: source.inputAudioBalance,
-			}
-		},
-	}
-	actions['adjust_audio_balance'] = {
-		name: 'Audio - Adjust Source Audio Balance',
-		description: 'Increases or decreases the audio balance of a specific source by a set percentage',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
-			},
-			{
-				type: 'number',
-				label: 'Amount (percentage of range)',
-				id: 'amount',
-				default: 0.1,
-				min: -1.0,
-				max: BALANCE_MAX,
-				clampValues: true,
-			},
-		],
-		callback: async (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioBalance
-			const newOffset = clamp(
-				(currentOffset !== undefined ? currentOffset : 0.5) + opt<number>(action, 'amount'),
-				BALANCE_MIN,
-				BALANCE_MAX,
-			)
-			await self.obs.sendRequest('SetInputAudioBalance', {
-				inputName: sourceName,
-				inputAudioBalance: newOffset,
-			})
-		},
-	}
 
-	actions['set_audio_monitor'] = {
-		name: 'Audio - Set Audio Monitor Type',
-		description: 'Sets the audio monitoring type for a specific source',
-		options: [
-			{
-				type: 'dropdown',
-				allowCustom: true,
-				label: 'Source',
-				id: 'source',
-				default: self.obsState.audioSourceListDefault,
-				choices: self.obsState.audioSourceList,
+		set_audio_monitor: {
+			name: 'Audio - Set Audio Monitor Type',
+			description: 'Sets the audio monitoring type for a specific source',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Monitor',
+					id: 'monitor',
+					default: ObsAudioMonitorType.None,
+					choices: [
+						{ id: ObsAudioMonitorType.None, label: 'Off' },
+						{ id: ObsAudioMonitorType.MonitorOnly, label: 'Monitor Only' },
+						{ id: ObsAudioMonitorType.MonitorAndOutput, label: 'Monitor / Output' },
+					],
+				},
+			],
+			callback: async (action) => {
+				const monitorType = action.options.monitor
+				await self.obs.sendRequest('SetInputAudioMonitorType', {
+					inputName: action.options.source,
+					monitorType: monitorType,
+				})
 			},
-			{
-				type: 'dropdown',
-				disableAutoExpression: true,
-				label: 'Monitor',
-				id: 'monitor',
-				default: ObsAudioMonitorType.None,
-				choices: [
-					{ id: ObsAudioMonitorType.None, label: 'Off' },
-					{ id: ObsAudioMonitorType.MonitorOnly, label: 'Monitor Only' },
-					{ id: ObsAudioMonitorType.MonitorAndOutput, label: 'Monitor / Output' },
-				],
+			learn: (action) => {
+				const sourceName = action.options.source
+				const source = self.obsState.findSourceByName(sourceName)
+				if (!source) return undefined
+				return {
+					monitor: source.monitorType,
+				}
 			},
-		],
-		callback: async (action) => {
-			const monitorType = opt<ObsAudioMonitorType>(action, 'monitor')
-			await self.obs.sendRequest('SetInputAudioMonitorType', {
-				inputName: opt<string>(action, 'source'),
-				monitorType: monitorType,
-			})
-		},
-		learn: (action) => {
-			const sourceName = opt<string>(action, 'source')
-			const source = self.obsState.findSourceByName(sourceName)
-			if (!source) return undefined
-			return {
-				monitor: source.monitorType,
-			}
 		},
 	}
-
-	return actions
 }

@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleProgram, stylePreview, Style, Color } from './style.js'
 
 /** Scene presets: program, preview, and smart switch template presets. */
 export function getScenePresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['tmp_sceneProgram'] = {
 		type: 'simple',
@@ -94,7 +95,7 @@ export function getScenePresets(self: OBSInstance): {
 
 	const sceneValues = self.obsState.sceneChoices.map((s) => ({ name: s.label, value: s.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'scenes',
 			name: 'Scenes',

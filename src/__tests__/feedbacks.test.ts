@@ -3,6 +3,7 @@ import type { CompanionFeedbackDefinition, CompanionFeedbackInfo, CompanionOptio
 import { getFeedbacks } from '../feedbacks.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 import { MockContext } from './mock-context.js'
+import { looseFeedbacks, type LooseFeedbacks } from './loose-definitions.js'
 
 function defaultOptions(def: CompanionFeedbackDefinition): CompanionOptionValues {
 	const options: CompanionOptionValues = {}
@@ -26,12 +27,12 @@ function makeMockInstanceSeeded(): MockInstance {
 
 describe('feedbacks', () => {
 	let self: MockInstance
-	let feedbacks: ReturnType<typeof getFeedbacks>
+	let feedbacks: LooseFeedbacks
 
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedFullState(self)
-		feedbacks = getFeedbacks.call(self)
+		feedbacks = looseFeedbacks(getFeedbacks.call(self))
 	})
 
 	test('produces a non-empty feedback set', () => {
@@ -39,8 +40,8 @@ describe('feedbacks', () => {
 	})
 
 	describe('every feedback definition is well-formed', () => {
-		test.each(Object.keys(getFeedbacks.call(makeMockInstanceSeeded())))('%s', (id) => {
-			const def = feedbacks[id]!
+		test.each(Object.keys(looseFeedbacks(getFeedbacks.call(makeMockInstanceSeeded()))))('%s', (id) => {
+			const def = feedbacks[id]
 			expect(def).toBeDefined()
 			expect(['boolean', 'advanced']).toContain(def.type)
 			expect(typeof def.name).toBe('string')
@@ -53,8 +54,8 @@ describe('feedbacks', () => {
 	})
 
 	describe('every feedback callback runs without throwing and returns a valid shape', () => {
-		test.each(Object.keys(getFeedbacks.call(makeMockInstanceSeeded())))('%s', async (id) => {
-			const def = feedbacks[id]!
+		test.each(Object.keys(looseFeedbacks(getFeedbacks.call(makeMockInstanceSeeded()))))('%s', async (id) => {
+			const def = feedbacks[id]
 			const result = await Promise.resolve(def.callback(feedbackInfo(id, defaultOptions(def)), new MockContext()))
 			const expectedType = def.type === 'boolean' ? 'boolean' : 'object'
 			expect(typeof result).toBe(expectedType)

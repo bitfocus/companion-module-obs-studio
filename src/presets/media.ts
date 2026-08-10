@@ -1,20 +1,24 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive, styleCaution } from './style.js'
 
 /** Media presets: play/pause, time-remaining, and current media controls. */
 export function getMediaPresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['playPauseCurrentMedia'] = {
 		type: 'simple',
 		name: 'Play/Pause Current Media',
 		style: baseStyle({ text: 'Play/\nPause:\n$(obs:current_media_name)' }),
 		steps: [
-			{ down: [{ actionId: 'play_pause_media', options: { useCurrentMedia: true, playPause: 'toggle' } }], up: [] },
+			{
+				down: [{ actionId: 'play_pause_media', options: { useCurrentMedia: true, source: '', playPause: 'toggle' } }],
+				up: [],
+			},
 		],
 		feedbacks: [],
 	}
@@ -29,7 +33,11 @@ export function getMediaPresets(self: OBSInstance): {
 				down: [
 					{
 						actionId: 'play_pause_media',
-						options: { source: { value: '$(local:source)', isExpression: true }, playPause: 'toggle' },
+						options: {
+							useCurrentMedia: false,
+							source: { value: '$(local:source)', isExpression: true },
+							playPause: 'toggle',
+						},
 					},
 				],
 				up: [],
@@ -56,7 +64,9 @@ export function getMediaPresets(self: OBSInstance): {
 				options: {
 					source: { value: '$(local:source)', isExpression: true },
 					rtThreshold: 20,
+					onlyIfSourceIsOnProgram: false,
 					onlyIfSourceIsPlaying: true,
+					blinkingEnabled: false,
 				},
 				style: styleCaution(),
 			},
@@ -65,7 +75,7 @@ export function getMediaPresets(self: OBSInstance): {
 
 	const mediaValues = self.obsState.mediaSourceList.map((s) => ({ name: s.label, value: s.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'media',
 			name: 'Media',

@@ -3,11 +3,6 @@ import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorTy
 
 const logger = createModuleLogger('Utils')
 
-/** Safely extract an option value. */
-export function opt<T>(event: { options: any }, key: string): T {
-	return event.options[key] as T
-}
-
 /** Clamp a number between min and max. */
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max)

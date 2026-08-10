@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
 /** Studio Mode and configuration presets for profiles and scene collections. */
 export function getStudioConfigPresets(self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['toggleStudioMode'] = {
 		type: 'simple',
@@ -67,7 +68,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 	const profileValues = self.obsState.profileChoices.map((p) => ({ name: p.label, value: p.id }))
 	const collectionValues = self.obsState.sceneCollectionList.map((c) => ({ name: c.label, value: c.id }))
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'studio-config',
 			name: 'Studio Mode & Config',

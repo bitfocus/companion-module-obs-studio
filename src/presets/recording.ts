@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleProgram, styleWarn } from './style.js'
 
 /** Recording control + status presets (split out of the former monolithic outputs file). */
 export function getRecordingPresets(_self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['recording'] = {
 		type: 'simple',
@@ -65,7 +66,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Create Recording Chapter',
 		style: baseStyle({ text: 'CREATE\nCHAPTER' }),
-		steps: [{ down: [{ actionId: 'CreateRecordChapter', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'CreateRecordChapter', options: { chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -123,7 +124,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'recording',
 			name: 'Recording',

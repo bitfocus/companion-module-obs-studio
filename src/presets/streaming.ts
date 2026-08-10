@@ -1,13 +1,14 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive, styleWarn, Style } from './style.js'
 
 /** Streaming control + status presets (split out of the former monolithic outputs file). */
 export function getStreamingPresets(_self: OBSInstance): {
-	presets: CompanionPresetDefinitions
-	sections: CompanionPresetSection[]
+	presets: CompanionPresetDefinitions<OBSInstanceTypes>
+	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	const presets: CompanionPresetDefinitions = {}
+	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 
 	presets['streaming'] = {
 		type: 'simple',
@@ -114,7 +115,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	const sections: CompanionPresetSection[] = [
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'streaming',
 			name: 'Streaming',

@@ -6,6 +6,7 @@ import { makeMockInstance, seedFullState, seedScene, seedSource, type MockInstan
 import { MockContext } from './mock-context.js'
 import type { OBSBatchRequest, OBSSceneItem } from '../types.js'
 import { SLEEP_MAX_MS } from '../constants.js'
+import { looseActions, type LooseActions } from './loose-definitions.js'
 
 function event(actionId: string, options: CompanionOptionValues): CompanionActionEvent {
 	return { id: 'test', controlId: 'control', actionId, options } as unknown as CompanionActionEvent
@@ -32,16 +33,16 @@ function sceneItem(partial: Partial<OBSSceneItem> & { sceneItemId: number; sourc
 
 describe('fadeVolume batch', () => {
 	let self: MockInstance
-	let actions: ReturnType<typeof getActions>
+	let actions: LooseActions
 
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedFullState(self)
-		actions = getActions.call(self)
+		actions = looseActions(getActions.call(self))
 	})
 
 	test('delays steps with Sleep requests rather than a non-protocol sleep field', async () => {
-		await actions['fadeVolume']!.callback(
+		await actions['fadeVolume'].callback(
 			event('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
 			new MockContext(),
 		)
@@ -58,7 +59,7 @@ describe('fadeVolume batch', () => {
 	})
 
 	test('ends on the target volume', async () => {
-		await actions['fadeVolume']!.callback(
+		await actions['fadeVolume'].callback(
 			event('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
 			new MockContext(),
 		)
@@ -68,7 +69,7 @@ describe('fadeVolume batch', () => {
 	})
 
 	test('still emits a step when the duration is shorter than one step', async () => {
-		await actions['fadeVolume']!.callback(
+		await actions['fadeVolume'].callback(
 			event('fadeVolume', { source: 'Mic', volume: -10, duration: 10 }),
 			new MockContext(),
 		)
@@ -81,16 +82,16 @@ describe('fadeVolume batch', () => {
 
 describe('quick_transition Sleep', () => {
 	let self: MockInstance
-	let actions: ReturnType<typeof getActions>
+	let actions: LooseActions
 
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedFullState(self)
-		actions = getActions.call(self)
+		actions = looseActions(getActions.call(self))
 	})
 
 	test('clamps sleepMillis to the protocol maximum', async () => {
-		await actions['quick_transition']!.callback(
+		await actions['quick_transition'].callback(
 			event('quick_transition', { transition: 'Fade', customDuration: true, transition_time: 60000 }),
 			new MockContext(),
 		)
@@ -135,18 +136,18 @@ describe('input default settings', () => {
 
 describe('custom_command variables', () => {
 	let self: MockInstance
-	let actions: ReturnType<typeof getActions>
+	let actions: LooseActions
 
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedFullState(self)
-		actions = getActions.call(self)
+		actions = looseActions(getActions.call(self))
 	})
 
 	test('records the request type, data and response', async () => {
 		self.socket.call.mockResolvedValue({ sceneName: 'Scene A' })
 
-		await actions['custom_command']!.callback(
+		await actions['custom_command'].callback(
 			event('custom_command', { command: 'GetCurrentProgramScene', arg: '{"a":1}' }),
 			new MockContext(),
 		)
@@ -161,7 +162,7 @@ describe('custom_command variables', () => {
 	test('clears the request and response variables when the request fails', async () => {
 		self.socket.call.mockRejectedValue(new Error('nope'))
 
-		await actions['custom_command']!.callback(
+		await actions['custom_command'].callback(
 			event('custom_command', { command: 'GetCurrentProgramScene', arg: '' }),
 			new MockContext(),
 		)
