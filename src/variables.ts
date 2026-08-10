@@ -72,7 +72,9 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 			break
 	}
 
-	if (source.inputAudioTracks) {
+	// Game Capture (and similar) sources report mute/volume but never populate inputAudioTracks,
+	// so those two are gated separately to still expose variables for them.
+	if (source.inputMuted !== undefined || source.inputVolume !== undefined) {
 		entries.push(
 			{
 				id: `volume_${sourceName}`,
@@ -84,6 +86,11 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 				name: `${sourceName} - Mute status`,
 				value: source.inputMuted !== undefined ? (source.inputMuted ? 'Muted' : 'Unmuted') : '',
 			},
+		)
+	}
+
+	if (source.inputAudioTracks) {
+		entries.push(
 			{
 				id: `monitor_${sourceName}`,
 				name: `${sourceName} - Audio monitor`,
