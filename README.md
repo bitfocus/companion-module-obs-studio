@@ -9,3 +9,7 @@ See [HELP.md](https://github.com/bitfocus/companion-module-obs-studio/blob/maste
 ## Changelog
 
 See [companion/CHANGELOG.md](companion/CHANGELOG.md) for the full release history.
+
+## LICENSE
+
+See [LICENSE](/LICENSE).
