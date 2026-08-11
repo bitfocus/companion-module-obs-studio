@@ -215,9 +215,9 @@ export type OBSInputListEntry = {
 }
 
 /**
- * The per-source data the module fetches in one batch, keyed by the suffix used in the batch's
- * request IDs (`<sourceUuid>:<kind>`). Modelling it as a map lets the response handler switch on the
- * kind and get the matching payload type, instead of treating every payload as `any`.
+ * The per-source data the module fetches in one batch. Modelling it as a map lets the response
+ * handler switch on the entry kind and get the matching payload type, instead of treating every
+ * payload as `any`.
  */
 export type SourceDataPayloads = {
 	active: { videoActive?: boolean; videoShowing?: boolean }
@@ -233,25 +233,34 @@ export type SourceDataPayloads = {
 
 export type SourceDataKind = keyof SourceDataPayloads
 
-/** Discriminated union pairing each request kind with the payload OBS returns for it. */
-export type SourceDataResponse = {
-	[K in SourceDataKind]: { kind: K; data: SourceDataPayloads[K] }
-}[SourceDataKind]
+/** Batch spec for the per-source data fetch; every entry carries the source it was issued for. */
+export type SourceDataBatchSpec = {
+	[K in SourceDataKind]: { meta: { uuid: string }; payload: SourceDataPayloads[K] }
+}
 
-const SOURCE_DATA_KINDS = new Set<string>([
-	'active',
-	'filters',
-	'settings',
-	'mute',
-	'volume',
-	'balance',
-	'sync_offset',
-	'monitor',
-	'tracks',
-] satisfies SourceDataKind[])
+export type InputKindDefaultsBatchSpec = {
+	defaults: { meta: { inputKind: string }; payload: OBSInputDefaultSettingsPayload }
+}
 
-export function isSourceDataKind(value: string): value is SourceDataKind {
-	return SOURCE_DATA_KINDS.has(value)
+export type OutputStatusBatchSpec = {
+	status: { meta: { outputName: string }; payload: OBSOutput }
+}
+
+export type SceneFilterBatchSpec = {
+	filters: { meta: { sceneUuid: string }; payload: OBSSourceFilterListPayload }
+}
+
+export type ContainerItemsBatchSpec = {
+	items: { meta: { containerUuid: string }; payload: OBSSceneItemListPayload }
+}
+
+export type SceneTransitionBatchSpec = {
+	list: { meta: null; payload: OBSSceneTransitionListPayload }
+	current: { meta: null; payload: OBSCurrentSceneTransitionPayload }
+}
+
+export type MediaStatusBatchSpec = {
+	status: { meta: { sourceUuid: string }; payload: OBSMediaInputStatusPayload }
 }
 
 /** The nested `font` object carried by OBS text source settings. */

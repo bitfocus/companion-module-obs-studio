@@ -4,6 +4,7 @@ import { getActions } from '../actions.js'
 import { initOBSListeners } from '../listeners.js'
 import { makeMockInstance, seedFullState, seedScene, seedSource, type MockInstance } from './mock/instance.js'
 import { MockContext } from './mock-context.js'
+import { mockBatchResponses } from './mock/socket.js'
 import type { OBSBatchRequest, OBSSceneItem } from '../types.js'
 import { SLEEP_MAX_MS } from '../constants.js'
 import { looseActions, type LooseActions } from './loose-definitions.js'
@@ -201,29 +202,22 @@ describe('scene filters', () => {
 
 	test('fetchSceneFilters stores filters keyed by scene UUID', async () => {
 		seedScene(self, 'Scene A', 'scene-a')
-		self.socket.callBatch.mockResolvedValue([
-			{
-				requestType: 'GetSourceFilterList',
-				requestId: 'scene-a',
-				requestStatus: { result: true, code: 100 },
-				responseData: {
-					filters: [
-						{
-							filterName: 'Color',
-							filterEnabled: true,
-							filterIndex: 0,
-							filterKind: 'color_filter',
-							filterSettings: {},
-						},
-					],
+		mockBatchResponses(self.socket, () => ({
+			filters: [
+				{
+					filterName: 'Color',
+					filterEnabled: true,
+					filterIndex: 0,
+					filterKind: 'color_filter',
+					filterSettings: {},
 				},
-			},
-		])
+			],
+		}))
 
 		await self.obs.fetchSceneFilters(['scene-a'])
 
 		expect(lastBatch(self)).toEqual([
-			{ requestType: 'GetSourceFilterList', requestData: { sourceUuid: 'scene-a' }, requestId: 'scene-a' },
+			{ requestType: 'GetSourceFilterList', requestData: { sourceUuid: 'scene-a' }, requestId: expect.any(String) },
 		])
 		expect(self.states.sourceFilters.get('scene-a')).toHaveLength(1)
 	})
@@ -286,25 +280,17 @@ describe('groups added after connect', () => {
 		self.socket.call.mockResolvedValue({
 			sceneItems: [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })],
 		})
-		self.socket.callBatch.mockImplementation(async (batch: OBSBatchRequest[]) => {
-			if (batch[0]?.requestType === 'GetGroupSceneItemList') {
-				return [
-					{
-						requestType: 'GetGroupSceneItemList',
-						requestId: 'group-1',
-						requestStatus: { result: true, code: 100 },
-						responseData: { sceneItems: [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })] },
-					},
-				]
-			}
-			return []
-		})
+		mockBatchResponses(self.socket, (request) =>
+			request.requestType === 'GetGroupSceneItemList'
+				? { sceneItems: [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })] }
+				: {},
+		)
 
 		await self.obs.addSceneItem('scene-a', 'group-1')
 
 		// The group's own item list was requested and cached.
 		expect(self.socket.callBatch).toHaveBeenCalledWith(
-			[{ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' }, requestId: 'group-1' }],
+			[{ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' }, requestId: expect.any(String) }],
 			expect.anything(),
 		)
 		expect(self.states.sceneItems.get('group-1')).toHaveLength(1)

@@ -3,6 +3,7 @@ import type { CompanionFeedbackBooleanEvent } from '@companion-module/base'
 import { initOBSListeners } from '../listeners.js'
 import { getOutputFeedbacks } from '../feedbacks/outputs.js'
 import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import { mockBatchResponses } from './mock/socket.js'
 import type { OBSBatchRequest, OBSSceneItem } from '../types.js'
 import { RequestBatchExecutionType } from 'obs-websocket-js'
 import { looseFeedbacks } from './loose-definitions.js'
@@ -34,20 +35,11 @@ describe('getInputKindList', () => {
 
 	test('fetches all kind defaults in a single parallel batch instead of one request per kind', async () => {
 		self.socket.call.mockResolvedValue({ inputKinds: ['text_gdiplus_v2', 'ffmpeg_source'] })
-		self.socket.callBatch.mockResolvedValue([
-			{
-				requestType: 'GetInputDefaultSettings',
-				requestId: 'text_gdiplus_v2',
-				requestStatus: { result: true, code: 100 },
-				responseData: { defaultInputSettings: { text: '' } },
-			},
-			{
-				requestType: 'GetInputDefaultSettings',
-				requestId: 'ffmpeg_source',
-				requestStatus: { result: true, code: 100 },
-				responseData: { defaultInputSettings: { local_file: '' } },
-			},
-		])
+		mockBatchResponses(self.socket, (request) =>
+			request.requestData?.inputKind === 'text_gdiplus_v2'
+				? { defaultInputSettings: { text: '' } }
+				: { defaultInputSettings: { local_file: '' } },
+		)
 
 		await self.obs.getInputKindList()
 
@@ -57,12 +49,12 @@ describe('getInputKindList', () => {
 				{
 					requestType: 'GetInputDefaultSettings',
 					requestData: { inputKind: 'text_gdiplus_v2' },
-					requestId: 'text_gdiplus_v2',
+					requestId: expect.any(String),
 				},
 				{
 					requestType: 'GetInputDefaultSettings',
 					requestData: { inputKind: 'ffmpeg_source' },
-					requestId: 'ffmpeg_source',
+					requestId: expect.any(String),
 				},
 			],
 			{ executionType: RequestBatchExecutionType.Parallel },
@@ -175,7 +167,7 @@ describe('output status polling', () => {
 		await self.obs.getAllOutputStatuses()
 
 		const batch = self.socket.callBatch.mock.calls[0][0] as OBSBatchRequest[]
-		expect(batch.map((r) => r.requestId)).toEqual(['adv_stream'])
+		expect(batch.map((r) => r.requestData)).toEqual([{ outputName: 'adv_stream' }])
 	})
 
 	test('stops polling once the last output_active feedback unsubscribes', async () => {
@@ -207,20 +199,17 @@ describe('media status polling', () => {
 		expect(first).toBe(second) // Same array instance: cached, not recomputed.
 		expect(first).toEqual(['clip-uuid'])
 
-		self.socket.callBatch.mockResolvedValue([
-			{
-				requestType: 'GetMediaInputStatus',
-				requestId: 'clip-uuid',
-				requestStatus: { result: true, code: 100 },
-				responseData: { mediaState: 'OBS_MEDIA_STATE_PLAYING', mediaCursor: 1000, mediaDuration: 5000 },
-			},
-		])
+		mockBatchResponses(self.socket, () => ({
+			mediaState: 'OBS_MEDIA_STATE_PLAYING',
+			mediaCursor: 1000,
+			mediaDuration: 5000,
+		}))
 
 		await self.obs.getOBSMediaStatus()
 
 		const batch = self.socket.callBatch.mock.calls[0][0] as OBSBatchRequest[]
 		expect(batch).toEqual([
-			{ requestId: 'clip-uuid', requestType: 'GetMediaInputStatus', requestData: { inputUuid: 'clip-uuid' } },
+			{ requestId: expect.any(String), requestType: 'GetMediaInputStatus', requestData: { inputUuid: 'clip-uuid' } },
 		])
 		expect(self.setVariableValues).toHaveBeenCalledWith(expect.objectContaining({ media_status_Clip: 'Playing' }))
 	})

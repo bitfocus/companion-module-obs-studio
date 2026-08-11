@@ -17,19 +17,19 @@ import {
 	OBSSource,
 	OBSBatchRequest,
 	OBSBatchResponse,
-	type OBSCurrentSceneTransitionPayload,
-	type OBSInputDefaultSettingsPayload,
+	type ContainerItemsBatchSpec,
+	type InputKindDefaultsBatchSpec,
+	type MediaStatusBatchSpec,
 	type OBSInputListEntry,
-	type OBSMediaInputStatusPayload,
 	type OBSMonitorListEntry,
 	type OBSOutput,
-	type OBSSceneItemListPayload,
-	type SourceDataResponse,
-	isSourceDataKind,
-	type OBSSceneTransitionListPayload,
+	type OutputStatusBatchSpec,
+	type SceneFilterBatchSpec,
+	type SceneTransitionBatchSpec,
+	type SourceDataBatchSpec,
 	type OBSFilter,
-	type OBSSourceFilterListPayload,
 } from './types.js'
+import { BatchBuilder, successfulEntry, type BatchEntry, type BatchSpec, type SuccessfulBatchEntry } from './batch.js'
 
 import {
 	INPUT_KIND_FFMPEG_SOURCE,
@@ -284,38 +284,48 @@ export class OBSApi {
 	}
 
 	/**
-	 * Failures OBS reports for sources that simply don't support the request. They're expected when
-	 * batching audio queries across every source, so they're filtered out of the failure log.
-	 */
-	private static readonly BENIGN_BATCH_FAILURE_COMMENTS = new Set([
-		'The specified source is not an input.',
-		'The specified input does not support audio.',
-	])
-
-	/**
 	 * Parallel is only safe for read-only batches with no ordering dependency and no Sleep entries.
 	 *
 	 * `TResponseData` lets each caller declare the payload it batched for; see {@link OBSBatchResponse}.
+	 * Callers that batch more than one kind of request should use {@link runBatch} instead.
 	 */
 	public async sendBatch<TResponseData = Record<string, unknown>>(
 		batch: OBSBatchRequest[],
 		options?: { executionType?: RequestBatchExecutionType },
 	): Promise<OBSBatchResponse<TResponseData>[] | undefined> {
+		const data = await this._callBatch(batch, options, () => false)
+		return data as OBSBatchResponse<TResponseData>[] | undefined
+	}
+
+	/**
+	 * Sends a batch built by a {@link BatchBuilder} and returns each response paired with the metadata
+	 * recorded for it, so responses are correlated without parsing meaning back out of request IDs.
+	 */
+	public async runBatch<TSpec extends BatchSpec>(
+		builder: BatchBuilder<TSpec>,
+		options?: { executionType?: RequestBatchExecutionType },
+	): Promise<BatchEntry<TSpec>[] | undefined> {
+		const data = await this._callBatch(builder.requests, options, (requestId) => builder.isOptional(requestId))
+		return data ? builder.resolve(data) : undefined
+	}
+
+	private async _callBatch(
+		batch: OBSBatchRequest[],
+		options: { executionType?: RequestBatchExecutionType } | undefined,
+		isOptional: (requestId: string) => boolean,
+	): Promise<OBSBatchResponse[] | undefined> {
+		if (batch.length === 0) return []
 		try {
 			// `callBatch` is typed against a union of concrete request shapes; our batches are built
 			// dynamically from string request types, which that union cannot represent.
 			const data = (await this.self.socket.callBatch(
 				batch as Parameters<OBSWebSocket['callBatch']>[0],
 				options,
-			)) as unknown as OBSBatchResponse<TResponseData>[]
+			)) as unknown as OBSBatchResponse[]
 
-			const errors = data.filter(
-				(request) =>
-					!request.requestStatus.result &&
-					!OBSApi.BENIGN_BATCH_FAILURE_COMMENTS.has(request.requestStatus.comment ?? ''),
-			)
+			const errors = data.filter((request) => !request.requestStatus.result && !isOptional(request.requestId))
 			if (errors.length > 0) {
-				const errorMessages = errors.map((error) => error.requestStatus.comment).join(' // ')
+				const errorMessages = errors.map((error) => `${error.requestType}: ${error.requestStatus.comment}`).join(' // ')
 				logger.debug(`Partial batch request failure (${errorMessages})`)
 			}
 			return data
@@ -484,20 +494,17 @@ export class OBSApi {
 			this.self.states.inputKindList.set(inputKind, {})
 		}
 
-		const batch: OBSBatchRequest[] = kinds.map((inputKind: string) => ({
-			requestType: 'GetInputDefaultSettings',
-			requestData: { inputKind },
-			requestId: inputKind,
-		}))
+		const builder = new BatchBuilder<InputKindDefaultsBatchSpec>()
+		for (const inputKind of kinds) {
+			builder.add('defaults', 'GetInputDefaultSettings', { inputKind }, { inputKind }, false)
+		}
 
-		const responses = await this.sendBatch<OBSInputDefaultSettingsPayload>(batch, {
-			executionType: RequestBatchExecutionType.Parallel,
-		})
-		if (!responses) return
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		if (!entries) return
 
-		for (const res of responses) {
-			if (!res.requestStatus.result || !res.responseData) continue
-			this.self.states.inputKindList.set(res.requestId, res.responseData.defaultInputSettings)
+		for (const entry of entries) {
+			if (!entry.requestStatus.result || !entry.responseData) continue
+			this.self.states.inputKindList.set(entry.meta.inputKind, entry.responseData.defaultInputSettings)
 		}
 	}
 
@@ -745,19 +752,16 @@ export class OBSApi {
 		)
 		if (outputNames.length === 0) return
 
-		const batch: OBSBatchRequest[] = outputNames.map((outputName) => ({
-			requestType: 'GetOutputStatus',
-			requestData: { outputName },
-			requestId: outputName,
-		}))
+		const builder = new BatchBuilder<OutputStatusBatchSpec>()
+		for (const outputName of outputNames) {
+			builder.add('status', 'GetOutputStatus', { outputName }, { outputName }, false)
+		}
 
-		const responses = await this.sendBatch<OBSOutput>(batch, {
-			executionType: RequestBatchExecutionType.Parallel,
-		})
-		if (responses) {
-			for (const res of responses) {
-				if (!res.requestStatus.result || !res.responseData) continue
-				this.self.states.outputs.set(res.requestId, res.responseData)
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		if (entries) {
+			for (const entry of entries) {
+				if (!entry.requestStatus.result || !entry.responseData) continue
+				this.self.states.outputs.set(entry.meta.outputName, entry.responseData)
 			}
 			this.self.checkFeedbacks('output_active')
 		}
@@ -831,20 +835,17 @@ export class OBSApi {
 		if (sceneUuids.length === 0) return
 		const epoch = this.self.obsState.epoch
 
-		const batch: OBSBatchRequest[] = sceneUuids.map((uuid) => ({
-			requestType: 'GetSourceFilterList',
-			requestData: { sourceUuid: uuid },
-			requestId: uuid,
-		}))
+		const builder = new BatchBuilder<SceneFilterBatchSpec>()
+		for (const sceneUuid of sceneUuids) {
+			builder.add('filters', 'GetSourceFilterList', { sourceUuid: sceneUuid }, { sceneUuid }, false)
+		}
 
-		const responses = await this.sendBatch<OBSSourceFilterListPayload>(batch, {
-			executionType: RequestBatchExecutionType.Parallel,
-		})
-		if (!responses || this.self.obsState.epoch !== epoch) return
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		if (!entries || this.self.obsState.epoch !== epoch) return
 
-		for (const res of responses) {
-			if (!res.requestStatus.result || !res.responseData) continue
-			this.self.states.sourceFilters.set(res.requestId, res.responseData.filters)
+		for (const entry of entries) {
+			if (!entry.requestStatus.result || !entry.responseData) continue
+			this.self.states.sourceFilters.set(entry.meta.sceneUuid, entry.responseData.filters)
 		}
 	}
 
@@ -858,21 +859,18 @@ export class OBSApi {
 		const epoch = this.self.obsState.epoch
 
 		const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
-		const batch: OBSBatchRequest[] = containerUuids.map((uuid) => ({
-			requestType,
-			requestData: { sceneUuid: uuid },
-			requestId: uuid,
-		}))
+		const builder = new BatchBuilder<ContainerItemsBatchSpec>()
+		for (const containerUuid of containerUuids) {
+			builder.add('items', requestType, { sceneUuid: containerUuid }, { containerUuid }, false)
+		}
 
-		const response = await this.sendBatch<OBSSceneItemListPayload>(batch, {
-			executionType: RequestBatchExecutionType.Parallel,
-		})
-		if (!response || this.self.obsState.epoch !== epoch) return
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		if (!entries || this.self.obsState.epoch !== epoch) return
 
-		for (const res of response) {
-			if (!res.requestStatus.result) continue
-			const containerUuid = res.requestId
-			const items = res.responseData?.sceneItems ?? []
+		for (const entry of entries) {
+			if (!entry.requestStatus.result) continue
+			const containerUuid = entry.meta.containerUuid
+			const items = entry.responseData?.sceneItems ?? []
 			this.self.states.sceneItems.set(containerUuid, items)
 			for (const item of items) {
 				allSourceUuids.add(item.sourceUuid)
@@ -886,128 +884,86 @@ export class OBSApi {
 		if (sourceUuids.length === 0) return
 		const epoch = this.self.obsState.epoch
 
-		const batch = this.buildSourceDataBatchRequests(sourceUuids)
-		const responses = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
+		const builder = this.buildSourceDataBatch(sourceUuids)
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
 		if (this.self.obsState.epoch !== epoch) return
 
-		if (responses) {
-			this.processSourceDataBatchResponses(responses)
+		if (entries) {
+			this.processSourceDataBatchResponses(entries)
 		}
 
 		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
 	}
 
-	private buildSourceDataBatchRequests(sourceUuids: string[]): OBSBatchRequest[] {
-		const batch: OBSBatchRequest[] = []
+	private buildSourceDataBatch(sourceUuids: string[]): BatchBuilder<SourceDataBatchSpec> {
+		const builder = new BatchBuilder<SourceDataBatchSpec>()
 		for (const uuid of sourceUuids) {
-			batch.push(
-				{
-					requestType: 'GetSourceActive',
-					requestData: { sourceUuid: uuid },
-					requestId: `${uuid}:active`,
-				},
-				{
-					requestType: 'GetSourceFilterList',
-					requestData: { sourceUuid: uuid },
-					requestId: `${uuid}:filters`,
-				},
-			)
+			const meta = { uuid }
+			builder.add('active', 'GetSourceActive', { sourceUuid: uuid }, meta, false)
+			builder.add('filters', 'GetSourceFilterList', { sourceUuid: uuid }, meta, false)
 
 			const source = this.self.states.sources.get(uuid)
 			if (source?.inputKind) {
-				batch.push({
-					requestType: 'GetInputSettings',
-					requestData: { inputUuid: uuid },
-					requestId: `${uuid}:settings`,
-				})
+				builder.add('settings', 'GetInputSettings', { inputUuid: uuid }, meta, false)
 
-				// Optimistically fetch input audio info.
-				batch.push(
-					{
-						requestType: 'GetInputMute',
-						requestData: { inputUuid: uuid },
-						requestId: `${uuid}:mute`,
-					},
-					{
-						requestType: 'GetInputVolume',
-						requestData: { inputUuid: uuid },
-						requestId: `${uuid}:volume`,
-					},
-					{
-						requestType: 'GetInputAudioBalance',
-						requestData: { inputUuid: uuid },
-						requestId: `${uuid}:balance`,
-					},
-					{
-						requestType: 'GetInputAudioSyncOffset',
-						requestData: { inputUuid: uuid },
-						requestId: `${uuid}:sync_offset`,
-					},
-					{
-						requestType: 'GetInputAudioMonitorType',
-						requestData: { inputUuid: uuid },
-						requestId: `${uuid}:monitor`,
-					},
-					{
-						requestType: 'GetInputAudioTracks',
-						requestData: { inputUuid: uuid },
-						requestId: `${uuid}:tracks`,
-					},
-				)
+				// Optimistically fetch input audio info: asking every input is cheaper than a round trip
+				// to discover which ones have audio, so these failures are expected rather than logged.
+				builder.add('mute', 'GetInputMute', { inputUuid: uuid }, meta, true)
+				builder.add('volume', 'GetInputVolume', { inputUuid: uuid }, meta, true)
+				builder.add('balance', 'GetInputAudioBalance', { inputUuid: uuid }, meta, true)
+				builder.add('sync_offset', 'GetInputAudioSyncOffset', { inputUuid: uuid }, meta, true)
+				builder.add('monitor', 'GetInputAudioMonitorType', { inputUuid: uuid }, meta, true)
+				builder.add('tracks', 'GetInputAudioTracks', { inputUuid: uuid }, meta, true)
 			}
 		}
-		return batch
+		return builder
 	}
 
-	private processSourceDataBatchResponses(responses: OBSBatchResponse[]): void {
-		for (const res of responses) {
-			if (!res.requestStatus.result) continue
+	private processSourceDataBatchResponses(entries: BatchEntry<SourceDataBatchSpec>[]): void {
+		for (const entry of entries) {
+			const successful = successfulEntry<SourceDataBatchSpec>(entry)
+			if (!successful) continue
 
-			const [uuid, kind] = res.requestId.split(':')
-			if (!uuid || !kind || !isSourceDataKind(kind) || !res.responseData) continue
-
-			const source = this.self.states.sources.get(uuid)
+			const source = this.self.states.sources.get(successful.meta.uuid)
 			if (!source) continue
 
 			if (!source.validName) source.validName = utils.validName(source.sourceName)
 
-			// The batch mixes request kinds, so the payload type is only known once the request-ID
-			// suffix has been validated above.
-			const response = { kind, data: res.responseData } as SourceDataResponse
-			this.processSingleSourceDataResponse(uuid, response, source)
+			this.processSingleSourceDataResponse(successful, source)
 		}
 	}
 
-	private processSingleSourceDataResponse(uuid: string, response: SourceDataResponse, source: OBSSource): void {
-		switch (response.kind) {
+	private processSingleSourceDataResponse(entry: SuccessfulBatchEntry<SourceDataBatchSpec>, source: OBSSource): void {
+		const uuid = entry.meta.uuid
+		switch (entry.kind) {
 			case 'active':
-				source.active = response.data.videoActive
-				source.videoShowing = response.data.videoShowing
+				source.active = entry.responseData.videoActive
+				source.videoShowing = entry.responseData.videoShowing
 				break
 			case 'filters':
-				this.self.states.sourceFilters.set(uuid, response.data.filters)
+				this.self.states.sourceFilters.set(uuid, entry.responseData.filters)
 				break
 			case 'settings':
 				// buildInputSettings merges default settings.
-				this.buildInputSettings(uuid, response.data.inputKind ?? '', response.data.inputSettings)
+				this.buildInputSettings(uuid, entry.responseData.inputKind ?? '', entry.responseData.inputSettings)
 				break
 			case 'mute':
-				this._updateSourceMute(source, response.data.inputMuted)
+				this._updateSourceMute(source, entry.responseData.inputMuted)
 				break
 			case 'volume':
-				this._updateSourceVolume(source, response.data.inputVolumeDb)
+				this._updateSourceVolume(source, entry.responseData.inputVolumeDb)
 				break
 			case 'balance':
-				this._updateSourceBalance(source, response.data.inputAudioBalance)
+				this._updateSourceBalance(source, entry.responseData.inputAudioBalance)
 				break
 			case 'sync_offset':
-				this._updateSourceSyncOffset(source, response.data.inputAudioSyncOffset)
+				this._updateSourceSyncOffset(source, entry.responseData.inputAudioSyncOffset)
 				break
 			case 'monitor':
-				this._updateSourceMonitorType(source, response.data.monitorType)
+				this._updateSourceMonitorType(source, entry.responseData.monitorType)
 				break
 			case 'tracks':
-				source.inputAudioTracks = response.data.inputAudioTracks
+				source.inputAudioTracks = entry.responseData.inputAudioTracks
 				break
 		}
 	}
@@ -1085,15 +1041,13 @@ export class OBSApi {
 	public async buildSceneTransitionList(): Promise<void> {
 		this.self.states.transitions.clear()
 
-		const batch = [
-			{ requestType: 'GetSceneTransitionList', requestId: 'list' },
-			{ requestType: 'GetCurrentSceneTransition', requestId: 'current' },
-		]
-		const data = await this.sendBatch<OBSSceneTransitionListPayload & OBSCurrentSceneTransitionPayload>(batch, {
-			executionType: RequestBatchExecutionType.Parallel,
-		})
-		const sceneTransitionList = data?.find((res) => res.requestId === 'list')?.responseData
-		const currentTransition = data?.find((res) => res.requestId === 'current')?.responseData
+		const builder = new BatchBuilder<SceneTransitionBatchSpec>()
+		builder.add('list', 'GetSceneTransitionList', undefined, null, false)
+		builder.add('current', 'GetCurrentSceneTransition', undefined, null, false)
+
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const sceneTransitionList = entries?.find((entry) => entry.kind === 'list')?.responseData
+		const currentTransition = entries?.find((entry) => entry.kind === 'current')?.responseData
 
 		if (sceneTransitionList) {
 			if (Array.isArray(sceneTransitionList.transitions)) {
@@ -1154,19 +1108,19 @@ export class OBSApi {
 		const mediaSourceUuids = this.self.obsState.mediaSourceUuids
 		if (mediaSourceUuids.length === 0) return
 
-		const batch: OBSBatchRequest[] = mediaSourceUuids.map((uuid) => ({
-			requestId: uuid,
-			requestType: 'GetMediaInputStatus',
-			requestData: { inputUuid: uuid },
-		}))
+		const builder = new BatchBuilder<MediaStatusBatchSpec>()
+		for (const sourceUuid of mediaSourceUuids) {
+			builder.add('status', 'GetMediaInputStatus', { inputUuid: sourceUuid }, { sourceUuid }, false)
+		}
 
-		const data = await this.sendBatch(batch, { executionType: RequestBatchExecutionType.Parallel })
-		if (data) {
+		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		if (entries) {
 			const allValues: Record<string, string | number | boolean | undefined> = {}
 			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
-			for (const response of data) {
-				if (response.requestStatus.result) {
-					this.processMediaStatusResponse(response, allValues, currentMedia)
+			for (const entry of entries) {
+				const successful = successfulEntry<MediaStatusBatchSpec>(entry)
+				if (successful) {
+					this.processMediaStatusResponse(successful, allValues, currentMedia)
 				}
 			}
 
@@ -1186,18 +1140,16 @@ export class OBSApi {
 	}
 
 	private processMediaStatusResponse(
-		response: OBSBatchResponse<OBSMediaInputStatusPayload>,
+		entry: SuccessfulBatchEntry<MediaStatusBatchSpec>,
 		allValues: Record<string, string | number | boolean | undefined>,
 		currentMedia: Array<{ name: string; elapsed: string; remaining: string }>,
 	): void {
-		const sourceUuid = response.requestId
-		const source = this.self.states.sources.get(sourceUuid)
+		const source = this.self.states.sources.get(entry.meta.sourceUuid)
 		if (!source) return
 
 		const sourceName = source.sourceName
 		const validName = source.validName ?? sourceName
-		const responseData = response.responseData
-		if (!responseData) return
+		const responseData = entry.responseData
 
 		const { mediaState } = responseData
 		const mediaCursor = responseData.mediaCursor ?? 0

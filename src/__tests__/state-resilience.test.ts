@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { initOBSListeners } from '../listeners.js'
 import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import { mockBatchResponses } from './mock/socket.js'
 
 describe('addSource upsert', () => {
 	let self: MockInstance
@@ -68,18 +69,11 @@ describe('state epoch guard', () => {
 	test('fetchSourcesData discards responses from before a reset', async () => {
 		seedSource(self, 'Mic', 'Mic', 'wasapi_input_capture')
 
-		self.socket.callBatch.mockImplementation(async () => {
+		mockBatchResponses(self.socket, (request) => {
 			// World resets while request in flight, then source is re-seeded.
 			self.obsState.resetSceneSourceStates()
 			seedSource(self, 'Mic', 'Mic', 'wasapi_input_capture')
-			return [
-				{
-					requestType: 'GetInputMute',
-					requestId: 'Mic:mute',
-					requestStatus: { result: true, code: 100 },
-					responseData: { inputMuted: true },
-				},
-			]
+			return request.requestType === 'GetInputMute' ? { inputMuted: true } : {}
 		})
 
 		await self.obs.fetchSourcesData(['Mic'])
