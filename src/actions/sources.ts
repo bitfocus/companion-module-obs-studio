@@ -1,6 +1,8 @@
-import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger, type JsonObject } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
+import type { OBSTextSourceFont } from '../types.js'
+import { INPUT_KIND_PREFIX_TEXT_GDIPLUS } from '../constants.js'
 
 const logger = createModuleLogger('Actions/Sources')
 
@@ -108,11 +110,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			learn: (action) => {
 				const sourceName = action.options.source
 				const source = self.obsState.findSourceByName(sourceName)
-				const text = source?.settings?.text
+				const text = utils.asString(source?.settings?.text)
 				if (!text) return undefined
-				return {
-					text: text,
-				}
+				return { text }
 			},
 		},
 		setTextProperties: {
@@ -353,10 +353,10 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const existingSettings = { ...(source?.settings || {}) }
 
 				// Start with existing settings, then overlay changes.
-				const inputSettings: Record<string, any> = { ...existingSettings }
+				const inputSettings: JsonObject = { ...existingSettings }
 				// Always copy font object if it exists.
-				const existingFont = existingSettings.font ? { ...existingSettings.font } : {}
-				const kind = source?.inputKind || ''
+				const existingFont: OBSTextSourceFont = { ...(existingSettings.font as OBSTextSourceFont | undefined) }
+				const kind = source?.inputKind ?? ''
 
 				for (const prop of props) {
 					if (prop === 'text') {
@@ -367,7 +367,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 						}
 						inputSettings.text = val
 					}
-					if (prop === 'textTransform' && kind.includes('text_gdiplus')) {
+					if (prop === 'textTransform' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						inputSettings.transform = action.options.textTransform
 					}
 					if (prop === 'fontSize') {
@@ -391,7 +391,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					}
 					if (prop === 'color1') {
 						const colorValue = utils.rgbaToObsColor(action.options.color1)
-						if (kind.includes('text_gdiplus')) {
+						if (kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 							inputSettings.color = colorValue
 						} else {
 							inputSettings.color1 = colorValue
@@ -399,7 +399,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					}
 					if (prop === 'color2') {
 						const colorValue = utils.rgbaToObsColor(action.options.color2)
-						if (kind.includes('text_gdiplus')) {
+						if (kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 							inputSettings.gradient_color = colorValue
 						} else {
 							inputSettings.color2 = colorValue
@@ -408,22 +408,22 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					if (prop === 'outline') {
 						inputSettings.outline = action.options.outline
 					}
-					if (prop === 'outlineSize' && kind.includes('text_gdiplus')) {
+					if (prop === 'outlineSize' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						const outlineSize = action.options.outlineSize
 						const size = parseInt(outlineSize)
 						if (!isNaN(size)) {
 							inputSettings.outline_size = size
 						}
 					}
-					if (prop === 'outlineColor' && kind.includes('text_gdiplus')) {
+					if (prop === 'outlineColor' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						const colorValue = utils.rgbaToObsColor(action.options.outlineColor)
 						inputSettings.outline_color = colorValue
 					}
-					if (prop === 'backgroundColor' && kind.includes('text_gdiplus')) {
+					if (prop === 'backgroundColor' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						const colorValue = utils.rgbaToObsColor(action.options.backgroundColor)
 						inputSettings.bk_color = colorValue
 					}
-					if (prop === 'backgroundOpacity' && kind.includes('text_gdiplus')) {
+					if (prop === 'backgroundOpacity' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						const backgroundOpacity = action.options.backgroundOpacity
 						const opacity = parseInt(backgroundOpacity)
 						if (!isNaN(opacity)) {
@@ -438,36 +438,36 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 						inputSettings.drop_shadow = action.options.dropShadow
 					}
 					if (prop === 'wrap') {
-						if (kind.includes('text_gdiplus')) {
+						if (kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 							inputSettings.extents_wrap = action.options.wrap
 						} else {
 							inputSettings.word_wrap = action.options.wrap
 						}
 					}
-					if (prop === 'alignment' && kind.includes('text_gdiplus')) {
+					if (prop === 'alignment' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						inputSettings.align = action.options.alignment
 					}
-					if (prop === 'verticalAlignment' && kind.includes('text_gdiplus')) {
+					if (prop === 'verticalAlignment' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						inputSettings.valign = action.options.verticalAlignment
 					}
-					if (prop === 'extents' && kind.includes('text_gdiplus')) {
+					if (prop === 'extents' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						inputSettings.extents = action.options.extents
 					}
-					if (prop === 'extentsWidth' && kind.includes('text_gdiplus')) {
+					if (prop === 'extentsWidth' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						const extentsWidth = action.options.extentsWidth
 						const width = parseInt(extentsWidth)
 						if (!isNaN(width)) {
 							inputSettings.extents_cx = width
 						}
 					}
-					if (prop === 'extentsHeight' && kind.includes('text_gdiplus')) {
+					if (prop === 'extentsHeight' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						const extentsHeight = action.options.extentsHeight
 						const height = parseInt(extentsHeight)
 						if (!isNaN(height)) {
 							inputSettings.extents_cy = height
 						}
 					}
-					if (prop === 'vertical' && kind.includes('text_gdiplus')) {
+					if (prop === 'vertical' && kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 						inputSettings.vertical = action.options.vertical
 					}
 				}
@@ -491,34 +491,40 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				if (!settings) return undefined
 
 				const props = action.options.props || []
-				const newOptions: Record<string, any> = { ...action.options }
-				const kind = source.inputKind || ''
+				const learnedOptions: Record<string, unknown> = { ...action.options }
+				const kind = source.inputKind ?? ''
 
-				const setIfProp = (prop: string, value: any): void => {
+				/** Only learn options the user actually selected, and only when OBS reported a value. */
+				const setIfProp = (prop: string, value: unknown): void => {
 					if (props.includes(prop) && value !== undefined) {
-						newOptions[prop] = value
+						learnedOptions[prop] = value
 					}
+				}
+
+				/** OBS stores colours as packed 32-bit integers; the UI expects an rgba() string. */
+				const setColorIfProp = (prop: string, packedColor: unknown): void => {
+					const color = utils.asNumber(packedColor)
+					if (color !== undefined) setIfProp(prop, utils.obsColorToRgba(color))
 				}
 
 				setIfProp('text', settings.text)
 
-				const font = settings.font
+				const font = settings.font as OBSTextSourceFont | undefined
 				if (font) {
 					setIfProp('fontSize', font.size)
 					setIfProp('fontFace', font.face)
 					setIfProp('fontStyle', font.style)
 				}
 
-				if (kind.includes('text_gdiplus')) {
+				if (kind.includes(INPUT_KIND_PREFIX_TEXT_GDIPLUS)) {
 					setIfProp('textTransform', settings.transform)
-					if (settings.color !== undefined) setIfProp('color1', utils.obsColorToRgba(settings.color))
-					if (settings.gradient_color !== undefined) setIfProp('color2', utils.obsColorToRgba(settings.gradient_color))
+					setColorIfProp('color1', settings.color)
+					setColorIfProp('color2', settings.gradient_color)
 					setIfProp('gradient', settings.gradient)
 					setIfProp('outline', settings.outline)
 					setIfProp('outlineSize', settings.outline_size)
-					if (settings.outline_color !== undefined)
-						setIfProp('outlineColor', utils.obsColorToRgba(settings.outline_color))
-					if (settings.bk_color !== undefined) setIfProp('backgroundColor', utils.obsColorToRgba(settings.bk_color))
+					setColorIfProp('outlineColor', settings.outline_color)
+					setColorIfProp('backgroundColor', settings.bk_color)
 					setIfProp('backgroundOpacity', settings.bk_opacity)
 					setIfProp('wrap', settings.extents_wrap)
 					setIfProp('alignment', settings.align)
@@ -528,14 +534,14 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					setIfProp('extentsHeight', settings.extents_cy)
 					setIfProp('vertical', settings.vertical)
 				} else {
-					if (settings.color1 !== undefined) setIfProp('color1', utils.obsColorToRgba(settings.color1))
-					if (settings.color2 !== undefined) setIfProp('color2', utils.obsColorToRgba(settings.color2))
+					setColorIfProp('color1', settings.color1)
+					setColorIfProp('color2', settings.color2)
 					setIfProp('outline', settings.outline)
 					setIfProp('dropShadow', settings.drop_shadow)
 					setIfProp('wrap', settings.word_wrap)
 				}
 
-				return newOptions
+				return learnedOptions
 			},
 		},
 		resetCaptureDevice: {
@@ -662,8 +668,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 						filterName: action.options.filter,
 						filterSettings: settingsJSON,
 					})
-				} catch (e: any) {
-					logger.error(`Set Filter Settings Error: ${e.message}`)
+				} catch (e) {
+					logger.error(`Set Filter Settings Error: ${utils.describeError(e)}`)
 				}
 			},
 			learn: (action) => {
@@ -891,8 +897,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 						logger.warn(`Scene item not found for source: ${sourceName} in scene: ${sourceSceneName}`)
 						return
 					}
-				} catch (e: any) {
-					logger.error(`Set Scene Item Properties Error: ${e.message}`)
+				} catch (e) {
+					logger.error(`Set Scene Item Properties Error: ${utils.describeError(e)}`)
 				}
 			},
 		},

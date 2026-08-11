@@ -1,14 +1,24 @@
-export interface ModuleConfig {
-	[key: string]: any
+import type { JsonObject } from '@companion-module/base'
+import type { OBSResponseTypes } from 'obs-websocket-js'
+
+export type ModuleConfig = {
 	host: string
 	port: number
-	scheme?: string
+	scheme?: OBSConnectionScheme
 }
 
-export interface ModuleSecrets {
-	[key: string]: any
+export type ModuleSecrets = {
 	pass?: string
 }
+
+/**
+ * The pre-4.0.0 config layout, where the WebSocket password lived in `config` rather than `secrets`.
+ * Only the v4_0_0 upgrade script should need this.
+ */
+export type LegacyModuleConfig = ModuleConfig & { pass?: string }
+
+export const OBS_CONNECTION_SCHEMES = ['ws', 'wss'] as const
+export type OBSConnectionScheme = (typeof OBS_CONNECTION_SCHEMES)[number]
 
 export interface ModuleChoice {
 	id: string | number
@@ -123,7 +133,7 @@ export interface OBSNormalizedState {
 	// Keyed by container (scene or group) UUID.
 	sceneItems: Map<string, OBSSceneItem[]>
 	// Keyed by input kind; value is that kind's default input settings.
-	inputKindList: Map<string, Record<string, unknown>>
+	inputKindList: Map<string, JsonObject>
 	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid or sceneUuid
 	audioPeak: Map<string, number>
 	monitors: ModuleChoice[]
@@ -146,7 +156,8 @@ export interface OBSSource {
 	inputKind?: string
 	// Parent group UUID if this source is in a group.
 	parentGroupUuid?: string
-	settings?: Record<string, any>
+	// Settings arrive verbatim from OBS over the wire, so they are JSON by construction.
+	settings?: JsonObject
 	OBSMediaStatus?: OBSMediaStatus
 	mediaCursor?: number
 	mediaDuration?: number
@@ -165,15 +176,108 @@ export type OBSBatchRequest = {
 	requestId?: string
 }
 
-export type OBSBatchResponse = {
+export type OBSRequestStatus = {
+	result: boolean
+	code: number
+	comment?: string
+}
+
+/**
+ * One entry in a `callBatch` reply.
+ *
+ * `TResponseData` is supplied by the caller because the payload shape depends entirely on which
+ * `requestType` was batched; obs-websocket-js cannot express that correlation across a
+ * heterogeneous batch. Callers narrow it at the point where they know what they asked for.
+ */
+export type OBSBatchResponse<TResponseData = Record<string, unknown>> = {
 	requestType: string
 	requestId: string
-	requestStatus: {
-		result: boolean
-		code: number
-		comment?: string
-	}
-	responseData: any
+	requestStatus: OBSRequestStatus
+	responseData?: TResponseData
+}
+
+/** Response payloads for the specific batches this module issues. */
+export type OBSInputDefaultSettingsPayload = { defaultInputSettings: JsonObject }
+export type OBSSourceFilterListPayload = { filters: OBSFilter[] }
+export type OBSSceneItemListPayload = { sceneItems: OBSSceneItem[] }
+export type OBSSceneTransitionListPayload = { transitions: OBSTransition[] }
+export type OBSCurrentSceneTransitionPayload = { transitionName: string; transitionDuration: number | null }
+export type OBSMediaInputStatusPayload = {
+	mediaState?: OBSMediaStatus
+	mediaCursor?: number | null
+	mediaDuration?: number | null
+}
+
+export type OBSInputListEntry = {
+	inputUuid: string
+	inputName: string
+	inputKind?: string
+}
+
+/**
+ * The per-source data the module fetches in one batch, keyed by the suffix used in the batch's
+ * request IDs (`<sourceUuid>:<kind>`). Modelling it as a map lets the response handler switch on the
+ * kind and get the matching payload type, instead of treating every payload as `any`.
+ */
+export type SourceDataPayloads = {
+	active: { videoActive?: boolean; videoShowing?: boolean }
+	filters: { filters: OBSFilter[] }
+	settings: { inputKind?: string; inputSettings: JsonObject }
+	mute: { inputMuted: boolean }
+	volume: { inputVolumeDb: number }
+	balance: { inputAudioBalance: number }
+	sync_offset: { inputAudioSyncOffset: number }
+	monitor: { monitorType: ObsAudioMonitorType }
+	tracks: { inputAudioTracks: Record<string, unknown> }
+}
+
+export type SourceDataKind = keyof SourceDataPayloads
+
+/** Discriminated union pairing each request kind with the payload OBS returns for it. */
+export type SourceDataResponse = {
+	[K in SourceDataKind]: { kind: K; data: SourceDataPayloads[K] }
+}[SourceDataKind]
+
+const SOURCE_DATA_KINDS = new Set<string>([
+	'active',
+	'filters',
+	'settings',
+	'mute',
+	'volume',
+	'balance',
+	'sync_offset',
+	'monitor',
+	'tracks',
+] satisfies SourceDataKind[])
+
+export function isSourceDataKind(value: string): value is SourceDataKind {
+	return SOURCE_DATA_KINDS.has(value)
+}
+
+/** The nested `font` object carried by OBS text source settings. */
+export type OBSTextSourceFont = {
+	face?: string
+	size?: number
+	style?: string
+	flags?: number
+}
+
+/** Payload of the high-frequency `InputVolumeMeters` event. */
+export type OBSVolumeMetersEvent = {
+	inputs: Array<{ inputUuid: string; inputLevelsMul: Array<[number, number, number]> }>
+}
+
+/** `SceneItemListReindexed` sends only the ordering fields, not full scene items. */
+export type OBSReindexedSceneItem = {
+	sceneItemId: number
+	sceneItemIndex: number
+}
+
+export type OBSMonitorListEntry = {
+	monitorIndex: number
+	monitorName?: string
+	monitorWidth: number
+	monitorHeight: number
 }
 
 export interface OBSScene {
@@ -216,7 +320,7 @@ export interface OBSFilter {
 	filterEnabled: boolean
 	filterIndex: number
 	filterKind: string
-	filterSettings: Record<string, any>
+	filterSettings: Record<string, unknown>
 }
 
 export interface OBSVersion {
@@ -229,18 +333,12 @@ export interface OBSVersion {
 	platformDescription: string
 }
 
-export interface OBSStats {
-	cpuUsage: number
-	memoryUsage: number
-	availableDiskSpace: number
-	activeFps: number
-	averageFrameRenderTime: number
-	renderSkippedFrames: number
-	renderTotalFrames: number
-	outputSkippedFrames: number
-	outputTotalFrames: number
-	webSocketSessionMessagesReceived: number
-	webSocketSessionMessagesSent: number
-	webSocketSessionDataReceived: number
-	webSocketSessionDataSent: number
-}
+/**
+ * Derived from the protocol definition rather than hand-written.
+ *
+ * The previous hand-written interface declared `webSocketSessionMessagesReceived`/`Sent` and
+ * `webSocketSessionDataReceived`/`Sent`, none of which OBS actually sends — the real fields are
+ * `webSocketSessionIncomingMessages`/`OutgoingMessages`. Aliasing the library type keeps this
+ * correct as the protocol evolves.
+ */
+export type OBSStats = OBSResponseTypes['GetStats']

@@ -2,6 +2,7 @@ import type OBSInstance from './main.js'
 import type { CompanionVariableDefinitions } from '@companion-module/base'
 import type { OBSScene, OBSSource } from './types.js'
 import * as utils from './utils.js'
+import { INPUT_KIND_FFMPEG_SOURCE, INPUT_KIND_IMAGE_SOURCE, INPUT_KIND_VLC_SOURCE } from './constants.js'
 
 type VariableValue = string | number | boolean | undefined
 
@@ -10,8 +11,6 @@ interface VariableEntry {
 	name: string
 	value: VariableValue
 }
-
-const FILE_NAME_REGEX = /[^\\/]+(?=\.[\w]+$)|[^\\/]+$/
 
 // Single source of truth for per-source variable definitions and values.
 function sourceVariableEntries(source: OBSSource): VariableEntry[] {
@@ -23,24 +22,13 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 		case 'text_ft2_source_v2':
 		case 'text_gdiplus_v2':
 		case 'text_gdiplus_v3': {
-			let text: VariableValue
-			if (settings?.from_file || settings?.read_from_file) {
-				text = `Text from file: ${settings.text_file ?? settings.file}`
-			} else {
-				text = settings?.text ?? ''
-			}
+			const text = utils.readTextSourceValue(settings)
 			entries.push({ id: `current_text_${sourceName}`, name: `${sourceName} - Current text`, value: text })
 			break
 		}
-		case 'ffmpeg_source':
-		case 'vlc_source': {
-			let file = ''
-			if (settings?.playlist) {
-				// Use first playlist value until cue determination is supported.
-				file = settings.playlist[0]?.value?.match(FILE_NAME_REGEX)?.[0] ?? ''
-			} else if (settings?.local_file) {
-				file = settings.local_file.match(FILE_NAME_REGEX)?.[0] ?? ''
-			}
+		case INPUT_KIND_FFMPEG_SOURCE:
+		case INPUT_KIND_VLC_SOURCE: {
+			const file = utils.readMediaFileName(settings)
 			entries.push(
 				{
 					id: `media_status_${sourceName}`,
@@ -61,11 +49,11 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 			)
 			break
 		}
-		case 'image_source':
+		case INPUT_KIND_IMAGE_SOURCE:
 			entries.push({
 				id: `image_file_name_${sourceName}`,
 				name: `${sourceName} - Image file name`,
-				value: settings?.file ? (settings.file.match(FILE_NAME_REGEX)?.[0] ?? '') : '',
+				value: utils.extractFileName(settings?.file),
 			})
 			break
 		default:

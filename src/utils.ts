@@ -1,4 +1,4 @@
-import { combineRgb, createModuleLogger } from '@companion-module/base'
+import { combineRgb, createModuleLogger, type JsonObject } from '@companion-module/base'
 import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
 
 const logger = createModuleLogger('Utils')
@@ -6,6 +6,20 @@ const logger = createModuleLogger('Utils')
 /** Clamp a number between min and max. */
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max)
+}
+
+/**
+ * Renders a caught value for logging.
+ *
+ * `catch` bindings are `unknown`, and obs-websocket-js rejects with a mix of `Error`s and plain
+ * objects carrying only `message`. Narrowing here keeps every call site free of `catch (e: any)`.
+ */
+export function describeError(error: unknown): string {
+	if (error instanceof Error) return error.message
+	if (typeof error === 'object' && error !== null && 'message' in error) {
+		return String(error.message)
+	}
+	return String(error)
 }
 
 export const Color = {
@@ -26,6 +40,58 @@ export function validName(name: string): string {
 		logger.debug(`Unable to generate validName for ${name}: ${error} `)
 		return name
 	}
+}
+
+/** Narrow an untyped OBS settings value to a string, or `undefined` if it isn't one. */
+export function asString(value: unknown): string | undefined {
+	return typeof value === 'string' ? value : undefined
+}
+
+/** Narrow an untyped OBS settings value to a finite number, or `undefined` if it isn't one. */
+export function asNumber(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+/**
+ * Strip a file path down to its bare name, dropping directories and any extension.
+ *
+ * OBS reports paths in the host OS's separator style, so both `/` and `\` are handled.
+ */
+export function extractFileName(path: unknown): string {
+	const pathString = asString(path)
+	if (!pathString) return ''
+	return pathString.match(/[^\\/]+(?=\.[\w]+$)|[^\\/]+$/)?.[0] ?? ''
+}
+
+/**
+ * Read the display text of a text source.
+ *
+ * Text sources either carry their text inline or point at a file, and the key naming differs
+ * between the GDI+ and FreeType renderers — hence the pairs of fallbacks.
+ */
+export function readTextSourceValue(settings: JsonObject | undefined): string {
+	if (!settings) return ''
+	if (settings.from_file || settings.read_from_file) {
+		const filePath = asString(settings.text_file) ?? asString(settings.file) ?? ''
+		return `Text from file: ${filePath}`
+	}
+	return asString(settings.text) ?? ''
+}
+
+/**
+ * Read the current media file name of an ffmpeg or VLC source.
+ *
+ * VLC sources expose a playlist; ffmpeg sources expose a single `local_file`. The first playlist
+ * entry is used until cue position determination is supported.
+ */
+export function readMediaFileName(settings: JsonObject | undefined): string {
+	if (!settings) return ''
+	const playlist = settings.playlist
+	if (Array.isArray(playlist)) {
+		const firstEntry = playlist[0] as { value?: unknown } | undefined
+		return extractFileName(firstEntry?.value)
+	}
+	return extractFileName(settings.local_file)
 }
 
 export function splitTimecode(timecode: string): { hh: string; mm: string; ss: string } {

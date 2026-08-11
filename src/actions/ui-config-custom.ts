@@ -1,7 +1,37 @@
-import { CompanionActionDefinitions, createModuleLogger, type JsonValue } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger, type JsonObject, type JsonValue } from '@companion-module/base'
+import type { OBSRequestTypes } from 'obs-websocket-js'
 import type OBSInstance from '../main.js'
+import * as utils from '../utils.js'
 
 const logger = createModuleLogger('Actions/Custom')
+
+/** OBS treats -1 as "open in a floating window" rather than on a numbered display. */
+const PROJECTOR_WINDOW_MONITOR_INDEX = -1
+
+/**
+ * Projector types backed by `OpenVideoMixProjector`. The remaining types ('Source', 'Scene') open a
+ * source projector instead and are handled separately, since they take a source name rather than a
+ * mix type.
+ */
+const VIDEO_MIX_TYPE_BY_PROJECTOR_TYPE: Record<string, string | undefined> = {
+	Multiview: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_MULTIVIEW',
+	Preview: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PREVIEW',
+	StudioProgram: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PROGRAM',
+}
+
+/**
+ * Parse a user-supplied JSON option, warning and returning `undefined` when it is malformed.
+ *
+ * Callers treat `undefined` as "abort the action" — distinct from a valid but empty object.
+ */
+function parseJsonOption(rawValue: string, label: string): JsonObject | undefined {
+	try {
+		return JSON.parse(rawValue) as JsonObject
+	} catch (e) {
+		logger.warn(`${label} must be formatted as valid JSON. ${utils.describeError(e)}`)
+		return undefined
+	}
+}
 
 export type UiConfigCustomActionSchemas = {
 	enable_studio_mode: { options: Record<string, never> }
@@ -189,19 +219,16 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			hasResult: true,
 			callback: async (action) => {
 				const command = action.options.command.replace(/ /g, '')
-				let arg: any = ''
 
+				let requestData: JsonObject = {}
 				if (action.options.arg) {
-					arg = action.options.arg
-					try {
-						arg = JSON.parse(arg)
-					} catch (e: any) {
-						logger.warn(`Request data must be formatted as valid JSON. ${e.message}`)
-						return null
-					}
+					const parsed = parseJsonOption(action.options.arg, 'Request data')
+					if (parsed === undefined) return null
+					requestData = parsed
 				}
 
-				const res = await self.obs.sendCustomRequest(command as any, arg ? arg : {})
+				// The request type is free text entered by the user, so it can't be checked statically.
+				const res = await self.obs.sendCustomRequest(command as keyof OBSRequestTypes, requestData)
 				return res ?? null
 			},
 		},
@@ -235,23 +262,15 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			callback: async (action) => {
 				const vendorName = action.options.vendorName.replace(/ /g, '')
 				const requestType = action.options.requestType.replace(/ /g, '')
-				let requestData: any = ''
 
+				let requestData: JsonObject = {}
 				if (action.options.requestData) {
-					requestData = action.options.requestData
-					try {
-						requestData = JSON.parse(requestData)
-					} catch (e: any) {
-						logger.warn(`Request data must be formatted as valid JSON. ${e.message}`)
-						return null
-					}
+					const parsed = parseJsonOption(action.options.requestData, 'Request data')
+					if (parsed === undefined) return null
+					requestData = parsed
 				}
-				const data = {
-					vendorName: vendorName,
-					requestType: requestType,
-					requestData: requestData,
-				}
-				const res = await self.obs.sendRequest('CallVendorRequest', data)
+
+				const res = await self.obs.sendRequest('CallVendorRequest', { vendorName, requestType, requestData })
 				return res?.responseData ?? null
 			},
 			hasResult: true,
@@ -367,43 +386,28 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 				},
 			],
 			callback: async (action) => {
-				const monitor = action.options.window === 'window' ? -1 : action.options.display
-				let requestType
-				let requestData
-				if (action.options.type === 'Multiview') {
-					requestType = 'OpenVideoMixProjector'
-					requestData = {
-						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_MULTIVIEW',
-						monitorIndex: monitor,
-					}
-				} else if (action.options.type === 'Preview') {
-					requestType = 'OpenVideoMixProjector'
-					requestData = {
-						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PREVIEW',
-						monitorIndex: monitor,
-					}
-				} else if (action.options.type === 'StudioProgram') {
-					requestType = 'OpenVideoMixProjector'
-					requestData = {
-						videoMixType: 'OBS_WEBSOCKET_VIDEO_MIX_TYPE_PROGRAM',
-						monitorIndex: monitor,
-					}
-				} else if (action.options.type === 'Source') {
-					requestType = 'OpenSourceProjector'
-					requestData = {
-						sourceName: action.options.source,
-						monitorIndex: monitor,
-					}
-				} else if (action.options.type === 'Scene') {
-					requestType = 'OpenSourceProjector'
-					requestData = {
-						sourceName: action.options.scene,
-						monitorIndex: monitor,
-					}
-				} else {
+				// The display dropdown allows custom values, so it can arrive as a string.
+				const selectedDisplay = utils.asNumber(action.options.display) ?? Number(action.options.display)
+				const monitorIndex =
+					action.options.window === 'window' || !Number.isFinite(selectedDisplay)
+						? PROJECTOR_WINDOW_MONITOR_INDEX
+						: selectedDisplay
+
+				const videoMixType = VIDEO_MIX_TYPE_BY_PROJECTOR_TYPE[action.options.type]
+				if (videoMixType) {
+					await self.obs.sendRequest('OpenVideoMixProjector', { videoMixType, monitorIndex })
 					return
 				}
-				await self.obs.sendRequest(requestType as any, requestData as any)
+
+				const sourceName =
+					action.options.type === 'Source'
+						? action.options.source
+						: action.options.type === 'Scene'
+							? action.options.scene
+							: undefined
+				if (sourceName === undefined) return
+
+				await self.obs.sendRequest('OpenSourceProjector', { sourceName, monitorIndex })
 			},
 		},
 	}

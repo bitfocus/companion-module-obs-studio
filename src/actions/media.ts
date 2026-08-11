@@ -1,6 +1,7 @@
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { OBSMediaStatus, OBSMediaInputAction } from '../types.js'
+import * as utils from '../utils.js'
 
 const logger = createModuleLogger('Actions/Media')
 
@@ -314,17 +315,16 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 							},
 						})
 					}
-				} catch (e: any) {
-					logger.error(`Set Media Source File Error: ${e.message}`)
+				} catch (e) {
+					logger.error(`Set Media Source File Error: ${utils.describeError(e)}`)
 				}
 			},
 			learn: (action) => {
 				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
 				const input = self.obsState.findSourceByName(mediaName)
-				if (!input) return undefined
-				return {
-					path: input.settings?.local_file,
-				}
+				const localFile = utils.asString(input?.settings?.local_file)
+				if (localFile === undefined) return undefined
+				return { path: localFile }
 			},
 		},
 	}

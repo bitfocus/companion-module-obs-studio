@@ -1,7 +1,7 @@
-import { createModuleLogger } from '@companion-module/base'
+import { createModuleLogger, type CompanionOptionValues } from '@companion-module/base'
 import type OBSInstance from './main.js'
 import type { OBSFeedbackId } from './feedbacks.js'
-import type { OBSSource } from './types.js'
+import type { OBSReindexedSceneItem, OBSScene, OBSSource, OBSVolumeMetersEvent } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
 import {
@@ -132,7 +132,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('SceneListChanged', (data) => {
 		self.states.scenes.clear()
-		for (const scene of data.scenes as any[]) {
+		for (const scene of data.scenes as unknown as OBSScene[]) {
 			self.states.scenes.set(scene.sceneUuid, {
 				sceneName: scene.sceneName,
 				sceneUuid: scene.sceneUuid,
@@ -257,7 +257,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		}
 	})
 	obs.on('InputVolumeMeters', (data) => {
-		self.obs.updateAudioPeak(data as any)
+		self.obs.updateAudioPeak(data as unknown as OBSVolumeMetersEvent)
 	})
 	obs.on('InputSettingsChanged', (data) => {
 		const sourceUuid = data.inputUuid
@@ -418,7 +418,8 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		// on the cached items rather than replacing them, to avoid dropping other cached fields.
 		const items = self.states.sceneItems.get(data.sceneUuid)
 		if (!items) return
-		const indexByItemId = new Map((data.sceneItems as any[]).map((item) => [item.sceneItemId, item.sceneItemIndex]))
+		const reindexedItems = data.sceneItems as unknown as OBSReindexedSceneItem[]
+		const indexByItemId = new Map(reindexedItems.map((item) => [item.sceneItemId, item.sceneItemIndex]))
 		for (const item of items) {
 			const newIndex = indexByItemId.get(item.sceneItemId)
 			if (newIndex !== undefined) item.sceneItemIndex = newIndex
@@ -499,7 +500,8 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(self.states.recording) })
 		self.checkFeedbacks('recording', 'recordingPaused')
-		self.obs.updateRecordingTimecode(data)
+		// RecordStateChanged carries no timecode; pass none so the handler takes its reset path.
+		self.obs.updateRecordingTimecode(undefined)
 
 		if (data.outputActive && previousRecordingState === OBSRecordingState.Paused) {
 			self.sendToActionRecorder({ actionId: 'resume_recording', options: {} })
@@ -586,9 +588,9 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		const mapping = MEDIA_ACTION_RECORDER_MAP[action]
 		if (mapping) {
-			const mediaOptions: Record<string, unknown> = { source: source?.sourceName, useCurrentMedia: false }
+			const mediaOptions: CompanionOptionValues = { source: source?.sourceName ?? '', useCurrentMedia: false }
 			if (mapping.playPause) mediaOptions.playPause = mapping.playPause
-			self.sendToActionRecorder({ actionId: mapping.actionId, options: mediaOptions as any })
+			self.sendToActionRecorder({ actionId: mapping.actionId, options: mediaOptions })
 		}
 	})
 }

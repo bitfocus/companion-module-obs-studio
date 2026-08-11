@@ -5,7 +5,7 @@ import type {
 	CompanionMigrationAction,
 } from '@companion-module/base'
 import upgrades from '../upgrades.js'
-import type { ModuleConfig, ModuleSecrets } from '../types.js'
+import type { LegacyModuleConfig, ModuleConfig, ModuleSecrets } from '../types.js'
 
 const context = {} as CompanionUpgradeContext<ModuleConfig>
 
@@ -23,6 +23,15 @@ function makeProps(
 
 // Index 1 is the v2_0_0 script (index 0 is the generated boolean-feedback conversion).
 const v2_0_0 = upgrades[1]
+// v4_0_0 is the last script in the list.
+const v4_0_0 = upgrades[upgrades.length - 1]
+
+function makeLegacyProps(
+	config: LegacyModuleConfig | null,
+	secrets: ModuleSecrets | null,
+): CompanionStaticUpgradeProps<LegacyModuleConfig, ModuleSecrets> {
+	return { config, secrets, actions: [], feedbacks: [] }
+}
 
 describe('v2_0_0 port migration', () => {
 	test('migrates the legacy default port 4444 to 4455', () => {
@@ -55,5 +64,39 @@ describe('v2_0_0 action migration', () => {
 		const result = v2_0_0(context, makeProps(null, [action]))
 		expect(result.updatedActions).toHaveLength(1)
 		expect(result.updatedActions[0].actionId).toBe('setText')
+	})
+})
+
+describe('v4_0_0 password migration', () => {
+	test('moves a config password into secrets and strips it from config', () => {
+		const props = makeLegacyProps({ host: '127.0.0.1', port: 4455, pass: 'hunter2' }, null)
+		const result = v4_0_0(context, props)
+
+		expect(result.updatedSecrets).toEqual({ pass: 'hunter2' })
+		expect(result.updatedConfig).not.toBeNull()
+		expect(result.updatedConfig).not.toHaveProperty('pass')
+	})
+
+	test('keeps an existing secret and only strips the stale config copy', () => {
+		const props = makeLegacyProps({ host: '127.0.0.1', port: 4455, pass: 'stale' }, { pass: 'current' })
+		const result = v4_0_0(context, props)
+
+		// The secret the user set under the new layout must win over the leftover config value.
+		expect(result.updatedSecrets).toBeNull()
+		expect(result.updatedConfig).not.toHaveProperty('pass')
+	})
+
+	test('does nothing when the config carries no password', () => {
+		const result = v4_0_0(context, makeLegacyProps({ host: '127.0.0.1', port: 4455 }, null))
+
+		expect(result.updatedSecrets).toBeNull()
+		expect(result.updatedConfig).toBeNull()
+	})
+
+	test('does nothing when there is no config', () => {
+		const result = v4_0_0(context, makeLegacyProps(null, null))
+
+		expect(result.updatedSecrets).toBeNull()
+		expect(result.updatedConfig).toBeNull()
 	})
 })

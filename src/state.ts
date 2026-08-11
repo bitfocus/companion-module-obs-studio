@@ -1,4 +1,5 @@
 import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSource, OBSScene } from './types.js'
+import { INPUT_KIND_IMAGE_SOURCE, isMediaInputKind, isTextInputKind } from './constants.js'
 
 interface ChoiceCache {
 	sourceChoices?: ModuleChoice[]
@@ -46,7 +47,7 @@ export class OBSState {
 	public get mediaSourceUuids(): string[] {
 		if (!this.mediaSourceUuidCache) {
 			this.mediaSourceUuidCache = Array.from(this.state.sources.values())
-				.filter((s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source')
+				.filter((s) => isMediaInputKind(s.inputKind))
 				.map((s) => s.sourceUuid)
 		}
 		return this.mediaSourceUuidCache
@@ -199,7 +200,7 @@ export class OBSState {
 		return this.cached('mediaSourceList', () =>
 			this.buildChoices(
 				Array.from(this.state.sources.values()),
-				(s) => s.inputKind === 'ffmpeg_source' || s.inputKind === 'vlc_source',
+				(s) => isMediaInputKind(s.inputKind),
 				(s) => ({ id: s.sourceName, label: s.sourceName }),
 				(a, b) => a.label.localeCompare(b.label),
 			),
@@ -227,7 +228,7 @@ export class OBSState {
 		return this.cached('textSourceList', () =>
 			this.buildChoices(
 				Array.from(this.state.sources.values()),
-				(s) => !!s.inputKind?.startsWith('text_'),
+				(s) => isTextInputKind(s.inputKind),
 				(s) => ({ id: s.sourceName, label: s.sourceName }),
 				(a, b) => a.label.localeCompare(b.label),
 			),
@@ -238,7 +239,7 @@ export class OBSState {
 		return this.cached('imageSourceList', () =>
 			this.buildChoices(
 				Array.from(this.state.sources.values()),
-				(s) => s.inputKind === 'image_source',
+				(s) => s.inputKind === INPUT_KIND_IMAGE_SOURCE,
 				(s) => ({ id: s.sourceName, label: s.sourceName }),
 				(a, b) => a.label.localeCompare(b.label),
 			),

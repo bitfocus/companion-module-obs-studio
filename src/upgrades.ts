@@ -4,7 +4,7 @@ import {
 	CompanionStaticUpgradeResult,
 	CreateConvertToBooleanFeedbackUpgradeScript,
 } from '@companion-module/base'
-import { ModuleConfig, ModuleSecrets } from './types.js'
+import { LegacyModuleConfig, ModuleConfig, ModuleSecrets } from './types.js'
 
 function getOpt(options: Record<string, unknown>, key: string): unknown {
 	const opt = options[key]
@@ -265,8 +265,8 @@ export default [
 		return changes
 	},
 	function v4_0_0(
-		_context: CompanionUpgradeContext<ModuleConfig>,
-		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
+		_context: CompanionUpgradeContext<LegacyModuleConfig>,
+		props: CompanionStaticUpgradeProps<LegacyModuleConfig, ModuleSecrets>,
 	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
 		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
 			updatedConfig: null,
@@ -274,14 +274,16 @@ export default [
 			updatedActions: [],
 			updatedFeedbacks: [],
 		}
-		if (props.config) {
-			if (props.config.pass) {
-				changes.updatedSecrets = {
-					pass: props.config.pass,
-				}
-				delete props.config.pass
-				changes.updatedConfig = props.config
+		// Move the password out of config and into secrets. An existing secret always wins: the
+		// config copy is the stale one, and overwriting would downgrade a password the user has
+		// already updated under the new layout.
+		const legacyConfig = props.config
+		if (legacyConfig?.pass) {
+			if (!props.secrets?.pass) {
+				changes.updatedSecrets = { pass: legacyConfig.pass }
 			}
+			delete legacyConfig.pass
+			changes.updatedConfig = legacyConfig
 		}
 
 		for (const action of props.actions) {

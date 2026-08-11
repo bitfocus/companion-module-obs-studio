@@ -11,6 +11,12 @@ import {
 	getOBSStreamingStateLabel,
 	getOBSMediaStatusLabel,
 	getMonitorTypeLabel,
+	describeError,
+	asString,
+	asNumber,
+	extractFileName,
+	readTextSourceValue,
+	readMediaFileName,
 } from '../utils.js'
 import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from '../types.js'
 
@@ -107,5 +113,79 @@ describe('state label helpers', () => {
 		expect(getMonitorTypeLabel(ObsAudioMonitorType.MonitorAndOutput)).toBe('Monitor / Output')
 		expect(getMonitorTypeLabel(ObsAudioMonitorType.MonitorOnly)).toBe('Monitor Only')
 		expect(getMonitorTypeLabel(undefined)).toBe('Off')
+	})
+})
+
+describe('describeError', () => {
+	test('uses the message of an Error', () => {
+		expect(describeError(new Error('boom'))).toBe('boom')
+	})
+	test('uses the message property of a plain rejection object', () => {
+		expect(describeError({ message: 'not connected' })).toBe('not connected')
+	})
+	test('stringifies values with no message', () => {
+		expect(describeError('plain string')).toBe('plain string')
+		expect(describeError(undefined)).toBe('undefined')
+	})
+})
+
+describe('asString / asNumber', () => {
+	test('passes through matching types', () => {
+		expect(asString('hello')).toBe('hello')
+		expect(asNumber(42)).toBe(42)
+	})
+	test('rejects mismatched types', () => {
+		expect(asString(42)).toBeUndefined()
+		expect(asNumber('42')).toBeUndefined()
+		expect(asNumber(null)).toBeUndefined()
+	})
+	test('rejects non-finite numbers', () => {
+		expect(asNumber(NaN)).toBeUndefined()
+		expect(asNumber(Infinity)).toBeUndefined()
+	})
+})
+
+describe('extractFileName', () => {
+	test('strips posix directories and the extension', () => {
+		expect(extractFileName('/home/user/videos/clip.mp4')).toBe('clip')
+	})
+	test('strips windows directories and the extension', () => {
+		expect(extractFileName('C:\\Media\\intro.mov')).toBe('intro')
+	})
+	test('keeps a bare name with no extension', () => {
+		expect(extractFileName('README')).toBe('README')
+	})
+	test('returns empty string for non-string input', () => {
+		expect(extractFileName(undefined)).toBe('')
+		expect(extractFileName(123)).toBe('')
+	})
+})
+
+describe('readTextSourceValue', () => {
+	test('reads inline text', () => {
+		expect(readTextSourceValue({ text: 'Hello' })).toBe('Hello')
+	})
+	test('reports the file path when reading from file', () => {
+		expect(readTextSourceValue({ from_file: true, text_file: '/tmp/a.txt' })).toBe('Text from file: /tmp/a.txt')
+	})
+	test('falls back to the `file` key for the FreeType renderer', () => {
+		expect(readTextSourceValue({ read_from_file: true, file: '/tmp/b.txt' })).toBe('Text from file: /tmp/b.txt')
+	})
+	test('returns empty string when settings are missing or text is absent', () => {
+		expect(readTextSourceValue(undefined)).toBe('')
+		expect(readTextSourceValue({})).toBe('')
+	})
+})
+
+describe('readMediaFileName', () => {
+	test('reads the first playlist entry for VLC sources', () => {
+		expect(readMediaFileName({ playlist: [{ value: '/media/one.mp4' }, { value: '/media/two.mp4' }] })).toBe('one')
+	})
+	test('reads local_file for ffmpeg sources', () => {
+		expect(readMediaFileName({ local_file: '/media/show.mkv' })).toBe('show')
+	})
+	test('returns empty string for an empty playlist or missing settings', () => {
+		expect(readMediaFileName({ playlist: [] })).toBe('')
+		expect(readMediaFileName(undefined)).toBe('')
 	})
 })
