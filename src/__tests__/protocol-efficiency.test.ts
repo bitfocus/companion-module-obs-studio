@@ -33,7 +33,7 @@ describe('getInputKindList', () => {
 		self = makeMockInstance()
 	})
 
-	test('fetches all kind defaults in a single parallel batch instead of one request per kind', async () => {
+	test('fetches all kind defaults in a single batch instead of one request per kind', async () => {
 		self.socket.call.mockResolvedValue({ inputKinds: ['text_gdiplus_v2', 'ffmpeg_source'] })
 		mockBatchResponses(self.socket, (request) =>
 			request.requestData?.inputKind === 'text_gdiplus_v2'
@@ -57,7 +57,8 @@ describe('getInputKindList', () => {
 					requestId: expect.any(String),
 				},
 			],
-			{ executionType: RequestBatchExecutionType.Parallel },
+			// Never Parallel: OBS pairs parallel results with the wrong request.
+			{ executionType: RequestBatchExecutionType.SerialRealtime },
 		)
 		expect(self.states.inputKindList.get('text_gdiplus_v2')).toEqual({ text: '' })
 		expect(self.states.inputKindList.get('ffmpeg_source')).toEqual({ local_file: '' })

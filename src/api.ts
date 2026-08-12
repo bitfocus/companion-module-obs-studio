@@ -25,7 +25,7 @@ import {
 	type OBSOutput,
 	type OutputStatusBatchSpec,
 	type SceneFilterBatchSpec,
-	type SceneTransitionBatchSpec,
+	type OBSTransition,
 	type SourceDataBatchSpec,
 	type OBSFilter,
 } from './types.js'
@@ -284,16 +284,13 @@ export class OBSApi {
 	}
 
 	/**
-	 * Parallel is only safe for read-only batches with no ordering dependency and no Sleep entries.
-	 *
 	 * `TResponseData` lets each caller declare the payload it batched for; see {@link OBSBatchResponse}.
 	 * Callers that batch more than one kind of request should use {@link runBatch} instead.
 	 */
 	public async sendBatch<TResponseData = Record<string, unknown>>(
 		batch: OBSBatchRequest[],
-		options?: { executionType?: RequestBatchExecutionType },
 	): Promise<OBSBatchResponse<TResponseData>[] | undefined> {
-		const data = await this._callBatch(batch, options, () => false)
+		const data = await this._callBatch(batch, () => false)
 		return data as OBSBatchResponse<TResponseData>[] | undefined
 	}
 
@@ -303,25 +300,26 @@ export class OBSApi {
 	 */
 	public async runBatch<TSpec extends BatchSpec>(
 		builder: BatchBuilder<TSpec>,
-		options?: { executionType?: RequestBatchExecutionType },
 	): Promise<BatchEntry<TSpec>[] | undefined> {
-		const data = await this._callBatch(builder.requests, options, (requestId) => builder.isOptional(requestId))
+		const data = await this._callBatch(builder.requests, (requestId) => builder.isOptional(requestId))
 		return data ? builder.resolve(data) : undefined
 	}
 
 	private async _callBatch(
 		batch: OBSBatchRequest[],
-		options: { executionType?: RequestBatchExecutionType } | undefined,
 		isOptional: (requestId: string) => boolean,
 	): Promise<OBSBatchResponse[] | undefined> {
 		if (batch.length === 0) return []
 		try {
 			// `callBatch` is typed against a union of concrete request shapes; our batches are built
 			// dynamically from string request types, which that union cannot represent.
-			const data = (await this.self.socket.callBatch(
-				batch as Parameters<OBSWebSocket['callBatch']>[0],
-				options,
-			)) as unknown as OBSBatchResponse[]
+			//
+			// Always serial: with `Parallel`, obs-websocket returns each result's `responseData` in
+			// completion order while leaving `requestId`/`requestType` in request order, so responses get
+			// paired with the wrong request. Serial execution keeps a batch correlatable.
+			const data = (await this.self.socket.callBatch(batch as Parameters<OBSWebSocket['callBatch']>[0], {
+				executionType: RequestBatchExecutionType.SerialRealtime,
+			})) as unknown as OBSBatchResponse[]
 
 			const errors = data.filter((request) => !request.requestStatus.result && !isOptional(request.requestId))
 			if (errors.length > 0) {
@@ -499,7 +497,7 @@ export class OBSApi {
 			builder.add('defaults', 'GetInputDefaultSettings', { inputKind }, { inputKind }, false)
 		}
 
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const entries = await this.runBatch(builder)
 		if (!entries) return
 
 		for (const entry of entries) {
@@ -757,7 +755,7 @@ export class OBSApi {
 			builder.add('status', 'GetOutputStatus', { outputName }, { outputName }, false)
 		}
 
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const entries = await this.runBatch(builder)
 		if (entries) {
 			for (const entry of entries) {
 				if (!entry.requestStatus.result || !entry.responseData) continue
@@ -830,6 +828,12 @@ export class OBSApi {
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
+	// A GetSourceFilterList reply can succeed without carrying a filters array; storing that as-is
+	// leaves a non-iterable value in the map that every filter consumer then trips over.
+	private setSourceFilters(uuid: string, filters: OBSFilter[] | undefined): void {
+		this.self.states.sourceFilters.set(uuid, filters ?? [])
+	}
+
 	// Fetch filter lists for scenes, which fetchSourcesData does not cover.
 	public async fetchSceneFilters(sceneUuids: string[]): Promise<void> {
 		if (sceneUuids.length === 0) return
@@ -840,12 +844,12 @@ export class OBSApi {
 			builder.add('filters', 'GetSourceFilterList', { sourceUuid: sceneUuid }, { sceneUuid }, false)
 		}
 
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const entries = await this.runBatch(builder)
 		if (!entries || this.self.obsState.epoch !== epoch) return
 
 		for (const entry of entries) {
 			if (!entry.requestStatus.result || !entry.responseData) continue
-			this.self.states.sourceFilters.set(entry.meta.sceneUuid, entry.responseData.filters)
+			this.setSourceFilters(entry.meta.sceneUuid, entry.responseData.filters)
 		}
 	}
 
@@ -864,7 +868,7 @@ export class OBSApi {
 			builder.add('items', requestType, { sceneUuid: containerUuid }, { containerUuid }, false)
 		}
 
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const entries = await this.runBatch(builder)
 		if (!entries || this.self.obsState.epoch !== epoch) return
 
 		for (const entry of entries) {
@@ -885,7 +889,7 @@ export class OBSApi {
 		const epoch = this.self.obsState.epoch
 
 		const builder = this.buildSourceDataBatch(sourceUuids)
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const entries = await this.runBatch(builder)
 		if (this.self.obsState.epoch !== epoch) return
 
 		if (entries) {
@@ -941,7 +945,7 @@ export class OBSApi {
 				source.videoShowing = entry.responseData.videoShowing
 				break
 			case 'filters':
-				this.self.states.sourceFilters.set(uuid, entry.responseData.filters)
+				this.setSourceFilters(uuid, entry.responseData.filters)
 				break
 			case 'settings':
 				// buildInputSettings merges default settings.
@@ -1039,38 +1043,39 @@ export class OBSApi {
 	}
 
 	public async buildSceneTransitionList(): Promise<void> {
-		this.self.states.transitions.clear()
+		const [sceneTransitionList, currentTransition] = await Promise.all([
+			this.sendRequest('GetSceneTransitionList'),
+			this.sendRequest('GetCurrentSceneTransition'),
+		])
 
-		const builder = new BatchBuilder<SceneTransitionBatchSpec>()
-		builder.add('list', 'GetSceneTransitionList', undefined, null, false)
-		builder.add('current', 'GetCurrentSceneTransition', undefined, null, false)
-
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
-		const sceneTransitionList = entries?.find((entry) => entry.kind === 'list')?.responseData
-		const currentTransition = entries?.find((entry) => entry.kind === 'current')?.responseData
-
-		if (sceneTransitionList) {
-			if (Array.isArray(sceneTransitionList.transitions)) {
-				for (const item of sceneTransitionList.transitions) {
-					if (item.transitionName) {
-						this.self.states.transitions.set(item.transitionName, item)
-					}
+		// Each response stands on its own: a reply that did not arrive must leave the known state alone
+		// rather than blanking it, or a single failed refresh permanently erases the transition list.
+		const transitions = sceneTransitionList?.transitions as unknown as OBSTransition[] | undefined
+		if (Array.isArray(transitions)) {
+			this.self.states.transitions.clear()
+			for (const item of transitions) {
+				if (item.transitionName) {
+					this.self.states.transitions.set(item.transitionName, item)
 				}
 			}
-
-			const transitionListVariable = this.self.obsState.transitionList?.map((item) => item.id) ?? []
-
-			this.self.states.currentTransition = currentTransition?.transitionName ?? 'None'
-			this.self.states.transitionDuration = currentTransition?.transitionDuration ?? 0
-
-			this.self.checkFeedbacks('transition_duration', 'current_transition')
-			this.self.setVariableValues({
-				current_transition: this.self.states.currentTransition,
-				transition_duration: this.self.states.transitionDuration,
-				transition_active: 'False',
-				transition_list: transitionListVariable.join(', '),
-			})
+		} else {
+			logger.debug('GetSceneTransitionList returned no transitions, keeping the previously known list')
 		}
+
+		if (currentTransition?.transitionName) {
+			this.self.states.currentTransition = currentTransition.transitionName
+			this.self.states.transitionDuration = currentTransition.transitionDuration ?? 0
+		} else {
+			logger.debug('GetCurrentSceneTransition returned no transition, keeping the previously known transition')
+		}
+
+		this.self.checkFeedbacks('transition_duration', 'current_transition')
+		this.self.setVariableValues({
+			current_transition: this.self.states.currentTransition,
+			transition_duration: this.self.states.transitionDuration,
+			transition_active: this.self.states.transitionActive,
+			transition_list: this.self.obsState.transitionList.map((item) => item.id),
+		})
 	}
 
 	// Scene and Source Actions
@@ -1113,9 +1118,9 @@ export class OBSApi {
 			builder.add('status', 'GetMediaInputStatus', { inputUuid: sourceUuid }, { sourceUuid }, false)
 		}
 
-		const entries = await this.runBatch(builder, { executionType: RequestBatchExecutionType.Parallel })
+		const entries = await this.runBatch(builder)
 		if (entries) {
-			const allValues: Record<string, string | number | boolean | undefined> = {}
+			const allValues: Record<string, string | number | boolean | string[] | undefined> = {}
 			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
 			for (const entry of entries) {
 				const successful = successfulEntry<MediaStatusBatchSpec>(entry)
@@ -1124,15 +1129,9 @@ export class OBSApi {
 				}
 			}
 
-			if (currentMedia.length > 0) {
-				allValues.current_media_name = currentMedia.map((v) => v.name).join('\n')
-				allValues.current_media_time_elapsed = currentMedia.map((v) => v.elapsed).join('\n')
-				allValues.current_media_time_remaining = currentMedia.map((v) => v.remaining).join('\n')
-			} else {
-				allValues.current_media_name = 'None'
-				allValues.current_media_time_elapsed = '--:--:--'
-				allValues.current_media_time_remaining = '--:--:--'
-			}
+			allValues.current_media_name = currentMedia.map((v) => v.name)
+			allValues.current_media_time_elapsed = currentMedia.map((v) => v.elapsed)
+			allValues.current_media_time_remaining = currentMedia.map((v) => v.remaining)
 
 			this.self.setVariableValues(allValues)
 			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining')
@@ -1141,7 +1140,7 @@ export class OBSApi {
 
 	private processMediaStatusResponse(
 		entry: SuccessfulBatchEntry<MediaStatusBatchSpec>,
-		allValues: Record<string, string | number | boolean | undefined>,
+		allValues: Record<string, string | number | boolean | string[] | undefined>,
 		currentMedia: Array<{ name: string; elapsed: string; remaining: string }>,
 	): void {
 		const source = this.self.states.sources.get(entry.meta.sourceUuid)
@@ -1224,7 +1223,7 @@ export class OBSApi {
 		const epoch = this.self.obsState.epoch
 		const data = await this.sendRequest('GetSourceFilterList', { sourceUuid: sourceUuid })
 		if (data && this.self.obsState.epoch === epoch) {
-			this.self.states.sourceFilters.set(sourceUuid, data.filters as unknown as OBSFilter[])
+			this.setSourceFilters(sourceUuid, data.filters as unknown as OBSFilter[] | undefined)
 		}
 	}
 
