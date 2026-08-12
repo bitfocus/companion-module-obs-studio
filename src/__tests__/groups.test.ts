@@ -1,33 +1,11 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import type { CompanionFeedbackBooleanEvent } from '@companion-module/base'
 import { initOBSListeners } from '../listeners.js'
 import { getSourceFeedbacks } from '../feedbacks/sources.js'
-import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import { mockBatchResponses } from './mock/socket.js'
+import { feedbackEvent } from './mock/events.js'
 import { MockContext } from './mock-context.js'
-import type { OBSSceneItem } from '../types.js'
 import { looseFeedbacks } from './loose-definitions.js'
-
-function feedbackEvent(options: Record<string, unknown>): CompanionFeedbackBooleanEvent {
-	return {
-		id: 'fb',
-		feedbackId: 'scene_item_active_in_scene',
-		controlId: 'c',
-		options,
-	} as unknown as CompanionFeedbackBooleanEvent
-}
-
-function sceneItem(partial: Partial<OBSSceneItem> & { sceneItemId: number; sourceUuid: string }): OBSSceneItem {
-	return {
-		sourceName: partial.sourceUuid,
-		sceneItemIndex: 0,
-		sceneItemLocked: false,
-		sceneItemEnabled: true,
-		isGroup: false,
-		inputKind: null,
-		sourceType: 'OBS_SOURCE_TYPE_INPUT',
-		...partial,
-	}
-}
 
 /** Seed a group source and its own item list of members. */
 function seedGroup(self: MockInstance, groupUuid: string, memberUuids: string[]): void {
@@ -97,11 +75,21 @@ describe('container model — grouped source feedback', () => {
 		const cb = feedbacks['scene_item_active_in_scene'].callback
 
 		// Enabled member matches.
-		expect(cb(feedbackEvent({ scene: 'Scene A', any: false, source: 'member-1' }), new MockContext())).toBe(true)
+		expect(
+			cb(
+				feedbackEvent('scene_item_active_in_scene', { scene: 'Scene A', any: false, source: 'member-1' }),
+				new MockContext(),
+			),
+		).toBe(true)
 
 		// Disable in group container and re-check.
 		self.states.sceneItems.get('group-1')![0].sceneItemEnabled = false
-		expect(cb(feedbackEvent({ scene: 'Scene A', any: false, source: 'member-1' }), new MockContext())).toBe(false)
+		expect(
+			cb(
+				feedbackEvent('scene_item_active_in_scene', { scene: 'Scene A', any: false, source: 'member-1' }),
+				new MockContext(),
+			),
+		).toBe(false)
 	})
 })
 
@@ -141,5 +129,64 @@ describe('container model — visibility resolution', () => {
 		expect(batch).toHaveLength(1)
 		expect(batch[0].requestData.sceneUuid).toBe('group-1')
 		expect(batch[0].requestData.sceneItemEnabled).toBe(true)
+	})
+})
+
+describe('removeScene group cleanup', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	test('removes the group container and its source entry along with the scene', async () => {
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.sources.set('group-1', {
+			sourceName: 'Group 1',
+			sourceUuid: 'group-1',
+			validName: 'Group_1',
+			isGroup: true,
+		})
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })])
+		self.states.sceneItems.set('group-1', [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })])
+
+		await self.obs.removeScene('scene-a')
+
+		expect(self.states.scenes.has('scene-a')).toBe(false)
+		expect(self.states.sceneItems.has('scene-a')).toBe(false)
+		expect(self.states.sceneItems.has('group-1')).toBe(false)
+		expect(self.states.sources.has('group-1')).toBe(false)
+	})
+})
+
+describe('groups added after connect', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	test('addSceneItem fetches the contents of a newly added group', async () => {
+		seedScene(self, 'Scene A', 'scene-a')
+
+		// GetSceneItemList for the scene now returns a group item.
+		self.socket.call.mockResolvedValue({
+			sceneItems: [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })],
+		})
+		mockBatchResponses(self.socket, (request) =>
+			request.requestType === 'GetGroupSceneItemList'
+				? { sceneItems: [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })] }
+				: {},
+		)
+
+		await self.obs.addSceneItem('scene-a', 'group-1')
+
+		// The group's own item list was requested and cached.
+		expect(self.socket.callBatch).toHaveBeenCalledWith(
+			[{ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' }, requestId: expect.any(String) }],
+			expect.anything(),
+		)
+		expect(self.states.sceneItems.get('group-1')).toHaveLength(1)
+		expect(self.states.sources.get('member-1')!.parentGroupUuid).toBe('group-1')
 	})
 })

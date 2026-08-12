@@ -5,51 +5,33 @@ import type {
 	CompanionVariableValue,
 } from '@companion-module/base'
 
-// https://github.com/bitfocus/companion/blob/bfe2e89d2fdbddf0d2347e73305e866c659ae412/companion/lib/Variables/Util.ts#L22
-const VARIABLE_REGEX = /\$\(([^:$)]+):([^)$]+)\)/
-
-/** Mock Companion context for action/feedback variable resolution in tests. */
+/**
+ * Mock Companion context for action/feedback callbacks.
+ *
+ * Under API 2.0 Companion resolves option expressions before invoking a callback, so the module
+ * never calls back into the context. The methods exist only to satisfy the three interfaces; giving
+ * them real implementations would be untested code that reads like a working fixture.
+ */
 export class MockContext
 	implements CompanionActionCallbackContext, CompanionFeedbackCallbackContext, CompanionLearnCallbackContext
 {
 	readonly type: 'action' | 'feedback'
 	readonly signal: AbortSignal
 
-	#variables = new Map<string, string>()
-	#customVariables = new Map<string, CompanionVariableValue>()
-
 	constructor(type: 'action' | 'feedback' = 'action', signal: AbortSignal = new AbortController().signal) {
 		this.type = type
 		this.signal = signal
 	}
 
-	getVariable(name: string): string {
-		return this.#variables.get(name) ?? '$NA'
+	getVariable(_name: string): string {
+		throw new Error('MockContext.getVariable is not implemented — no module code calls it')
 	}
 
-	setVariable(name: string, value: string): void {
-		this.#variables.set(name, value)
+	setCustomVariableValue(_variableName: string, _value: CompanionVariableValue): void {
+		throw new Error('MockContext.setCustomVariableValue is not implemented — no module code calls it')
 	}
 
-	clearVariables(): void {
-		this.#variables.clear()
-	}
-
-	setCustomVariableValue(variableName: string, value: CompanionVariableValue): void {
-		this.#customVariables.set(variableName, value)
-	}
-
-	async parseVariablesInString(text: string): Promise<string> {
-		return new Promise<string>((resolve) => {
-			let result = text
-
-			let match: RegExpExecArray | null
-			while ((match = VARIABLE_REGEX.exec(result)) !== null) {
-				const [fullId, module, varname] = match
-				result = result.replace(fullId, () => this.getVariable(`${module}:${varname}`))
-			}
-
-			resolve(result)
-		})
+	async parseVariablesInString(_text: string): Promise<string> {
+		throw new Error('MockContext.parseVariablesInString is not implemented — no module code calls it')
 	}
 }

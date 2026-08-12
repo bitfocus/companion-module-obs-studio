@@ -1,14 +1,10 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import type { CompanionFeedbackInfo } from '@companion-module/base'
 import { getSceneFeedbacks } from '../../feedbacks/scenes.js'
 import { Color } from '../../utils.js'
 import { makeMockInstance, seedScene, type MockInstance } from '../mock/instance.js'
+import { feedbackEvent } from '../mock/events.js'
 import { MockContext } from '../mock-context.js'
 import { looseFeedbacks } from '../loose-definitions.js'
-
-function feedback(options: Record<string, unknown>): CompanionFeedbackInfo {
-	return { id: 'test', controlId: 'control', feedbackId: 'scene_active', options } as unknown as CompanionFeedbackInfo
-}
 
 describe('scene_active feedback', () => {
 	let self: MockInstance
@@ -24,7 +20,7 @@ describe('scene_active feedback', () => {
 		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
 
 		const result = fb.callback(
-			feedback({ mode: 'program', scene: 'Scene A', fg: Color.White, bg: Color.Red }),
+			feedbackEvent('scene_active', { mode: 'program', scene: 'Scene A', fg: Color.White, bg: Color.Red }),
 			new MockContext(),
 		)
 		expect(result).toEqual({ color: Color.White, bgcolor: Color.Red })
@@ -36,7 +32,12 @@ describe('scene_active feedback', () => {
 		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
 
 		const result = fb.callback(
-			feedback({ mode: 'preview', scene: 'Scene B', fg_preview: Color.White, bg_preview: Color.Green }),
+			feedbackEvent('scene_active', {
+				mode: 'preview',
+				scene: 'Scene B',
+				fg_preview: Color.White,
+				bg_preview: Color.Green,
+			}),
 			new MockContext(),
 		)
 		expect(result).toEqual({ color: Color.White, bgcolor: Color.Green })
@@ -46,7 +47,10 @@ describe('scene_active feedback', () => {
 		self.states.programScene = 'Scene A'
 		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
 
-		const result = fb.callback(feedback({ mode: 'programAndPreview', scene: 'Scene B' }), new MockContext())
+		const result = fb.callback(
+			feedbackEvent('scene_active', { mode: 'programAndPreview', scene: 'Scene B' }),
+			new MockContext(),
+		)
 		expect(result).toEqual({})
 	})
 })

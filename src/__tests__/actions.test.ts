@@ -1,24 +1,21 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import type { CompanionActionDefinition, CompanionActionEvent, CompanionOptionValues } from '@companion-module/base'
 import { getActions } from '../actions.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
+import { actionEvent, defaultOptions } from './mock/events.js'
 import { MockContext } from './mock-context.js'
 import { looseActions, type LooseActions } from './loose-definitions.js'
 
-/** Build an options object from each option's declared default. */
-function defaultOptions(def: CompanionActionDefinition): CompanionOptionValues {
-	const options: CompanionOptionValues = {}
-	for (const option of def.options) {
-		if ('id' in option && 'default' in option) {
-			options[option.id] = option.default
-		}
-	}
-	return options
-}
-
-function event(actionId: string, options: CompanionOptionValues): CompanionActionEvent {
-	return { id: 'test', controlId: 'control', actionId, options } as unknown as CompanionActionEvent
-}
+/**
+ * The id lists drive `test.each`, so they have to exist at collection time — before any `beforeEach`
+ * has run. Built once here rather than per `test.each` call.
+ */
+const SEEDED_ACTIONS = (() => {
+	const self = makeMockInstance()
+	seedFullState(self)
+	return looseActions(getActions.call(self))
+})()
+const ACTION_IDS = Object.keys(SEEDED_ACTIONS)
+const LEARN_ACTION_IDS = ACTION_IDS.filter((id) => SEEDED_ACTIONS[id].learn !== undefined)
 
 describe('actions', () => {
 	let self: MockInstance
@@ -31,45 +28,31 @@ describe('actions', () => {
 	})
 
 	test('produces a non-empty action set', () => {
-		expect(Object.keys(actions).length).toBeGreaterThan(0)
+		expect(ACTION_IDS.length).toBeGreaterThan(0)
 	})
 
-	describe('every action definition is well-formed', () => {
-		test.each(Object.keys(looseActions(getActions.call(makeMockInstanceSeeded()))))('%s', (id) => {
-			const def = actions[id]
-			expect(def).toBeDefined()
-			expect(typeof def.name).toBe('string')
-			expect(def.name.length).toBeGreaterThan(0)
-			expect(Array.isArray(def.options)).toBe(true)
-			expect(typeof def.callback).toBe('function')
-			expect(def.learn === undefined || typeof def.learn === 'function').toBe(true)
-		})
+	// The rest of the definition shape (option array, callback, optional learn) is enforced statically
+	// by `CompanionActionDefinitions<OBSActionSchemas>`, so only the non-empty name needs asserting.
+	test('every action has a non-empty name', () => {
+		const unnamed = ACTION_IDS.filter((id) => actions[id].name.length === 0)
+		expect(unnamed).toEqual([])
 	})
 
 	describe('every action callback runs without throwing', () => {
-		test.each(Object.keys(looseActions(getActions.call(makeMockInstanceSeeded()))))('%s', async (id) => {
+		test.each(ACTION_IDS)('%s', async (id) => {
 			const def = actions[id]
 			await expect(
-				Promise.resolve(def.callback(event(id, defaultOptions(def)), new MockContext())),
+				Promise.resolve(def.callback(actionEvent(id, defaultOptions(def)), new MockContext())),
 			).resolves.not.toThrow()
 		})
 	})
 
 	describe('every learn callback runs without throwing', () => {
-		const seeded = looseActions(getActions.call(makeMockInstanceSeeded()))
-		const withLearn = Object.keys(seeded).filter((id) => seeded[id].learn !== undefined)
-		test.each(withLearn)('%s', async (id) => {
+		test.each(LEARN_ACTION_IDS)('%s', async (id) => {
 			const def = actions[id]
 			await expect(
-				Promise.resolve(def.learn!(event(id, defaultOptions(def)), new MockContext())),
+				Promise.resolve(def.learn!(actionEvent(id, defaultOptions(def)), new MockContext())),
 			).resolves.not.toThrow()
 		})
 	})
 })
-
-/** Helper so the `test.each` id lists can be computed at collection time. */
-function makeMockInstanceSeeded(): MockInstance {
-	const self = makeMockInstance()
-	seedFullState(self)
-	return self
-}

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { initOBSListeners } from '../listeners.js'
 import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
-import { mockBatchResponses } from './mock/socket.js'
+import { lastBatch, mockBatchResponses } from './mock/socket.js'
 
 describe('addSource upsert', () => {
 	let self: MockInstance
@@ -251,5 +251,78 @@ describe('listener state hygiene', () => {
 		const scene = self.states.scenes.get('new-scene')
 		expect(scene?.sceneName).toBe('New Scene')
 		expect(self.obsState.findSceneByName('New Scene')).toBe(scene)
+	})
+})
+
+describe('scene filters', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	test('fetchSceneFilters stores filters keyed by scene UUID', async () => {
+		seedScene(self, 'Scene A', 'scene-a')
+		mockBatchResponses(self.socket, () => ({
+			filters: [
+				{
+					filterName: 'Color',
+					filterEnabled: true,
+					filterIndex: 0,
+					filterKind: 'color_filter',
+					filterSettings: {},
+				},
+			],
+		}))
+
+		await self.obs.fetchSceneFilters(['scene-a'])
+
+		expect(lastBatch(self.socket)).toEqual([
+			{ requestType: 'GetSourceFilterList', requestData: { sourceUuid: 'scene-a' }, requestId: expect.any(String) },
+		])
+		expect(self.states.sourceFilters.get('scene-a')).toHaveLength(1)
+	})
+
+	test('a scene filter is resolvable by name and surfaces in the filter list', () => {
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.sourceFilters.set('scene-a', [
+			{ filterName: 'Color', filterEnabled: true, filterIndex: 0, filterKind: 'color_filter', filterSettings: {} },
+		])
+
+		expect(self.obsState.findFilterTargetUuid('Scene A')).toBe('scene-a')
+		expect(self.obsState.findSourceFiltersByName('Scene A')).toHaveLength(1)
+		expect(self.obsState.filterList.map((f) => f.id)).toContain('Color')
+	})
+
+	test('SourceFilterEnableStateChanged on a scene updates the cached filter', () => {
+		initOBSListeners(self)
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.sourceFilters.set('scene-a', [
+			{ filterName: 'Color', filterEnabled: true, filterIndex: 0, filterKind: 'color_filter', filterSettings: {} },
+		])
+
+		self.socket.emit('SourceFilterEnableStateChanged', {
+			sourceName: 'Scene A',
+			filterName: 'Color',
+			filterEnabled: false,
+		})
+
+		expect(self.states.sourceFilters.get('scene-a')![0].filterEnabled).toBe(false)
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('filter_enabled')
+	})
+
+	test('setFilterVisibility targets a scene by name', async () => {
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.sourceFilters.set('scene-a', [
+			{ filterName: 'Color', filterEnabled: true, filterIndex: 0, filterKind: 'color_filter', filterSettings: {} },
+		])
+
+		await self.obs.setFilterVisibility('Color', 'toggle', { allSources: false, source: 'Scene A' })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetSourceFilterEnabled', {
+			sourceUuid: 'scene-a',
+			filterName: 'Color',
+			filterEnabled: false,
+		})
 	})
 })

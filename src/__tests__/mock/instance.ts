@@ -1,6 +1,12 @@
 import { vi, type Mock } from 'vitest'
 import type OBSInstance from '../../main.js'
-import { type ModuleConfig, type ModuleSecrets, OBSMediaStatus, ObsAudioMonitorType } from '../../types.js'
+import {
+	type ModuleConfig,
+	type ModuleSecrets,
+	type OBSSceneItem,
+	OBSMediaStatus,
+	ObsAudioMonitorType,
+} from '../../types.js'
 import { validName } from '../../utils.js'
 import { OBSState } from '../../state.js'
 import { OBSApi } from '../../api.js'
@@ -60,6 +66,20 @@ export function seedScene(self: MockInstance, sceneName: string, sceneUuid = sce
 		sceneUuid,
 		sceneIndex: self.states.scenes.size,
 	})
+}
+
+/** Build a scene item, defaulting every field the caller does not care about. */
+export function sceneItem(partial: Partial<OBSSceneItem> & { sceneItemId: number; sourceUuid: string }): OBSSceneItem {
+	return {
+		sourceName: partial.sourceUuid,
+		sceneItemIndex: 0,
+		sceneItemLocked: false,
+		sceneItemEnabled: true,
+		isGroup: false,
+		inputKind: null,
+		sourceType: 'OBS_SOURCE_TYPE_INPUT',
+		...partial,
+	}
 }
 
 /** Seed a source/input into module state (mirrors `OBSApi.addSource`). */

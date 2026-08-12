@@ -1,30 +1,12 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import type { CompanionFeedbackBooleanEvent } from '@companion-module/base'
-import { initOBSListeners } from '../listeners.js'
 import { getOutputFeedbacks } from '../feedbacks/outputs.js'
-import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import { makeMockInstance, seedSource, type MockInstance } from './mock/instance.js'
 import { mockBatchResponses } from './mock/socket.js'
-import type { OBSBatchRequest, OBSSceneItem } from '../types.js'
+import { feedbackEvent } from './mock/events.js'
+import type { OBSBatchRequest } from '../types.js'
 import { RequestBatchExecutionType } from 'obs-websocket-js'
 import { looseFeedbacks } from './loose-definitions.js'
 import { MockContext } from './mock-context.js'
-
-function sceneItem(partial: Partial<OBSSceneItem> & { sceneItemId: number; sourceUuid: string }): OBSSceneItem {
-	return {
-		sourceName: partial.sourceUuid,
-		sceneItemIndex: 0,
-		sceneItemLocked: false,
-		sceneItemEnabled: true,
-		isGroup: false,
-		inputKind: null,
-		sourceType: 'OBS_SOURCE_TYPE_INPUT',
-		...partial,
-	}
-}
-
-function feedbackEvent(feedbackId: string, options: Record<string, unknown>): CompanionFeedbackBooleanEvent {
-	return { id: 'fb', feedbackId, controlId: 'c', options } as unknown as CompanionFeedbackBooleanEvent
-}
 
 describe('getInputKindList', () => {
 	let self: MockInstance
@@ -33,7 +15,7 @@ describe('getInputKindList', () => {
 		self = makeMockInstance()
 	})
 
-	test('fetches all kind defaults in a single batch instead of one request per kind', async () => {
+	test('fetches every kind default in one batch', async () => {
 		self.socket.call.mockResolvedValue({ inputKinds: ['text_gdiplus_v2', 'ffmpeg_source'] })
 		mockBatchResponses(self.socket, (request) =>
 			request.requestData?.inputKind === 'text_gdiplus_v2'
@@ -72,7 +54,7 @@ describe('getStreamStatus / getRecordStatus', () => {
 		self = makeMockInstance()
 	})
 
-	test('getStreamStatus no longer batches GetStreamServiceSettings', async () => {
+	test('issues GetStreamStatus on its own and leaves stream_service alone', async () => {
 		self.socket.call.mockResolvedValue({
 			outputActive: true,
 			outputTimecode: '00:01:00.000',
@@ -86,9 +68,13 @@ describe('getStreamStatus / getRecordStatus', () => {
 
 		expect(self.socket.call).toHaveBeenCalledWith('GetStreamStatus', undefined)
 		expect(self.socket.callBatch).not.toHaveBeenCalled()
-		expect(self.setVariableValues).toHaveBeenCalledWith(
-			expect.not.objectContaining({ stream_service: expect.anything() }),
-		)
+		// Asserted against every call, and only after confirming there was one:
+		// `toHaveBeenCalledWith(not.objectContaining(...))` passes as soon as any single call omits the
+		// key, and an empty call list would make the check vacuous.
+		expect(self.setVariableValues.mock.calls.length).toBeGreaterThan(0)
+		for (const [values] of self.setVariableValues.mock.calls) {
+			expect(values).not.toHaveProperty('stream_service')
+		}
 	})
 
 	test('getStreamServiceSettings sets stream_service independently', async () => {
@@ -103,7 +89,7 @@ describe('getStreamStatus / getRecordStatus', () => {
 		expect(self.setVariableValues).toHaveBeenCalledWith({ stream_service: 'Twitch' })
 	})
 
-	test('getRecordStatus no longer batches GetRecordDirectory', async () => {
+	test('issues GetRecordStatus on its own', async () => {
 		self.socket.call.mockResolvedValue({ outputActive: false, outputPaused: false, outputTimecode: '00:00:00.000' })
 
 		await self.obs.getRecordStatus()
@@ -221,61 +207,5 @@ describe('media status polling', () => {
 
 		self.obs.addSource('clip2-uuid', 'Clip 2', 'vlc_source')
 		expect(self.obsState.mediaSourceUuids).toEqual(['clip-uuid', 'clip2-uuid'])
-	})
-})
-
-describe('SceneItemListReindexed', () => {
-	let self: MockInstance
-
-	beforeEach(() => {
-		self = makeMockInstance()
-		initOBSListeners(self)
-	})
-
-	test('updates ordering on cached items without dropping other fields', () => {
-		self.states.sceneItems.set('scene-a', [
-			sceneItem({ sceneItemId: 1, sourceUuid: 'a', sceneItemIndex: 0, sceneItemEnabled: false }),
-			sceneItem({ sceneItemId: 2, sourceUuid: 'b', sceneItemIndex: 1, sceneItemEnabled: true }),
-		])
-
-		self.socket.emit('SceneItemListReindexed', {
-			sceneUuid: 'scene-a',
-			sceneName: 'Scene A',
-			sceneItems: [
-				{ sceneItemId: 1, sceneItemIndex: 1 },
-				{ sceneItemId: 2, sceneItemIndex: 0 },
-			],
-		})
-
-		const items = self.states.sceneItems.get('scene-a')!
-		expect(items.find((i) => i.sceneItemId === 1)).toMatchObject({ sceneItemIndex: 1, sceneItemEnabled: false })
-		expect(items.find((i) => i.sceneItemId === 2)).toMatchObject({ sceneItemIndex: 0, sceneItemEnabled: true })
-	})
-})
-
-describe('removeScene group cleanup', () => {
-	let self: MockInstance
-
-	beforeEach(() => {
-		self = makeMockInstance()
-	})
-
-	test('removes the group container and its source entry along with the scene', async () => {
-		seedScene(self, 'Scene A', 'scene-a')
-		self.states.sources.set('group-1', {
-			sourceName: 'Group 1',
-			sourceUuid: 'group-1',
-			validName: 'Group_1',
-			isGroup: true,
-		})
-		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })])
-		self.states.sceneItems.set('group-1', [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })])
-
-		await self.obs.removeScene('scene-a')
-
-		expect(self.states.scenes.has('scene-a')).toBe(false)
-		expect(self.states.sceneItems.has('scene-a')).toBe(false)
-		expect(self.states.sceneItems.has('group-1')).toBe(false)
-		expect(self.states.sources.has('group-1')).toBe(false)
 	})
 })

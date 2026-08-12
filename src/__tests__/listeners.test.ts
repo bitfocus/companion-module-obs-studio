@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { initOBSListeners } from '../listeners.js'
 import { OBSRecordingState } from '../types.js'
-import { makeMockInstance, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from './mock/instance.js'
 
 describe('scene change listeners', () => {
 	let self: MockInstance
@@ -138,5 +138,34 @@ describe('input / filter / ui listeners', () => {
 		self.socket.emit('ScreenshotSaved', { savedScreenshotPath: '/tmp/shot.png' })
 
 		expect(self.setVariableValues).toHaveBeenCalledWith({ screenshot_saved_path: '/tmp/shot.png' })
+	})
+})
+
+describe('SceneItemListReindexed', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		initOBSListeners(self)
+	})
+
+	test('updates ordering on cached items without dropping other fields', () => {
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'a', sceneItemIndex: 0, sceneItemEnabled: false }),
+			sceneItem({ sceneItemId: 2, sourceUuid: 'b', sceneItemIndex: 1, sceneItemEnabled: true }),
+		])
+
+		self.socket.emit('SceneItemListReindexed', {
+			sceneUuid: 'scene-a',
+			sceneName: 'Scene A',
+			sceneItems: [
+				{ sceneItemId: 1, sceneItemIndex: 1 },
+				{ sceneItemId: 2, sceneItemIndex: 0 },
+			],
+		})
+
+		const items = self.states.sceneItems.get('scene-a')!
+		expect(items.find((i) => i.sceneItemId === 1)).toMatchObject({ sceneItemIndex: 1, sceneItemEnabled: false })
+		expect(items.find((i) => i.sceneItemId === 2)).toMatchObject({ sceneItemIndex: 0, sceneItemEnabled: true })
 	})
 })

@@ -1,8 +1,4 @@
-import type {
-	CompanionActionDefinition,
-	CompanionFeedbackDefinition,
-	CompanionPresetDefinitions,
-} from '@companion-module/base'
+import type { CompanionActionDefinition, CompanionFeedbackDefinition } from '@companion-module/base'
 
 /**
  * The definition maps are keyed by literal ids and their values include `false | undefined`,
@@ -11,7 +7,6 @@ import type {
  */
 export type LooseActions = Record<string, CompanionActionDefinition>
 export type LooseFeedbacks = Record<string, CompanionFeedbackDefinition>
-export type LoosePresets = CompanionPresetDefinitions
 
 export function looseActions(actions: object): LooseActions {
 	return actions as LooseActions
@@ -19,8 +14,4 @@ export function looseActions(actions: object): LooseActions {
 
 export function looseFeedbacks(feedbacks: object): LooseFeedbacks {
 	return feedbacks as LooseFeedbacks
-}
-
-export function loosePresets(presets: object): LoosePresets {
-	return presets as LoosePresets
 }

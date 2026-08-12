@@ -1,29 +1,16 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import type { CompanionFeedbackDefinition, CompanionFeedbackInfo, CompanionOptionValues } from '@companion-module/base'
 import { getFeedbacks } from '../feedbacks.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
+import { defaultOptions, feedbackEvent } from './mock/events.js'
 import { MockContext } from './mock-context.js'
 import { looseFeedbacks, type LooseFeedbacks } from './loose-definitions.js'
 
-function defaultOptions(def: CompanionFeedbackDefinition): CompanionOptionValues {
-	const options: CompanionOptionValues = {}
-	for (const option of def.options) {
-		if ('id' in option && 'default' in option) {
-			options[option.id] = option.default
-		}
-	}
-	return options
-}
-
-function feedbackInfo(feedbackId: string, options: CompanionOptionValues): CompanionFeedbackInfo {
-	return { id: 'test', controlId: 'control', feedbackId, options } as unknown as CompanionFeedbackInfo
-}
-
-function makeMockInstanceSeeded(): MockInstance {
+/** Built once at collection time, since `test.each` needs the ids before `beforeEach` runs. */
+const FEEDBACK_IDS = (() => {
 	const self = makeMockInstance()
 	seedFullState(self)
-	return self
-}
+	return Object.keys(looseFeedbacks(getFeedbacks.call(self)))
+})()
 
 describe('feedbacks', () => {
 	let self: MockInstance
@@ -36,27 +23,20 @@ describe('feedbacks', () => {
 	})
 
 	test('produces a non-empty feedback set', () => {
-		expect(Object.keys(feedbacks).length).toBeGreaterThan(0)
+		expect(FEEDBACK_IDS.length).toBeGreaterThan(0)
 	})
 
-	describe('every feedback definition is well-formed', () => {
-		test.each(Object.keys(looseFeedbacks(getFeedbacks.call(makeMockInstanceSeeded()))))('%s', (id) => {
-			const def = feedbacks[id]
-			expect(def).toBeDefined()
-			expect(['boolean', 'advanced']).toContain(def.type)
-			expect(typeof def.name).toBe('string')
-			expect(def.name.length).toBeGreaterThan(0)
-			expect(Array.isArray(def.options)).toBe(true)
-			expect(typeof def.callback).toBe('function')
-			// Boolean feedbacks must declare a default style
-			expect(def.type !== 'boolean' || def.defaultStyle !== undefined).toBe(true)
-		})
+	// `CompanionFeedbackDefinitions<OBSFeedbackSchemas>` statically enforces the rest of the shape,
+	// including `defaultStyle` being required on boolean feedbacks.
+	test('every feedback has a non-empty name', () => {
+		const unnamed = FEEDBACK_IDS.filter((id) => feedbacks[id].name.length === 0)
+		expect(unnamed).toEqual([])
 	})
 
 	describe('every feedback callback runs without throwing and returns a valid shape', () => {
-		test.each(Object.keys(looseFeedbacks(getFeedbacks.call(makeMockInstanceSeeded()))))('%s', async (id) => {
+		test.each(FEEDBACK_IDS)('%s', async (id) => {
 			const def = feedbacks[id]
-			const result = await Promise.resolve(def.callback(feedbackInfo(id, defaultOptions(def)), new MockContext()))
+			const result = await Promise.resolve(def.callback(feedbackEvent(id, defaultOptions(def)), new MockContext()))
 			const expectedType = def.type === 'boolean' ? 'boolean' : 'object'
 			expect(typeof result).toBe(expectedType)
 		})

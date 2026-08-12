@@ -29,6 +29,12 @@ export function makeMockSocket(): MockOBSWebSocket {
  * responses in terms of the request that produced them rather than depending on how IDs are formed.
  * A responder returning `undefined` produces a failed entry, as OBS does for unsupported requests.
  */
+/** The batch entries passed to the most recent `callBatch` call. */
+export function lastBatch(socket: MockOBSWebSocket): OBSBatchRequest[] {
+	const calls = socket.callBatch.mock.calls
+	return calls[calls.length - 1][0] as OBSBatchRequest[]
+}
+
 export function mockBatchResponses(
 	socket: MockOBSWebSocket,
 	respond: (request: OBSBatchRequest) => Record<string, unknown> | undefined,

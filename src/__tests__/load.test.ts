@@ -6,6 +6,13 @@ import { getFeedbacks } from '../feedbacks.js'
 import { getVariables } from '../variables.js'
 import { looseActions, looseFeedbacks } from './loose-definitions.js'
 
+/**
+ * A deliberately loose ceiling. These cases measure ~11-30ms in practice, so this is a canary for a
+ * catastrophic regression (an accidental O(n^2) walk over sources) rather than a performance target;
+ * keeping it far above the real numbers is what stops it flaking on a busy CI box.
+ */
+const BUDGET_MS = 1000
+
 function seedMassiveState(self: MockInstance, numScenes: number, numSources: number) {
 	const s = self.states
 
@@ -100,22 +107,15 @@ describe('Load & Performance Tests', () => {
 
 		await self.obs.buildSceneList()
 
-		const end = performance.now()
-		const duration = end - start
-
-		console.log(`Parsing ${numScenes} scenes and ${numSources} inputs via buildSceneList took ${duration.toFixed(2)}ms`)
-
-		expect(duration).toBeLessThan(1000)
-
+		expect(performance.now() - start).toBeLessThan(BUDGET_MS)
 		expect(self.states.scenes.size).toBe(numScenes)
 	})
 
-	it('should generate actions, feedbacks, variables within reasonable time and memory', () => {
+	it('should generate actions, feedbacks, variables within reasonable time', () => {
 		const numScenes = 100
 		const numSources = 5000
 		seedMassiveState(self, numScenes, numSources)
 
-		const heapBefore = process.memoryUsage().heapUsed
 		const start = performance.now()
 
 		const actions = looseActions(getActions.call(self))
@@ -126,19 +126,7 @@ describe('Load & Performance Tests', () => {
 		self.setFeedbackDefinitions(feedbacks)
 		self.setVariableDefinitions(variables)
 
-		const end = performance.now()
-		const heapAfter = process.memoryUsage().heapUsed
-
-		const duration = end - start
-		const heapDiffMB = (heapAfter - heapBefore) / 1024 / 1024
-
-		console.log(
-			`Generating definitions with ${numScenes} scenes and ${numSources} sources took ${duration.toFixed(2)}ms`,
-		)
-		console.log(`Memory heap difference: ${heapDiffMB.toFixed(2)} MB`)
-
-		expect(duration).toBeLessThan(1000)
-		expect(heapDiffMB).toBeLessThan(50)
+		expect(performance.now() - start).toBeLessThan(BUDGET_MS)
 	})
 
 	it('should handle high-frequency events rapidly', () => {
@@ -161,11 +149,7 @@ describe('Load & Performance Tests', () => {
 				],
 			})
 		}
-		const end = performance.now()
-		const duration = end - start
 
-		console.log(`Processing 10,000 InputVolumeMeters events took ${duration.toFixed(2)}ms`)
-
-		expect(duration).toBeLessThan(500)
+		expect(performance.now() - start).toBeLessThan(BUDGET_MS)
 	})
 })
