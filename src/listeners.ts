@@ -203,7 +203,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (source) {
 			source.inputVolume = utils.roundNumber(data.inputVolumeDb, 1)
 			const name = source.validName ?? data.inputUuid
-			self.setVariableValues({ [`volume_${name}`]: source.inputVolume + ' dB' })
+			self.setVariableValues({ [`volume_${name}`]: source.inputVolume })
 			self.checkFeedbacks('volume')
 			self.sendToActionRecorder({
 				actionId: 'set_volume',
@@ -228,9 +228,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (source) {
 			source.inputAudioSyncOffset = data.inputAudioSyncOffset
 			const name = source.validName ?? data.inputUuid
-			self.setVariableValues({
-				[`sync_offset_${name}`]: source.inputAudioSyncOffset + 'ms',
-			})
+			self.setVariableValues({ [`sync_offset_${name}`]: source.inputAudioSyncOffset })
 			self.sendToActionRecorder({
 				actionId: 'set_audio_offset',
 				options: { source: source.sourceName, offset: data.inputAudioSyncOffset },
@@ -319,12 +317,12 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('SceneTransitionStarted', () => {
 		self.states.transitionActive = true
-		self.setVariableValues({ transition_active: 'True' })
+		self.setVariableValues({ transition_active: self.states.transitionActive })
 		self.checkFeedbacks('transition_active')
 	})
 	obs.on('SceneTransitionEnded', () => {
 		self.states.transitionActive = false
-		self.setVariableValues({ transition_active: 'False' })
+		self.setVariableValues({ transition_active: self.states.transitionActive })
 		self.checkFeedbacks('transition_active')
 	})
 	obs.on('SceneTransitionVideoEnded', () => {})

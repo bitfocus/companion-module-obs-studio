@@ -142,6 +142,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - current_transition
 - transition_duration
 - transition_list (List of every available transition)
+- transition_active (Boolean, true while a transition is in progress)
 
 **Sources**
 

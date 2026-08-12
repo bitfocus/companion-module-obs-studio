@@ -73,4 +73,23 @@ describe('variables', () => {
 		// 'Title' (text) and 'Logo' (image) have no audio, so they're excluded.
 		expect(updates.audio_source_list).toEqual(['Game', 'Mic'])
 	})
+
+	// These variables are written both here and by event handlers in listeners.ts / api.ts. The two
+	// paths have drifted apart before (a unit suffix on one side, a number on the other), leaving the
+	// value's type dependent on which handler ran last.
+	test('values that have a second writer keep their type', () => {
+		self.states.transitionActive = true
+		self.states.sources.get('Mic')!.inputAudioSyncOffset = 250
+		self.states.sources.get('Clip')!.active = true
+
+		updateVariableValues.call(self)
+		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+		expect(updates.volume_Mic).toBe(0)
+		expect(updates.sync_offset_Mic).toBe(250)
+		expect(updates.transition_active).toBe(true)
+		expect(updates.source_active_Clip).toBe(true)
+		expect(updates.mute_Mic).toBe('Unmuted')
+		expect(updates.media_status_Clip).toBe('Playing')
+	})
 })
