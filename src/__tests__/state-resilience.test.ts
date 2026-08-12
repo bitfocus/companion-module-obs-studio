@@ -140,6 +140,74 @@ describe('input registration from GetInputList', () => {
 	})
 })
 
+describe('buildSceneTransitionList', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	const respondWith = (responses: Record<string, unknown>) => {
+		self.socket.call.mockImplementation(async (type: string) => responses[type])
+	}
+
+	test('populates state and variables from the two replies', async () => {
+		respondWith({
+			GetSceneTransitionList: { transitions: [{ transitionName: 'Fade' }, { transitionName: 'Cut' }] },
+			GetCurrentSceneTransition: { transitionName: 'Fade', transitionDuration: 300 },
+		})
+
+		await self.obs.buildSceneTransitionList()
+
+		expect(self.states.currentTransition).toBe('Fade')
+		expect(self.states.transitionDuration).toBe(300)
+		expect(self.setVariableValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				current_transition: 'Fade',
+				transition_duration: 300,
+				transition_list: ['Cut', 'Fade'],
+			}),
+		)
+	})
+
+	test('a reply with no data leaves the known transition state intact', async () => {
+		respondWith({
+			GetSceneTransitionList: { transitions: [{ transitionName: 'Fade' }] },
+			GetCurrentSceneTransition: { transitionName: 'Fade', transitionDuration: 300 },
+		})
+		await self.obs.buildSceneTransitionList()
+
+		// A later refresh where OBS answers with nothing usable must not blank what is already known.
+		respondWith({})
+		await self.obs.buildSceneTransitionList()
+
+		expect(self.states.currentTransition).toBe('Fade')
+		expect(self.states.transitionDuration).toBe(300)
+		expect(self.setVariableValues).toHaveBeenLastCalledWith(
+			expect.objectContaining({ current_transition: 'Fade', transition_duration: 300, transition_list: ['Fade'] }),
+		)
+	})
+})
+
+describe('source filter storage', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	test('a filter list reply with no filters array is stored as an empty list', async () => {
+		seedSource(self, 'Mic', 'Mic', 'wasapi_input_capture')
+		self.socket.call.mockResolvedValue({})
+
+		await self.obs.getSourceFilters('Mic')
+
+		expect(self.states.sourceFilters.get('Mic')).toEqual([])
+		// filterList iterates every stored entry, so a non-array value there would throw.
+		expect(self.obsState.filterList).toEqual([])
+	})
+})
+
 describe('listener state hygiene', () => {
 	let self: MockInstance
 

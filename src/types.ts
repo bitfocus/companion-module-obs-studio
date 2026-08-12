@@ -198,10 +198,8 @@ export type OBSBatchResponse<TResponseData = Record<string, unknown>> = {
 
 /** Response payloads for the specific batches this module issues. */
 export type OBSInputDefaultSettingsPayload = { defaultInputSettings: JsonObject }
-export type OBSSourceFilterListPayload = { filters: OBSFilter[] }
+export type OBSSourceFilterListPayload = { filters?: OBSFilter[] }
 export type OBSSceneItemListPayload = { sceneItems: OBSSceneItem[] }
-export type OBSSceneTransitionListPayload = { transitions: OBSTransition[] }
-export type OBSCurrentSceneTransitionPayload = { transitionName: string; transitionDuration: number | null }
 export type OBSMediaInputStatusPayload = {
 	mediaState?: OBSMediaStatus
 	mediaCursor?: number | null
@@ -221,7 +219,7 @@ export type OBSInputListEntry = {
  */
 export type SourceDataPayloads = {
 	active: { videoActive?: boolean; videoShowing?: boolean }
-	filters: { filters: OBSFilter[] }
+	filters: { filters?: OBSFilter[] }
 	settings: { inputKind?: string; inputSettings: JsonObject }
 	mute: { inputMuted: boolean }
 	volume: { inputVolumeDb: number }
@@ -252,11 +250,6 @@ export type SceneFilterBatchSpec = {
 
 export type ContainerItemsBatchSpec = {
 	items: { meta: { containerUuid: string }; payload: OBSSceneItemListPayload }
-}
-
-export type SceneTransitionBatchSpec = {
-	list: { meta: null; payload: OBSSceneTransitionListPayload }
-	current: { meta: null; payload: OBSCurrentSceneTransitionPayload }
 }
 
 export type MediaStatusBatchSpec = {

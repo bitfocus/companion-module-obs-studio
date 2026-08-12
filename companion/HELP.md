@@ -141,13 +141,13 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - scene_previous
 - current_transition
 - transition_duration
-- transition_list
+- transition_list (List of every available transition)
 
 **Sources**
 
-- current_media_name (Will only reflect one source if multiple media sources are playing)
-- current_media_time_elapsed (Will only reflect one source if multiple media sources are playing)
-- current_media_time_remaining (Will only reflect one source if multiple media sources are playing)
+- current_media_name (List, containing an entry for every currently playing media source)
+- current_media_time_elapsed (List, containing an entry for every currently playing media source)
+- current_media_time_remaining (List, containing an entry for every currently playing media source)
 - media_status_source_name(Current status of media sources, including: playing, paused, stopped, ended)
 - media_file_name (Current file name of media sources, not including the extension)
 - media_time_elapsed
@@ -159,6 +159,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - monitor (Current audio monitoring state of a source)
 - sync_offset (Current audio sync offset of a source)
 - balance (Current audio balance of a source)
+- audio_source_list (List of every audio source)
 
 **General**
 

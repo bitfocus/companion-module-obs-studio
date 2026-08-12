@@ -47,4 +47,30 @@ describe('variables', () => {
 		expect(updates.scene_active).toBe('Scene A')
 		expect(updates.scene_preview).toBe('Scene B')
 	})
+
+	test('transition and audio source lists are sorted arrays', () => {
+		self.states.transitions.set('Cut', {
+			transitionName: 'Cut',
+			transitionUuid: 'Cut',
+			transitionType: 'cut_transition',
+			transitionFixed: true,
+			transitionConfigurable: false,
+		})
+		// Game Capture style source: reports volume but no audio tracks, still counts as audio.
+		self.states.sources.set('Game', {
+			sourceName: 'Game',
+			sourceUuid: 'Game',
+			validName: 'Game',
+			isGroup: false,
+			inputKind: 'game_capture',
+			inputVolume: 0,
+		})
+
+		updateVariableValues.call(self)
+		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+		expect(updates.transition_list).toEqual(['Cut', 'Fade'])
+		// 'Title' (text) and 'Logo' (image) have no audio, so they're excluded.
+		expect(updates.audio_source_list).toEqual(['Game', 'Mic'])
+	})
 })

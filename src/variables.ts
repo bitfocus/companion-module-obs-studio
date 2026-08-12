@@ -4,7 +4,7 @@ import type { OBSScene, OBSSource } from './types.js'
 import * as utils from './utils.js'
 import { INPUT_KIND_FFMPEG_SOURCE, INPUT_KIND_IMAGE_SOURCE, INPUT_KIND_VLC_SOURCE } from './constants.js'
 
-type VariableValue = string | number | boolean | undefined
+type VariableValue = string | number | boolean | (string | number)[] | undefined
 
 interface VariableEntry {
 	id: string
@@ -164,6 +164,7 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 		transition_duration: { name: 'Current transition duration (ms)' },
 		transition_active: { name: 'Transition in progress' },
 		transition_list: { name: 'List of available transition types' },
+		audio_source_list: { name: 'List of audio sources' },
 		current_media_name: { name: 'Source name(s) for currently playing media source(s)' },
 		current_media_time_elapsed: { name: 'Elapsed time(s) for currently playing media source(s)' },
 		current_media_time_remaining: { name: 'Remaining time(s) for currently playing media source(s)' },
@@ -200,18 +201,19 @@ export function updateVariableValues(this: OBSInstance): void {
 		stream_service: 'None',
 		streaming: 'Off-Air',
 		kbits_per_sec: 0,
-		current_media_name: 'None',
+		current_media_name: [],
 		replay_buffer_path: 'None',
 		screenshot_saved_path: 'None',
-		current_media_time_elapsed: '00:00:00',
-		current_media_time_remaining: '00:00:00',
+		current_media_time_elapsed: [],
+		current_media_time_remaining: [],
 		scene_preview: this.states.previewScene ?? 'None',
 		scene_active: this.states.programScene ?? 'None',
 		scene_previous: this.states.previousScene ?? 'None',
 		current_transition: this.states.currentTransition ?? 'None',
 		transition_duration: this.states.transitionDuration ?? 0,
 		transition_active: this.states.transitionActive ?? false,
-		transition_list: this.obsState.transitionList?.map((item) => item.id).join(', ') ?? '',
+		transition_list: this.obsState.transitionList?.map((item) => item.id) ?? [],
+		audio_source_list: this.obsState.audioSourceList?.map((item) => item.id) ?? [],
 		profile: this.states.currentProfile ?? 'None',
 		scene_collection: this.states.currentSceneCollection ?? 'None',
 		base_resolution: this.states.resolution ?? '',
