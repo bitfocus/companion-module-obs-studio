@@ -37,6 +37,7 @@ import {
 	INPUT_KIND_PREFIX_TEXT,
 	INPUT_KIND_VLC_SOURCE,
 	POLL_INTERVALS,
+	FADE_STEP_MS,
 } from './constants.js'
 
 const logger = createModuleLogger('OBSApi')
@@ -59,6 +60,9 @@ export class OBSApi {
 	private lastMeterFeedbackCheck = 0
 	private meterFeedbackPending = false
 	private static readonly METER_FEEDBACK_THROTTLE_MS = 100
+
+	// Source names with a volume fade batch currently executing in OBS.
+	private fadesInFlight = new Set<string>()
 
 	// Subscription tracking for output-status polling (keyed by feedback ID).
 	private outputStatusSubscribers = new Set<string>()
@@ -972,6 +976,52 @@ export class OBSApi {
 		}
 	}
 
+	/**
+	 * Ramps a source to `targetVolume` over `duration`, as one batch of SetInputVolume steps separated
+	 * by Sleep entries (only honoured by serial batch execution).
+	 *
+	 * The starting volume is read from OBS rather than taken from module state: state may be stale, or
+	 * absent entirely for a source whose audio data was never fetched, and guessing there makes the
+	 * fade jump before it ramps.
+	 */
+	public async fadeSourceVolume(sourceName: string, targetVolume: number, duration: number): Promise<void> {
+		if (this.fadesInFlight.has(sourceName)) {
+			logger.debug(`Ignoring fade for ${sourceName}, one is already in progress`)
+			return
+		}
+
+		// Claimed before the first await, or two presses in the same tick both get past the check.
+		// Tracked here rather than on the source object: a scene collection change clears the source map
+		// mid-fade, which would drop the flag and let a second fade start while this batch still runs.
+		this.fadesInFlight.add(sourceName)
+		try {
+			const current = await this.sendRequest('GetInputVolume', { inputName: sourceName })
+			if (current?.inputVolumeDb === undefined) {
+				logger.debug(`Cannot fade ${sourceName}, its current volume could not be read`)
+				return
+			}
+			const currentVolume = current.inputVolumeDb
+
+			const frames = Math.max(1, Math.floor(duration / FADE_STEP_MS))
+			const volStep = (targetVolume - currentVolume) / frames
+			const fadeBatch: OBSBatchRequest[] = []
+
+			for (let i = 1; i <= frames; i++) {
+				if (i > 1) {
+					fadeBatch.push({ requestType: 'Sleep', requestData: { sleepMillis: FADE_STEP_MS } })
+				}
+				fadeBatch.push({
+					requestType: 'SetInputVolume',
+					requestData: { inputName: sourceName, inputVolumeDb: utils.roundNumber(currentVolume + volStep * i, 1) },
+				})
+			}
+
+			await this.sendBatch(fadeBatch)
+		} finally {
+			this.fadesInFlight.delete(sourceName)
+		}
+	}
+
 	private _updateSourceMute(source: OBSSource, muted: boolean): void {
 		source.inputMuted = muted
 		this.self.setVariableValues({ [`mute_${source.validName}`]: muted ? 'Muted' : 'Unmuted' })
@@ -979,7 +1029,7 @@ export class OBSApi {
 
 	private _updateSourceVolume(source: OBSSource, volumeDb: number): void {
 		source.inputVolume = utils.roundNumber(volumeDb, 1)
-		this.self.setVariableValues({ [`volume_${source.validName}`]: source.inputVolume + ' dB' })
+		this.self.setVariableValues({ [`volume_${source.validName}`]: source.inputVolume })
 	}
 
 	private _updateSourceBalance(source: OBSSource, balance: number): void {
@@ -989,7 +1039,7 @@ export class OBSApi {
 
 	private _updateSourceSyncOffset(source: OBSSource, offset: number): void {
 		source.inputAudioSyncOffset = offset
-		this.self.setVariableValues({ [`sync_offset_${source.validName}`]: offset + 'ms' })
+		this.self.setVariableValues({ [`sync_offset_${source.validName}`]: offset })
 	}
 
 	private _updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
@@ -1171,11 +1221,9 @@ export class OBSApi {
 			})
 		}
 
-		let status = OBSMediaStatus.Stopped
-		if (mediaState === OBSMediaStatus.Playing) status = OBSMediaStatus.Playing
-		else if (mediaState === OBSMediaStatus.Paused) status = OBSMediaStatus.Paused
-
-		allValues[`media_status_${validName}`] = utils.getOBSMediaStatusLabel(status)
+		// Reported as-is, matching the state this poll just stored: collapsing ended/buffering/error into
+		// stopped here made the variable disagree with the MediaInputPlaybackEnded event's own write.
+		allValues[`media_status_${validName}`] = utils.getOBSMediaStatusLabel(mediaState)
 		allValues[`media_time_elapsed_${validName}`] = source.timeElapsed
 		allValues[`media_time_remaining_${validName}`] = source.timeRemaining
 	}

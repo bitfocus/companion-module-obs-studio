@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { CompanionActionEvent, CompanionOptionValues } from '@companion-module/base'
 import { getActions } from '../actions.js'
 import { initOBSListeners } from '../listeners.js'
@@ -39,6 +39,8 @@ describe('fadeVolume batch', () => {
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedFullState(self)
+		// The fade reads the starting volume from OBS rather than from module state.
+		self.socket.call.mockResolvedValue({ inputVolumeDb: 0 })
 		actions = looseActions(getActions.call(self))
 	})
 
@@ -78,6 +80,60 @@ describe('fadeVolume batch', () => {
 		const steps = lastBatch(self).filter((r) => r.requestType === 'SetInputVolume')
 		expect(steps).toHaveLength(1)
 		expect(steps[0].requestData).toEqual({ inputName: 'Mic', inputVolumeDb: -10 })
+	})
+
+	test('fades from the volume OBS reports, not the cached one', async () => {
+		self.states.sources.get('Mic')!.inputVolume = -60
+		self.socket.call.mockResolvedValue({ inputVolumeDb: 0 })
+
+		await actions['fadeVolume'].callback(
+			event('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
+			new MockContext(),
+		)
+
+		const steps = lastBatch(self).filter((r) => r.requestType === 'SetInputVolume')
+		expect(steps[0].requestData).toEqual({ inputName: 'Mic', inputVolumeDb: -2.5 })
+	})
+
+	test('does nothing when the current volume cannot be read', async () => {
+		self.socket.call.mockResolvedValue({})
+
+		await actions['fadeVolume'].callback(
+			event('fadeVolume', { source: 'Ghost', volume: -10, duration: 200 }),
+			new MockContext(),
+		)
+
+		expect(self.socket.callBatch).not.toHaveBeenCalled()
+	})
+
+	test('ignores a second fade for the same source while one is in flight', async () => {
+		let releaseBatch: (value: unknown) => void = () => {}
+		self.socket.callBatch.mockImplementation(async () => new Promise((resolve) => (releaseBatch = resolve)))
+
+		// Fired in the same tick: the guard must be claimed before the first await, not after it.
+		const first = actions['fadeVolume'].callback(
+			event('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
+			new MockContext(),
+		)
+		const second = actions['fadeVolume'].callback(
+			event('fadeVolume', { source: 'Mic', volume: 0, duration: 200 }),
+			new MockContext(),
+		)
+
+		await vi.waitFor(() => expect(self.socket.callBatch).toHaveBeenCalledTimes(1))
+		await second
+		expect(self.socket.callBatch).toHaveBeenCalledTimes(1)
+
+		releaseBatch([])
+		await first
+
+		// Once the batch finishes the source can be faded again.
+		self.socket.callBatch.mockResolvedValue([])
+		await actions['fadeVolume'].callback(
+			event('fadeVolume', { source: 'Mic', volume: 0, duration: 200 }),
+			new MockContext(),
+		)
+		expect(self.socket.callBatch).toHaveBeenCalledTimes(2)
 	})
 })
 

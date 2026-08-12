@@ -1,8 +1,7 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { clamp } from '../utils.js'
-import * as utils from '../utils.js'
-import { ObsAudioMonitorType, type OBSBatchRequest } from '../types.js'
+import { ObsAudioMonitorType } from '../types.js'
 import {
 	VOLUME_MIN_DB,
 	VOLUME_MAX_DB,
@@ -10,7 +9,6 @@ import {
 	BALANCE_MAX,
 	SYNC_OFFSET_MIN,
 	SYNC_OFFSET_MAX,
-	FADE_STEP_MS,
 } from '../constants.js'
 
 export type AudioActionSchemas = {
@@ -223,43 +221,12 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 					id: 'duration',
 					default: 1000,
 					min: 10,
-					max: 60000,
+					max: 5000,
 					clampValues: true,
 				},
 			],
 			callback: async (action) => {
-				const sourceName = action.options.source
-				const targetVolume = action.options.volume
-				const duration = action.options.duration
-				const source = self.obsState.findSourceByName(sourceName)
-
-				if (source && !source.audioFadeActive) {
-					const currentVolume = source.inputVolume ?? -100
-					const frames = Math.max(1, Math.floor(duration / FADE_STEP_MS))
-					const volStep = (targetVolume - currentVolume) / frames
-					const fadeBatch: OBSBatchRequest[] = []
-
-					// Sleep requests provide the delay between steps; a `sleep` field on a request is not part of the protocol.
-					for (let i = 1; i <= frames; i++) {
-						if (i > 1) {
-							fadeBatch.push({ requestType: 'Sleep', requestData: { sleepMillis: FADE_STEP_MS } })
-						}
-						fadeBatch.push({
-							requestType: 'SetInputVolume',
-							requestData: {
-								inputName: sourceName,
-								inputVolumeDb: utils.roundNumber(currentVolume + volStep * i, 1),
-							},
-						})
-					}
-
-					source.audioFadeActive = true
-					try {
-						await self.obs.sendBatch(fadeBatch)
-					} finally {
-						source.audioFadeActive = false
-					}
-				}
+				await self.obs.fadeSourceVolume(action.options.source, action.options.volume, action.options.duration)
 			},
 		},
 		set_audio_offset: {
