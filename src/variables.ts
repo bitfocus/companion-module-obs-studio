@@ -94,6 +94,11 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 				name: `${sourceName} - Audio balance`,
 				value: source.inputAudioBalance !== undefined ? source.inputAudioBalance : '',
 			},
+			{
+				id: `tracks_${sourceName}`,
+				name: `${sourceName} - Active audio mixer tracks`,
+				value: utils.activeAudioTracks(source.inputAudioTracks),
+			},
 		)
 	}
 
@@ -169,6 +174,9 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 		current_media_time_elapsed: { name: 'Elapsed time(s) for currently playing media source(s)' },
 		current_media_time_remaining: { name: 'Remaining time(s) for currently playing media source(s)' },
 		replay_buffer_path: { name: 'File path of the last replay buffer saved' },
+		replay_buffer_active: { name: 'Replay buffer is active' },
+		virtualcam_active: { name: 'Virtual camera is active' },
+		studio_mode: { name: 'Studio mode is active' },
 		screenshot_saved_path: { name: 'File path of the last saved screenshot' },
 		custom_command_type: { name: 'Latest Custom Command type sent to obs-websocket' },
 		custom_command_request: { name: 'Latest Custom Command request data sent to obs-websocket' },
@@ -203,6 +211,9 @@ export function updateVariableValues(this: OBSInstance): void {
 		kbits_per_sec: 0,
 		current_media_name: [],
 		replay_buffer_path: 'None',
+		replay_buffer_active: this.states.replayBuffer,
+		virtualcam_active: this.states.outputs.get('virtualcam_output')?.outputActive ?? false,
+		studio_mode: this.states.studioMode,
 		screenshot_saved_path: 'None',
 		current_media_time_elapsed: [],
 		current_media_time_remaining: [],

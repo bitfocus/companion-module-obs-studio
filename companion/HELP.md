@@ -133,6 +133,8 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - output_total_frames
 - average_frame_time
 - replay_buffer_path
+- replay_buffer_active
+- virtualcam_active
 
 **Switching & Transitions**
 
@@ -160,12 +162,14 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - monitor (Current audio monitoring state of a source)
 - sync_offset (Current audio sync offset of a source)
 - balance (Current audio balance of a source)
+- tracks (List of the audio mixer track numbers a source is routed to, e.g. [1, 3])
 - audio_source_list (List of every audio source)
 
 **General**
 
 - profile
 - scene_collection
+- studio_mode (Boolean, true while studio mode is enabled)
 - fps
 - cpu_usage
 - memory_usage

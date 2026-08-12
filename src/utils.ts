@@ -218,3 +218,13 @@ export function getMonitorTypeLabel(type: ObsAudioMonitorType | string | undefin
 			return 'Off'
 	}
 }
+
+/** Converts a GetInputAudioTracks-style `{"1": true, "2": false, ...}` map to the sorted list of enabled track numbers. */
+export function activeAudioTracks(tracks: Record<string, unknown> | undefined): number[] {
+	if (!tracks) return []
+	return Object.entries(tracks)
+		.filter(([, enabled]) => enabled === true)
+		.map(([track]) => Number(track))
+		.filter((track) => Number.isInteger(track))
+		.sort((a, b) => a - b)
+}

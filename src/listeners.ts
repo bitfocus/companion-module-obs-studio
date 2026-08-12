@@ -239,6 +239,8 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			source.inputAudioTracks = data.inputAudioTracks
+			const name = source.validName ?? data.inputUuid
+			self.setVariableValues({ [`tracks_${name}`]: utils.activeAudioTracks(data.inputAudioTracks) })
 		}
 	})
 	obs.on('InputAudioMonitorTypeChanged', (data) => {
@@ -514,6 +516,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('ReplayBufferStateChanged', (data) => {
 		self.states.replayBuffer = data.outputActive
 		self.checkFeedbacks('replayBufferActive')
+		self.setVariableValues({ replay_buffer_active: self.states.replayBuffer })
 		self.sendToActionRecorder({
 			actionId: data.outputActive ? 'start_replay_buffer' : 'stop_replay_buffer',
 			options: {},
@@ -532,6 +535,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			virtualCam.outputActive = data.outputActive
 			self.checkFeedbacks('output_active')
 		}
+		self.setVariableValues({ virtualcam_active: data.outputActive })
 		self.sendToActionRecorder({
 			actionId: data.outputActive ? 'start_output' : 'stop_output',
 			options: { output: 'virtualcam_output' },
@@ -606,6 +610,7 @@ function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		void (async () => {
 			self.states.studioMode = data.studioModeEnabled ?? false
 			self.checkFeedbacks('studioMode')
+			self.setVariableValues({ studio_mode: self.states.studioMode })
 
 			if (self.states.studioMode) {
 				const preview = await self.obs.sendRequest('GetCurrentPreviewScene')

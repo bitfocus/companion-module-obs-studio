@@ -69,6 +69,23 @@ describe('output state listeners', () => {
 		expect(self.states.streamReconnecting).toBe(false)
 		expect(self.setVariableValues).toHaveBeenCalledWith({ streaming: 'Live' })
 	})
+
+	test('ReplayBufferStateChanged updates state and the replay_buffer_active variable', () => {
+		self.socket.emit('ReplayBufferStateChanged', { outputActive: true, outputState: 'OBS_WEBSOCKET_OUTPUT_STARTED' })
+
+		expect(self.states.replayBuffer).toBe(true)
+		expect(self.setVariableValues).toHaveBeenCalledWith({ replay_buffer_active: true })
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('replayBufferActive')
+	})
+
+	test('VirtualcamStateChanged updates the virtualcam_active variable', () => {
+		self.states.outputs.set('virtualcam_output', { outputName: 'virtualcam_output', outputActive: false })
+
+		self.socket.emit('VirtualcamStateChanged', { outputActive: true, outputState: 'OBS_WEBSOCKET_OUTPUT_STARTED' })
+
+		expect(self.states.outputs.get('virtualcam_output')?.outputActive).toBe(true)
+		expect(self.setVariableValues).toHaveBeenCalledWith({ virtualcam_active: true })
+	})
 })
 
 describe('input / filter / ui listeners', () => {
@@ -94,7 +111,7 @@ describe('input / filter / ui listeners', () => {
 		expect(self.states.sourceFilters.get('Mic')?.[0].filterSettings).toEqual({ db: 10 })
 	})
 
-	test('InputAudioTracksChanged updates the cached audio tracks', () => {
+	test('InputAudioTracksChanged updates the cached audio tracks and the tracks_ variable', () => {
 		seedSource(self, 'Mic')
 
 		self.socket.emit('InputAudioTracksChanged', {
@@ -104,6 +121,17 @@ describe('input / filter / ui listeners', () => {
 		})
 
 		expect(self.states.sources.get('Mic')?.inputAudioTracks).toEqual({ '1': false, '2': true })
+		expect(self.setVariableValues).toHaveBeenCalledWith({ tracks_Mic: [2] })
+	})
+
+	test('StudioModeStateChanged sets the studio_mode variable', async () => {
+		self.socket.call.mockResolvedValue({ sceneName: 'Scene A', sceneUuid: 'scene-a' })
+
+		self.socket.emit('StudioModeStateChanged', { studioModeEnabled: true })
+		await new Promise((resolve) => setImmediate(resolve))
+
+		expect(self.states.studioMode).toBe(true)
+		expect(self.setVariableValues).toHaveBeenCalledWith({ studio_mode: true })
 	})
 
 	test('ScreenshotSaved sets the screenshot path variable', () => {

@@ -92,4 +92,33 @@ describe('variables', () => {
 		expect(updates.mute_Mic).toBe('Unmuted')
 		expect(updates.media_status_Clip).toBe('Playing')
 	})
+
+	test('studio_mode, virtualcam_active and replay_buffer_active reflect state', () => {
+		self.states.studioMode = true
+		self.states.replayBuffer = true
+		self.states.outputs.set('virtualcam_output', { outputName: 'virtualcam_output', outputActive: true })
+
+		updateVariableValues.call(self)
+		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+		expect(updates.studio_mode).toBe(true)
+		expect(updates.replay_buffer_active).toBe(true)
+		expect(updates.virtualcam_active).toBe(true)
+	})
+
+	test('virtualcam_active defaults to false before the virtualcam output is known', () => {
+		updateVariableValues.call(self)
+		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+		expect(updates.virtualcam_active).toBe(false)
+	})
+
+	test('tracks_<source> lists the active audio mixer tracks as numbers', () => {
+		self.states.sources.get('Mic')!.inputAudioTracks = { '1': false, '2': true, '3': true }
+
+		updateVariableValues.call(self)
+		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+		expect(updates.tracks_Mic).toEqual([2, 3])
+	})
 })
