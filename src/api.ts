@@ -1321,6 +1321,36 @@ export class OBSApi {
 		}
 	}
 
+	public async setAllSourcesVisibility(
+		visible: string,
+		options: { useCurrentScene: boolean; scene: string; except: string[] },
+	): Promise<void> {
+		const scene = options.useCurrentScene
+			? this.self.states.scenes.get(this.self.states.programSceneUuid)
+			: this.self.obsState.findSceneByName(options.scene)
+		if (!scene) return
+
+		const items = this.self.obsState.getContainerItems(scene.sceneUuid)
+		if (!items || items.length === 0) return
+
+		const except = new Set(Array.isArray(options.except) ? options.except : [])
+		const nonExcepted = items.filter((item) => !except.has(item.sourceName))
+		const excepted = items.filter((item) => except.has(item.sourceName))
+
+		const toInstances = (list: typeof items) =>
+			list.map((item) => ({ containerUuid: scene.sceneUuid, sceneItemId: item.sceneItemId }))
+
+		const requests = this.buildSourceVisibilityRequests(toInstances(nonExcepted), visible)
+		if (visible !== 'toggle') {
+			const oppositeVisible = visible === 'true' ? 'false' : 'true'
+			requests.push(...this.buildSourceVisibilityRequests(toInstances(excepted), oppositeVisible))
+		}
+
+		if (requests.length > 0) {
+			await this.sendBatch(requests)
+		}
+	}
+
 	private findSourceInstances(
 		sourceUuid: string,
 		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },

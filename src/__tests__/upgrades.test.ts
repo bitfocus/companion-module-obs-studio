@@ -100,3 +100,58 @@ describe('v4_0_0 password migration', () => {
 		expect(result.updatedConfig).toBeNull()
 	})
 })
+
+describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
+	test('migrates an "All Sources" toggle_scene_item to toggle_all_scene_items', () => {
+		const action = {
+			id: 'a1',
+			actionId: 'toggle_scene_item',
+			options: { all: true, source: 'allSources', scene: 'Scene A', visible: 'false' },
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions).toHaveLength(1)
+		const updated = result.updatedActions[0]
+		expect(updated.actionId).toBe('toggle_all_scene_items')
+		expect(updated.options.all).toBeUndefined()
+		expect(updated.options.source).toBeUndefined()
+		expect(updated.options.anyScene).toBeUndefined()
+		expect(updated.options.useCurrentScene).toBe(false)
+		expect(updated.options.scene).toBe('Scene A')
+		expect(updated.options.except).toEqual([])
+	})
+
+	test('maps "Current Scene" to useCurrentScene', () => {
+		const action = {
+			id: 'a1',
+			actionId: 'toggle_scene_item',
+			options: { all: true, scene: 'Current Scene', visible: 'true' },
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions[0].options.useCurrentScene).toBe(true)
+	})
+
+	test('maps "Preview Scene" to the preview scene variable', () => {
+		const action = {
+			id: 'a1',
+			actionId: 'toggle_scene_item',
+			options: { all: true, scene: 'Preview Scene', visible: 'true' },
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions[0].options.useCurrentScene).toBe(false)
+		expect(result.updatedActions[0].options.scene).toBe('$(obs:scene_preview)')
+	})
+
+	test('leaves a single-source toggle_scene_item untouched', () => {
+		const action = {
+			id: 'a1',
+			actionId: 'toggle_scene_item',
+			options: { all: false, source: 'Camera', scene: 'Scene A', visible: 'toggle' },
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions).toHaveLength(0)
+	})
+})

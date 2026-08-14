@@ -35,7 +35,8 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 
 **Sources**
 
-- Set Source Visibility _(Individual sources, or All Sources within a scene)_
+- Set Source Visibility _(Individual source)_
+- Set Visibility of All Sources in Scene _(with an optional except list, set to the opposite visibility)_
 - Set Filter Visibility
 - Set Filter Settings
 - Set Source Transform (Position / Scale / Rotation)

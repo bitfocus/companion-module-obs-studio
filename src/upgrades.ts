@@ -335,6 +335,24 @@ export default [
 					setOpt(action.options, 'useProgramScene', true)
 					actionChanged = true
 				}
+			} else if (action.actionId === 'toggle_scene_item' && getOpt(action.options, 'all') === true) {
+				// The "All Sources" flag was dropped when the action was rewritten for
+				// anyScene/useCurrentScene; move those configs onto the new dedicated action.
+				action.actionId = 'toggle_all_scene_items'
+				const scene = getOpt(action.options, 'scene')
+				if (scene === 'Current Scene') {
+					setOpt(action.options, 'useCurrentScene', true)
+				} else if (scene === 'Preview Scene') {
+					setOpt(action.options, 'useCurrentScene', false)
+					setOpt(action.options, 'scene', '$(obs:scene_preview)')
+				} else {
+					setOpt(action.options, 'useCurrentScene', false)
+				}
+				setOpt(action.options, 'except', [])
+				delete action.options.all
+				delete action.options.source
+				delete action.options.anyScene
+				actionChanged = true
 			}
 
 			if (actionChanged) {

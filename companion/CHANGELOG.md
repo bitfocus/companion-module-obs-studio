@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Streaming - Reconnecting" feedback that activates while a stream is reconnecting
 - Streaming status variable now reports "Reconnecting" during stream reconnection
 - `screenshot_saved_path` variable containing the path of the most recently saved screenshot
+- "Source - Set Visibility of All Sources in Scene" action, with an "Except" option to exclude
+  specific sources (which are set to the opposite visibility)
 
 ### Changed
 

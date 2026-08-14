@@ -76,6 +76,14 @@ export type SourceActionSchemas = {
 			visible: 'true' | 'false' | 'toggle'
 		}
 	}
+	toggle_all_scene_items: {
+		options: {
+			useCurrentScene: boolean
+			scene: string
+			except: string[]
+			visible: 'true' | 'false' | 'toggle'
+		}
+	}
 }
 
 export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<SourceActionSchemas> {
@@ -970,6 +978,55 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				return {
 					visible: item.sceneItemEnabled ? 'true' : 'false',
 				}
+			},
+		},
+
+		toggle_all_scene_items: {
+			name: 'Source - Set Visibility of All Sources in Scene',
+			description:
+				'Shows, hides, or toggles the visibility of every source in a scene, optionally excepting some sources. Excepted sources are set to the opposite visibility (ignored when Visibility is Toggle).',
+			options: [
+				{
+					type: 'checkbox',
+					label: 'Current Scene',
+					id: 'useCurrentScene',
+					default: true,
+				},
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Scene',
+					id: 'scene',
+					default: self.obsState.sceneListDefault,
+					choices: self.obsState.sceneChoices,
+					isVisibleExpression: '!$(options:useCurrentScene)',
+				},
+				{
+					type: 'multidropdown',
+					label: 'Except',
+					id: 'except',
+					default: [],
+					choices: self.obsState.sourceChoices,
+				},
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Visibility',
+					id: 'visible',
+					default: 'toggle',
+					choices: [
+						{ id: 'true', label: 'Show' },
+						{ id: 'false', label: 'Hide' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+				},
+			],
+			callback: async (action) => {
+				await self.obs.setAllSourcesVisibility(action.options.visible, {
+					useCurrentScene: action.options.useCurrentScene,
+					scene: action.options.scene,
+					except: action.options.except,
+				})
 			},
 		},
 	}
