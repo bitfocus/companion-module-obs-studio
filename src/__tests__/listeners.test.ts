@@ -122,6 +122,27 @@ describe('input / filter / ui listeners', () => {
 
 		expect(self.states.sources.get('Mic')?.inputAudioTracks).toEqual({ '1': false, '2': true })
 		expect(self.setVariableValues).toHaveBeenCalledWith({ tracks_Mic: [2] })
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('audio_track')
+	})
+
+	test('InputAudioTracksChanged records the changed tracks per direction', () => {
+		seedSource(self, 'Mic')
+		self.states.sources.get('Mic')!.inputAudioTracks = { '1': true, '2': false, '3': true }
+
+		self.socket.emit('InputAudioTracksChanged', {
+			inputName: 'Mic',
+			inputUuid: 'Mic',
+			inputAudioTracks: { '1': false, '2': true, '3': true },
+		})
+
+		expect(self.sendToActionRecorder).toHaveBeenCalledWith({
+			actionId: 'set_audio_tracks',
+			options: { source: 'Mic', tracks: ['2'], value: 'true' },
+		})
+		expect(self.sendToActionRecorder).toHaveBeenCalledWith({
+			actionId: 'set_audio_tracks',
+			options: { source: 'Mic', tracks: ['1'], value: 'false' },
+		})
 	})
 
 	test('StudioModeStateChanged sets the studio_mode variable', async () => {

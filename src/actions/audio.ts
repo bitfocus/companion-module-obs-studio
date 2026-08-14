@@ -23,6 +23,7 @@ export type AudioActionSchemas = {
 	set_audio_balance: { options: { source: string; balance: number } }
 	adjust_audio_balance: { options: { source: string; amount: number } }
 	set_audio_monitor: { options: { source: string; monitor: ObsAudioMonitorType } }
+	set_audio_tracks: { options: { source: string; tracks: string[]; value: 'true' | 'false' | 'toggle' } }
 }
 
 export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<AudioActionSchemas> {
@@ -416,6 +417,66 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 				return {
 					monitor: source.monitorType,
 				}
+			},
+		},
+
+		set_audio_tracks: {
+			name: 'Audio - Set Audio Tracks',
+			description: 'Sets or toggles the mixer output tracks of a specific audio source',
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'multidropdown',
+					label: 'Tracks',
+					id: 'tracks',
+					tooltip: 'Leave empty to affect all tracks',
+					default: [],
+					choices: [
+						{ id: '1', label: 'Track 1' },
+						{ id: '2', label: 'Track 2' },
+						{ id: '3', label: 'Track 3' },
+						{ id: '4', label: 'Track 4' },
+						{ id: '5', label: 'Track 5' },
+						{ id: '6', label: 'Track 6' },
+					],
+				},
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Enabled',
+					id: 'value',
+					default: 'toggle',
+					choices: [
+						{ id: 'true', label: 'True' },
+						{ id: 'false', label: 'False' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+				},
+			],
+			callback: async (action) => {
+				const currentTracks = self.obsState.findSourceByName(action.options.source)?.inputAudioTracks
+				if (!currentTracks) return
+
+				const selected = action.options.tracks.length > 0 ? action.options.tracks : Object.keys(currentTracks)
+				const inputAudioTracks: Record<string, boolean> = {}
+				for (const track of selected) {
+					if (!(track in currentTracks)) continue
+					inputAudioTracks[track] =
+						action.options.value === 'toggle' ? currentTracks[track] !== true : action.options.value === 'true'
+				}
+				if (Object.keys(inputAudioTracks).length === 0) return
+
+				await self.obs.sendRequest('SetInputAudioTracks', {
+					inputName: action.options.source,
+					inputAudioTracks: inputAudioTracks,
+				})
 			},
 		},
 	}

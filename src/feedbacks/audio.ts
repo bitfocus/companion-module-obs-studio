@@ -6,6 +6,7 @@ import { Color } from '../utils.js'
 export type AudioFeedbackSchemas = {
 	audio_muted: { type: 'boolean'; options: { source: string } }
 	audio_monitor_type: { type: 'boolean'; options: { source: string; monitor: ObsAudioMonitorType } }
+	audio_track: { type: 'boolean'; options: { source: string; track: string } }
 	volume: { type: 'boolean'; options: { source: string; volume: number } }
 	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number } }
 	audioMeter: { type: 'advanced'; options: { source: string; threshold: number } }
@@ -71,6 +72,45 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				const sourceName = feedback.options.source
 				const monitorType = feedback.options.monitor
 				return self.obsState.findSourceByName(sourceName)?.monitorType === monitorType
+			},
+		},
+
+		audio_track: {
+			type: 'boolean',
+			name: 'Audio - Track Enabled',
+			description: 'If a mixer output track of an audio source is enabled, change the style of the button',
+			defaultStyle: {
+				color: Color.White,
+				bgcolor: Color.Red,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					allowCustom: true,
+					label: 'Source',
+					id: 'source',
+					default: self.obsState.audioSourceListDefault,
+					choices: self.obsState.audioSourceList,
+				},
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Track',
+					id: 'track',
+					default: '1',
+					choices: [
+						{ id: '1', label: 'Track 1' },
+						{ id: '2', label: 'Track 2' },
+						{ id: '3', label: 'Track 3' },
+						{ id: '4', label: 'Track 4' },
+						{ id: '5', label: 'Track 5' },
+						{ id: '6', label: 'Track 6' },
+					],
+				},
+			],
+			callback: (feedback) => {
+				const source = self.obsState.findSourceByName(feedback.options.source)
+				return source?.inputAudioTracks?.[feedback.options.track] === true
 			},
 		},
 

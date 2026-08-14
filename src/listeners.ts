@@ -238,9 +238,24 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputAudioTracksChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
+			const previousTracks = source.inputAudioTracks
 			source.inputAudioTracks = data.inputAudioTracks
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`tracks_${name}`]: utils.activeAudioTracks(data.inputAudioTracks) })
+			self.checkFeedbacks('audio_track')
+
+			// A track change can enable some tracks and disable others, which needs one recorded action per direction
+			for (const value of ['true', 'false'] as const) {
+				const tracks = Object.entries(data.inputAudioTracks)
+					.filter(([track, enabled]) => enabled === (value === 'true') && previousTracks?.[track] !== enabled)
+					.map(([track]) => track)
+				if (tracks.length > 0) {
+					self.sendToActionRecorder({
+						actionId: 'set_audio_tracks',
+						options: { source: source.sourceName, tracks, value },
+					})
+				}
+			}
 		}
 	})
 	obs.on('InputAudioMonitorTypeChanged', (data) => {

@@ -1,0 +1,37 @@
+import { beforeEach, describe, expect, test } from 'vitest'
+import { getAudioFeedbacks } from '../../feedbacks/audio.js'
+import { makeMockInstance, seedSource, type MockInstance } from '../mock/instance.js'
+import { feedbackEvent } from '../mock/events.js'
+import { MockContext } from '../mock-context.js'
+import { looseFeedbacks } from '../loose-definitions.js'
+
+describe('audio_track', () => {
+	let self: MockInstance
+
+	const check = (options: { source: string; track: string }): unknown => {
+		const feedbacks = looseFeedbacks(getAudioFeedbacks(self))
+		return feedbacks['audio_track'].callback(feedbackEvent('audio_track', options), new MockContext())
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedSource(self, 'Mic')
+		self.states.sources.get('Mic')!.inputAudioTracks = { '1': true, '2': false }
+	})
+
+	test('is true for an enabled track', () => {
+		expect(check({ source: 'Mic', track: '1' })).toBe(true)
+	})
+
+	test('is false for a disabled track', () => {
+		expect(check({ source: 'Mic', track: '2' })).toBe(false)
+	})
+
+	test('is false for a track the source does not report', () => {
+		expect(check({ source: 'Mic', track: '4' })).toBe(false)
+	})
+
+	test('is false for an unknown source', () => {
+		expect(check({ source: 'Nope', track: '1' })).toBe(false)
+	})
+})
