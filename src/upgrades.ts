@@ -3,8 +3,9 @@ import {
 	CompanionUpgradeContext,
 	CompanionStaticUpgradeResult,
 	CreateConvertToBooleanFeedbackUpgradeScript,
+	CompanionMigrationFeedback,
 } from '@companion-module/base'
-import { LegacyModuleConfig, ModuleConfig, ModuleSecrets } from './types.js'
+import { LegacyModuleConfig, ModuleConfig, ModuleSecrets, ObsAudioMonitorType } from './types.js'
 
 function getOpt(options: Record<string, unknown>, key: string): unknown {
 	const opt = options[key]
@@ -18,6 +19,46 @@ function setOpt(options: Record<string, unknown>, key: string, value: unknown): 
 	} else {
 		options[key] = value
 	}
+}
+
+/**
+ * The monitor option went from OBS's three-state monitor type to a plain enabled/disabled value, matching the
+ * OBS 32.1+ mixer where monitoring is a single toggle. Both monitoring types become enabled; anything that
+ * isn't one of the three known types (an expression, or an already-converted value) is left alone.
+ */
+function convertMonitorOption(options: Record<string, unknown>): boolean {
+	const monitor = getOpt(options, 'monitor')
+	if (monitor === ObsAudioMonitorType.None) {
+		setOpt(options, 'monitor', 'false')
+		return true
+	}
+	if (monitor === ObsAudioMonitorType.MonitorOnly || monitor === ObsAudioMonitorType.MonitorAndOutput) {
+		setOpt(options, 'monitor', 'true')
+		return true
+	}
+	return false
+}
+
+/**
+ * The feedback lost its monitor option entirely and is now simply true while monitoring is enabled, so a
+ * feedback that matched "Off" has to be inverted to keep meaning the same thing.
+ */
+function convertMonitorFeedback(feedback: CompanionMigrationFeedback): boolean {
+	const monitor = getOpt(feedback.options, 'monitor')
+	if (
+		monitor !== ObsAudioMonitorType.None &&
+		monitor !== ObsAudioMonitorType.MonitorOnly &&
+		monitor !== ObsAudioMonitorType.MonitorAndOutput
+	) {
+		return false
+	}
+
+	// An inversion driven by an expression can't be flipped statically, so it is left as the user set it.
+	if (monitor === ObsAudioMonitorType.None && feedback.isInverted?.isExpression !== true) {
+		feedback.isInverted = { isExpression: false, value: feedback.isInverted?.value !== true }
+	}
+	delete feedback.options.monitor
+	return true
 }
 
 export default [
@@ -353,6 +394,8 @@ export default [
 				delete action.options.source
 				delete action.options.anyScene
 				actionChanged = true
+			} else if (action.actionId === 'set_audio_monitor') {
+				actionChanged = convertMonitorOption(action.options)
 			}
 
 			if (actionChanged) {
@@ -378,6 +421,8 @@ export default [
 				delete feedback.options.custom
 				delete feedback.options.customSceneName
 				feedbackChanged = true
+			} else if (feedback.feedbackId === 'audio_monitor_type') {
+				feedbackChanged = convertMonitorFeedback(feedback)
 			}
 			if (feedbackChanged) {
 				changes.updatedFeedbacks.push(feedback)

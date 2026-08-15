@@ -1,6 +1,6 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { clamp } from '../utils.js'
+import { clamp, isMonitoringEnabled } from '../utils.js'
 import { ObsAudioMonitorType } from '../types.js'
 import {
 	VOLUME_MIN_DB,
@@ -22,7 +22,7 @@ export type AudioActionSchemas = {
 	adjust_audio_offset: { options: { source: string; amount: number } }
 	set_audio_balance: { options: { source: string; balance: number } }
 	adjust_audio_balance: { options: { source: string; amount: number } }
-	set_audio_monitor: { options: { source: string; monitor: ObsAudioMonitorType } }
+	set_audio_monitor: { options: { source: string; monitor: 'true' | 'false' | 'toggle' } }
 	set_audio_tracks: { options: { source: string; tracks: string[]; value: 'true' | 'false' | 'toggle' } }
 }
 
@@ -379,8 +379,8 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 		},
 
 		set_audio_monitor: {
-			name: 'Audio - Set Audio Monitor Type',
-			description: 'Sets the audio monitoring type for a specific source',
+			name: 'Audio - Set Audio Monitoring',
+			description: 'Enables, disables, or toggles audio monitoring for a specific source',
 			options: [
 				{
 					type: 'dropdown',
@@ -393,21 +393,25 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
-					label: 'Monitor',
+					label: 'Monitoring',
 					id: 'monitor',
-					default: ObsAudioMonitorType.None,
+					default: 'toggle',
 					choices: [
-						{ id: ObsAudioMonitorType.None, label: 'Off' },
-						{ id: ObsAudioMonitorType.MonitorOnly, label: 'Monitor Only' },
-						{ id: ObsAudioMonitorType.MonitorAndOutput, label: 'Monitor / Output' },
+						{ id: 'true', label: 'Enabled' },
+						{ id: 'false', label: 'Disabled' },
+						{ id: 'toggle', label: 'Toggle' },
 					],
 				},
 			],
 			callback: async (action) => {
-				const monitorType = action.options.monitor
+				const enabled =
+					action.options.monitor === 'toggle'
+						? !isMonitoringEnabled(self.obsState.findSourceByName(action.options.source)?.monitorType)
+						: action.options.monitor === 'true'
+
 				await self.obs.sendRequest('SetInputAudioMonitorType', {
 					inputName: action.options.source,
-					monitorType: monitorType,
+					monitorType: enabled ? ObsAudioMonitorType.MonitorAndOutput : ObsAudioMonitorType.None,
 				})
 			},
 			learn: (action) => {
@@ -415,7 +419,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 				const source = self.obsState.findSourceByName(sourceName)
 				if (!source) return undefined
 				return {
-					monitor: source.monitorType,
+					monitor: isMonitoringEnabled(source.monitorType) ? 'true' : 'false',
 				}
 			},
 		},

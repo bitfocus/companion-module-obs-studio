@@ -263,11 +263,15 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (source) {
 			source.monitorType = data.monitorType as ObsAudioMonitorType
 			const name = source.validName ?? data.inputUuid
-			self.setVariableValues({ [`monitor_${name}`]: utils.getMonitorTypeLabel(data.monitorType) })
+			const monitoring = utils.isMonitoringEnabled(data.monitorType)
+			self.setVariableValues({
+				[`monitor_${name}`]: utils.getMonitorTypeLabel(data.monitorType),
+				[`monitor_active_${name}`]: monitoring,
+			})
 			self.checkFeedbacks('audio_monitor_type')
 			self.sendToActionRecorder({
 				actionId: 'set_audio_monitor',
-				options: { source: source.sourceName, monitor: data.monitorType },
+				options: { source: source.sourceName, monitor: monitoring ? 'true' : 'false' },
 			})
 		}
 	})

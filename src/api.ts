@@ -1044,7 +1044,10 @@ export class OBSApi {
 
 	private _updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
 		source.monitorType = monitorType
-		this.self.setVariableValues({ [`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType) })
+		this.self.setVariableValues({
+			[`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType),
+			[`monitor_active_${source.validName}`]: utils.isMonitoringEnabled(monitorType),
+		})
 	}
 
 	// Refresh container item list and return contained source UUIDs.

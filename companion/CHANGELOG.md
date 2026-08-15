@@ -19,11 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `screenshot_saved_path` variable containing the path of the most recently saved screenshot
 - "Source - Set Visibility of All Sources in Scene" action, with an "Except" option to exclude
   specific sources (which are set to the opposite visibility)
+- `monitor_active` variable for each audio source, reporting whether monitoring is enabled
 
 ### Changed
 
 - Rewritten in TypeScript to improve code quality and stability
 - Batch more communication with obs-websocket wherever possible to improve performance
+- "Audio - Set Audio Monitoring" (previously "Set Audio Monitor Type") now enables, disables, or toggles
+  monitoring instead of selecting a monitor type, and the "Audio - Monitoring" feedback (previously
+  "Audio - Monitor Type") is simply active while monitoring is enabled, matching the audio mixer in OBS
+  32.1 and newer. Existing actions and feedbacks are converted automatically, with feedbacks that matched
+  "Off" becoming inverted
 
 ### Fixed
 

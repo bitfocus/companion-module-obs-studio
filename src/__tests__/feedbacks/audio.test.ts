@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { getAudioFeedbacks } from '../../feedbacks/audio.js'
+import { ObsAudioMonitorType } from '../../types.js'
 import { makeMockInstance, seedSource, type MockInstance } from '../mock/instance.js'
 import { feedbackEvent } from '../mock/events.js'
 import { MockContext } from '../mock-context.js'
@@ -33,5 +34,38 @@ describe('audio_track', () => {
 
 	test('is false for an unknown source', () => {
 		expect(check({ source: 'Nope', track: '1' })).toBe(false)
+	})
+})
+
+describe('audio_monitor_type', () => {
+	let self: MockInstance
+
+	const check = (options: { source: string }): unknown => {
+		const feedbacks = looseFeedbacks(getAudioFeedbacks(self))
+		return feedbacks['audio_monitor_type'].callback(feedbackEvent('audio_monitor_type', options), new MockContext())
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedSource(self, 'Mic')
+	})
+
+	test.each([ObsAudioMonitorType.MonitorOnly, ObsAudioMonitorType.MonitorAndOutput])(
+		'is true for %s',
+		(monitorType) => {
+			self.states.sources.get('Mic')!.monitorType = monitorType
+
+			expect(check({ source: 'Mic' })).toBe(true)
+		},
+	)
+
+	test('is false when monitoring is off', () => {
+		self.states.sources.get('Mic')!.monitorType = ObsAudioMonitorType.None
+
+		expect(check({ source: 'Mic' })).toBe(false)
+	})
+
+	test('is false for an unknown source', () => {
+		expect(check({ source: 'Nope' })).toBe(false)
 	})
 })

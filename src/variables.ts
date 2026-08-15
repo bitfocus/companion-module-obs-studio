@@ -85,6 +85,11 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 				value: utils.getMonitorTypeLabel(source.monitorType),
 			},
 			{
+				id: `monitor_active_${sourceName}`,
+				name: `${sourceName} - Audio monitoring enabled`,
+				value: utils.isMonitoringEnabled(source.monitorType),
+			},
+			{
 				id: `sync_offset_${sourceName}`,
 				name: `${sourceName} - Sync offset (ms)`,
 				value: source.inputAudioSyncOffset,

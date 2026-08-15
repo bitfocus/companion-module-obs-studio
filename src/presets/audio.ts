@@ -1,7 +1,6 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { ObsAudioMonitorType } from '../types.js'
 import { baseStyle, styleActive, styleMuted, Color } from './style.js'
 
 /** Audio presets: per-source controls for volume, mute, and monitoring. */
@@ -79,7 +78,7 @@ export function getAudioPresets(self: OBSInstance): {
 
 	presets['tmp_audioMonitor'] = {
 		type: 'simple',
-		name: 'Monitor + Output',
+		name: 'Toggle Monitoring',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Audio source' }],
 		style: baseStyle({ text: '$(local:source)\nMonitor' }),
 		steps: [
@@ -89,7 +88,7 @@ export function getAudioPresets(self: OBSInstance): {
 						actionId: 'set_audio_monitor',
 						options: {
 							source: { value: '$(local:source)', isExpression: true },
-							monitor: ObsAudioMonitorType.MonitorAndOutput,
+							monitor: 'toggle',
 						},
 					},
 				],
@@ -99,10 +98,7 @@ export function getAudioPresets(self: OBSInstance): {
 		feedbacks: [
 			{
 				feedbackId: 'audio_monitor_type',
-				options: {
-					source: { value: '$(local:source)', isExpression: true },
-					monitor: ObsAudioMonitorType.MonitorAndOutput,
-				},
+				options: { source: { value: '$(local:source)', isExpression: true } },
 				style: styleActive(),
 			},
 		],

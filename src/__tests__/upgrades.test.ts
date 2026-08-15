@@ -3,8 +3,10 @@ import type {
 	CompanionStaticUpgradeProps,
 	CompanionUpgradeContext,
 	CompanionMigrationAction,
+	CompanionMigrationFeedback,
 } from '@companion-module/base'
 import upgrades from '../upgrades.js'
+import { ObsAudioMonitorType } from '../types.js'
 import type { LegacyModuleConfig, ModuleConfig, ModuleSecrets } from '../types.js'
 
 const context = {} as CompanionUpgradeContext<ModuleConfig>
@@ -150,6 +152,103 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 			actionId: 'toggle_scene_item',
 			options: { all: false, source: 'Camera', scene: 'Scene A', visible: 'toggle' },
 		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions).toHaveLength(0)
+	})
+})
+
+describe('v4_0_0 audio monitoring migration', () => {
+	function monitorAction(monitor: unknown): CompanionMigrationAction {
+		return {
+			id: 'a1',
+			actionId: 'set_audio_monitor',
+			options: { source: 'Mic', monitor },
+		} as unknown as CompanionMigrationAction
+	}
+
+	function monitorFeedback(monitor: unknown): CompanionMigrationFeedback {
+		return {
+			id: 'f1',
+			feedbackId: 'audio_monitor_type',
+			options: { source: 'Mic', monitor },
+		} as unknown as CompanionMigrationFeedback
+	}
+
+	test.each([
+		[ObsAudioMonitorType.None, 'false'],
+		[ObsAudioMonitorType.MonitorOnly, 'true'],
+		[ObsAudioMonitorType.MonitorAndOutput, 'true'],
+	])('converts the %s action option to %s', (monitor, expected) => {
+		const result = v4_0_0(context, makeProps(null, [monitorAction(monitor)]))
+
+		expect(result.updatedActions).toHaveLength(1)
+		expect(result.updatedActions[0].options.monitor).toBe(expected)
+	})
+
+	function upgradeFeedback(feedback: CompanionMigrationFeedback) {
+		const props = makeProps(null)
+		props.feedbacks = [feedback]
+		return v4_0_0(context, props)
+	}
+
+	test.each([ObsAudioMonitorType.MonitorOnly, ObsAudioMonitorType.MonitorAndOutput])(
+		'drops the %s feedback option without inverting',
+		(monitor) => {
+			const result = upgradeFeedback(monitorFeedback(monitor))
+
+			expect(result.updatedFeedbacks).toHaveLength(1)
+			expect(result.updatedFeedbacks[0].options.monitor).toBeUndefined()
+			expect(result.updatedFeedbacks[0].isInverted).toBeUndefined()
+		},
+	)
+
+	test('inverts a feedback that matched "Off"', () => {
+		const result = upgradeFeedback(monitorFeedback(ObsAudioMonitorType.None))
+
+		expect(result.updatedFeedbacks).toHaveLength(1)
+		expect(result.updatedFeedbacks[0].options.monitor).toBeUndefined()
+		expect(result.updatedFeedbacks[0].isInverted).toEqual({ isExpression: false, value: true })
+	})
+
+	test('un-inverts a feedback that matched "Off" while already inverted', () => {
+		const feedback = monitorFeedback(ObsAudioMonitorType.None)
+		feedback.isInverted = { isExpression: false, value: true }
+		const result = upgradeFeedback(feedback)
+
+		expect(result.updatedFeedbacks[0].isInverted).toEqual({ isExpression: false, value: false })
+	})
+
+	test('leaves an expression-driven inversion alone', () => {
+		const feedback = monitorFeedback(ObsAudioMonitorType.None)
+		feedback.isInverted = { isExpression: true, value: '$(obs:monitor_Mic)' }
+		const result = upgradeFeedback(feedback)
+
+		expect(result.updatedFeedbacks[0].isInverted).toEqual({ isExpression: true, value: '$(obs:monitor_Mic)' })
+	})
+
+	test('leaves an already converted feedback untouched', () => {
+		const feedback = { id: 'f1', feedbackId: 'audio_monitor_type', options: { source: 'Mic' } }
+		const result = upgradeFeedback(feedback as unknown as CompanionMigrationFeedback)
+
+		expect(result.updatedFeedbacks).toHaveLength(0)
+	})
+
+	test('converts an option stored in the expanded value shape', () => {
+		const action = monitorAction({ isExpression: false, value: ObsAudioMonitorType.MonitorAndOutput })
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions[0].options.monitor).toEqual({ isExpression: false, value: 'true' })
+	})
+
+	test.each(['true', 'false', 'toggle'])('leaves an already converted value (%s) untouched', (monitor) => {
+		const result = v4_0_0(context, makeProps(null, [monitorAction(monitor)]))
+
+		expect(result.updatedActions).toHaveLength(0)
+	})
+
+	test('leaves an expression untouched', () => {
+		const action = monitorAction({ isExpression: true, value: '$(obs:monitor_Mic)' })
 		const result = v4_0_0(context, makeProps(null, [action]))
 
 		expect(result.updatedActions).toHaveLength(0)

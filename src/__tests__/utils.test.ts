@@ -11,6 +11,7 @@ import {
 	getOBSStreamingStateLabel,
 	getOBSMediaStatusLabel,
 	getMonitorTypeLabel,
+	isMonitoringEnabled,
 	describeError,
 	asString,
 	asNumber,
@@ -113,6 +114,12 @@ describe('state label helpers', () => {
 		expect(getMonitorTypeLabel(ObsAudioMonitorType.MonitorAndOutput)).toBe('Monitor / Output')
 		expect(getMonitorTypeLabel(ObsAudioMonitorType.MonitorOnly)).toBe('Monitor Only')
 		expect(getMonitorTypeLabel(undefined)).toBe('Off')
+	})
+	test('monitoring enabled treats both monitor types as on', () => {
+		expect(isMonitoringEnabled(ObsAudioMonitorType.MonitorAndOutput)).toBe(true)
+		expect(isMonitoringEnabled(ObsAudioMonitorType.MonitorOnly)).toBe(true)
+		expect(isMonitoringEnabled(ObsAudioMonitorType.None)).toBe(false)
+		expect(isMonitoringEnabled(undefined)).toBe(false)
 	})
 })
 

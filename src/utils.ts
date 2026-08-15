@@ -219,6 +219,14 @@ export function getMonitorTypeLabel(type: ObsAudioMonitorType | string | undefin
 	}
 }
 
+/**
+ * OBS 32.1+ dropped "Monitor Only" from its UI and made muting independent of monitoring, so monitoring is
+ * an on/off state. The legacy monitor-only type is still reported by OBS and counts as enabled.
+ */
+export function isMonitoringEnabled(type: ObsAudioMonitorType | string | undefined): boolean {
+	return type !== undefined && type !== (ObsAudioMonitorType.None as string)
+}
+
 /** Converts a GetInputAudioTracks-style `{"1": true, "2": false, ...}` map to the sorted list of enabled track numbers. */
 export function activeAudioTracks(tracks: Record<string, unknown> | undefined): number[] {
 	if (!tracks) return []

@@ -43,7 +43,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Source Mute (Set / Toggle)
 - Set Source Volume
 - Adjust Source Volume
-- Set Audio Monitor
+- Set Audio Monitoring (Enable / Disable / Toggle)
 - Set Audio Sync Offset
 - Set Audio Balance
 - Set Audio Tracks (Set / Toggle mixer output tracks)
@@ -101,7 +101,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Source Enabled in Scene (If a source is enabled in a specific scene, change the style of the button)
 - Filter Enabled
 - Audio Muted
-- Audio Monitor Type
+- Audio Monitoring
 - Audio Track Enabled
 - Volume
 - Media Playing
@@ -162,7 +162,8 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - current_text (Current text value of text sources)
 - volume (Current volume in dB of a source)
 - mute (Current audio mute state of a source)
-- monitor (Current audio monitoring state of a source)
+- monitor (Current audio monitoring type of a source)
+- monitor_active (Whether audio monitoring is enabled for a source)
 - sync_offset (Current audio sync offset of a source)
 - balance (Current audio balance of a source)
 - tracks (List of the audio mixer track numbers a source is routed to, e.g. [1, 3])

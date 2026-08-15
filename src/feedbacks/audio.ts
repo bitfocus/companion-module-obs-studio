@@ -1,11 +1,10 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { ObsAudioMonitorType } from '../types.js'
-import { Color } from '../utils.js'
+import { Color, isMonitoringEnabled } from '../utils.js'
 
 export type AudioFeedbackSchemas = {
 	audio_muted: { type: 'boolean'; options: { source: string } }
-	audio_monitor_type: { type: 'boolean'; options: { source: string; monitor: ObsAudioMonitorType } }
+	audio_monitor_type: { type: 'boolean'; options: { source: string } }
 	audio_track: { type: 'boolean'; options: { source: string; track: string } }
 	volume: { type: 'boolean'; options: { source: string; volume: number } }
 	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number } }
@@ -40,8 +39,8 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 
 		audio_monitor_type: {
 			type: 'boolean',
-			name: 'Audio - Monitor Type',
-			description: 'If the audio monitor type is matched, change the style of the button',
+			name: 'Audio - Monitoring',
+			description: 'If audio monitoring is enabled for a source, change the style of the button',
 			defaultStyle: {
 				color: Color.White,
 				bgcolor: Color.Red,
@@ -55,23 +54,10 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					default: self.obsState.audioSourceListDefault,
 					choices: self.obsState.audioSourceList,
 				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Monitor',
-					id: 'monitor',
-					default: ObsAudioMonitorType.None,
-					choices: [
-						{ id: ObsAudioMonitorType.None, label: 'Off' },
-						{ id: ObsAudioMonitorType.MonitorOnly, label: 'Monitor Only' },
-						{ id: ObsAudioMonitorType.MonitorAndOutput, label: 'Monitor / Output' },
-					],
-				},
 			],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
-				const monitorType = feedback.options.monitor
-				return self.obsState.findSourceByName(sourceName)?.monitorType === monitorType
+				return isMonitoringEnabled(self.obsState.findSourceByName(sourceName)?.monitorType)
 			},
 		},
 
