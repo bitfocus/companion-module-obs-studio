@@ -18,7 +18,10 @@ export function getAudioPresets(self: OBSInstance): {
 		steps: [
 			{
 				down: [
-					{ actionId: 'toggle_source_mute', options: { source: { value: '$(local:source)', isExpression: true } } },
+					{
+						actionId: 'mute',
+						options: { source: { value: '$(local:source)', isExpression: true }, mute: 'toggle' },
+					},
 				],
 				up: [],
 			},
@@ -47,8 +50,15 @@ export function getAudioPresets(self: OBSInstance): {
 			{
 				down: [
 					{
-						actionId: 'adjust_volume',
-						options: { source: { value: '$(local:source)', isExpression: true }, volume: 3 },
+						actionId: 'volume',
+						options: {
+							source: { value: '$(local:source)', isExpression: true },
+							mode: 'adjust',
+							unit: 'db',
+							value: 0,
+							duration: 0,
+							amount: 3,
+						},
 					},
 				],
 				up: [],
@@ -66,8 +76,15 @@ export function getAudioPresets(self: OBSInstance): {
 			{
 				down: [
 					{
-						actionId: 'adjust_volume',
-						options: { source: { value: '$(local:source)', isExpression: true }, volume: -3 },
+						actionId: 'volume',
+						options: {
+							source: { value: '$(local:source)', isExpression: true },
+							mode: 'adjust',
+							unit: 'db',
+							value: 0,
+							duration: 0,
+							amount: -3,
+						},
 					},
 				],
 				up: [],

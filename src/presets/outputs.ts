@@ -18,7 +18,10 @@ export function getOutputPresets(self: OBSInstance): {
 		steps: [
 			{
 				down: [
-					{ actionId: 'start_stop_output', options: { output: { value: '$(local:output)', isExpression: true } } },
+					{
+						actionId: 'output',
+						options: { action: 'toggle', output: { value: '$(local:output)', isExpression: true } },
+					},
 				],
 				up: [],
 			},
@@ -39,7 +42,12 @@ export function getOutputPresets(self: OBSInstance): {
 		style: baseStyle({ text: 'START\n$(local:output)' }),
 		steps: [
 			{
-				down: [{ actionId: 'start_output', options: { output: { value: '$(local:output)', isExpression: true } } }],
+				down: [
+					{
+						actionId: 'output',
+						options: { action: 'start', output: { value: '$(local:output)', isExpression: true } },
+					},
+				],
 				up: [],
 			},
 		],
@@ -59,7 +67,9 @@ export function getOutputPresets(self: OBSInstance): {
 		style: baseStyle({ text: 'STOP\n$(local:output)' }),
 		steps: [
 			{
-				down: [{ actionId: 'stop_output', options: { output: { value: '$(local:output)', isExpression: true } } }],
+				down: [
+					{ actionId: 'output', options: { action: 'stop', output: { value: '$(local:output)', isExpression: true } } },
+				],
 				up: [],
 			},
 		],

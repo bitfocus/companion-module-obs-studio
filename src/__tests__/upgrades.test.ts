@@ -158,6 +158,120 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 	})
 })
 
+describe('v4_0_0 action consolidation', () => {
+	function upgradeAction(actionId: string, options: Record<string, unknown>) {
+		const action = { id: 'a1', actionId, options } as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+		expect(result.updatedActions).toHaveLength(1)
+		return result.updatedActions[0]
+	}
+
+	test.each([
+		['start_recording', 'recording', 'start'],
+		['stop_recording', 'recording', 'stop'],
+		['ToggleRecordPause', 'recording', 'toggle_pause'],
+		['SplitRecordFile', 'recording', 'split'],
+		['StartStopStreaming', 'streaming', 'toggle'],
+		['save_replay_buffer', 'replay_buffer', 'save'],
+		['start_stop_output', 'output', 'toggle'],
+	])('maps %s onto %s', (oldId, newId, expected) => {
+		const updated = upgradeAction(oldId, {})
+		expect(updated.actionId).toBe(newId)
+		expect(updated.options.action).toBe(expected)
+	})
+
+	test.each([
+		['enable_studio_mode', 'true'],
+		['disable_studio_mode', 'false'],
+		['toggle_studio_mode', 'toggle'],
+	])('maps %s onto studio_mode', (oldId, expected) => {
+		const updated = upgradeAction(oldId, {})
+		expect(updated.actionId).toBe('studio_mode')
+		expect(updated.options.enabled).toBe(expected)
+	})
+
+	test('maps toggle_source_mute onto mute with a toggle option', () => {
+		const updated = upgradeAction('toggle_source_mute', { source: 'Mic' })
+		expect(updated.actionId).toBe('mute')
+		expect(updated.options).toEqual({ source: 'Mic', mute: 'toggle' })
+	})
+
+	test('keeps the existing mute value when migrating set_source_mute', () => {
+		const updated = upgradeAction('set_source_mute', { source: 'Mic', mute: 'false' })
+		expect(updated.actionId).toBe('mute')
+		expect(updated.options.mute).toBe('false')
+	})
+
+	test('renames the adjust_volume amount and marks the mode and unit', () => {
+		const updated = upgradeAction('adjust_volume', { source: 'Mic', volume: 3 })
+		expect(updated.actionId).toBe('volume')
+		expect(updated.options).toEqual({ source: 'Mic', mode: 'adjust', unit: 'db', amount: 3 })
+	})
+
+	test('migrates adjust_volume_percent to the percent unit', () => {
+		const updated = upgradeAction('adjust_volume_percent', { source: 'Mic', volume: 5 })
+		expect(updated.options).toEqual({ source: 'Mic', mode: 'adjust', unit: 'percent', amount: 5 })
+	})
+
+	test('migrates set_volume to an instant set', () => {
+		const updated = upgradeAction('set_volume', { source: 'Mic', volume: -6 })
+		expect(updated.options).toEqual({ source: 'Mic', mode: 'set', unit: 'db', value: -6, duration: 0 })
+	})
+
+	test('keeps the fade duration when migrating fadeVolume', () => {
+		const updated = upgradeAction('fadeVolume', { source: 'Mic', volume: -6, duration: 1000 })
+		expect(updated.options).toEqual({ source: 'Mic', mode: 'set', unit: 'db', value: -6, duration: 1000 })
+	})
+
+	test('renames the set_transition_duration option', () => {
+		const updated = upgradeAction('set_transition_duration', { duration: 250 })
+		expect(updated.actionId).toBe('transition_duration')
+		expect(updated.options).toEqual({ mode: 'set', value: 250 })
+	})
+
+	test.each([
+		['next', 'next'],
+		['previous', 'previous'],
+	])('maps an adjustPreviewScene %s onto the preview_scene mode', (adjust, expected) => {
+		const updated = upgradeAction('adjustPreviewScene', { adjust })
+		expect(updated.actionId).toBe('preview_scene')
+		expect(updated.options).toEqual({ mode: expected })
+	})
+
+	test('maps the legacy previewNextScene through to the combined action', () => {
+		const updated = upgradeAction('previewNextScene', {})
+		expect(updated.actionId).toBe('preview_scene')
+		expect(updated.options.mode).toBe('next')
+	})
+
+	test('maps an adjustTransitionType onto the transition_type mode', () => {
+		const updated = upgradeAction('adjustTransitionType', { adjust: 'previous' })
+		expect(updated.actionId).toBe('transition_type')
+		expect(updated.options).toEqual({ mode: 'previous' })
+	})
+
+	test('migrates an option stored in the expanded value shape', () => {
+		const updated = upgradeAction('adjust_volume', {
+			source: { isExpression: true, value: '$(internal:custom_source)' },
+			volume: { isExpression: false, value: 3 },
+		})
+		expect(updated.options).toEqual({
+			source: { isExpression: true, value: '$(internal:custom_source)' },
+			mode: 'adjust',
+			unit: 'db',
+			amount: { isExpression: false, value: 3 },
+		})
+	})
+
+	test('leaves an action outside the consolidated families untouched', () => {
+		const result = v4_0_0(
+			context,
+			makeProps(null, [{ id: 'a1', actionId: 'do_transition', options: {} } as unknown as CompanionMigrationAction]),
+		)
+		expect(result.updatedActions).toHaveLength(0)
+	})
+})
+
 describe('v4_0_0 audio monitoring migration', () => {
 	function monitorAction(monitor: unknown): CompanionMigrationAction {
 		return {

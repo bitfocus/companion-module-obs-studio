@@ -15,7 +15,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 		name: 'Toggle Streaming',
 		previewStyle: baseStyle({ text: 'TOGGLE\nSTREAM' }),
 		style: baseStyle({ text: 'START\nSTREAM' }),
-		steps: [{ down: [{ actionId: 'StartStopStreaming', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'streaming', options: { action: 'toggle' } }], up: [] }],
 		feedbacks: [{ feedbackId: 'streaming', options: {}, style: { ...styleActive(), text: 'STOP\nSTREAM' } }],
 	}
 
@@ -23,7 +23,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Start Stream',
 		style: baseStyle({ text: 'START\nSTREAM' }),
-		steps: [{ down: [{ actionId: 'start_streaming', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'streaming', options: { action: 'start' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -31,7 +31,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Stop Stream',
 		style: baseStyle({ text: 'STOP\nSTREAM' }),
-		steps: [{ down: [{ actionId: 'stop_streaming', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'streaming', options: { action: 'stop' } }], up: [] }],
 		feedbacks: [],
 	}
 

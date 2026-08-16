@@ -128,7 +128,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
 		self.checkFeedbacks('scene_active', 'scenePreview')
-		self.sendToActionRecorder({ actionId: 'preview_scene', options: { scene: data.sceneName } })
+		self.sendToActionRecorder({ actionId: 'preview_scene', options: { mode: 'set', scene: data.sceneName } })
 	})
 	obs.on('SceneListChanged', (data) => {
 		self.states.scenes.clear()
@@ -193,7 +193,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			})
 			self.checkFeedbacks('audio_muted')
 			self.sendToActionRecorder({
-				actionId: 'set_source_mute',
+				actionId: 'mute',
 				options: { source: source.sourceName, mute: data.inputMuted ? 'true' : 'false' },
 			})
 		}
@@ -206,8 +206,8 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.setVariableValues({ [`volume_${name}`]: source.inputVolume })
 			self.checkFeedbacks('volume')
 			self.sendToActionRecorder({
-				actionId: 'set_volume',
-				options: { source: source.sourceName, volume: source.inputVolume },
+				actionId: 'volume',
+				options: { source: source.sourceName, mode: 'set', unit: 'db', value: source.inputVolume, duration: 0 },
 			})
 		}
 	})
@@ -218,8 +218,8 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`balance_${name}`]: source.inputAudioBalance })
 			self.sendToActionRecorder({
-				actionId: 'set_audio_balance',
-				options: { source: source.sourceName, balance: source.inputAudioBalance },
+				actionId: 'audio_balance',
+				options: { source: source.sourceName, mode: 'set', value: source.inputAudioBalance },
 			})
 		}
 	})
@@ -230,8 +230,8 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			const name = source.validName ?? data.inputUuid
 			self.setVariableValues({ [`sync_offset_${name}`]: source.inputAudioSyncOffset })
 			self.sendToActionRecorder({
-				actionId: 'set_audio_offset',
-				options: { source: source.sourceName, offset: data.inputAudioSyncOffset },
+				actionId: 'audio_offset',
+				options: { source: source.sourceName, mode: 'set', value: data.inputAudioSyncOffset },
 			})
 		}
 	})
@@ -327,14 +327,20 @@ function setupTransitionListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				void self.obs.buildSceneTransitionList()
 				void self.updateActionsFeedbacksVariables()
 			}
-			self.sendToActionRecorder({ actionId: 'set_transition_type', options: { transitions: data.transitionName } })
+			self.sendToActionRecorder({
+				actionId: 'transition_type',
+				options: { mode: 'set', transitions: data.transitionName },
+			})
 		})()
 	})
 	obs.on('CurrentSceneTransitionDurationChanged', (data) => {
 		self.states.transitionDuration = data.transitionDuration ?? 0
 		self.checkFeedbacks('transition_duration')
 		self.setVariableValues({ transition_duration: self.states.transitionDuration })
-		self.sendToActionRecorder({ actionId: 'set_transition_duration', options: { duration: data.transitionDuration } })
+		self.sendToActionRecorder({
+			actionId: 'transition_duration',
+			options: { mode: 'set', value: data.transitionDuration },
+		})
 	})
 	obs.on('SceneTransitionStarted', () => {
 		self.states.transitionActive = true
@@ -500,7 +506,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const isReconnectTransition =
 			outputState === OBSStreamingState.Reconnecting || outputState === OBSStreamingState.Reconnected
 		if (!isReconnectTransition) {
-			self.sendToActionRecorder({ actionId: data.outputActive ? 'start_streaming' : 'stop_streaming', options: {} })
+			self.sendToActionRecorder({ actionId: 'streaming', options: { action: data.outputActive ? 'start' : 'stop' } })
 		}
 	})
 	obs.on('RecordStateChanged', (data) => {
@@ -523,13 +529,13 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.obs.updateRecordingTimecode(undefined)
 
 		if (data.outputActive && previousRecordingState === OBSRecordingState.Paused) {
-			self.sendToActionRecorder({ actionId: 'resume_recording', options: {} })
+			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'resume' } })
 		} else if (data.outputActive) {
-			self.sendToActionRecorder({ actionId: 'start_recording', options: {} })
+			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'start' } })
 		} else if (data.outputState === 'OBS_WEBSOCKET_OUTPUT_PAUSED') {
-			self.sendToActionRecorder({ actionId: 'pause_recording', options: {} })
+			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'pause' } })
 		} else {
-			self.sendToActionRecorder({ actionId: 'stop_recording', options: {} })
+			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'stop' } })
 		}
 	})
 	obs.on('ReplayBufferStateChanged', (data) => {
@@ -537,8 +543,8 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.checkFeedbacks('replayBufferActive')
 		self.setVariableValues({ replay_buffer_active: self.states.replayBuffer })
 		self.sendToActionRecorder({
-			actionId: data.outputActive ? 'start_replay_buffer' : 'stop_replay_buffer',
-			options: {},
+			actionId: 'replay_buffer',
+			options: { action: data.outputActive ? 'start' : 'stop' },
 		})
 	})
 	obs.on('RecordFileChanged', (data) => {
@@ -556,8 +562,8 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		}
 		self.setVariableValues({ virtualcam_active: data.outputActive })
 		self.sendToActionRecorder({
-			actionId: data.outputActive ? 'start_output' : 'stop_output',
-			options: { output: 'virtualcam_output' },
+			actionId: 'output',
+			options: { action: data.outputActive ? 'start' : 'stop', output: 'virtualcam_output' },
 		})
 	})
 	obs.on('ReplayBufferSaved', (data) => {
@@ -623,8 +629,8 @@ function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 	obs.on('StudioModeStateChanged', (data) => {
 		self.sendToActionRecorder({
-			actionId: data.studioModeEnabled ? 'enable_studio_mode' : 'disable_studio_mode',
-			options: {},
+			actionId: 'studio_mode',
+			options: { enabled: data.studioModeEnabled ? 'true' : 'false' },
 		})
 		void (async () => {
 			self.states.studioMode = data.studioModeEnabled ?? false

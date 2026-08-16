@@ -15,7 +15,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		name: 'Toggle Recording',
 		previewStyle: baseStyle({ text: 'TOGGLE\nRECORD' }),
 		style: baseStyle({ text: 'START\nRECORD' }),
-		steps: [{ down: [{ actionId: 'toggle_recording', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'toggle', chapterName: '' } }], up: [] }],
 		feedbacks: [
 			{ feedbackId: 'recording', options: {}, style: { ...styleProgram(), text: 'STOP\nRECORD' } },
 			{ feedbackId: 'recordingPaused', options: {}, style: styleWarn() },
@@ -26,7 +26,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Start Recording',
 		style: baseStyle({ text: 'START\nRECORD' }),
-		steps: [{ down: [{ actionId: 'start_recording', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'start', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -34,7 +34,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Stop Recording',
 		style: baseStyle({ text: 'STOP\nRECORD' }),
-		steps: [{ down: [{ actionId: 'stop_recording', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'stop', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -42,7 +42,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Pause Recording',
 		style: baseStyle({ text: 'PAUSE\nRECORD' }),
-		steps: [{ down: [{ actionId: 'pause_recording', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'pause', chapterName: '' } }], up: [] }],
 		feedbacks: [{ feedbackId: 'recordingPaused', options: {}, style: styleWarn() }],
 	}
 
@@ -50,7 +50,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Resume Recording',
 		style: baseStyle({ text: 'RESUME\nRECORD' }),
-		steps: [{ down: [{ actionId: 'resume_recording', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'resume', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -58,7 +58,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Split Recording File',
 		style: baseStyle({ text: 'SPLIT\nRECORD' }),
-		steps: [{ down: [{ actionId: 'SplitRecordFile', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'split', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -66,7 +66,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Create Recording Chapter',
 		style: baseStyle({ text: 'CREATE\nCHAPTER' }),
-		steps: [{ down: [{ actionId: 'CreateRecordChapter', options: { chapterName: '' } }], up: [] }],
+		steps: [{ down: [{ actionId: 'recording', options: { action: 'chapter', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 

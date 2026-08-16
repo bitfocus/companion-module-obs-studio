@@ -37,7 +37,12 @@ export function getScenePresets(self: OBSInstance): {
 		style: baseStyle({ text: '$(local:scene)' }),
 		steps: [
 			{
-				down: [{ actionId: 'preview_scene', options: { scene: { value: '$(local:scene)', isExpression: true } } }],
+				down: [
+					{
+						actionId: 'preview_scene',
+						options: { mode: 'set', scene: { value: '$(local:scene)', isExpression: true } },
+					},
+				],
 				up: [],
 			},
 		],
@@ -81,7 +86,7 @@ export function getScenePresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Preview Next Scene',
 		style: baseStyle({ text: 'Preview\nNext' }),
-		steps: [{ down: [{ actionId: 'adjustPreviewScene', options: { adjust: 'next' } }], up: [] }],
+		steps: [{ down: [{ actionId: 'preview_scene', options: { mode: 'next', scene: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -89,7 +94,7 @@ export function getScenePresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Preview Previous Scene',
 		style: baseStyle({ text: 'Preview\nPrevious' }),
-		steps: [{ down: [{ actionId: 'adjustPreviewScene', options: { adjust: 'previous' } }], up: [] }],
+		steps: [{ down: [{ actionId: 'preview_scene', options: { mode: 'previous', scene: '' } }], up: [] }],
 		feedbacks: [],
 	}
 

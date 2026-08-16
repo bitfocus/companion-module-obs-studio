@@ -2,17 +2,26 @@ import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 
 export type OutputActionSchemas = {
-	start_recording: { options: Record<string, never> }
-	stop_recording: { options: Record<string, never> }
-	pause_recording: { options: Record<string, never> }
-	resume_recording: { options: Record<string, never> }
-	ToggleRecordPause: { options: Record<string, never> }
-	toggle_recording: { options: Record<string, never>; result: boolean | null }
-	SplitRecordFile: { options: Record<string, never> }
-	CreateRecordChapter: { options: { chapterName: string } }
-	start_streaming: { options: Record<string, never> }
-	stop_streaming: { options: Record<string, never> }
-	StartStopStreaming: { options: Record<string, never>; result: boolean | null }
+	recording: {
+		options: {
+			action: 'toggle' | 'start' | 'stop' | 'pause' | 'resume' | 'toggle_pause' | 'split' | 'chapter'
+			chapterName: string
+		}
+		result: boolean | null
+	}
+	streaming: {
+		options: { action: 'toggle' | 'start' | 'stop' }
+		result: boolean | null
+	}
+	SendStreamCaption: { options: { text: string } }
+	replay_buffer: {
+		options: { action: 'toggle' | 'start' | 'stop' | 'save' }
+		result: boolean | null
+	}
+	output: {
+		options: { action: 'toggle' | 'start' | 'stop'; output: string }
+		result: boolean | null
+	}
 	set_stream_settings: {
 		options: {
 			streamType: 'rtmp_custom' | 'rtmp_common' | 'whip_custom'
@@ -24,120 +33,125 @@ export type OutputActionSchemas = {
 			bearerToken: string
 		}
 	}
-	SendStreamCaption: { options: { text: string } }
-	start_replay_buffer: { options: Record<string, never> }
-	stop_replay_buffer: { options: Record<string, never> }
-	save_replay_buffer: { options: Record<string, never> }
-	ToggleReplayBuffer: { options: Record<string, never>; result: boolean | null }
-	start_output: { options: { output: string } }
-	stop_output: { options: { output: string } }
-	start_stop_output: { options: { output: string }; result: boolean | null }
 }
 
 export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<OutputActionSchemas> {
 	return {
 		// Recording
-		start_recording: {
-			name: 'Recording - Start',
-			description: 'Starts recording the current program output',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('StartRecord')
-			},
-		},
-		stop_recording: {
-			name: 'Recording - Stop',
-			description: 'Stops the current recording',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('StopRecord')
-			},
-		},
-		pause_recording: {
-			name: 'Recording - Pause',
-			description: 'Pauses the current recording (requires a recording format that supports pausing)',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('PauseRecord')
-			},
-		},
-		resume_recording: {
-			name: 'Recording - Resume',
-			description: 'Resumes a paused recording',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('ResumeRecord')
-			},
-		},
-		ToggleRecordPause: {
-			name: 'Recording - Toggle Pause',
-			description: 'Toggles between paused and recording states',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('ToggleRecordPause')
-			},
-		},
-		toggle_recording: {
-			name: 'Recording - Toggle',
-			description: 'Toggles between recording and stopped states',
-			options: [],
-			hasResult: true,
-			callback: async () => {
-				const res = await self.obs.sendRequest('ToggleRecord')
-				return res?.outputActive ?? null
-			},
-		},
-		SplitRecordFile: {
-			name: 'Recording - Split File',
-			description:
-				'Splits the current recording into a new file (requires Advanced output mode and file splitting enabled)',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('SplitRecordFile')
-			},
-		},
-		CreateRecordChapter: {
-			name: 'Recording - Create Chapter',
-			description: 'Adds a chapter marker to the current recording (requires a format that supports chapters)',
+		recording: {
+			name: 'Recording',
+			description: 'Controls the recording output',
 			options: [
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Action',
+					id: 'action',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'start', label: 'Start' },
+						{ id: 'stop', label: 'Stop' },
+						{ id: 'pause', label: 'Pause' },
+						{ id: 'resume', label: 'Resume' },
+						{ id: 'toggle_pause', label: 'Toggle Pause' },
+						{ id: 'split', label: 'Split File' },
+						{ id: 'chapter', label: 'Create Chapter' },
+					],
+				},
 				{
 					type: 'textinput',
 					label: 'Chapter Name (Optional)',
 					id: 'chapterName',
 					default: '',
 					useVariables: true,
+					isVisibleExpression: `$(options:action) === 'chapter'`,
 				},
 			],
+			hasResult: true,
 			callback: async (action) => {
-				const chapterName = action.options.chapterName
-				await self.obs.sendRequest('CreateRecordChapter', { chapterName: chapterName })
+				switch (action.options.action) {
+					case 'toggle': {
+						const res = await self.obs.sendRequest('ToggleRecord')
+						return res?.outputActive ?? null
+					}
+					case 'start':
+						await self.obs.sendRequest('StartRecord')
+						return true
+					case 'stop':
+						await self.obs.sendRequest('StopRecord')
+						return false
+					case 'pause':
+						await self.obs.sendRequest('PauseRecord')
+						return null
+					case 'resume':
+						await self.obs.sendRequest('ResumeRecord')
+						return null
+					case 'toggle_pause':
+						await self.obs.sendRequest('ToggleRecordPause')
+						return null
+					case 'split':
+						await self.obs.sendRequest('SplitRecordFile')
+						return null
+					case 'chapter':
+						await self.obs.sendRequest('CreateRecordChapter', { chapterName: action.options.chapterName })
+						return null
+					default:
+						return null
+				}
 			},
 		},
 		// Streaming
-		start_streaming: {
-			name: 'Stream - Start',
-			description: 'Starts streaming to the currently configured service',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('StartStream')
-			},
-		},
-		stop_streaming: {
-			name: 'Stream - Stop',
-			description: 'Stops the current stream',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('StopStream')
-			},
-		},
-		StartStopStreaming: {
-			name: 'Stream - Toggle',
-			description: 'Toggles between streaming and off-air states',
-			options: [],
+		streaming: {
+			name: 'Stream',
+			description: 'Controls the streaming output',
+			options: [
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Action',
+					id: 'action',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'start', label: 'Start' },
+						{ id: 'stop', label: 'Stop' },
+					],
+				},
+			],
 			hasResult: true,
-			callback: async () => {
-				const res = await self.obs.sendRequest('ToggleStream')
-				return res?.outputActive ?? null
+			callback: async (action) => {
+				switch (action.options.action) {
+					case 'toggle': {
+						const res = await self.obs.sendRequest('ToggleStream')
+						return res?.outputActive ?? null
+					}
+					case 'start':
+						await self.obs.sendRequest('StartStream')
+						return true
+					case 'stop':
+						await self.obs.sendRequest('StopStream')
+						return false
+					default:
+						return null
+				}
+			},
+		},
+		SendStreamCaption: {
+			name: 'Stream - Send Caption',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Caption Text',
+					id: 'text',
+					default: '',
+					useVariables: true,
+				},
+			],
+			callback: async (action) => {
+				if (self.states.streaming) {
+					await self.obs.sendRequest('SendStreamCaption', { captionText: action.options.text })
+				}
 			},
 		},
 		set_stream_settings: {
@@ -231,110 +245,63 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 				void self.obs.getStreamServiceSettings()
 			},
 		},
-		SendStreamCaption: {
-			name: 'Stream - Send Caption',
+		// Replay Buffer
+		replay_buffer: {
+			name: 'Replay Buffer',
+			description: 'Controls the replay buffer output',
 			options: [
 				{
-					type: 'textinput',
-					label: 'Caption Text',
-					id: 'text',
-					default: '',
-					useVariables: true,
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Action',
+					id: 'action',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'start', label: 'Start' },
+						{ id: 'stop', label: 'Stop' },
+						{ id: 'save', label: 'Save' },
+					],
 				},
 			],
-			callback: async (action) => {
-				if (self.states.streaming) {
-					const captionText = action.options.text
-					await self.obs.sendRequest('SendStreamCaption', { captionText: captionText })
-				}
-			},
-		},
-		// Replay Buffer
-		start_replay_buffer: {
-			name: 'Replay Buffer - Start',
-			description: 'Starts the replay buffer output',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('StartReplayBuffer')
-			},
-		},
-		stop_replay_buffer: {
-			name: 'Replay Buffer - Stop',
-			description: 'Stops the replay buffer output',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('StopReplayBuffer')
-			},
-		},
-		save_replay_buffer: {
-			name: 'Replay Buffer - Save',
-			description: 'Saves the current contents of the replay buffer to disk',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('SaveReplayBuffer')
-			},
-		},
-		ToggleReplayBuffer: {
-			name: 'Replay Buffer - Toggle',
-			description: 'Toggles the replay buffer output state',
-			options: [],
 			hasResult: true,
-			callback: async () => {
-				const res = await self.obs.sendRequest('ToggleReplayBuffer')
-				return res?.outputActive ?? null
+			callback: async (action) => {
+				switch (action.options.action) {
+					case 'toggle': {
+						const res = await self.obs.sendRequest('ToggleReplayBuffer')
+						return res?.outputActive ?? null
+					}
+					case 'start':
+						await self.obs.sendRequest('StartReplayBuffer')
+						return true
+					case 'stop':
+						await self.obs.sendRequest('StopReplayBuffer')
+						return false
+					case 'save':
+						await self.obs.sendRequest('SaveReplayBuffer')
+						return null
+					default:
+						return null
+				}
 			},
 		},
 		// Outputs
-		start_output: {
-			name: 'Start Output',
-			description: 'Starts a specific output (e.g., Virtual Cam, Decklink)',
+		output: {
+			name: 'Output',
+			description: 'Controls a specific output (e.g., Virtual Cam, Decklink)',
 			options: [
 				{
 					type: 'dropdown',
-					allowCustom: true,
-					label: 'Output',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.obsState.outputList,
+					disableAutoExpression: true,
+					label: 'Action',
+					id: 'action',
+					default: 'toggle',
+					choices: [
+						{ id: 'toggle', label: 'Toggle' },
+						{ id: 'start', label: 'Start' },
+						{ id: 'stop', label: 'Stop' },
+					],
 				},
-			],
-			callback: async (action) => {
-				if (action.options.output === 'virtualcam_output') {
-					await self.obs.sendRequest('StartVirtualCam')
-				} else {
-					await self.obs.sendRequest('StartOutput', {
-						outputName: action.options.output,
-					})
-				}
-			},
-		},
-		stop_output: {
-			name: 'Stop Output',
-			description: 'Stops a specific output',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Output',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.obsState.outputList,
-				},
-			],
-			callback: async (action) => {
-				if (action.options.output === 'virtualcam_output') {
-					await self.obs.sendRequest('StopVirtualCam')
-				} else {
-					await self.obs.sendRequest('StopOutput', {
-						outputName: action.options.output,
-					})
-				}
-			},
-		},
-		start_stop_output: {
-			name: 'Toggle Output',
-			description: 'Toggles the state of a specific output',
-			options: [
 				{
 					type: 'dropdown',
 					allowCustom: true,
@@ -346,14 +313,32 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 			],
 			hasResult: true,
 			callback: async (action) => {
-				if (action.options.output === 'virtualcam_output') {
-					const res = await self.obs.sendRequest('ToggleVirtualCam')
-					return res?.outputActive ?? null
-				} else {
-					const res = await self.obs.sendRequest('ToggleOutput', {
-						outputName: action.options.output,
-					})
-					return res?.outputActive ?? null
+				const outputName = action.options.output
+				const isVirtualCam = outputName === 'virtualcam_output'
+
+				switch (action.options.action) {
+					case 'toggle': {
+						const res = isVirtualCam
+							? await self.obs.sendRequest('ToggleVirtualCam')
+							: await self.obs.sendRequest('ToggleOutput', { outputName })
+						return res?.outputActive ?? null
+					}
+					case 'start':
+						if (isVirtualCam) {
+							await self.obs.sendRequest('StartVirtualCam')
+						} else {
+							await self.obs.sendRequest('StartOutput', { outputName })
+						}
+						return true
+					case 'stop':
+						if (isVirtualCam) {
+							await self.obs.sendRequest('StopVirtualCam')
+						} else {
+							await self.obs.sendRequest('StopOutput', { outputName })
+						}
+						return false
+					default:
+						return null
 				}
 			},
 		},

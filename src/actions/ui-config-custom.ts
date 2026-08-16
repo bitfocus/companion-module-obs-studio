@@ -34,9 +34,7 @@ function parseJsonOption(rawValue: string, label: string): JsonObject | undefine
 }
 
 export type UiConfigCustomActionSchemas = {
-	enable_studio_mode: { options: Record<string, never> }
-	disable_studio_mode: { options: Record<string, never> }
-	toggle_studio_mode: { options: Record<string, never> }
+	studio_mode: { options: { enabled: 'true' | 'false' | 'toggle' }; result: boolean }
 	set_profile: { options: { profile: string } }
 	set_scene_collection: { options: { scene_collection: string } }
 	'trigger-hotkey': { options: { id: string } }
@@ -62,28 +60,29 @@ export type UiConfigCustomActionSchemas = {
 export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefinitions<UiConfigCustomActionSchemas> {
 	return {
 		// Studio Mode
-		enable_studio_mode: {
-			name: 'Studio Mode - Enable',
-			description: 'Enables Studio Mode, which allows for previewing changes before they go live',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: true })
-			},
-		},
-		disable_studio_mode: {
-			name: 'Studio Mode - Disable',
-			description: 'Disables Studio Mode, making all changes go directly to program',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: false })
-			},
-		},
-		toggle_studio_mode: {
-			name: 'Studio Mode - Toggle',
-			description: 'Toggles Studio Mode between on and off',
-			options: [],
-			callback: async () => {
-				await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: self.states.studioMode ? false : true })
+		studio_mode: {
+			name: 'Studio Mode',
+			description: 'Enables or disables Studio Mode, which allows for previewing changes before they go live',
+			options: [
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Studio Mode',
+					id: 'enabled',
+					default: 'toggle',
+					choices: [
+						{ id: 'true', label: 'Enabled' },
+						{ id: 'false', label: 'Disabled' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+				},
+			],
+			hasResult: true,
+			callback: async (action) => {
+				const enabled =
+					action.options.enabled === 'toggle' ? !self.states.studioMode : action.options.enabled === 'true'
+				await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: enabled })
+				return enabled
 			},
 		},
 

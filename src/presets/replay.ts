@@ -15,7 +15,7 @@ export function getReplayPresets(_self: OBSInstance): {
 		name: 'Toggle Replay Buffer',
 		previewStyle: baseStyle({ text: 'TOGGLE\nREPLAY' }),
 		style: baseStyle({ text: 'START\nREPLAY' }),
-		steps: [{ down: [{ actionId: 'ToggleReplayBuffer', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'toggle' } }], up: [] }],
 		feedbacks: [{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'STOP\nREPLAY' } }],
 	}
 
@@ -23,7 +23,7 @@ export function getReplayPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Start Replay Buffer',
 		style: baseStyle({ text: 'START\nREPLAY' }),
-		steps: [{ down: [{ actionId: 'start_replay_buffer', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'start' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -31,7 +31,7 @@ export function getReplayPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Stop Replay Buffer',
 		style: baseStyle({ text: 'STOP\nREPLAY' }),
-		steps: [{ down: [{ actionId: 'stop_replay_buffer', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'stop' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -39,7 +39,7 @@ export function getReplayPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Save Replay Buffer',
 		style: baseStyle({ text: 'SAVE\nREPLAY' }),
-		steps: [{ down: [{ actionId: 'save_replay_buffer', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'save' } }], up: [] }],
 		feedbacks: [],
 	}
 

@@ -3,6 +3,7 @@ import {
 	CompanionUpgradeContext,
 	CompanionStaticUpgradeResult,
 	CreateConvertToBooleanFeedbackUpgradeScript,
+	CompanionMigrationAction,
 	CompanionMigrationFeedback,
 } from '@companion-module/base'
 import { LegacyModuleConfig, ModuleConfig, ModuleSecrets, ObsAudioMonitorType } from './types.js'
@@ -58,6 +59,106 @@ function convertMonitorFeedback(feedback: CompanionMigrationFeedback): boolean {
 		feedback.isInverted = { isExpression: false, value: feedback.isInverted?.value !== true }
 	}
 	delete feedback.options.monitor
+	return true
+}
+
+function renameOpt(options: Record<string, unknown>, from: string, to: string): void {
+	if (!(from in options)) return
+	options[to] = options[from]
+	delete options[from]
+}
+
+/**
+ * Action families that used to be one action per command (recording start/stop/pause/…), or a
+ * set/adjust pair, are now a single action with a leading dropdown. Each entry names the combined
+ * action, the fixed option values that identify the old command, and any option renames it needs.
+ */
+const CONSOLIDATED_ACTIONS: Record<
+	string,
+	{ actionId: string; options: Record<string, unknown>; renames?: Record<string, string> }
+> = {
+	start_recording: { actionId: 'recording', options: { action: 'start' } },
+	stop_recording: { actionId: 'recording', options: { action: 'stop' } },
+	pause_recording: { actionId: 'recording', options: { action: 'pause' } },
+	resume_recording: { actionId: 'recording', options: { action: 'resume' } },
+	ToggleRecordPause: { actionId: 'recording', options: { action: 'toggle_pause' } },
+	toggle_recording: { actionId: 'recording', options: { action: 'toggle' } },
+	SplitRecordFile: { actionId: 'recording', options: { action: 'split' } },
+	CreateRecordChapter: { actionId: 'recording', options: { action: 'chapter' } },
+
+	start_streaming: { actionId: 'streaming', options: { action: 'start' } },
+	stop_streaming: { actionId: 'streaming', options: { action: 'stop' } },
+	StartStopStreaming: { actionId: 'streaming', options: { action: 'toggle' } },
+
+	start_replay_buffer: { actionId: 'replay_buffer', options: { action: 'start' } },
+	stop_replay_buffer: { actionId: 'replay_buffer', options: { action: 'stop' } },
+	save_replay_buffer: { actionId: 'replay_buffer', options: { action: 'save' } },
+	ToggleReplayBuffer: { actionId: 'replay_buffer', options: { action: 'toggle' } },
+
+	start_output: { actionId: 'output', options: { action: 'start' } },
+	stop_output: { actionId: 'output', options: { action: 'stop' } },
+	start_stop_output: { actionId: 'output', options: { action: 'toggle' } },
+
+	enable_studio_mode: { actionId: 'studio_mode', options: { enabled: 'true' } },
+	disable_studio_mode: { actionId: 'studio_mode', options: { enabled: 'false' } },
+	toggle_studio_mode: { actionId: 'studio_mode', options: { enabled: 'toggle' } },
+
+	toggle_source_mute: { actionId: 'mute', options: { mute: 'toggle' } },
+	set_source_mute: { actionId: 'mute', options: {} },
+
+	set_volume: { actionId: 'volume', options: { mode: 'set', unit: 'db', duration: 0 }, renames: { volume: 'value' } },
+	fadeVolume: { actionId: 'volume', options: { mode: 'set', unit: 'db' }, renames: { volume: 'value' } },
+	adjust_volume: { actionId: 'volume', options: { mode: 'adjust', unit: 'db' }, renames: { volume: 'amount' } },
+	adjust_volume_percent: {
+		actionId: 'volume',
+		options: { mode: 'adjust', unit: 'percent' },
+		renames: { volume: 'amount' },
+	},
+
+	set_audio_offset: { actionId: 'audio_offset', options: { mode: 'set' }, renames: { offset: 'value' } },
+	adjust_audio_offset: { actionId: 'audio_offset', options: { mode: 'adjust' } },
+	set_audio_balance: { actionId: 'audio_balance', options: { mode: 'set' }, renames: { balance: 'value' } },
+	adjust_audio_balance: { actionId: 'audio_balance', options: { mode: 'adjust' } },
+
+	set_transition_type: { actionId: 'transition_type', options: { mode: 'set' } },
+	set_transition_duration: {
+		actionId: 'transition_duration',
+		options: { mode: 'set' },
+		renames: { duration: 'value' },
+	},
+	adjust_transition_duration: { actionId: 'transition_duration', options: { mode: 'adjust' } },
+
+	preview_scene: { actionId: 'preview_scene', options: { mode: 'set' } },
+}
+
+/**
+ * The "adjust" actions carried a next/previous dropdown that becomes one more choice on the
+ * combined action's mode dropdown, so their value is mapped across rather than fixed.
+ */
+const ADJUST_TO_MODE_ACTIONS: Record<string, string> = {
+	adjustTransitionType: 'transition_type',
+	adjustPreviewScene: 'preview_scene',
+}
+
+function consolidateAction(action: CompanionMigrationAction): boolean {
+	const adjustTarget = ADJUST_TO_MODE_ACTIONS[action.actionId]
+	if (adjustTarget) {
+		action.actionId = adjustTarget
+		setOpt(action.options, 'mode', getOpt(action.options, 'adjust') === 'previous' ? 'previous' : 'next')
+		delete action.options.adjust
+		return true
+	}
+
+	const consolidated = CONSOLIDATED_ACTIONS[action.actionId]
+	if (!consolidated) return false
+
+	action.actionId = consolidated.actionId
+	for (const [from, to] of Object.entries(consolidated.renames ?? {})) {
+		renameOpt(action.options, from, to)
+	}
+	for (const [key, value] of Object.entries(consolidated.options)) {
+		setOpt(action.options, key, value)
+	}
 	return true
 }
 
@@ -396,6 +497,11 @@ export default [
 				actionChanged = true
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)
+			}
+
+			// Runs last so it also picks up the ids the branches above just rewrote.
+			if (consolidateAction(action)) {
+				actionChanged = true
 			}
 
 			if (actionChanged) {

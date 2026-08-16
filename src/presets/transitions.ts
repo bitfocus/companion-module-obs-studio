@@ -30,8 +30,8 @@ export function getTransitionPresets(self: OBSInstance): {
 			{
 				down: [
 					{
-						actionId: 'set_transition_type',
-						options: { transitions: { value: '$(local:transition)', isExpression: true } },
+						actionId: 'transition_type',
+						options: { mode: 'set', transitions: { value: '$(local:transition)', isExpression: true } },
 					},
 				],
 				up: [],
@@ -75,7 +75,7 @@ export function getTransitionPresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Next Transition Type',
 		style: baseStyle({ text: 'Next\nTransition' }),
-		steps: [{ down: [{ actionId: 'adjustTransitionType', options: { adjust: 'next' } }], up: [] }],
+		steps: [{ down: [{ actionId: 'transition_type', options: { mode: 'next', transitions: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -83,7 +83,7 @@ export function getTransitionPresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Previous Transition Type',
 		style: baseStyle({ text: 'Previous\nTransition' }),
-		steps: [{ down: [{ actionId: 'adjustTransitionType', options: { adjust: 'previous' } }], up: [] }],
+		steps: [{ down: [{ actionId: 'transition_type', options: { mode: 'previous', transitions: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -99,7 +99,9 @@ export function getTransitionPresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Decrease transition time (-50ms)',
 		style: baseStyle({ text: 'Duration\n-50ms' }),
-		steps: [{ down: [{ actionId: 'adjust_transition_duration', options: { amount: -50 } }], up: [] }],
+		steps: [
+			{ down: [{ actionId: 'transition_duration', options: { mode: 'adjust', value: 500, amount: -50 } }], up: [] },
+		],
 		feedbacks: [],
 	}
 
@@ -107,7 +109,9 @@ export function getTransitionPresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Increase transition time (+50ms)',
 		style: baseStyle({ text: 'Duration\n+50ms' }),
-		steps: [{ down: [{ actionId: 'adjust_transition_duration', options: { amount: 50 } }], up: [] }],
+		steps: [
+			{ down: [{ actionId: 'transition_duration', options: { mode: 'adjust', value: 500, amount: 50 } }], up: [] },
+		],
 		feedbacks: [],
 	}
 
@@ -119,7 +123,9 @@ export function getTransitionPresets(self: OBSInstance): {
 			type: 'simple',
 			name: `Transition Set ${time}ms`,
 			style: baseStyle({ text: `${time}ms` }),
-			steps: [{ down: [{ actionId: 'set_transition_duration', options: { duration: time } }], up: [] }],
+			steps: [
+				{ down: [{ actionId: 'transition_duration', options: { mode: 'set', value: time, amount: 50 } }], up: [] },
+			],
 			feedbacks: [{ feedbackId: 'transition_duration', options: { duration: time }, style: styleActive() }],
 		}
 	}

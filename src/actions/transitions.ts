@@ -8,10 +8,8 @@ const logger = createModuleLogger('Actions/Transitions')
 export type TransitionActionSchemas = {
 	do_transition: { options: Record<string, never> }
 	quick_transition: { options: { transition: string; customDuration: boolean; transition_time: number } }
-	set_transition_type: { options: { transitions: string } }
-	adjustTransitionType: { options: { adjust: 'next' | 'previous' } }
-	set_transition_duration: { options: { duration: number } }
-	adjust_transition_duration: { options: { amount: number } }
+	transition_type: { options: { mode: 'set' | 'next' | 'previous'; transitions: string } }
+	transition_duration: { options: { mode: 'set' | 'adjust'; value: number; amount: number } }
 }
 
 export function getTransitionActions(self: OBSInstance): CompanionActionDefinitions<TransitionActionSchemas> {
@@ -112,96 +110,81 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			},
 		},
 
-		set_transition_type: {
-			name: 'Transition - Set Type',
-			description: 'Sets the current transition type used for Studio Mode transitions',
+		transition_type: {
+			name: 'Transition - Type',
+			description: 'Sets the current transition type used for Studio Mode transitions, or cycles through the list',
 			options: [
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Mode',
+					id: 'mode',
+					default: 'set',
+					choices: [
+						{ id: 'set', label: 'Set Type' },
+						{ id: 'next', label: 'Next Type' },
+						{ id: 'previous', label: 'Previous Type' },
+					],
+				},
 				{
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
 					default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
 					choices: self.obsState.transitionList,
+					isVisibleExpression: `$(options:mode) === 'set'`,
 				},
 			],
 			callback: async (action) => {
-				const transition = action.options.transitions
-				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: transition })
+				if (action.options.mode === 'set') {
+					await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: action.options.transitions })
+					return
+				}
+
+				const currentTransitionIndex = self.obsState.transitionList.findIndex(
+					(item) => item.id === self.states.currentTransition,
+				)
+
+				const transitionName =
+					action.options.mode === 'next'
+						? (self.obsState.transitionList[currentTransitionIndex + 1]?.id ?? self.obsState.transitionList[0]?.id)
+						: (self.obsState.transitionList[currentTransitionIndex - 1]?.id ??
+							self.obsState.transitionList[self.obsState.transitionList.length - 1]?.id)
+
+				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: transitionName as string })
 			},
 			learn: () => {
 				const transition = self.states.currentTransition
 				if (!transition) return undefined
-				return { transitions: transition }
+				return { mode: 'set', transitions: transition }
 			},
 		},
-		adjustTransitionType: {
-			name: 'Transition - Adjust Type',
-			description: 'Cycles through the list of transitions',
+
+		transition_duration: {
+			name: 'Transition - Duration',
+			description: 'Sets or adjusts the duration for current transitions in milliseconds',
 			options: [
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
-					label: 'Adjust',
-					id: 'adjust',
-					default: 'next',
+					label: 'Mode',
+					id: 'mode',
+					default: 'set',
 					choices: [
-						{ id: 'next', label: 'Next' },
-						{ id: 'previous', label: 'Previous' },
+						{ id: 'set', label: 'Set' },
+						{ id: 'adjust', label: 'Adjust' },
 					],
 				},
-			],
-			callback: async (action) => {
-				const currentTransition = self.states.currentTransition
-				const currentTransitionIndex = self.obsState.transitionList.findIndex((item) => item.id === currentTransition)
-
-				if (action.options.adjust === 'next') {
-					const nextTransition =
-						self.obsState.transitionList[currentTransitionIndex + 1]?.id ?? self.obsState.transitionList[0]?.id
-					await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: nextTransition as string })
-				} else if (action.options.adjust === 'previous') {
-					const previousTransition =
-						(self.obsState.transitionList[currentTransitionIndex - 1]?.id as string) ??
-						(self.obsState.transitionList[self.obsState.transitionList.length - 1]?.id as string)
-					await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: previousTransition })
-				}
-			},
-		},
-
-		set_transition_duration: {
-			name: 'Transition - Set Duration',
-			description: 'Sets the duration for current transitions in milliseconds',
-			options: [
 				{
 					type: 'number',
 					label: 'Transition time (in ms)',
-					id: 'duration',
+					id: 'value',
 					default: 500,
 					min: 0,
 					max: 60 * 1000, // Max is required by API
 					clampValues: true,
+					isVisibleExpression: `$(options:mode) === 'set'`,
 				},
-			],
-			callback: async (action) => {
-				const duration = action.options.duration
-				if (duration !== null) {
-					await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
-				}
-			},
-			learn: () => {
-				const duration = self.states.transitionDuration
-				if (duration !== undefined) {
-					return {
-						duration: Number(duration),
-					}
-				}
-				return undefined
-			},
-		},
-
-		adjust_transition_duration: {
-			name: 'Transition - Adjust Duration',
-			description: 'Adjusts the current transition duration by a specific amount of milliseconds',
-			options: [
 				{
 					type: 'number',
 					label: 'Amount (in ms)',
@@ -210,20 +193,26 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					min: -60 * 1000,
 					max: 60 * 1000,
 					clampValues: true,
+					isVisibleExpression: `$(options:mode) === 'adjust'`,
 				},
 			],
 			callback: async (action) => {
-				if (self.states.transitionDuration !== undefined) {
-					let duration = Number(self.states.transitionDuration) + action.options.amount
-					if (duration > 60000) {
-						duration = 60000
-					} else if (duration < 0) {
-						duration = 0
-					}
-					await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+				let duration: number
+				if (action.options.mode === 'set') {
+					duration = action.options.value
+				} else if (self.states.transitionDuration !== undefined) {
+					duration = clamp(Number(self.states.transitionDuration) + action.options.amount, 0, 60 * 1000)
 				} else {
 					logger.warn('Unable to adjust transition duration')
+					return
 				}
+
+				await self.obs.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: duration })
+			},
+			learn: () => {
+				const duration = self.states.transitionDuration
+				if (duration === undefined) return undefined
+				return { mode: 'set', value: Number(duration) }
 			},
 		},
 	}

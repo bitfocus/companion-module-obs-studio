@@ -9,11 +9,12 @@ import { looseActions, type LooseActions } from '../loose-definitions.js'
 const RESULT_ACTIONS = [
 	'custom_command',
 	'vendorRequest',
-	'toggle_source_mute',
-	'toggle_recording',
-	'StartStopStreaming',
-	'ToggleReplayBuffer',
-	'start_stop_output',
+	'mute',
+	'recording',
+	'streaming',
+	'replay_buffer',
+	'output',
+	'studio_mode',
 	'take_screenshot',
 ]
 
@@ -37,15 +38,15 @@ describe('action results', () => {
 
 	test('toggle actions return the new boolean state from OBS', async () => {
 		self.socket.call.mockResolvedValue({ outputActive: true })
-		const streaming = await actions['StartStopStreaming'].callback(
-			actionEvent('StartStopStreaming', {}),
+		const streaming = await actions['streaming'].callback(
+			actionEvent('streaming', { action: 'toggle' }),
 			new MockContext(),
 		)
 		expect(streaming).toBe(true)
 
 		self.socket.call.mockResolvedValue({ inputMuted: false })
-		const mute = await actions['toggle_source_mute'].callback(
-			actionEvent('toggle_source_mute', { source: 'Mic' }),
+		const mute = await actions['mute'].callback(
+			actionEvent('mute', { source: 'Mic', mute: 'toggle' }),
 			new MockContext(),
 		)
 		expect(mute).toBe(false)

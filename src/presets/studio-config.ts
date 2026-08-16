@@ -14,7 +14,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 		type: 'simple',
 		name: 'Toggle Studio Mode',
 		style: baseStyle({ text: 'ENABLE\nStudio Mode' }),
-		steps: [{ down: [{ actionId: 'toggle_studio_mode', options: {} }], up: [] }],
+		steps: [{ down: [{ actionId: 'studio_mode', options: { enabled: 'toggle' } }], up: [] }],
 		feedbacks: [{ feedbackId: 'studioMode', options: {}, style: { ...styleActive(), text: 'DISABLE\nStudio Mode' } }],
 	}
 

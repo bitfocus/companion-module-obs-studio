@@ -23,7 +23,10 @@ describe('scene actions', () => {
 
 	test('preview_scene sends SetCurrentPreviewScene with the chosen scene', async () => {
 		const actions = looseActions(getSceneActions(self))
-		await actions['preview_scene'].callback(actionEvent('preview_scene', { scene: 'Scene A' }), new MockContext())
+		await actions['preview_scene'].callback(
+			actionEvent('preview_scene', { mode: 'set', scene: 'Scene A' }),
+			new MockContext(),
+		)
 
 		expect(self.socket.call).toHaveBeenCalledWith('SetCurrentPreviewScene', { sceneName: 'Scene A' })
 	})

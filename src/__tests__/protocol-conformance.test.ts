@@ -20,8 +20,8 @@ describe('fadeVolume batch', () => {
 	})
 
 	test('delays steps with Sleep requests rather than a non-protocol sleep field', async () => {
-		await actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: -10, duration: 200 }),
 			new MockContext(),
 		)
 
@@ -37,8 +37,8 @@ describe('fadeVolume batch', () => {
 	})
 
 	test('ends on the target volume', async () => {
-		await actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: -10, duration: 200 }),
 			new MockContext(),
 		)
 
@@ -47,8 +47,8 @@ describe('fadeVolume batch', () => {
 	})
 
 	test('still emits a step when the duration is shorter than one step', async () => {
-		await actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: -10, duration: 10 }),
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: -10, duration: 10 }),
 			new MockContext(),
 		)
 
@@ -61,8 +61,8 @@ describe('fadeVolume batch', () => {
 		self.states.sources.get('Mic')!.inputVolume = -60
 		self.socket.call.mockResolvedValue({ inputVolumeDb: 0 })
 
-		await actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: -10, duration: 200 }),
 			new MockContext(),
 		)
 
@@ -73,8 +73,8 @@ describe('fadeVolume batch', () => {
 	test('does nothing when the current volume cannot be read', async () => {
 		self.socket.call.mockResolvedValue({})
 
-		await actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Ghost', volume: -10, duration: 200 }),
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Ghost', mode: 'set', unit: 'db', value: -10, duration: 200 }),
 			new MockContext(),
 		)
 
@@ -86,12 +86,12 @@ describe('fadeVolume batch', () => {
 		self.socket.callBatch.mockImplementation(async () => new Promise((resolve) => (releaseBatch = resolve)))
 
 		// Fired in the same tick: the guard must be claimed before the first await, not after it.
-		const first = actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: -10, duration: 200 }),
+		const first = actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: -10, duration: 200 }),
 			new MockContext(),
 		)
-		const second = actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: 0, duration: 200 }),
+		const second = actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: 0, duration: 200 }),
 			new MockContext(),
 		)
 
@@ -104,8 +104,8 @@ describe('fadeVolume batch', () => {
 
 		// Once the batch finishes the source can be faded again.
 		self.socket.callBatch.mockResolvedValue([])
-		await actions['fadeVolume'].callback(
-			actionEvent('fadeVolume', { source: 'Mic', volume: 0, duration: 200 }),
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', mode: 'set', unit: 'db', value: 0, duration: 200 }),
 			new MockContext(),
 		)
 		expect(self.socket.callBatch).toHaveBeenCalledTimes(2)
