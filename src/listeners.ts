@@ -1,7 +1,7 @@
 import { createModuleLogger, type CompanionOptionValues } from '@companion-module/base'
 import type OBSInstance from './main.js'
 import type { OBSFeedbackId } from './feedbacks.js'
-import type { OBSReindexedSceneItem, OBSScene, OBSSource, OBSVolumeMetersEvent } from './types.js'
+import type { MediaControlAction, OBSReindexedSceneItem, OBSScene, OBSSource, OBSVolumeMetersEvent } from './types.js'
 import type OBSWebSocket from 'obs-websocket-js'
 import * as utils from './utils.js'
 import {
@@ -10,6 +10,7 @@ import {
 	OBSRecordingState,
 	OBSStreamingState,
 	ObsAudioMonitorType,
+	MEDIA_CONTROL_ACTIONS,
 } from './types.js'
 
 const logger = createModuleLogger('Listeners')
@@ -578,15 +579,10 @@ function setMediaStatus(self: OBSInstance, source: OBSSource, uuid: string, stat
 	self.setVariableValues({ [`media_status_${name}`]: utils.getOBSMediaStatusLabel(status) })
 }
 
-// Map media action to recorder entry.
-const MEDIA_ACTION_RECORDER_MAP: Partial<Record<OBSMediaInputAction, string>> = {
-	[OBSMediaInputAction.Pause]: 'pause',
-	[OBSMediaInputAction.Play]: 'play',
-	[OBSMediaInputAction.Restart]: 'restart',
-	[OBSMediaInputAction.Stop]: 'stop',
-	[OBSMediaInputAction.Next]: 'next',
-	[OBSMediaInputAction.Previous]: 'previous',
-}
+// Map media action back to the media_control choice that triggers it.
+const MEDIA_ACTION_RECORDER_MAP: Partial<Record<OBSMediaInputAction, MediaControlAction>> = Object.fromEntries(
+	Object.entries(MEDIA_CONTROL_ACTIONS).map(([choice, mediaAction]) => [mediaAction, choice]),
+)
 
 // Media Listeners
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {

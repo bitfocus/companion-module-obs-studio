@@ -1,11 +1,21 @@
 import { combineRgb, createModuleLogger, type JsonObject } from '@companion-module/base'
 import { OBSRecordingState, OBSStreamingState, OBSMediaStatus, ObsAudioMonitorType } from './types.js'
+import { VOLUME_MIN_DB } from './constants.js'
 
 const logger = createModuleLogger('Utils')
 
 /** Clamp a number between min and max. */
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max)
+}
+
+/** OBS's mixer maps its 0-100% fader onto decibels logarithmically, with 100% at 0 dB. */
+export function dbToPercent(db: number): number {
+	return Math.pow(10, db / 20) * 100
+}
+
+export function percentToDb(percent: number): number {
+	return percent <= 0 ? VOLUME_MIN_DB : 20 * Math.log10(percent / 100)
 }
 
 /**

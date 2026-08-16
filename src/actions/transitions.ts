@@ -2,6 +2,7 @@ import { clamp } from '../utils.js'
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { SLEEP_MAX_MS } from '../constants.js'
+import { modeDropdown, modeNumber, resolveSetAdjust, visibleWhenMode } from './options.js'
 
 const logger = createModuleLogger('Actions/Transitions')
 
@@ -114,25 +115,18 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			name: 'Transition - Type',
 			description: 'Sets the current transition type used for Studio Mode transitions, or cycles through the list',
 			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set Type' },
-						{ id: 'next', label: 'Next Type' },
-						{ id: 'previous', label: 'Previous Type' },
-					],
-				},
+				modeDropdown([
+					{ id: 'set', label: 'Set Type' },
+					{ id: 'next', label: 'Next Type' },
+					{ id: 'previous', label: 'Previous Type' },
+				]),
 				{
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
 					default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
 					choices: self.obsState.transitionList,
-					isVisibleExpression: `$(options:mode) === 'set'`,
+					isVisibleExpression: visibleWhenMode('set'),
 				},
 			],
 			callback: async (action) => {
@@ -141,15 +135,14 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					return
 				}
 
-				const currentTransitionIndex = self.obsState.transitionList.findIndex(
-					(item) => item.id === self.states.currentTransition,
-				)
+				// Read the list once: outside a definition rebuild `transitionList` is rebuilt and sorted per access.
+				const transitions = self.obsState.transitionList
+				const currentIndex = transitions.findIndex((item) => item.id === self.states.currentTransition)
 
 				const transitionName =
 					action.options.mode === 'next'
-						? (self.obsState.transitionList[currentTransitionIndex + 1]?.id ?? self.obsState.transitionList[0]?.id)
-						: (self.obsState.transitionList[currentTransitionIndex - 1]?.id ??
-							self.obsState.transitionList[self.obsState.transitionList.length - 1]?.id)
+						? (transitions[currentIndex + 1]?.id ?? transitions[0]?.id)
+						: (transitions[currentIndex - 1]?.id ?? transitions[transitions.length - 1]?.id)
 
 				await self.obs.sendRequest('SetCurrentSceneTransition', { transitionName: transitionName as string })
 			},
@@ -164,45 +157,31 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			name: 'Transition - Duration',
 			description: 'Sets or adjusts the duration for current transitions in milliseconds',
 			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set' },
-						{ id: 'adjust', label: 'Adjust' },
-					],
-				},
-				{
-					type: 'number',
+				modeDropdown(),
+				modeNumber('set', {
 					label: 'Transition time (in ms)',
 					id: 'value',
 					default: 500,
 					min: 0,
 					max: 60 * 1000, // Max is required by API
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
-				},
-				{
-					type: 'number',
+				}),
+				modeNumber('adjust', {
 					label: 'Amount (in ms)',
 					id: 'amount',
 					default: 50,
 					min: -60 * 1000,
 					max: 60 * 1000,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'adjust'`,
-				},
+				}),
 			],
 			callback: async (action) => {
-				let duration: number
-				if (action.options.mode === 'set') {
-					duration = action.options.value
-				} else if (self.states.transitionDuration !== undefined) {
-					duration = clamp(Number(self.states.transitionDuration) + action.options.amount, 0, 60 * 1000)
-				} else {
+				const current = self.states.transitionDuration
+				const duration = resolveSetAdjust(
+					action.options,
+					current === undefined ? undefined : Number(current),
+					0,
+					60 * 1000,
+				)
+				if (duration === undefined) {
 					logger.warn('Unable to adjust transition duration')
 					return
 				}

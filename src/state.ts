@@ -339,6 +339,14 @@ export class OBSState {
 		return this.sceneNameIndex.get(name)
 	}
 
+	/** OBS orders scenes bottom-up, so a lower sceneIndex is the "next" scene in the UI. */
+	public findSceneByIndex(index: number): OBSScene | undefined {
+		for (const scene of this.state.scenes.values()) {
+			if (scene.sceneIndex === index) return scene
+		}
+		return undefined
+	}
+
 	// Filters attach to inputs or scenes, so resolve against both maps.
 	public findFilterTargetUuid(name: string): string | undefined {
 		return this.findSourceByName(name)?.sourceUuid ?? this.findSceneByName(name)?.sceneUuid

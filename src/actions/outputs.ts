@@ -1,5 +1,74 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
+import {
+	type CompanionActionDefinition,
+	type CompanionActionDefinitions,
+	type DropdownChoice,
+	type SomeCompanionActionInputField,
+} from '@companion-module/base'
 import type OBSInstance from '../main.js'
+
+const VIRTUAL_CAM_OUTPUT = 'virtualcam_output'
+
+function isVirtualCam(outputName: string): boolean {
+	return outputName === VIRTUAL_CAM_OUTPUT
+}
+
+/**
+ * Every output family (recording, streaming, replay buffer, individual outputs) is one action with
+ * a leading dropdown, and they all share the same toggle/start/stop shape and result convention:
+ * toggle reports the state OBS came back with, start/stop report the state they asked for, and
+ * anything else reports nothing.
+ */
+function outputControlAction<TOptions extends { action: string }>(config: {
+	name: string
+	description: string
+	toggle: (options: TOptions) => Promise<{ outputActive?: boolean } | undefined>
+	start: (options: TOptions) => Promise<unknown>
+	stop: (options: TOptions) => Promise<unknown>
+	/** Choices beyond toggle/start/stop, along with any option fields they need. */
+	extraChoices?: DropdownChoice[]
+	extraOptions?: SomeCompanionActionInputField<Extract<keyof TOptions, string>>[]
+	/** Runs for the extra choices; toggle/start/stop never reach it. */
+	handleExtra?: (options: TOptions) => Promise<unknown>
+}): CompanionActionDefinition<{ options: TOptions; result: boolean | null }> {
+	return {
+		name: config.name,
+		description: config.description,
+		options: [
+			{
+				type: 'dropdown',
+				disableAutoExpression: true,
+				label: 'Action',
+				id: 'action' as Extract<keyof TOptions, string>,
+				default: 'toggle',
+				choices: [
+					{ id: 'toggle', label: 'Toggle' },
+					{ id: 'start', label: 'Start' },
+					{ id: 'stop', label: 'Stop' },
+					...(config.extraChoices ?? []),
+				],
+			},
+			...(config.extraOptions ?? []),
+		],
+		hasResult: true,
+		callback: async (action) => {
+			switch (action.options.action) {
+				case 'toggle': {
+					const res = await config.toggle(action.options)
+					return res?.outputActive ?? null
+				}
+				case 'start':
+					await config.start(action.options)
+					return true
+				case 'stop':
+					await config.stop(action.options)
+					return false
+				default:
+					await config.handleExtra?.(action.options)
+					return null
+			}
+		},
+	}
+}
 
 export type OutputActionSchemas = {
 	recording: {
@@ -38,27 +107,20 @@ export type OutputActionSchemas = {
 export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<OutputActionSchemas> {
 	return {
 		// Recording
-		recording: {
+		recording: outputControlAction({
 			name: 'Recording',
 			description: 'Controls the recording output',
-			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Action',
-					id: 'action',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'start', label: 'Start' },
-						{ id: 'stop', label: 'Stop' },
-						{ id: 'pause', label: 'Pause' },
-						{ id: 'resume', label: 'Resume' },
-						{ id: 'toggle_pause', label: 'Toggle Pause' },
-						{ id: 'split', label: 'Split File' },
-						{ id: 'chapter', label: 'Create Chapter' },
-					],
-				},
+			toggle: async () => self.obs.sendRequest('ToggleRecord'),
+			start: async () => self.obs.sendRequest('StartRecord'),
+			stop: async () => self.obs.sendRequest('StopRecord'),
+			extraChoices: [
+				{ id: 'pause', label: 'Pause' },
+				{ id: 'resume', label: 'Resume' },
+				{ id: 'toggle_pause', label: 'Toggle Pause' },
+				{ id: 'split', label: 'Split File' },
+				{ id: 'chapter', label: 'Create Chapter' },
+			],
+			extraOptions: [
 				{
 					type: 'textinput',
 					label: 'Chapter Name (Optional)',
@@ -68,75 +130,29 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 					isVisibleExpression: `$(options:action) === 'chapter'`,
 				},
 			],
-			hasResult: true,
-			callback: async (action) => {
-				switch (action.options.action) {
-					case 'toggle': {
-						const res = await self.obs.sendRequest('ToggleRecord')
-						return res?.outputActive ?? null
-					}
-					case 'start':
-						await self.obs.sendRequest('StartRecord')
-						return true
-					case 'stop':
-						await self.obs.sendRequest('StopRecord')
-						return false
+			handleExtra: async (options) => {
+				switch (options.action) {
 					case 'pause':
-						await self.obs.sendRequest('PauseRecord')
-						return null
+						return self.obs.sendRequest('PauseRecord')
 					case 'resume':
-						await self.obs.sendRequest('ResumeRecord')
-						return null
+						return self.obs.sendRequest('ResumeRecord')
 					case 'toggle_pause':
-						await self.obs.sendRequest('ToggleRecordPause')
-						return null
+						return self.obs.sendRequest('ToggleRecordPause')
 					case 'split':
-						await self.obs.sendRequest('SplitRecordFile')
-						return null
+						return self.obs.sendRequest('SplitRecordFile')
 					case 'chapter':
-						await self.obs.sendRequest('CreateRecordChapter', { chapterName: action.options.chapterName })
-						return null
-					default:
-						return null
+						return self.obs.sendRequest('CreateRecordChapter', { chapterName: options.chapterName })
 				}
 			},
-		},
+		}),
 		// Streaming
-		streaming: {
+		streaming: outputControlAction({
 			name: 'Stream',
 			description: 'Controls the streaming output',
-			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Action',
-					id: 'action',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'start', label: 'Start' },
-						{ id: 'stop', label: 'Stop' },
-					],
-				},
-			],
-			hasResult: true,
-			callback: async (action) => {
-				switch (action.options.action) {
-					case 'toggle': {
-						const res = await self.obs.sendRequest('ToggleStream')
-						return res?.outputActive ?? null
-					}
-					case 'start':
-						await self.obs.sendRequest('StartStream')
-						return true
-					case 'stop':
-						await self.obs.sendRequest('StopStream')
-						return false
-					default:
-						return null
-				}
-			},
-		},
+			toggle: async () => self.obs.sendRequest('ToggleStream'),
+			start: async () => self.obs.sendRequest('StartStream'),
+			stop: async () => self.obs.sendRequest('StopStream'),
+		}),
 		SendStreamCaption: {
 			name: 'Stream - Send Caption',
 			options: [
@@ -246,101 +262,42 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 			},
 		},
 		// Replay Buffer
-		replay_buffer: {
+		replay_buffer: outputControlAction({
 			name: 'Replay Buffer',
 			description: 'Controls the replay buffer output',
-			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Action',
-					id: 'action',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'start', label: 'Start' },
-						{ id: 'stop', label: 'Stop' },
-						{ id: 'save', label: 'Save' },
-					],
-				},
-			],
-			hasResult: true,
-			callback: async (action) => {
-				switch (action.options.action) {
-					case 'toggle': {
-						const res = await self.obs.sendRequest('ToggleReplayBuffer')
-						return res?.outputActive ?? null
-					}
-					case 'start':
-						await self.obs.sendRequest('StartReplayBuffer')
-						return true
-					case 'stop':
-						await self.obs.sendRequest('StopReplayBuffer')
-						return false
-					case 'save':
-						await self.obs.sendRequest('SaveReplayBuffer')
-						return null
-					default:
-						return null
-				}
-			},
-		},
+			toggle: async () => self.obs.sendRequest('ToggleReplayBuffer'),
+			start: async () => self.obs.sendRequest('StartReplayBuffer'),
+			stop: async () => self.obs.sendRequest('StopReplayBuffer'),
+			extraChoices: [{ id: 'save', label: 'Save' }],
+			handleExtra: async () => self.obs.sendRequest('SaveReplayBuffer'),
+		}),
 		// Outputs
-		output: {
+		output: outputControlAction({
 			name: 'Output',
 			description: 'Controls a specific output (e.g., Virtual Cam, Decklink)',
-			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Action',
-					id: 'action',
-					default: 'toggle',
-					choices: [
-						{ id: 'toggle', label: 'Toggle' },
-						{ id: 'start', label: 'Start' },
-						{ id: 'stop', label: 'Stop' },
-					],
-				},
+			// The virtual camera has its own requests and takes no output name.
+			toggle: async ({ output }) =>
+				isVirtualCam(output)
+					? self.obs.sendRequest('ToggleVirtualCam')
+					: self.obs.sendRequest('ToggleOutput', { outputName: output }),
+			start: async ({ output }) =>
+				isVirtualCam(output)
+					? self.obs.sendRequest('StartVirtualCam')
+					: self.obs.sendRequest('StartOutput', { outputName: output }),
+			stop: async ({ output }) =>
+				isVirtualCam(output)
+					? self.obs.sendRequest('StopVirtualCam')
+					: self.obs.sendRequest('StopOutput', { outputName: output }),
+			extraOptions: [
 				{
 					type: 'dropdown',
 					allowCustom: true,
 					label: 'Output',
 					id: 'output',
-					default: 'virtualcam_output',
+					default: VIRTUAL_CAM_OUTPUT,
 					choices: self.obsState.outputList,
 				},
 			],
-			hasResult: true,
-			callback: async (action) => {
-				const outputName = action.options.output
-				const isVirtualCam = outputName === 'virtualcam_output'
-
-				switch (action.options.action) {
-					case 'toggle': {
-						const res = isVirtualCam
-							? await self.obs.sendRequest('ToggleVirtualCam')
-							: await self.obs.sendRequest('ToggleOutput', { outputName })
-						return res?.outputActive ?? null
-					}
-					case 'start':
-						if (isVirtualCam) {
-							await self.obs.sendRequest('StartVirtualCam')
-						} else {
-							await self.obs.sendRequest('StartOutput', { outputName })
-						}
-						return true
-					case 'stop':
-						if (isVirtualCam) {
-							await self.obs.sendRequest('StopVirtualCam')
-						} else {
-							await self.obs.sendRequest('StopOutput', { outputName })
-						}
-						return false
-					default:
-						return null
-				}
-			},
-		},
+		}),
 	}
 }

@@ -1,7 +1,8 @@
 import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { clamp, isMonitoringEnabled } from '../utils.js'
+import { clamp, dbToPercent, isMonitoringEnabled, percentToDb } from '../utils.js'
 import { ObsAudioMonitorType } from '../types.js'
+import { modeDropdown, modeNumber, resolveSetAdjust } from './options.js'
 import {
 	VOLUME_MIN_DB,
 	VOLUME_MAX_DB,
@@ -10,15 +11,6 @@ import {
 	SYNC_OFFSET_MIN,
 	SYNC_OFFSET_MAX,
 } from '../constants.js'
-
-/** OBS's mixer maps its 0-100% fader onto decibels logarithmically, with 100% at 0 dB. */
-function dbToPercent(db: number): number {
-	return Math.pow(10, db / 20) * 100
-}
-
-function percentToDb(percent: number): number {
-	return percent <= 0 ? VOLUME_MIN_DB : 20 * Math.log10(percent / 100)
-}
 
 export type AudioActionSchemas = {
 	mute: { options: { source: string; mute: 'true' | 'false' | 'toggle' }; result: boolean | null }
@@ -97,17 +89,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 					default: self.obsState.audioSourceListDefault,
 					choices: self.obsState.audioSourceList,
 				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set' },
-						{ id: 'adjust', label: 'Adjust' },
-					],
-				},
+				modeDropdown(),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -119,36 +101,15 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 						{ id: 'percent', label: 'Percentage' },
 					],
 				},
-				{
-					type: 'number',
-					label: 'Target Volume',
-					id: 'value',
-					default: 0,
-					min: VOLUME_MIN_DB,
-					max: 100,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
-				},
-				{
-					type: 'number',
+				modeNumber('set', { label: 'Target Volume', id: 'value', default: 0, min: VOLUME_MIN_DB, max: 100 }),
+				modeNumber('set', {
 					label: 'Fade Duration (in ms, 0 for instant)',
 					id: 'duration',
 					default: 0,
 					min: 0,
 					max: 5000,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
-				},
-				{
-					type: 'number',
-					label: 'Adjustment Amount',
-					id: 'amount',
-					default: 1,
-					min: -100,
-					max: 100,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'adjust'`,
-				},
+				}),
+				modeNumber('adjust', { label: 'Adjustment Amount', id: 'amount', default: 1, min: -100, max: 100 }),
 			],
 			callback: async (action) => {
 				const sourceName = action.options.source
@@ -193,45 +154,26 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 					default: self.obsState.audioSourceListDefault,
 					choices: self.obsState.audioSourceList,
 				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set' },
-						{ id: 'adjust', label: 'Adjust' },
-					],
-				},
-				{
-					type: 'number',
+				modeDropdown(),
+				modeNumber('set', {
 					label: 'Offset in ms',
 					id: 'value',
 					default: 0,
 					min: SYNC_OFFSET_MIN,
 					max: SYNC_OFFSET_MAX,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
-				},
-				{
-					type: 'number',
+				}),
+				modeNumber('adjust', {
 					label: 'Amount in ms',
 					id: 'amount',
 					default: 50,
-					min: -20000,
+					min: SYNC_OFFSET_MIN,
 					max: SYNC_OFFSET_MAX,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'adjust'`,
-				},
+				}),
 			],
 			callback: async (action) => {
 				const sourceName = action.options.source
-				const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioSyncOffset
-				const newOffset =
-					action.options.mode === 'set'
-						? action.options.value
-						: clamp((currentOffset ?? 0) + action.options.amount, SYNC_OFFSET_MIN, SYNC_OFFSET_MAX)
+				const currentOffset = self.obsState.findSourceByName(sourceName)?.inputAudioSyncOffset ?? 0
+				const newOffset = resolveSetAdjust(action.options, currentOffset, SYNC_OFFSET_MIN, SYNC_OFFSET_MAX)
 
 				await self.obs.sendRequest('SetInputAudioSyncOffset', {
 					inputName: sourceName,
@@ -260,45 +202,26 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 					default: self.obsState.audioSourceListDefault,
 					choices: self.obsState.audioSourceList,
 				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set' },
-						{ id: 'adjust', label: 'Adjust' },
-					],
-				},
-				{
-					type: 'number',
+				modeDropdown(),
+				modeNumber('set', {
 					label: 'Balance (0.0 to 1.0)',
 					id: 'value',
 					default: 0.5,
 					min: BALANCE_MIN,
 					max: BALANCE_MAX,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
-				},
-				{
-					type: 'number',
+				}),
+				modeNumber('adjust', {
 					label: 'Amount (percentage of range)',
 					id: 'amount',
 					default: 0.1,
 					min: -1.0,
 					max: BALANCE_MAX,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'adjust'`,
-				},
+				}),
 			],
 			callback: async (action) => {
 				const sourceName = action.options.source
-				const currentBalance = self.obsState.findSourceByName(sourceName)?.inputAudioBalance
-				const newBalance =
-					action.options.mode === 'set'
-						? action.options.value
-						: clamp((currentBalance ?? 0.5) + action.options.amount, BALANCE_MIN, BALANCE_MAX)
+				const currentBalance = self.obsState.findSourceByName(sourceName)?.inputAudioBalance ?? 0.5
+				const newBalance = resolveSetAdjust(action.options, currentBalance, BALANCE_MIN, BALANCE_MAX)
 
 				await self.obs.sendRequest('SetInputAudioBalance', {
 					inputName: sourceName,

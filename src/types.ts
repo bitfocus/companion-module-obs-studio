@@ -74,6 +74,21 @@ export enum OBSMediaInputAction {
 	Previous = 'OBS_WEBSOCKET_MEDIA_INPUT_ACTION_PREVIOUS',
 }
 
+/**
+ * The media_control choices that map straight onto an OBS media action. `toggle` is deliberately
+ * absent: it resolves to Play or Pause from the source's current status.
+ */
+export const MEDIA_CONTROL_ACTIONS = {
+	play: OBSMediaInputAction.Play,
+	pause: OBSMediaInputAction.Pause,
+	restart: OBSMediaInputAction.Restart,
+	stop: OBSMediaInputAction.Stop,
+	next: OBSMediaInputAction.Next,
+	previous: OBSMediaInputAction.Previous,
+} as const satisfies Record<string, OBSMediaInputAction>
+
+export type MediaControlAction = keyof typeof MEDIA_CONTROL_ACTIONS
+
 export enum ObsAudioMonitorType {
 	None = 'OBS_MONITORING_TYPE_NONE',
 	MonitorOnly = 'OBS_MONITORING_TYPE_MONITOR_ONLY',

@@ -1,5 +1,6 @@
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { modeDropdown, visibleWhenMode } from './options.js'
 
 const logger = createModuleLogger('Actions/Scenes')
 
@@ -38,18 +39,11 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 			description:
 				'Sets the current preview scene, either directly or by moving through the scene list (Studio Mode only)',
 			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set Scene' },
-						{ id: 'next', label: 'Next Scene' },
-						{ id: 'previous', label: 'Previous Scene' },
-					],
-				},
+				modeDropdown([
+					{ id: 'set', label: 'Set Scene' },
+					{ id: 'next', label: 'Next Scene' },
+					{ id: 'previous', label: 'Previous Scene' },
+				]),
 				{
 					type: 'dropdown',
 					label: 'Scene',
@@ -57,7 +51,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 					default: self.obsState.sceneListDefault,
 					choices: self.obsState.sceneChoices,
 					allowCustom: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
+					isVisibleExpression: visibleWhenMode('set'),
 				},
 			],
 			callback: async (action) => {
@@ -69,9 +63,8 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 				const previewScene = self.obsState.findSceneByName(self.states.previewScene)
 				const previewSceneIndex = previewScene?.sceneIndex ?? 0
 
-				// OBS orders scenes bottom-up, so the "next" scene in the UI is the lower index.
 				const targetIndex = action.options.mode === 'next' ? previewSceneIndex - 1 : previewSceneIndex + 1
-				const targetScene = Array.from(self.states.scenes.values()).find((s) => s.sceneIndex === targetIndex)
+				const targetScene = self.obsState.findSceneByIndex(targetIndex)
 				if (targetScene) {
 					await self.obs.sendRequest('SetCurrentPreviewScene', { sceneName: targetScene.sceneName })
 				} else {

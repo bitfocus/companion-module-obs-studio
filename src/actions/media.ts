@@ -1,7 +1,8 @@
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { OBSMediaStatus, OBSMediaInputAction } from '../types.js'
+import { OBSMediaStatus, OBSMediaInputAction, MEDIA_CONTROL_ACTIONS, type MediaControlAction } from '../types.js'
 import * as utils from '../utils.js'
+import { modeDropdown, modeNumber } from './options.js'
 
 const logger = createModuleLogger('Actions/Media')
 
@@ -13,7 +14,7 @@ type MediaTarget = {
 
 export type MediaActionSchemas = {
 	media_control: {
-		options: MediaTarget & { action: 'toggle' | 'play' | 'pause' | 'restart' | 'stop' | 'next' | 'previous' }
+		options: MediaTarget & { action: 'toggle' | MediaControlAction }
 	}
 	media_time: { options: MediaTarget & { mode: 'set' | 'adjust'; value: number; amount: number } }
 	updateMediaLocalFile: { options: MediaTarget & { path: string } }
@@ -60,35 +61,12 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 			callback: async (action) => {
 				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
 
-				let mediaAction: OBSMediaInputAction
-				switch (action.options.action) {
-					case 'toggle':
-						mediaAction =
-							self.obsState.findSourceByName(mediaName)?.OBSMediaStatus === OBSMediaStatus.Playing
-								? OBSMediaInputAction.Pause
-								: OBSMediaInputAction.Play
-						break
-					case 'play':
-						mediaAction = OBSMediaInputAction.Play
-						break
-					case 'pause':
-						mediaAction = OBSMediaInputAction.Pause
-						break
-					case 'restart':
-						mediaAction = OBSMediaInputAction.Restart
-						break
-					case 'stop':
-						mediaAction = OBSMediaInputAction.Stop
-						break
-					case 'next':
-						mediaAction = OBSMediaInputAction.Next
-						break
-					case 'previous':
-						mediaAction = OBSMediaInputAction.Previous
-						break
-					default:
-						return
-				}
+				const mediaAction =
+					action.options.action === 'toggle'
+						? self.obsState.findSourceByName(mediaName)?.OBSMediaStatus === OBSMediaStatus.Playing
+							? OBSMediaInputAction.Pause
+							: OBSMediaInputAction.Play
+						: MEDIA_CONTROL_ACTIONS[action.options.action]
 
 				await self.obs.sendRequest('TriggerMediaInputAction', {
 					inputName: mediaName,
@@ -116,37 +94,18 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					choices: self.obsState.mediaSourceList,
 					isVisibleExpression: `!$(options:useCurrentMedia)`,
 				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Mode',
-					id: 'mode',
-					default: 'set',
-					choices: [
-						{ id: 'set', label: 'Set Time' },
-						{ id: 'adjust', label: 'Scrub' },
-					],
-				},
-				{
-					type: 'number',
-					label: 'Time (in ms)',
-					id: 'value',
-					default: 0,
-					min: 0,
-					max: 100 * 60 * 60 * 1000,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'set'`,
-				},
-				{
-					type: 'number',
+				modeDropdown([
+					{ id: 'set', label: 'Set Time' },
+					{ id: 'adjust', label: 'Scrub' },
+				]),
+				modeNumber('set', { label: 'Time (in ms)', id: 'value', default: 0, min: 0, max: 100 * 60 * 60 * 1000 }),
+				modeNumber('adjust', {
 					label: 'Scrub Amount (in seconds, can be negative)',
 					id: 'amount',
 					default: 1,
 					min: -3600,
 					max: 3600,
-					clampValues: true,
-					isVisibleExpression: `$(options:mode) === 'adjust'`,
-				},
+				}),
 			],
 			callback: async (action) => {
 				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source

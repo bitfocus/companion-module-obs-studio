@@ -71,11 +71,17 @@ function renameOpt(options: Record<string, unknown>, from: string, to: string): 
 /**
  * Action families that used to be one action per command (recording start/stop/pause/…), or a
  * set/adjust pair, are now a single action with a leading dropdown. Each entry names the combined
- * action, the fixed option values that identify the old command, and any option renames it needs.
+ * action, the fixed option values that identify the old command, any option renames it needs, and
+ * defaults for options that the old action could leave unset.
  */
-const CONSOLIDATED_ACTIONS: Record<
+const ACTION_MIGRATIONS: Record<
 	string,
-	{ actionId: string; options: Record<string, unknown>; renames?: Record<string, string> }
+	{
+		actionId: string
+		options: Record<string, unknown>
+		renames?: Record<string, string>
+		defaults?: Record<string, unknown>
+	}
 > = {
 	start_recording: { actionId: 'recording', options: { action: 'start' } },
 	stop_recording: { actionId: 'recording', options: { action: 'stop' } },
@@ -130,6 +136,21 @@ const CONSOLIDATED_ACTIONS: Record<
 
 	preview_scene: { actionId: 'preview_scene', options: { mode: 'set' } },
 
+	// The next/previous dropdown these carried is now one more choice on the combined mode dropdown,
+	// so its value moves across rather than being fixed.
+	adjustTransitionType: {
+		actionId: 'transition_type',
+		options: {},
+		renames: { adjust: 'mode' },
+		defaults: { mode: 'next' },
+	},
+	adjustPreviewScene: {
+		actionId: 'preview_scene',
+		options: {},
+		renames: { adjust: 'mode' },
+		defaults: { mode: 'next' },
+	},
+
 	play_pause_media: { actionId: 'media_control', options: {}, renames: { playPause: 'action' } },
 	restart_media: { actionId: 'media_control', options: { action: 'restart' } },
 	stop_media: { actionId: 'media_control', options: { action: 'stop' } },
@@ -139,33 +160,19 @@ const CONSOLIDATED_ACTIONS: Record<
 	scrub_media: { actionId: 'media_time', options: { mode: 'adjust' }, renames: { scrubAmount: 'amount' } },
 }
 
-/**
- * The "adjust" actions carried a next/previous dropdown that becomes one more choice on the
- * combined action's mode dropdown, so their value is mapped across rather than fixed.
- */
-const ADJUST_TO_MODE_ACTIONS: Record<string, string> = {
-	adjustTransitionType: 'transition_type',
-	adjustPreviewScene: 'preview_scene',
-}
-
 function consolidateAction(action: CompanionMigrationAction): boolean {
-	const adjustTarget = ADJUST_TO_MODE_ACTIONS[action.actionId]
-	if (adjustTarget) {
-		action.actionId = adjustTarget
-		setOpt(action.options, 'mode', getOpt(action.options, 'adjust') === 'previous' ? 'previous' : 'next')
-		delete action.options.adjust
-		return true
-	}
+	const migration = ACTION_MIGRATIONS[action.actionId]
+	if (!migration) return false
 
-	const consolidated = CONSOLIDATED_ACTIONS[action.actionId]
-	if (!consolidated) return false
-
-	action.actionId = consolidated.actionId
-	for (const [from, to] of Object.entries(consolidated.renames ?? {})) {
+	action.actionId = migration.actionId
+	for (const [from, to] of Object.entries(migration.renames ?? {})) {
 		renameOpt(action.options, from, to)
 	}
-	for (const [key, value] of Object.entries(consolidated.options)) {
+	for (const [key, value] of Object.entries(migration.options)) {
 		setOpt(action.options, key, value)
+	}
+	for (const [key, value] of Object.entries(migration.defaults ?? {})) {
+		if (!(key in action.options)) setOpt(action.options, key, value)
 	}
 	return true
 }

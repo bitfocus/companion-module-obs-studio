@@ -7,7 +7,7 @@ import { actionEvent } from './mock/events.js'
 import { SLEEP_MAX_MS } from '../constants.js'
 import { looseActions, type LooseActions } from './loose-definitions.js'
 
-describe('fadeVolume batch', () => {
+describe('volume fade batch', () => {
 	let self: MockInstance
 	let actions: LooseActions
 

@@ -250,6 +250,20 @@ describe('v4_0_0 action consolidation', () => {
 		expect(updated.options).toEqual({ mode: 'previous' })
 	})
 
+	test('defaults the mode to next when the old adjust option was never set', () => {
+		const updated = upgradeAction('adjustPreviewScene', {})
+		expect(updated.actionId).toBe('preview_scene')
+		expect(updated.options).toEqual({ mode: 'next' })
+	})
+
+	test('carries an expression-valued adjust across to the mode option', () => {
+		const updated = upgradeAction('adjustTransitionType', {
+			adjust: { isExpression: true, value: '$(internal:custom_direction)' },
+		})
+		expect(updated.actionId).toBe('transition_type')
+		expect(updated.options).toEqual({ mode: { isExpression: true, value: '$(internal:custom_direction)' } })
+	})
+
 	test('migrates an option stored in the expanded value shape', () => {
 		const updated = upgradeAction('adjust_volume', {
 			source: { isExpression: true, value: '$(internal:custom_source)' },
