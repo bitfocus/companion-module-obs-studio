@@ -16,7 +16,7 @@ export function getMediaPresets(self: OBSInstance): {
 		style: baseStyle({ text: 'Play/\nPause:\n$(obs:current_media_name)' }),
 		steps: [
 			{
-				down: [{ actionId: 'play_pause_media', options: { useCurrentMedia: true, source: '', playPause: 'toggle' } }],
+				down: [{ actionId: 'media_control', options: { useCurrentMedia: true, source: '', action: 'toggle' } }],
 				up: [],
 			},
 		],
@@ -32,11 +32,11 @@ export function getMediaPresets(self: OBSInstance): {
 			{
 				down: [
 					{
-						actionId: 'play_pause_media',
+						actionId: 'media_control',
 						options: {
 							useCurrentMedia: false,
 							source: { value: '$(local:source)', isExpression: true },
-							playPause: 'toggle',
+							action: 'toggle',
 						},
 					},
 				],

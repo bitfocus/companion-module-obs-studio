@@ -129,6 +129,14 @@ const CONSOLIDATED_ACTIONS: Record<
 	adjust_transition_duration: { actionId: 'transition_duration', options: { mode: 'adjust' } },
 
 	preview_scene: { actionId: 'preview_scene', options: { mode: 'set' } },
+
+	play_pause_media: { actionId: 'media_control', options: {}, renames: { playPause: 'action' } },
+	restart_media: { actionId: 'media_control', options: { action: 'restart' } },
+	stop_media: { actionId: 'media_control', options: { action: 'stop' } },
+	next_media: { actionId: 'media_control', options: { action: 'next' } },
+	previous_media: { actionId: 'media_control', options: { action: 'previous' } },
+	set_media_time: { actionId: 'media_time', options: { mode: 'set' }, renames: { mediaTime: 'value' } },
+	scrub_media: { actionId: 'media_time', options: { mode: 'adjust' }, renames: { scrubAmount: 'amount' } },
 }
 
 /**

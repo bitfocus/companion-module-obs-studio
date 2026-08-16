@@ -263,6 +263,33 @@ describe('v4_0_0 action consolidation', () => {
 		})
 	})
 
+	test.each([
+		['restart_media', 'restart'],
+		['stop_media', 'stop'],
+		['next_media', 'next'],
+		['previous_media', 'previous'],
+	])('maps %s onto media_control', (oldId, expected) => {
+		const updated = upgradeAction(oldId, { useCurrentMedia: false, source: 'Clip' })
+		expect(updated.actionId).toBe('media_control')
+		expect(updated.options).toEqual({ useCurrentMedia: false, source: 'Clip', action: expected })
+	})
+
+	test('renames the play_pause_media dropdown, keeping its value', () => {
+		const updated = upgradeAction('play_pause_media', { useCurrentMedia: true, source: '', playPause: 'pause' })
+		expect(updated.actionId).toBe('media_control')
+		expect(updated.options).toEqual({ useCurrentMedia: true, source: '', action: 'pause' })
+	})
+
+	test('migrates set_media_time and scrub_media onto media_time', () => {
+		const set = upgradeAction('set_media_time', { useCurrentMedia: true, source: '', mediaTime: 5000 })
+		expect(set.actionId).toBe('media_time')
+		expect(set.options).toEqual({ useCurrentMedia: true, source: '', mode: 'set', value: 5000 })
+
+		const scrub = upgradeAction('scrub_media', { useCurrentMedia: true, source: '', scrubAmount: -5 })
+		expect(scrub.actionId).toBe('media_time')
+		expect(scrub.options).toEqual({ useCurrentMedia: true, source: '', mode: 'adjust', amount: -5 })
+	})
+
 	test('leaves an action outside the consolidated families untouched', () => {
 		const result = v4_0_0(
 			context,

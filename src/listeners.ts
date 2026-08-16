@@ -579,15 +579,13 @@ function setMediaStatus(self: OBSInstance, source: OBSSource, uuid: string, stat
 }
 
 // Map media action to recorder entry.
-const MEDIA_ACTION_RECORDER_MAP: Partial<
-	Record<OBSMediaInputAction, { actionId: string; playPause?: 'play' | 'pause' }>
-> = {
-	[OBSMediaInputAction.Pause]: { actionId: 'play_pause_media', playPause: 'pause' },
-	[OBSMediaInputAction.Play]: { actionId: 'play_pause_media', playPause: 'play' },
-	[OBSMediaInputAction.Restart]: { actionId: 'restart_media' },
-	[OBSMediaInputAction.Stop]: { actionId: 'stop_media' },
-	[OBSMediaInputAction.Next]: { actionId: 'next_media' },
-	[OBSMediaInputAction.Previous]: { actionId: 'previous_media' },
+const MEDIA_ACTION_RECORDER_MAP: Partial<Record<OBSMediaInputAction, string>> = {
+	[OBSMediaInputAction.Pause]: 'pause',
+	[OBSMediaInputAction.Play]: 'play',
+	[OBSMediaInputAction.Restart]: 'restart',
+	[OBSMediaInputAction.Stop]: 'stop',
+	[OBSMediaInputAction.Next]: 'next',
+	[OBSMediaInputAction.Previous]: 'previous',
 }
 
 // Media Listeners
@@ -613,11 +611,14 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			}
 		}
 
-		const mapping = MEDIA_ACTION_RECORDER_MAP[action]
-		if (mapping) {
-			const mediaOptions: CompanionOptionValues = { source: source?.sourceName ?? '', useCurrentMedia: false }
-			if (mapping.playPause) mediaOptions.playPause = mapping.playPause
-			self.sendToActionRecorder({ actionId: mapping.actionId, options: mediaOptions })
+		const recordedAction = MEDIA_ACTION_RECORDER_MAP[action]
+		if (recordedAction) {
+			const mediaOptions: CompanionOptionValues = {
+				source: source?.sourceName ?? '',
+				useCurrentMedia: false,
+				action: recordedAction,
+			}
+			self.sendToActionRecorder({ actionId: 'media_control', options: mediaOptions })
 		}
 	})
 }

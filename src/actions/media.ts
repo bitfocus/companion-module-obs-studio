@@ -12,21 +12,18 @@ type MediaTarget = {
 }
 
 export type MediaActionSchemas = {
-	play_pause_media: { options: MediaTarget & { playPause: 'toggle' | 'play' | 'pause' } }
-	restart_media: { options: MediaTarget }
-	stop_media: { options: MediaTarget }
-	next_media: { options: MediaTarget }
-	previous_media: { options: MediaTarget }
-	set_media_time: { options: MediaTarget & { mediaTime: number } }
-	scrub_media: { options: MediaTarget & { scrubAmount: number } }
+	media_control: {
+		options: MediaTarget & { action: 'toggle' | 'play' | 'pause' | 'restart' | 'stop' | 'next' | 'previous' }
+	}
+	media_time: { options: MediaTarget & { mode: 'set' | 'adjust'; value: number; amount: number } }
 	updateMediaLocalFile: { options: MediaTarget & { path: string } }
 }
 
 export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<MediaActionSchemas> {
 	return {
-		play_pause_media: {
-			name: 'Media - Play / Pause',
-			description: 'Plays, pauses, or toggles the playback state of a media source',
+		media_control: {
+			name: 'Media - Control',
+			description: 'Controls the playback of a media source',
 			options: [
 				{
 					type: 'checkbox',
@@ -47,149 +44,62 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					type: 'dropdown',
 					disableAutoExpression: true,
 					label: 'Action',
-					id: 'playPause',
+					id: 'action',
 					default: 'toggle',
 					choices: [
 						{ id: 'toggle', label: 'Toggle Play/Pause' },
 						{ id: 'play', label: 'Play' },
 						{ id: 'pause', label: 'Pause' },
+						{ id: 'restart', label: 'Restart' },
+						{ id: 'stop', label: 'Stop' },
+						{ id: 'next', label: 'Next' },
+						{ id: 'previous', label: 'Previous' },
 					],
 				},
 			],
 			callback: async (action) => {
 				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				const playPause = action.options.playPause
+
 				let mediaAction: OBSMediaInputAction
-				if (playPause === 'toggle') {
-					mediaAction =
-						self.obsState.findSourceByName(mediaName)?.OBSMediaStatus === OBSMediaStatus.Playing
-							? OBSMediaInputAction.Pause
-							: OBSMediaInputAction.Play
-				} else {
-					mediaAction = playPause === 'pause' ? OBSMediaInputAction.Pause : OBSMediaInputAction.Play
+				switch (action.options.action) {
+					case 'toggle':
+						mediaAction =
+							self.obsState.findSourceByName(mediaName)?.OBSMediaStatus === OBSMediaStatus.Playing
+								? OBSMediaInputAction.Pause
+								: OBSMediaInputAction.Play
+						break
+					case 'play':
+						mediaAction = OBSMediaInputAction.Play
+						break
+					case 'pause':
+						mediaAction = OBSMediaInputAction.Pause
+						break
+					case 'restart':
+						mediaAction = OBSMediaInputAction.Restart
+						break
+					case 'stop':
+						mediaAction = OBSMediaInputAction.Stop
+						break
+					case 'next':
+						mediaAction = OBSMediaInputAction.Next
+						break
+					case 'previous':
+						mediaAction = OBSMediaInputAction.Previous
+						break
+					default:
+						return
 				}
+
 				await self.obs.sendRequest('TriggerMediaInputAction', {
 					inputName: mediaName,
 					mediaAction: mediaAction,
 				})
 			},
 		},
-		restart_media: {
-			name: 'Media - Restart',
-			description: 'Restarts playback of a media source from the beginning',
-			options: [
-				{
-					type: 'checkbox',
-					label: 'Currently Playing',
-					id: 'useCurrentMedia',
-					default: false,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
-					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
-					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
-			],
-			callback: async (action) => {
-				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				await self.obs.sendRequest('TriggerMediaInputAction', {
-					inputName: mediaName,
-					mediaAction: OBSMediaInputAction.Restart,
-				})
-			},
-		},
-		stop_media: {
-			name: 'Media - Stop',
-			description: 'Stops playback of a media source',
-			options: [
-				{
-					type: 'checkbox',
-					label: 'Currently Playing',
-					id: 'useCurrentMedia',
-					default: false,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
-					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
-					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
-			],
-			callback: async (action) => {
-				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				await self.obs.sendRequest('TriggerMediaInputAction', {
-					inputName: mediaName,
-					mediaAction: OBSMediaInputAction.Stop,
-				})
-			},
-		},
-		next_media: {
-			name: 'Media - Next',
-			description: 'Skips to the next item in a media source playlist (if supported)',
-			options: [
-				{
-					type: 'checkbox',
-					label: 'Currently Playing',
-					id: 'useCurrentMedia',
-					default: false,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
-					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
-					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
-			],
-			callback: async (action) => {
-				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				await self.obs.sendRequest('TriggerMediaInputAction', {
-					inputName: mediaName,
-					mediaAction: OBSMediaInputAction.Next,
-				})
-			},
-		},
-		previous_media: {
-			name: 'Media - Previous',
-			description: 'Skips to the previous item in a media source playlist (if supported)',
-			options: [
-				{
-					type: 'checkbox',
-					label: 'Currently Playing',
-					id: 'useCurrentMedia',
-					default: false,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
-					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
-					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
-			],
-			callback: async (action) => {
-				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				await self.obs.sendRequest('TriggerMediaInputAction', {
-					inputName: mediaName,
-					mediaAction: OBSMediaInputAction.Previous,
-				})
-			},
-		},
 
-		set_media_time: {
-			name: 'Media - Set Time',
-			description: 'Sets the playback cursor of a media source to a specific time',
+		media_time: {
+			name: 'Media - Playback Time',
+			description: 'Sets the playback cursor of a media source to a specific time, or moves it by an offset',
 			options: [
 				{
 					type: 'checkbox',
@@ -205,71 +115,62 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					default: self.obsState.mediaSourceListDefault,
 					choices: self.obsState.mediaSourceList,
 					isVisibleExpression: `!$(options:useCurrentMedia)`,
+				},
+				{
+					type: 'dropdown',
+					disableAutoExpression: true,
+					label: 'Mode',
+					id: 'mode',
+					default: 'set',
+					choices: [
+						{ id: 'set', label: 'Set Time' },
+						{ id: 'adjust', label: 'Scrub' },
+					],
 				},
 				{
 					type: 'number',
 					label: 'Time (in ms)',
-					id: 'mediaTime',
+					id: 'value',
 					default: 0,
 					min: 0,
 					max: 100 * 60 * 60 * 1000,
 					clampValues: true,
+					isVisibleExpression: `$(options:mode) === 'set'`,
+				},
+				{
+					type: 'number',
+					label: 'Scrub Amount (in seconds, can be negative)',
+					id: 'amount',
+					default: 1,
+					min: -3600,
+					max: 3600,
+					clampValues: true,
+					isVisibleExpression: `$(options:mode) === 'adjust'`,
 				},
 			],
 			callback: async (action) => {
 				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				const mediaTime = action.options.mediaTime
-				await self.obs.sendRequest('SetMediaInputCursor', {
-					inputName: mediaName,
-					mediaCursor: mediaTime,
-				})
+
+				if (action.options.mode === 'set') {
+					await self.obs.sendRequest('SetMediaInputCursor', {
+						inputName: mediaName,
+						mediaCursor: action.options.value,
+					})
+				} else {
+					await self.obs.sendRequest('OffsetMediaInputCursor', {
+						inputName: mediaName,
+						mediaCursorOffset: action.options.amount * 1000,
+					})
+				}
 			},
 			learn: (action) => {
 				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
 				const source = self.obsState.findSourceByName(mediaName)
 				if (!source || source.mediaCursor === undefined) return undefined
 				return {
-					mediaTime: source.mediaCursor,
+					mode: 'set',
+					value: source.mediaCursor,
 				}
-			},
-		},
-
-		scrub_media: {
-			name: 'Media - Scrub',
-			description: 'Moves the playback cursor of a media source by a specific offset',
-			options: [
-				{
-					type: 'checkbox',
-					label: 'Currently Playing',
-					id: 'useCurrentMedia',
-					default: false,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
-					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
-					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
-				{
-					type: 'number',
-					label: 'Scrub Amount (in seconds, can be negative)',
-					id: 'scrubAmount',
-					default: 1,
-					min: -3600,
-					max: 3600,
-					clampValues: true,
-				},
-			],
-			callback: async (action) => {
-				const mediaName = action.options.useCurrentMedia ? self.states.currentMedia : action.options.source
-				const scrubAmount = action.options.scrubAmount
-				await self.obs.sendRequest('OffsetMediaInputCursor', {
-					inputName: mediaName,
-					mediaCursorOffset: scrubAmount * 1000,
-				})
 			},
 		},
 
