@@ -20,11 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Source - Set Visibility of All Sources in Scene" action, with an "Except" option to exclude
   specific sources (which are set to the opposite visibility)
 - `monitor_active` variable for each audio source, reporting whether monitoring is enabled
+- `audio_source_list` variable (list of available audio sources)
+- `source_active` variable for each source, reporting whether it is active
+- `replay_buffer_active`, `virtualcam_active`, `studio_mode`, and per-source `tracks_<source>` variables
+- Action Recorder ("Learn") support for actions, to capture current values from OBS
 
 ### Changed
 
 - Rewritten in TypeScript to improve code quality and stability
 - Batch more communication with obs-websocket wherever possible to improve performance
+- "Trigger Hotkey by ID" action's choices are now fetched dynamically from OBS instead of a static list
 - "Audio - Set Audio Monitoring" (previously "Set Audio Monitor Type") now enables, disables, or toggles
   monitoring instead of selecting a monitor type, and the "Audio - Monitoring" feedback (previously
   "Audio - Monitor Type") is simply active while monitoring is enabled, matching the audio mixer in OBS
