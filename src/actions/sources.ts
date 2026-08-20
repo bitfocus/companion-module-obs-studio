@@ -60,6 +60,7 @@ export type SourceActionSchemas = {
 			useProgramScene: boolean
 			scene: string
 			source: string
+			props: string[]
 			positionX: string
 			positionY: string
 			scaleX: string
@@ -498,13 +499,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const settings = source?.settings
 				if (!settings) return undefined
 
-				const props = action.options.props || []
 				const learnedOptions: Record<string, unknown> = { ...action.options }
 				const kind = source.inputKind ?? ''
 
-				/** Only learn options the user actually selected, and only when OBS reported a value. */
+				/** Learn every field OBS reported a value for, regardless of which props are currently selected. */
 				const setIfProp = (prop: string, value: unknown): void => {
-					if (props.includes(prop) && value !== undefined) {
+					if (value !== undefined) {
 						learnedOptions[prop] = value
 					}
 				}
@@ -843,11 +843,25 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					choices: self.obsState.sourceChoices,
 				},
 				{
+					type: 'multidropdown',
+					label: 'Properties',
+					id: 'props',
+					default: [],
+					choices: [
+						{ id: 'positionX', label: 'Position X' },
+						{ id: 'positionY', label: 'Position Y' },
+						{ id: 'scaleX', label: 'Scale X' },
+						{ id: 'scaleY', label: 'Scale Y' },
+						{ id: 'rotation', label: 'Rotation' },
+					],
+				},
+				{
 					type: 'textinput',
 					label: 'Position X',
 					id: 'positionX',
 					default: '',
 					useVariables: true,
+					isVisibleExpression: `arrayIncludes($(options:props), 'positionX')`,
 				},
 				{
 					type: 'textinput',
@@ -855,6 +869,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'positionY',
 					default: '',
 					useVariables: true,
+					isVisibleExpression: `arrayIncludes($(options:props), 'positionY')`,
 				},
 				{
 					type: 'textinput',
@@ -862,6 +877,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'scaleX',
 					default: '',
 					useVariables: true,
+					isVisibleExpression: `arrayIncludes($(options:props), 'scaleX')`,
 				},
 				{
 					type: 'textinput',
@@ -869,6 +885,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'scaleY',
 					default: '',
 					useVariables: true,
+					isVisibleExpression: `arrayIncludes($(options:props), 'scaleY')`,
 				},
 				{
 					type: 'textinput',
@@ -876,18 +893,22 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'rotation',
 					default: '',
 					useVariables: true,
+					isVisibleExpression: `arrayIncludes($(options:props), 'rotation')`,
 				},
 			],
 			callback: async (action) => {
 				const sourceSceneName = action.options.useProgramScene ? self.states.programScene : action.options.scene
 				const sourceName = action.options.source
+				const props = action.options.props || []
 
 				const transform: { [key: string]: number } = {}
-				if (action.options.positionX) transform.positionX = Number(action.options.positionX)
-				if (action.options.positionY) transform.positionY = Number(action.options.positionY)
-				if (action.options.scaleX) transform.scaleX = Number(action.options.scaleX)
-				if (action.options.scaleY) transform.scaleY = Number(action.options.scaleY)
-				if (action.options.rotation) transform.rotation = Number(action.options.rotation)
+				if (props.includes('positionX') && action.options.positionX)
+					transform.positionX = Number(action.options.positionX)
+				if (props.includes('positionY') && action.options.positionY)
+					transform.positionY = Number(action.options.positionY)
+				if (props.includes('scaleX') && action.options.scaleX) transform.scaleX = Number(action.options.scaleX)
+				if (props.includes('scaleY') && action.options.scaleY) transform.scaleY = Number(action.options.scaleY)
+				if (props.includes('rotation') && action.options.rotation) transform.rotation = Number(action.options.rotation)
 
 				try {
 					const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
@@ -907,6 +928,46 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					}
 				} catch (e) {
 					logger.error(`Set Scene Item Properties Error: ${utils.describeError(e)}`)
+				}
+			},
+			learn: async (action) => {
+				const sourceSceneName = action.options.useProgramScene ? self.states.programScene : action.options.scene
+				const sourceName = action.options.source
+
+				try {
+					const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
+						sceneName: sourceSceneName,
+						sourceName: sourceName,
+					})
+					if (!sceneItem?.sceneItemId) return undefined
+
+					const res = await self.obs.sendRequest('GetSceneItemTransform', {
+						sceneName: sourceSceneName,
+						sceneItemId: sceneItem.sceneItemId,
+					})
+					const sceneItemTransform = res?.sceneItemTransform
+					if (!sceneItemTransform) return undefined
+
+					const props = action.options.props || []
+					const learnedOptions: Record<string, unknown> = {}
+
+					/** OBS reports transform values as numbers; String() would stringify undefined as 'undefined'. */
+					const setIfProp = (prop: string, value: unknown): void => {
+						if (!props.includes(prop)) return
+						const num = utils.asNumber(value)
+						if (num !== undefined) learnedOptions[prop] = String(num)
+					}
+
+					setIfProp('positionX', sceneItemTransform.positionX)
+					setIfProp('positionY', sceneItemTransform.positionY)
+					setIfProp('scaleX', sceneItemTransform.scaleX)
+					setIfProp('scaleY', sceneItemTransform.scaleY)
+					setIfProp('rotation', sceneItemTransform.rotation)
+
+					return learnedOptions
+				} catch (e) {
+					logger.error(`Learn Scene Item Properties Error: ${utils.describeError(e)}`)
+					return undefined
 				}
 			},
 		},

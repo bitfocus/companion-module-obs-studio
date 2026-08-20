@@ -512,6 +512,16 @@ export default [
 				actionChanged = true
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)
+			} else if (action.actionId === 'source_properties') {
+				const includedProps: string[] = []
+				for (const key of ['positionX', 'positionY', 'scaleX', 'scaleY', 'rotation']) {
+					const value = getOpt(action.options, key)
+					if (value !== undefined && value !== null && value !== '') {
+						includedProps.push(key)
+					}
+				}
+				setOpt(action.options, 'props', includedProps)
+				actionChanged = true
 			}
 
 			// Runs last so it also picks up the ids the branches above just rewrote.
