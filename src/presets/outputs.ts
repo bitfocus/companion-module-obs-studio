@@ -1,136 +1,84 @@
-import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
+import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive } from './style.js'
 
-/** Custom output presets (Virtual Camera, Decklink, etc.) templates. */
+/** Custom output presets (Virtual Cam, Decklink, etc.), grouped by output. */
 export function getOutputPresets(self: OBSInstance): {
 	presets: CompanionPresetDefinitions<OBSInstanceTypes>
 	sections: CompanionPresetSection<OBSInstanceTypes>[]
 } {
 	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
+	const groups: CompanionPresetGroup<OBSInstanceTypes>[] = []
 
-	presets['tmp_outputToggle'] = {
-		type: 'simple',
-		name: 'Toggle Output',
-		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
-		style: baseStyle({ text: '$(local:output)' }),
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'output',
-						options: { action: 'toggle', output: { value: '$(local:output)', isExpression: true } },
-					},
-				],
-				up: [],
-			},
-		],
-		feedbacks: [
-			{
-				feedbackId: 'output_active',
-				options: { output: { value: '$(local:output)', isExpression: true } },
-				style: { ...styleActive(), text: '$(local:output)\nActive' },
-			},
-		],
+	for (const output of self.obsState.outputList) {
+		const outputId = String(output.id)
+		const slug = outputId.replace(/[^a-zA-Z0-9]+/g, '_')
+		const value = { value: outputId, isExpression: false as const }
+		const ids = {
+			toggle: `output_${slug}_toggle`,
+			start: `output_${slug}_start`,
+			stop: `output_${slug}_stop`,
+			status: `output_${slug}_status`,
+		}
+
+		presets[ids.toggle] = {
+			type: 'simple',
+			name: 'Toggle Output',
+			style: baseStyle({ text: output.label }),
+			steps: [{ down: [{ actionId: 'output', options: { action: 'toggle', output: value } }], up: [] }],
+			feedbacks: [
+				{
+					feedbackId: 'output_active',
+					options: { output: value },
+					style: { ...styleActive(), text: `${output.label}\nActive` },
+				},
+			],
+		}
+
+		presets[ids.start] = {
+			type: 'simple',
+			name: 'Start Output',
+			style: baseStyle({ text: `START\n${output.label}` }),
+			steps: [{ down: [{ actionId: 'output', options: { action: 'start', output: value } }], up: [] }],
+			feedbacks: [{ feedbackId: 'output_active', options: { output: value }, style: styleActive() }],
+		}
+
+		presets[ids.stop] = {
+			type: 'simple',
+			name: 'Stop Output',
+			style: baseStyle({ text: `STOP\n${output.label}` }),
+			steps: [{ down: [{ actionId: 'output', options: { action: 'stop', output: value } }], up: [] }],
+			feedbacks: [],
+		}
+
+		presets[ids.status] = {
+			type: 'simple',
+			name: 'Output Status',
+			style: baseStyle({ text: output.label }),
+			steps: [{ down: [], up: [] }],
+			feedbacks: [
+				{
+					feedbackId: 'output_active',
+					options: { output: value },
+					style: { ...styleActive(), text: `${output.label}\nActive` },
+				},
+			],
+		}
+
+		groups.push({
+			id: `outputs-${slug}`,
+			type: 'simple',
+			name: output.label,
+			presets: [ids.toggle, ids.start, ids.stop, ids.status],
+		})
 	}
-
-	presets['tmp_outputStart'] = {
-		type: 'simple',
-		name: 'Start Output',
-		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
-		style: baseStyle({ text: 'START\n$(local:output)' }),
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'output',
-						options: { action: 'start', output: { value: '$(local:output)', isExpression: true } },
-					},
-				],
-				up: [],
-			},
-		],
-		feedbacks: [
-			{
-				feedbackId: 'output_active',
-				options: { output: { value: '$(local:output)', isExpression: true } },
-				style: styleActive(),
-			},
-		],
-	}
-
-	presets['tmp_outputStop'] = {
-		type: 'simple',
-		name: 'Stop Output',
-		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
-		style: baseStyle({ text: 'STOP\n$(local:output)' }),
-		steps: [
-			{
-				down: [
-					{ actionId: 'output', options: { action: 'stop', output: { value: '$(local:output)', isExpression: true } } },
-				],
-				up: [],
-			},
-		],
-		feedbacks: [],
-	}
-
-	presets['tmp_outputStatus'] = {
-		type: 'simple',
-		name: 'Output Status',
-		localVariables: [{ variableType: 'simple', variableName: 'output', startupValue: '', headline: 'Output name' }],
-		style: baseStyle({ text: '$(local:output)' }),
-		steps: [{ down: [], up: [] }],
-		feedbacks: [
-			{
-				feedbackId: 'output_active',
-				options: { output: { value: '$(local:output)', isExpression: true } },
-				style: { ...styleActive(), text: '$(local:output)\nActive' },
-			},
-		],
-	}
-
-	const outputValues = self.obsState.outputList.map((o) => ({ name: o.label, value: o.id }))
 
 	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
 		{
 			id: 'outputs',
 			name: 'Custom Outputs',
-			definitions: [
-				{
-					id: 'outputs-control',
-					name: 'Toggle',
-					type: 'template',
-					presetId: 'tmp_outputToggle',
-					templateVariableName: 'output',
-					templateValues: outputValues,
-				},
-				{
-					id: 'outputs-start',
-					name: 'Start',
-					type: 'template',
-					presetId: 'tmp_outputStart',
-					templateVariableName: 'output',
-					templateValues: outputValues,
-				},
-				{
-					id: 'outputs-stop',
-					name: 'Stop',
-					type: 'template',
-					presetId: 'tmp_outputStop',
-					templateVariableName: 'output',
-					templateValues: outputValues,
-				},
-				{
-					id: 'outputs-status',
-					name: 'Status',
-					type: 'template',
-					presetId: 'tmp_outputStatus',
-					templateVariableName: 'output',
-					templateValues: outputValues,
-				},
-			],
+			definitions: groups,
 		},
 	]
 

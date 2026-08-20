@@ -284,7 +284,7 @@ export class OBSState {
 			this.buildChoices(
 				Array.from(this.state.outputs.keys()),
 				(id) => !id.includes('file_output') && !id.includes('ffmpeg_output'),
-				(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Camera' : name }),
+				(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Cam' : name }),
 				(a, b) => a.label.localeCompare(b.label),
 			),
 		)
