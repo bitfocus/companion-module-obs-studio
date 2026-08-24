@@ -13,7 +13,7 @@ export type SceneActionSchemas = {
 export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<SceneActionSchemas> {
 	return {
 		set_scene: {
-			name: 'Set Program Scene',
+			name: 'Scene - Set Program Scene',
 			description: 'Switches the current program output to the specified scene',
 			options: [
 				{
@@ -35,7 +35,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 		},
 
 		preview_scene: {
-			name: 'Set Preview Scene',
+			name: 'Scens - Set Preview Scene',
 			description:
 				'Sets the current preview scene, either directly or by moving through the scene list (Studio Mode only)',
 			options: [
@@ -78,7 +78,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 		},
 
 		smart_switcher: {
-			name: 'Smart Scene Switcher',
+			name: 'Scene - Smart Scene Switcher',
 			description: 'Preview a scene, or transition it if it is already in preview',
 			options: [
 				{

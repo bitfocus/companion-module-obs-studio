@@ -23,7 +23,7 @@ export type MediaActionSchemas = {
 export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<MediaActionSchemas> {
 	return {
 		media_control: {
-			name: 'Media - Control',
+			name: 'Media - Playback Controls',
 			description: 'Controls the playback of a media source',
 			options: [
 				{
@@ -76,7 +76,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 		},
 
 		media_time: {
-			name: 'Media - Playback Time',
+			name: 'Media - Set / Scrub Playback Time',
 			description: 'Sets the playback cursor of a media source to a specific time, or moves it by an offset',
 			options: [
 				{

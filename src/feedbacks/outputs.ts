@@ -116,7 +116,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 
 		streamCongestion: {
 			type: 'advanced',
-			name: 'Stream Congestion',
+			name: 'Streaming - Stream Congestion',
 			description: 'Change the style of the button to show stream congestion',
 			affectedProperties: ['bgcolor'],
 			options: [

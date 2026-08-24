@@ -16,7 +16,7 @@ export type TransitionActionSchemas = {
 export function getTransitionActions(self: OBSInstance): CompanionActionDefinitions<TransitionActionSchemas> {
 	return {
 		do_transition: {
-			name: 'Transition - Perform Transition',
+			name: 'Transitions - Perform Transition',
 			description: 'Transitions the current preview scene to program using the current transition',
 			options: [],
 			callback: async () => {
@@ -31,7 +31,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		},
 
 		quick_transition: {
-			name: 'Transition - Quick Transition',
+			name: 'Transitions - Quick Transition',
 			description: 'Performs a quick transition using a specific transition type and optional custom duration',
 			options: [
 				{
@@ -112,7 +112,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		},
 
 		transition_type: {
-			name: 'Transition - Type',
+			name: 'Transitions - Set Type',
 			description: 'Sets the current transition type used for Studio Mode transitions, or cycles through the list',
 			options: [
 				modeDropdown([
@@ -154,7 +154,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 		},
 
 		transition_duration: {
-			name: 'Transition - Duration',
+			name: 'Transitions - Set Duration',
 			description: 'Sets or adjusts the duration for current transitions in milliseconds',
 			options: [
 				modeDropdown(),

@@ -108,7 +108,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 	return {
 		// Recording
 		recording: outputControlAction({
-			name: 'Recording',
+			name: 'Recording - Controls',
 			description: 'Controls the recording output',
 			toggle: async () => self.obs.sendRequest('ToggleRecord'),
 			start: async () => self.obs.sendRequest('StartRecord'),
@@ -147,14 +147,14 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 		}),
 		// Streaming
 		streaming: outputControlAction({
-			name: 'Stream',
+			name: 'Streaming - Controls',
 			description: 'Controls the streaming output',
 			toggle: async () => self.obs.sendRequest('ToggleStream'),
 			start: async () => self.obs.sendRequest('StartStream'),
 			stop: async () => self.obs.sendRequest('StopStream'),
 		}),
 		SendStreamCaption: {
-			name: 'Stream - Send Caption',
+			name: 'Streaming - Send Caption',
 			options: [
 				{
 					type: 'textinput',
@@ -171,7 +171,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 			},
 		},
 		set_stream_settings: {
-			name: 'Stream - Set Settings',
+			name: 'Streaming - Set Stream Settings',
 			options: [
 				{
 					type: 'dropdown',
@@ -263,7 +263,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 		},
 		// Replay Buffer
 		replay_buffer: outputControlAction({
-			name: 'Replay Buffer',
+			name: 'Replay Buffer - Controls',
 			description: 'Controls the replay buffer output',
 			toggle: async () => self.obs.sendRequest('ToggleReplayBuffer'),
 			start: async () => self.obs.sendRequest('StartReplayBuffer'),
@@ -273,7 +273,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 		}),
 		// Outputs
 		output: outputControlAction({
-			name: 'Output',
+			name: 'Output - Controls',
 			description: 'Controls a specific output (e.g., Virtual Cam, Decklink)',
 			// The virtual camera has its own requests and takes no output name.
 			toggle: async ({ output }) =>

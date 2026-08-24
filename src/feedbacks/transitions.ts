@@ -12,7 +12,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 	return {
 		transition_active: {
 			type: 'boolean',
-			name: 'Transition - In Progress',
+			name: 'Transitions - In Progress',
 			description: 'If an OBS transition is currently in progress, change the style of the button',
 			defaultStyle: {
 				color: Color.White,
@@ -26,7 +26,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 
 		current_transition: {
 			type: 'boolean',
-			name: 'Transition - Type',
+			name: 'Transitions - Type',
 			description:
 				'If a specific transition type is currently selected as the active transition, change the style of the button',
 			defaultStyle: {

@@ -197,7 +197,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 
 		// Custom + Vendor Commands
 		custom_command: {
-			name: 'Custom Command',
+			name: 'Custom - Send Command',
 			description: 'Sends a custom raw request to OBS WebSocket',
 			options: [
 				{
@@ -233,7 +233,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 
 		vendorRequest: {
-			name: 'Custom Vendor Request',
+			name: 'Custom - Send Vendor Request',
 			description: 'Sends a request to a specific OBS vendor plugin',
 			options: [
 				{
@@ -275,9 +275,9 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			hasResult: true,
 		},
 
-		// Open Windows
+		// UI Windows
 		openInputPropertiesDialog: {
-			name: 'Open Window - Source Properties',
+			name: 'UI - Open Source Properties Window',
 			description: 'Opens the properties dialog for a source within the OBS UI',
 			options: [
 				{
@@ -294,7 +294,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		},
 		openInputFiltersDialog: {
-			name: 'Open Window - Source Filters',
+			name: 'UI - Open Source Filter Window',
 			description: 'Opens the filters dialog for a source within the OBS UI',
 			options: [
 				{
@@ -311,7 +311,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			},
 		},
 		openInputInteractDialog: {
-			name: 'Open Window - Source Interact',
+			name: 'UI - Open Source Interaction Window',
 			description: 'Opens the interact dialog for a source (e.g., browser source) within the OBS UI',
 			options: [
 				{
@@ -329,7 +329,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		},
 
 		open_projector: {
-			name: 'Open Projector',
+			name: 'UI - Open Projector',
 			options: [
 				{
 					type: 'dropdown',

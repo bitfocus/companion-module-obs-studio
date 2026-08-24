@@ -91,7 +91,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 	return {
 		// Text Sources
 		setText: {
-			name: 'Set Source Text',
+			name: 'Source - Set Source Text',
 			options: [
 				{
 					type: 'dropdown',
@@ -125,7 +125,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			},
 		},
 		setTextProperties: {
-			name: 'Set Text Properties',
+			name: 'Source - Set Text Properties',
 			options: [
 				{
 					type: 'dropdown',
@@ -553,7 +553,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			},
 		},
 		resetCaptureDevice: {
-			name: 'Reset Video Capture Device',
+			name: 'Source - Reset Video Capture Device',
 			description: 'Deactivates and Reactivates a Video Capture Source to reset it',
 			options: [
 				{
@@ -579,7 +579,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 
 		// Filters
 		toggle_filter: {
-			name: 'Filter - Set Visibility',
+			name: 'Filters - Set Visibility',
 			description: 'Shows, hides, or toggles the enabled state of a filter on a source',
 			options: [
 				{
@@ -640,7 +640,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		},
 
 		setFilterSettings: {
-			name: 'Filter - Set Settings',
+			name: 'Filters - Set Settings',
 			description: 'Sets the settings for a filter using a JSON object',
 			options: [
 				{
@@ -693,7 +693,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		},
 
 		refresh_browser_source: {
-			name: 'Refresh Browser Source',
+			name: 'Source - Refresh Browser Source',
 			description: 'Refreshes the cache of a specific browser source',
 			options: [
 				{
@@ -717,7 +717,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		},
 
 		take_screenshot: {
-			name: 'Take Screenshot',
+			name: 'Source - Take Screenshot',
 			description: 'Saves a screenshot of a specific source or scene to disk',
 			options: [
 				{

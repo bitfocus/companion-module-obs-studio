@@ -104,7 +104,7 @@ export function getUiConfigCustomFeedbacks(
 
 		vendorEvent: {
 			type: 'boolean',
-			name: 'Vendor Event',
+			name: 'Custom - Vendor Event',
 			description: 'Change the style of the button based on third party vendor events',
 			defaultStyle: {
 				color: Color.White,
