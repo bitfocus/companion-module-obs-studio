@@ -132,7 +132,7 @@ describe('Load tests', () => {
 			})
 		}
 
-		// Each event replaces the peak map with the inputs it carried, so the last event wins.
-		expect(self.states.audioPeak.get(`Source ${(10000 - 1) % numSources}`)).toBeDefined()
+		// Peaks land on the source records the meter events named.
+		expect(self.states.sources.get(`Source ${(10000 - 1) % numSources}`)!.peak).toBeDefined()
 	})
 })

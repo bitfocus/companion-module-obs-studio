@@ -216,18 +216,18 @@ describe('listener state hygiene', () => {
 		initOBSListeners(self)
 	})
 
-	test('InputRemoved cleans up filters and audio peaks', () => {
+	test('InputRemoved cleans up the source and its filters', () => {
 		seedSource(self, 'Mic', 'Mic', 'wasapi_input_capture')
 		self.states.sourceFilters.set('Mic', [
 			{ filterName: 'Gain', filterEnabled: true, filterIndex: 0, filterKind: 'gain_filter', filterSettings: {} },
 		])
-		self.states.audioPeak.set('Mic', -12)
+		self.states.sources.get('Mic')!.peak = -12
 
 		self.socket.emit('InputRemoved', { inputName: 'Mic', inputUuid: 'Mic' })
 
 		expect(self.states.sources.has('Mic')).toBe(false)
 		expect(self.states.sourceFilters.has('Mic')).toBe(false)
-		expect(self.states.audioPeak.has('Mic')).toBe(false)
+		// The peak lived on the source record, so it goes with it.
 	})
 
 	test('SceneListChanged refreshes definitions so position variables stay current', () => {

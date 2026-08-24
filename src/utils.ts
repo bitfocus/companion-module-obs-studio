@@ -198,6 +198,17 @@ export function getOBSRecordingStateLabel(state: OBSRecordingState): string {
 	}
 }
 
+/**
+ * Derive the streaming state from the two flags the module stores.
+ *
+ * `streamReconnecting` outranks `streaming`, so a reconnect keeps its own label instead of showing
+ * as plain Live — both the polled path and the event path need the same precedence.
+ */
+export function getStreamingState(states: { streaming: boolean; streamReconnecting: boolean }): OBSStreamingState {
+	if (states.streamReconnecting) return OBSStreamingState.Reconnecting
+	return states.streaming ? OBSStreamingState.Streaming : OBSStreamingState.OffAir
+}
+
 export function getOBSStreamingStateLabel(state: OBSStreamingState): string {
 	switch (state) {
 		case OBSStreamingState.Streaming:

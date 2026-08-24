@@ -2,7 +2,12 @@ import type OBSInstance from './main.js'
 import type { CompanionVariableDefinitions } from '@companion-module/base'
 import type { OBSScene, OBSSource } from './types.js'
 import * as utils from './utils.js'
-import { INPUT_KIND_FFMPEG_SOURCE, INPUT_KIND_IMAGE_SOURCE, INPUT_KIND_VLC_SOURCE } from './constants.js'
+import {
+	INPUT_KIND_FFMPEG_SOURCE,
+	INPUT_KIND_IMAGE_SOURCE,
+	INPUT_KIND_VLC_SOURCE,
+	VIRTUALCAM_OUTPUT_NAME,
+} from './constants.js'
 
 type VariableValue = string | number | boolean | (string | number)[] | undefined
 
@@ -15,7 +20,7 @@ interface VariableEntry {
 // Single source of truth for per-source variable definitions and values.
 function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 	const entries: VariableEntry[] = []
-	const sourceName = source.validName ?? source.sourceName
+	const sourceName = source.validName
 	const settings = source.settings
 
 	switch (source.inputKind) {
@@ -221,7 +226,7 @@ export function updateVariableValues(this: OBSInstance): void {
 		current_media_name: [],
 		replay_buffer_path: 'None',
 		replay_buffer_active: this.states.replayBuffer,
-		virtualcam_active: this.states.outputs.get('virtualcam_output')?.outputActive ?? false,
+		virtualcam_active: this.states.outputs.get(VIRTUALCAM_OUTPUT_NAME)?.outputActive ?? false,
 		studio_mode: this.states.studioMode,
 		screenshot_saved_path: 'None',
 		current_media_time_elapsed: [],

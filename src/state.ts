@@ -1,5 +1,11 @@
 import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSource, OBSScene } from './types.js'
-import { INPUT_KIND_IMAGE_SOURCE, isMediaInputKind, isSelectableOutput, isTextInputKind } from './constants.js'
+import {
+	INPUT_KIND_IMAGE_SOURCE,
+	VIRTUALCAM_OUTPUT_NAME,
+	isMediaInputKind,
+	isSelectableOutput,
+	isTextInputKind,
+} from './constants.js'
 
 interface ChoiceCache {
 	sourceChoices?: ModuleChoice[]
@@ -133,7 +139,6 @@ export class OBSState {
 			sceneItems: new Map(),
 			inputKindList: new Map(),
 			sourceFilters: new Map(),
-			audioPeak: new Map(),
 			monitors: [],
 			imageFormats: [],
 			hotkeyNames: [],
@@ -146,7 +151,6 @@ export class OBSState {
 		this.state.sources.clear()
 		this.state.sourceFilters.clear()
 		this.state.sceneItems.clear()
-		this.state.audioPeak.clear()
 		this.invalidateSourceNameIndex()
 		this.invalidateSceneNameIndex()
 	}
@@ -284,7 +288,7 @@ export class OBSState {
 			this.buildChoices(
 				Array.from(this.state.outputs.keys()),
 				(id) => isSelectableOutput(id),
-				(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Cam' : name }),
+				(name) => ({ id: name, label: name === VIRTUALCAM_OUTPUT_NAME ? 'Virtual Cam' : name }),
 				(a, b) => a.label.localeCompare(b.label),
 			),
 		)

@@ -150,7 +150,6 @@ export interface OBSNormalizedState {
 	// Keyed by input kind; value is that kind's default input settings.
 	inputKindList: Map<string, JsonObject>
 	sourceFilters: Map<string, OBSFilter[]> // Keyed by sourceUuid or sceneUuid
-	audioPeak: Map<string, number>
 	monitors: ModuleChoice[]
 	imageFormats: ModuleChoice[]
 	hotkeyNames: ModuleChoice[]
@@ -164,7 +163,7 @@ export interface OBSSource {
 	inputAudioBalance?: number
 	inputAudioSyncOffset?: number
 	monitorType?: ObsAudioMonitorType
-	validName?: string
+	validName: string
 	sourceName: string
 	sourceUuid: string
 	isGroup?: boolean

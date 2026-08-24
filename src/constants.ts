@@ -35,6 +35,9 @@ export function isMediaInputKind(inputKind: string | undefined | null): boolean 
 	return inputKind === INPUT_KIND_FFMPEG_SOURCE || inputKind === INPUT_KIND_VLC_SOURCE
 }
 
+/** OBS's built-in virtual camera output, which has its own state-changed event. */
+export const VIRTUALCAM_OUTPUT_NAME = 'virtualcam_output'
+
 /** Outputs OBS reports but that are not offered as targets: recording/replay writers. */
 export function isSelectableOutput(outputName: string): boolean {
 	return !outputName.includes('file_output') && !outputName.includes('ffmpeg_output')

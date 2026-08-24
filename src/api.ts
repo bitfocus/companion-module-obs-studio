@@ -11,7 +11,6 @@ import * as utils from './utils.js'
 import {
 	OBSMediaStatus,
 	OBSRecordingState,
-	OBSStreamingState,
 	OBSSceneItem,
 	ObsAudioMonitorType,
 	OBSSource,
@@ -38,6 +37,7 @@ import {
 	isMediaInputKind,
 	isSelectableOutput,
 	isTextInputKind,
+	VIRTUALCAM_OUTPUT_NAME,
 } from './constants.js'
 
 const logger = createModuleLogger('OBSApi')
@@ -70,7 +70,7 @@ export class OBSApi {
 	// Subscription tracking for output-status polling (keyed by feedback ID).
 	private outputStatusSubscribers = new Set<string>()
 	// Outputs with a dedicated state-changed event don't need polling.
-	private static readonly OUTPUTS_WITH_DEDICATED_EVENTS = new Set(['virtualcam_output'])
+	private static readonly OUTPUTS_WITH_DEDICATED_EVENTS = new Set([VIRTUALCAM_OUTPUT_NAME])
 
 	// Event subscriptions except high-frequency volume meters.
 	private get baseEventSubscriptions(): number {
@@ -664,12 +664,7 @@ export class OBSApi {
 			const kbits = newBytes > 0 ? Math.round((newBytes * 8) / 1000) : 0
 			this.self.states.outputBytes = streamStatus.outputBytes
 
-			// Preserve reconnecting label.
-			const streamingState = this.self.states.streamReconnecting
-				? OBSStreamingState.Reconnecting
-				: this.self.states.streaming
-					? OBSStreamingState.Streaming
-					: OBSStreamingState.OffAir
+			const streamingState = utils.getStreamingState(this.self.states)
 
 			if (streamingChanged) this.self.checkFeedbacks('streaming')
 			if (congestionChanged) this.self.checkFeedbacks('streamCongestion')
@@ -941,8 +936,6 @@ export class OBSApi {
 			const source = this.self.states.sources.get(successful.meta.uuid)
 			if (!source) continue
 
-			if (!source.validName) source.validName = utils.validName(source.sourceName)
-
 			this.processSingleSourceDataResponse(successful, source)
 		}
 	}
@@ -962,19 +955,19 @@ export class OBSApi {
 				this.buildInputSettings(uuid, entry.responseData.inputKind ?? '', entry.responseData.inputSettings)
 				break
 			case 'mute':
-				this._updateSourceMute(source, entry.responseData.inputMuted)
+				this.updateSourceMute(source, entry.responseData.inputMuted)
 				break
 			case 'volume':
-				this._updateSourceVolume(source, entry.responseData.inputVolumeDb)
+				this.updateSourceVolume(source, entry.responseData.inputVolumeDb)
 				break
 			case 'balance':
-				this._updateSourceBalance(source, entry.responseData.inputAudioBalance)
+				this.updateSourceBalance(source, entry.responseData.inputAudioBalance)
 				break
 			case 'sync_offset':
-				this._updateSourceSyncOffset(source, entry.responseData.inputAudioSyncOffset)
+				this.updateSourceSyncOffset(source, entry.responseData.inputAudioSyncOffset)
 				break
 			case 'monitor':
-				this._updateSourceMonitorType(source, entry.responseData.monitorType)
+				this.updateSourceMonitorType(source, entry.responseData.monitorType)
 				break
 			case 'tracks':
 				source.inputAudioTracks = entry.responseData.inputAudioTracks
@@ -1028,27 +1021,27 @@ export class OBSApi {
 		}
 	}
 
-	private _updateSourceMute(source: OBSSource, muted: boolean): void {
+	public updateSourceMute(source: OBSSource, muted: boolean): void {
 		source.inputMuted = muted
 		this.self.setVariableValues({ [`mute_${source.validName}`]: muted ? 'Muted' : 'Unmuted' })
 	}
 
-	private _updateSourceVolume(source: OBSSource, volumeDb: number): void {
+	public updateSourceVolume(source: OBSSource, volumeDb: number): void {
 		source.inputVolume = utils.roundNumber(volumeDb, 1)
 		this.self.setVariableValues({ [`volume_${source.validName}`]: source.inputVolume })
 	}
 
-	private _updateSourceBalance(source: OBSSource, balance: number): void {
+	public updateSourceBalance(source: OBSSource, balance: number): void {
 		source.inputAudioBalance = utils.roundNumber(balance, 1)
 		this.self.setVariableValues({ [`balance_${source.validName}`]: source.inputAudioBalance })
 	}
 
-	private _updateSourceSyncOffset(source: OBSSource, offset: number): void {
+	public updateSourceSyncOffset(source: OBSSource, offset: number): void {
 		source.inputAudioSyncOffset = offset
 		this.self.setVariableValues({ [`sync_offset_${source.validName}`]: offset })
 	}
 
-	private _updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
+	public updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
 		source.monitorType = monitorType
 		this.self.setVariableValues({
 			[`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType),
@@ -1207,7 +1200,7 @@ export class OBSApi {
 		if (!source) return
 
 		const sourceName = source.sourceName
-		const validName = source.validName ?? sourceName
+		const validName = source.validName
 		const responseData = entry.responseData
 
 		const { mediaState } = responseData
@@ -1247,7 +1240,7 @@ export class OBSApi {
 		const settings = defaultSettings ? { ...defaultSettings, ...inputSettings } : inputSettings
 		source.settings = settings
 
-		const name = source.validName ?? source.sourceName
+		const name = source.validName
 
 		if (isTextInputKind(inputKind)) {
 			source.text = utils.readTextSourceValue(settings)
@@ -1287,7 +1280,6 @@ export class OBSApi {
 	public updateAudioPeak(data: {
 		inputs: Array<{ inputUuid: string; inputLevelsMul: Array<[number, number, number]> }>
 	}): void {
-		this.self.states.audioPeak.clear()
 		let changed = false
 		data.inputs.forEach((input) => {
 			const channel = input.inputLevelsMul[0]
@@ -1298,7 +1290,6 @@ export class OBSApi {
 				const computed = Math.round(20.0 * Math.log10(channelPeak))
 				if (isFinite(computed)) dbPeak = computed
 			}
-			this.self.states.audioPeak.set(input.inputUuid, dbPeak)
 			const source = this.self.states.sources.get(input.inputUuid)
 			if (source) {
 				if (source.peak !== dbPeak) changed = true

@@ -5,11 +5,10 @@ import {
 	type SomeCompanionActionInputField,
 } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-
-const VIRTUAL_CAM_OUTPUT = 'virtualcam_output'
+import { VIRTUALCAM_OUTPUT_NAME } from '../constants.js'
 
 function isVirtualCam(outputName: string): boolean {
-	return outputName === VIRTUAL_CAM_OUTPUT
+	return outputName === VIRTUALCAM_OUTPUT_NAME
 }
 
 /**
@@ -294,7 +293,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 					allowCustom: true,
 					label: 'Output',
 					id: 'output',
-					default: VIRTUAL_CAM_OUTPUT,
+					default: VIRTUALCAM_OUTPUT_NAME,
 					choices: self.obsState.outputList,
 				},
 			],
