@@ -42,15 +42,13 @@ describe('presets', () => {
 		expect(Object.keys(presets).length).toBeGreaterThan(0)
 	})
 
-	test('every preset has a type and non-empty name', () => {
-		for (const preset of Object.values(presets)) {
-			expect(preset).toBeDefined()
-			expect(typeof preset!.type).toBe('string')
-			// `alternatives` entries group variants and carry no name of their own.
-			if (!isButtonPreset(preset)) continue
-			expect(typeof preset.name).toBe('string')
-			expect(preset.name.length).toBeGreaterThan(0)
-		}
+	// The definition shape is enforced statically; only the non-empty name needs asserting.
+	// `alternatives` entries group variants and carry no name of their own.
+	test('every preset has a non-empty name', () => {
+		const unnamed = Object.entries(presets)
+			.filter(([, preset]) => isButtonPreset(preset) && preset.name.length === 0)
+			.map(([id]) => id)
+		expect(unnamed).toEqual([])
 	})
 
 	test('every preset action references an action that exists', () => {
@@ -82,9 +80,6 @@ describe('presets', () => {
 	test('every structure section references presets that exist', () => {
 		const missing: string[] = []
 		for (const section of structure) {
-			expect(typeof section.id).toBe('string')
-			expect(typeof section.name).toBe('string')
-			// Validate that every preset ID referenced in the structure exists.
 			for (const definition of section.definitions) {
 				if (typeof definition === 'string') {
 					if (!(definition in presets)) missing.push(`${section.id} -> ${definition}`)

@@ -6,13 +6,6 @@ import { getFeedbacks } from '../feedbacks.js'
 import { getVariables } from '../variables.js'
 import { looseActions, looseFeedbacks } from './loose-definitions.js'
 
-/**
- * A deliberately loose ceiling. These cases measure ~11-30ms in practice, so this is a canary for a
- * catastrophic regression (an accidental O(n^2) walk over sources) rather than a performance target;
- * keeping it far above the real numbers is what stops it flaking on a busy CI box.
- */
-const BUDGET_MS = 1000
-
 function seedMassiveState(self: MockInstance, numScenes: number, numSources: number) {
 	const s = self.states
 
@@ -55,14 +48,19 @@ function seedMassiveState(self: MockInstance, numScenes: number, numSources: num
 	}
 }
 
-describe('Load & Performance Tests', () => {
+/**
+ * Scale tests: a collection far larger than a realistic one must still be ingested and turned into
+ * definitions without dropping entries or throwing. Wall-clock budgets are deliberately not asserted
+ * — on a shared CI box they measure the box, not the module.
+ */
+describe('Load tests', () => {
 	let self: MockInstance
 
 	beforeEach(() => {
 		self = makeMockInstance()
 	})
 
-	it('should parse massive websocket payload quickly', async () => {
+	it('ingests a massive scene/input payload without losing entries', async () => {
 		const numScenes = 100
 		const numSources = 5000
 
@@ -88,56 +86,40 @@ describe('Load & Performance Tests', () => {
 			if (requestType === 'GetSceneItemList') {
 				return { sceneItems: [] }
 			}
-			if (requestType === 'GetSourceActive') {
-				return { videoActive: true, videoShowing: true }
-			}
-			if (requestType === 'GetRecordStatus') {
-				return {
-					outputActive: false,
-					outputPaused: false,
-					outputTimecode: '00:00:00.000',
-					outputDuration: 0,
-					outputBytes: 0,
-				}
-			}
 			return {}
 		})
 
-		const start = performance.now()
-
 		await self.obs.buildSceneList()
 
-		expect(performance.now() - start).toBeLessThan(BUDGET_MS)
 		expect(self.states.scenes.size).toBe(numScenes)
+		expect(self.states.sources.size).toBe(numSources)
 	})
 
-	it('should generate actions, feedbacks, variables within reasonable time', () => {
+	it('generates a definition per scene and per audio/media source at scale', () => {
 		const numScenes = 100
 		const numSources = 5000
 		seedMassiveState(self, numScenes, numSources)
-
-		const start = performance.now()
 
 		const actions = looseActions(getActions.call(self))
 		const feedbacks = looseFeedbacks(getFeedbacks.call(self))
 		const variables = getVariables.call(self)
 
-		self.setActionDefinitions(actions)
-		self.setFeedbackDefinitions(feedbacks)
-		self.setVariableDefinitions(variables)
-
-		expect(performance.now() - start).toBeLessThan(BUDGET_MS)
+		expect(Object.keys(actions).length).toBeGreaterThan(0)
+		expect(Object.keys(feedbacks).length).toBeGreaterThan(0)
+		// One active-state variable per input, one media-status variable per media input, one
+		// position variable per scene.
+		expect(Object.keys(variables).filter((id) => id.startsWith('source_active_'))).toHaveLength(numSources)
+		expect(Object.keys(variables).filter((id) => id.startsWith('media_status_'))).toHaveLength(numSources / 2)
+		expect(variables).toHaveProperty(`scene_${numScenes}`)
 	})
 
-	it('should handle high-frequency events rapidly', () => {
+	it('survives a high-frequency event stream', () => {
 		const numScenes = 10
 		const numSources = 50
 		seedMassiveState(self, numScenes, numSources)
 
 		initOBSListeners(self)
 
-		const start = performance.now()
-		// Fire 10000 events
 		for (let i = 0; i < 10000; i++) {
 			self.socket.emit('InputVolumeMeters', {
 				inputs: [
@@ -150,6 +132,7 @@ describe('Load & Performance Tests', () => {
 			})
 		}
 
-		expect(performance.now() - start).toBeLessThan(BUDGET_MS)
+		// Each event replaces the peak map with the inputs it carried, so the last event wins.
+		expect(self.states.audioPeak.get(`Source ${(10000 - 1) % numSources}`)).toBeDefined()
 	})
 })

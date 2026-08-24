@@ -530,7 +530,7 @@ export class OBSApi {
 
 		this.self.states.currentProfile = profiles?.currentProfileName ?? 'None'
 
-		profiles?.profiles.forEach((profile: string) => {
+		profiles?.profiles?.forEach((profile: string) => {
 			this.self.states.profiles.set(profile, {})
 		})
 
@@ -544,7 +544,7 @@ export class OBSApi {
 		this.self.states.sceneCollections.clear()
 
 		this.self.states.currentSceneCollection = collections?.currentSceneCollectionName ?? 'None'
-		collections?.sceneCollections.forEach((sceneCollection: string) => {
+		collections?.sceneCollections?.forEach((sceneCollection: string) => {
 			this.self.states.sceneCollections.set(sceneCollection, {})
 		})
 

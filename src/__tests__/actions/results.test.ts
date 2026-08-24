@@ -28,12 +28,11 @@ describe('action results', () => {
 		actions = looseActions(getActions.call(self))
 	})
 
-	describe('declares hasResult', () => {
-		test.each(RESULT_ACTIONS)('%s', (id) => {
-			const def = actions[id]
-			expect(def).toBeDefined()
-			expect(def.hasResult).toBe(true)
-		})
+	// Asserted as a set rather than per-id, so an action that gains or loses `hasResult` without the
+	// list being updated fails too.
+	test('exactly the result-producing actions declare hasResult', () => {
+		const declared = Object.keys(actions).filter((id) => actions[id].hasResult)
+		expect(declared.sort()).toEqual([...RESULT_ACTIONS].sort())
 	})
 
 	test('toggle actions return the new boolean state from OBS', async () => {
