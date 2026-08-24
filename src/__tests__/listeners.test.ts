@@ -1,7 +1,14 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { initOBSListeners } from '../listeners.js'
 import { OBSRecordingState } from '../types.js'
-import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from './mock/instance.js'
+import {
+	makeMockInstance,
+	sceneItem,
+	seedScene,
+	seedSource,
+	seedFullState,
+	type MockInstance,
+} from './mock/instance.js'
 
 describe('scene change listeners', () => {
 	let self: MockInstance
@@ -188,5 +195,48 @@ describe('SceneItemListReindexed', () => {
 		const items = self.states.sceneItems.get('scene-a')!
 		expect(items.find((i) => i.sceneItemId === 1)).toMatchObject({ sceneItemIndex: 1, sceneItemEnabled: false })
 		expect(items.find((i) => i.sceneItemId === 2)).toMatchObject({ sceneItemIndex: 0, sceneItemEnabled: true })
+	})
+})
+
+describe('media poll lifetime', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+		self = makeMockInstance()
+		seedFullState(self)
+		initOBSListeners(self)
+	})
+
+	afterEach(() => {
+		self.obs.stopMediaPoll()
+		vi.useRealTimers()
+	})
+
+	test('removing the last media input stops the poll', () => {
+		self.obs.reconcileMediaPoll()
+		expect(self.mediaPoll).toBeDefined()
+
+		self.socket.emit('InputRemoved', { inputName: 'Clip', inputUuid: 'Clip' })
+
+		expect(self.mediaPoll).toBeUndefined()
+	})
+
+	test('removing a non-media input leaves the poll running', () => {
+		self.obs.reconcileMediaPoll()
+		expect(self.mediaPoll).toBeDefined()
+
+		self.socket.emit('InputRemoved', { inputName: 'Mic', inputUuid: 'Mic' })
+
+		expect(self.mediaPoll).toBeDefined()
+	})
+
+	test('a scene collection change stops the poll while state is inconsistent', () => {
+		self.obs.reconcileMediaPoll()
+		expect(self.mediaPoll).toBeDefined()
+
+		self.socket.emit('CurrentSceneCollectionChanging', { sceneCollectionName: 'Other' })
+
+		expect(self.mediaPoll).toBeUndefined()
 	})
 })

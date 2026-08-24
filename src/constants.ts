@@ -35,6 +35,11 @@ export function isMediaInputKind(inputKind: string | undefined | null): boolean 
 	return inputKind === INPUT_KIND_FFMPEG_SOURCE || inputKind === INPUT_KIND_VLC_SOURCE
 }
 
+/** Outputs OBS reports but that are not offered as targets: recording/replay writers. */
+export function isSelectableOutput(outputName: string): boolean {
+	return !outputName.includes('file_output') && !outputName.includes('ffmpeg_output')
+}
+
 /** True for any of the versioned text source kinds. */
 export function isTextInputKind(inputKind: string | undefined | null): boolean {
 	return !!inputKind?.startsWith(INPUT_KIND_PREFIX_TEXT)

@@ -181,7 +181,6 @@ export interface OBSSource {
 	text?: string
 	imageFile?: string
 	inputAudioTracks?: Record<string, unknown>
-	audioFadeActive?: boolean
 	peak?: number
 }
 

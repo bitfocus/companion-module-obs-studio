@@ -59,6 +59,9 @@ function setupGeneralListeners(self: OBSInstance, obs: OBSWebSocket): void {
 // Config Listeners
 function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('CurrentSceneCollectionChanging', () => {
+		// Suppression, not lifetime: the source map still holds the outgoing collection's UUIDs, so a
+		// tick here would query inputs that are already gone. reconcileMediaPoll restarts it once the
+		// new collection has finished loading.
 		self.obs.stopMediaPoll()
 		self.states.sceneCollectionChanging = true
 	})
@@ -162,6 +165,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.sourceFilters.delete(data.inputUuid)
 		self.states.audioPeak.delete(data.inputUuid)
 		self.obsState.invalidateSourceNameIndex()
+		self.obs.reconcileMediaPoll()
 		void self.updateActionsFeedbacksVariables()
 	})
 	obs.on('InputNameChanged', (data) => {

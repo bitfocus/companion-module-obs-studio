@@ -32,12 +32,12 @@ import {
 import { BatchBuilder, successfulEntry, type BatchEntry, type BatchSpec, type SuccessfulBatchEntry } from './batch.js'
 
 import {
-	INPUT_KIND_FFMPEG_SOURCE,
 	INPUT_KIND_IMAGE_SOURCE,
-	INPUT_KIND_PREFIX_TEXT,
-	INPUT_KIND_VLC_SOURCE,
 	POLL_INTERVALS,
 	FADE_STEP_MS,
+	isMediaInputKind,
+	isSelectableOutput,
+	isTextInputKind,
 } from './constants.js'
 
 const logger = createModuleLogger('OBSApi')
@@ -60,6 +60,9 @@ export class OBSApi {
 	private lastMeterFeedbackCheck = 0
 	private meterFeedbackPending = false
 	private static readonly METER_FEEDBACK_THROTTLE_MS = 100
+
+	// Last seen free disk space, so the threshold feedback isn't re-evaluated every poll tick.
+	private lastFreeDiskSpaceMB?: number
 
 	// Source names with a volume fade batch currently executing in OBS.
 	private fadesInFlight = new Set<string>()
@@ -245,7 +248,7 @@ export class OBSApi {
 	}
 
 	// OBS WebSocket Commands
-	private async _call<T extends keyof OBSRequestTypes>(
+	public async sendRequest<T extends keyof OBSRequestTypes>(
 		requestType: T,
 		requestData?: OBSRequestTypes[T],
 	): Promise<OBSResponseTypes[T] | undefined> {
@@ -257,18 +260,11 @@ export class OBSApi {
 		}
 	}
 
-	public async sendRequest<T extends keyof OBSRequestTypes>(
-		requestType: T,
-		requestData?: OBSRequestTypes[T],
-	): Promise<OBSResponseTypes[T] | undefined> {
-		return this._call(requestType, requestData)
-	}
-
 	public async sendCustomRequest<T extends keyof OBSRequestTypes>(
 		requestType: T,
 		requestData?: OBSRequestTypes[T],
 	): Promise<OBSResponseTypes[T] | undefined> {
-		const data = await this._call(requestType, requestData)
+		const data = await this.sendRequest(requestType, requestData)
 		if (data) {
 			logger.debug(
 				`Custom Command Response: Request ${requestType} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
@@ -401,10 +397,8 @@ export class OBSApi {
 					promises.push(this.getRecordStatus())
 				}
 
-				// Add outputs status request.
-				if (this.self.states.outputs.size > 0 && !this.self.states.sceneCollectionChanging) {
-					promises.push(this.getAllOutputStatuses())
-				}
+				// getAllOutputStatuses no-ops when there is nothing to poll or no subscriber.
+				promises.push(this.getAllOutputStatuses())
 
 				// Run poll requests in parallel.
 				void Promise.all(promises)
@@ -426,10 +420,26 @@ export class OBSApi {
 		}, OBSApi.MEDIA_POLL_INTERVAL)
 	}
 
+	/**
+	 * The media poll should run exactly when the collection contains media sources.
+	 *
+	 * Derived from state rather than started as a side effect of parsing an input's settings, so the
+	 * poll stops when the last media source goes away and restarts on its own after a bulk reload,
+	 * instead of depending on which unrelated request happens to run next.
+	 */
+	public reconcileMediaPoll(): void {
+		const needed = this.self.obsState.mediaSourceUuids.length > 0
+		if (needed && !this.self.mediaPoll) {
+			this.startMediaPoll()
+		} else if (!needed && this.self.mediaPoll) {
+			this.stopMediaPoll()
+		}
+	}
+
 	public stopMediaPoll(): void {
 		if (this.self.mediaPoll) {
 			clearInterval(this.self.mediaPoll)
-			this.self.mediaPoll = null
+			delete this.self.mediaPoll
 		}
 	}
 
@@ -439,24 +449,27 @@ export class OBSApi {
 	// collection — fetched once per connection.
 	public async getObsCapabilities(): Promise<boolean> {
 		try {
-			const version = await this.sendRequest('GetVersion')
+			// None of these depend on one another, so pay one round trip rather than three.
+			const [version, studioMode] = await Promise.all([
+				this.sendRequest('GetVersion'),
+				this.sendRequest('GetStudioModeEnabled'),
+				this.buildMonitorList(),
+				this.getInputKindList(),
+			])
 			if (!version) return false
 
 			this.self.states.version = version
 			logger.debug(
 				`OBS Version: ${version.obsVersion} // OBS WebSocket Version: ${version.obsWebSocketVersion} // Platform: ${version.platformDescription}`,
 			)
-			this.self.states.imageFormats = []
-			version.supportedImageFormats.forEach((format: string) => {
-				this.self.states.imageFormats.push({ id: format, label: format })
-			})
+			this.self.states.imageFormats = version.supportedImageFormats.map((format: string) => ({
+				id: format,
+				label: format,
+			}))
 
-			const studioMode = await this.sendRequest('GetStudioModeEnabled')
 			if (studioMode) {
 				this.self.states.studioMode = studioMode.studioModeEnabled ?? false
 			}
-
-			await Promise.all([this.buildMonitorList(), this.getInputKindList()])
 
 			return true
 		} catch (error) {
@@ -505,8 +518,9 @@ export class OBSApi {
 		if (!entries) return
 
 		for (const entry of entries) {
-			if (!entry.requestStatus.result || !entry.responseData) continue
-			this.self.states.inputKindList.set(entry.meta.inputKind, entry.responseData.defaultInputSettings)
+			const successful = successfulEntry<InputKindDefaultsBatchSpec>(entry)
+			if (!successful) continue
+			this.self.states.inputKindList.set(successful.meta.inputKind, successful.responseData.defaultInputSettings)
 		}
 	}
 
@@ -559,15 +573,14 @@ export class OBSApi {
 		this.self.states.outputs.clear()
 
 		const outputData = await this.sendRequest('GetOutputList')
+		if (!outputData) return
 
-		if (outputData) {
-			for (const output of (outputData.outputs ?? []) as unknown as OBSOutput[]) {
-				if (output) this.self.states.outputs.set(output.outputName, output)
-			}
-			// Fetch statuses for all outputs in one request.
-			void this.getAllOutputStatuses()
-			void this.self.updateActionsFeedbacksVariables()
+		for (const output of (outputData.outputs ?? []) as unknown as OBSOutput[]) {
+			if (output) this.self.states.outputs.set(output.outputName, output)
 		}
+		// Fetch statuses for all outputs in one request.
+		void this.getAllOutputStatuses()
+		void this.self.updateActionsFeedbacksVariables()
 	}
 
 	public async buildMonitorList(): Promise<void> {
@@ -592,12 +605,9 @@ export class OBSApi {
 			this.self.states.stats = data
 
 			const freeSpaceMB = utils.roundNumber(data.availableDiskSpace, 0)
-			let freeSpace: number | string = freeSpaceMB
-			if (freeSpace > 1000) {
-				freeSpace = `${utils.roundNumber(freeSpace / 1000, 0)} GB`
-			} else {
-				freeSpace = `${utils.roundNumber(freeSpace, 0)} MB`
-			}
+			const freeSpace = freeSpaceMB > 1000 ? `${utils.roundNumber(freeSpaceMB / 1000, 0)} GB` : `${freeSpaceMB} MB`
+			const diskSpaceChanged = freeSpaceMB !== this.lastFreeDiskSpaceMB
+			this.lastFreeDiskSpaceMB = freeSpaceMB
 
 			this.self.setVariableValues({
 				fps: utils.roundNumber(data.activeFps, 2),
@@ -611,7 +621,8 @@ export class OBSApi {
 				free_disk_space: freeSpace,
 				free_disk_space_mb: freeSpaceMB,
 			})
-			this.self.checkFeedbacks('freeDiskSpaceRemaining')
+			// Threshold feedback, polled once a second: only worth re-evaluating when the value moved.
+			if (diskSpaceChanged) this.self.checkFeedbacks('freeDiskSpaceRemaining')
 		}
 	}
 
@@ -640,19 +651,18 @@ export class OBSApi {
 		if (streamStatus) {
 			const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
 			const timecode = timecodeMatch?.[0] ?? '00:00:00'
+			const previousStreaming = this.self.states.streaming
 			this.self.states.streaming = streamStatus.outputActive
 			this.self.states.streamingTimecode = timecode
 			const streamingTimecodeSplit = utils.splitTimecode(timecode)
 
+			const streamingChanged = this.self.states.streaming !== previousStreaming
+			const congestionChanged = streamStatus.outputCongestion !== this.self.states.streamCongestion
 			this.self.states.streamCongestion = streamStatus.outputCongestion
 
-			let kbits = 0
-			if (streamStatus.outputBytes > this.self.states.outputBytes) {
-				kbits = Math.round(((streamStatus.outputBytes - this.self.states.outputBytes) * 8) / 1000)
-				this.self.states.outputBytes = streamStatus.outputBytes
-			} else {
-				this.self.states.outputBytes = streamStatus.outputBytes
-			}
+			const newBytes = streamStatus.outputBytes - this.self.states.outputBytes
+			const kbits = newBytes > 0 ? Math.round((newBytes * 8) / 1000) : 0
+			this.self.states.outputBytes = streamStatus.outputBytes
 
 			// Preserve reconnecting label.
 			const streamingState = this.self.states.streamReconnecting
@@ -661,15 +671,16 @@ export class OBSApi {
 					? OBSStreamingState.Streaming
 					: OBSStreamingState.OffAir
 
-			this.self.checkFeedbacks('streaming', 'streamCongestion')
+			if (streamingChanged) this.self.checkFeedbacks('streaming')
+			if (congestionChanged) this.self.checkFeedbacks('streamCongestion')
 			this.self.setVariableValues({
 				streaming: utils.getOBSStreamingStateLabel(streamingState),
 				stream_timecode: timecode,
 				stream_timecode_hh: streamingTimecodeSplit.hh,
 				stream_timecode_mm: streamingTimecodeSplit.mm,
 				stream_timecode_ss: streamingTimecodeSplit.ss,
-				output_skipped_frames: streamStatus.outputSkippedFrames,
-				output_total_frames: streamStatus.outputTotalFrames,
+				stream_output_skipped_frames: streamStatus.outputSkippedFrames,
+				stream_output_total_frames: streamStatus.outputTotalFrames,
 				kbits_per_sec: kbits,
 			})
 		}
@@ -685,13 +696,16 @@ export class OBSApi {
 		const recordStatus = await this.sendRequest('GetRecordStatus')
 
 		if (recordStatus) {
-			if (recordStatus.outputActive === true && recordStatus.outputPaused === false) {
-				this.self.states.recording = OBSRecordingState.Recording
-			} else {
-				this.self.states.recording = recordStatus.outputPaused ? OBSRecordingState.Paused : OBSRecordingState.Stopped
-			}
+			const previousRecording = this.self.states.recording
+			this.self.states.recording = recordStatus.outputPaused
+				? OBSRecordingState.Paused
+				: recordStatus.outputActive
+					? OBSRecordingState.Recording
+					: OBSRecordingState.Stopped
 
-			this.self.checkFeedbacks('recording', 'recordingPaused')
+			if (this.self.states.recording !== previousRecording) {
+				this.self.checkFeedbacks('recording', 'recordingPaused')
+			}
 			this.updateRecordingTimecode(recordStatus)
 			this.self.setVariableValues({ recording: utils.getOBSRecordingStateLabel(this.self.states.recording) })
 		}
@@ -728,16 +742,6 @@ export class OBSApi {
 		}
 	}
 
-	public async getOutputStatus(outputName: string): Promise<void> {
-		if (!this.self.states.sceneCollectionChanging) {
-			const outputStatus = await this.sendRequest('GetOutputStatus', { outputName: outputName })
-			if (outputStatus) {
-				this.self.states.outputs.set(outputName, outputStatus as unknown as OBSOutput)
-				this.self.checkFeedbacks('output_active')
-			}
-		}
-	}
-
 	public async getAllOutputStatuses(): Promise<void> {
 		if (this.self.states.outputs.size === 0 || this.self.states.sceneCollectionChanging) {
 			return
@@ -745,12 +749,10 @@ export class OBSApi {
 		// Nothing reads output_active, so there's nothing to keep fresh.
 		if (this.outputStatusSubscribers.size === 0) return
 
-		// Skip outputs with a dedicated state-changed event and file/ffmpeg outputs, which aren't offered as feedback targets.
+		// Skip outputs with a dedicated state-changed event, and any that aren't offered as feedback
+		// targets in the first place — isSelectableOutput is the same rule state.outputList applies.
 		const outputNames = Array.from(this.self.states.outputs.keys()).filter(
-			(name) =>
-				!OBSApi.OUTPUTS_WITH_DEDICATED_EVENTS.has(name) &&
-				!name.includes('file_output') &&
-				!name.includes('ffmpeg_output'),
+			(name) => !OBSApi.OUTPUTS_WITH_DEDICATED_EVENTS.has(name) && isSelectableOutput(name),
 		)
 		if (outputNames.length === 0) return
 
@@ -762,8 +764,9 @@ export class OBSApi {
 		const entries = await this.runBatch(builder)
 		if (entries) {
 			for (const entry of entries) {
-				if (!entry.requestStatus.result || !entry.responseData) continue
-				this.self.states.outputs.set(entry.meta.outputName, entry.responseData)
+				const successful = successfulEntry<OutputStatusBatchSpec>(entry)
+				if (!successful) continue
+				this.self.states.outputs.set(successful.meta.outputName, successful.responseData)
 			}
 			this.self.checkFeedbacks('output_active')
 		}
@@ -829,6 +832,7 @@ export class OBSApi {
 		// Scenes can carry filters too, and are not part of the source map.
 		await this.fetchSceneFilters(sceneUuids)
 
+		this.reconcileMediaPoll()
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
@@ -852,8 +856,9 @@ export class OBSApi {
 		if (!entries || this.self.obsState.epoch !== epoch) return
 
 		for (const entry of entries) {
-			if (!entry.requestStatus.result || !entry.responseData) continue
-			this.setSourceFilters(entry.meta.sceneUuid, entry.responseData.filters)
+			const successful = successfulEntry<SceneFilterBatchSpec>(entry)
+			if (!successful) continue
+			this.setSourceFilters(successful.meta.sceneUuid, successful.responseData.filters)
 		}
 	}
 
@@ -901,6 +906,7 @@ export class OBSApi {
 		}
 
 		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
+		this.reconcileMediaPoll()
 	}
 
 	private buildSourceDataBatch(sourceUuids: string[]): BatchBuilder<SourceDataBatchSpec> {
@@ -1158,6 +1164,7 @@ export class OBSApi {
 		this.self.states.sceneItems.delete(sceneUuid)
 		this.self.obsState.invalidateSceneNameIndex()
 		this.self.obsState.invalidateSourceNameIndex()
+		this.reconcileMediaPoll()
 		void this.self.updateActionsFeedbacksVariables()
 	}
 
@@ -1242,14 +1249,13 @@ export class OBSApi {
 
 		const name = source.validName ?? source.sourceName
 
-		if (inputKind.startsWith(INPUT_KIND_PREFIX_TEXT)) {
+		if (isTextInputKind(inputKind)) {
 			source.text = utils.readTextSourceValue(settings)
 			this.self.setVariableValues({ [`current_text_${name}`]: source.text })
 			return
 		}
 
-		if (inputKind === INPUT_KIND_FFMPEG_SOURCE || inputKind === INPUT_KIND_VLC_SOURCE) {
-			if (!this.self.mediaPoll) void this.startMediaPoll()
+		if (isMediaInputKind(inputKind)) {
 			// Sync media file name variable when settings change.
 			this.self.setVariableValues({ [`media_file_name_${name}`]: utils.readMediaFileName(settings) })
 			return
@@ -1328,9 +1334,7 @@ export class OBSApi {
 		visible: string,
 		options: { useCurrentScene: boolean; scene: string; except: string[] },
 	): Promise<void> {
-		const scene = options.useCurrentScene
-			? this.self.states.scenes.get(this.self.states.programSceneUuid)
-			: this.self.obsState.findSceneByName(options.scene)
+		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
 		if (!scene) return
 
 		const items = this.self.obsState.getContainerItems(scene.sceneUuid)
@@ -1354,6 +1358,13 @@ export class OBSApi {
 		}
 	}
 
+	/** Resolves the scene an action targets: either the live program scene, or one named explicitly. */
+	private resolveTargetScene(useCurrentScene: boolean, sceneName: string) {
+		return useCurrentScene
+			? this.self.states.scenes.get(this.self.states.programSceneUuid)
+			: this.self.obsState.findSceneByName(sceneName)
+	}
+
 	private findSourceInstances(
 		sourceUuid: string,
 		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
@@ -1367,10 +1378,7 @@ export class OBSApi {
 				if (item) instances.push({ containerUuid, sceneItemId: item.sceneItemId })
 			}
 		} else {
-			const scene = options.useCurrentScene
-				? this.self.states.scenes.get(this.self.states.programSceneUuid)
-				: this.self.obsState.findSceneByName(options.scene)
-
+			const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
 			if (!scene) return instances
 
 			// Resolve grouped source container via parent group.
@@ -1388,15 +1396,10 @@ export class OBSApi {
 		visible: string,
 	): OBSBatchRequest[] {
 		return instances.map((instance) => {
-			let enabled: boolean
-			if (visible === 'toggle') {
-				const item = this.self.states.sceneItems
-					.get(instance.containerUuid)
-					?.find((i) => i.sceneItemId === instance.sceneItemId)
-				enabled = item ? !item.sceneItemEnabled : false
-			} else {
-				enabled = visible === 'true'
-			}
+			const item = this.self.states.sceneItems
+				.get(instance.containerUuid)
+				?.find((i) => i.sceneItemId === instance.sceneItemId)
+			const enabled = utils.resolveVisibility(visible, item?.sceneItemEnabled)
 
 			return {
 				requestType: 'SetSceneItemEnabled',
@@ -1419,45 +1422,30 @@ export class OBSApi {
 			const requests: OBSBatchRequest[] = []
 			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
 				const filter = filters.find((f) => f.filterName === filterName)
-				if (filter) {
-					let filterVisibility: boolean
-					if (visible === 'toggle') {
-						filterVisibility = !filter.filterEnabled
-					} else {
-						filterVisibility = visible === 'true'
-					}
-					requests.push({
-						requestType: 'SetSourceFilterEnabled',
-						requestData: {
-							sourceUuid: sourceUuid,
-							filterName: filterName,
-							filterEnabled: filterVisibility,
-						},
-					})
-				}
+				if (!filter) return
+				requests.push({
+					requestType: 'SetSourceFilterEnabled',
+					requestData: {
+						sourceUuid,
+						filterName,
+						filterEnabled: utils.resolveVisibility(visible, filter.filterEnabled),
+					},
+				})
 			})
 
 			await this.sendBatch(requests)
 		} else {
 			const sourceUuid = this.self.obsState.findFilterTargetUuid(options.source)
 			if (!sourceUuid) return
-			let filterVisibility: boolean
-			if (visible === 'toggle') {
-				const filters = this.self.states.sourceFilters.get(sourceUuid)
-				const filter = filters?.find((f) => f.filterName === filterName)
-				if (filter) {
-					filterVisibility = !filter.filterEnabled
-				} else {
-					return
-				}
-			} else {
-				filterVisibility = visible === 'true'
-			}
+
+			const filter = this.self.states.sourceFilters.get(sourceUuid)?.find((f) => f.filterName === filterName)
+			// Toggling a filter that isn't known would guess at its state, so do nothing instead.
+			if (visible === 'toggle' && !filter) return
 
 			await this.sendRequest('SetSourceFilterEnabled', {
-				sourceUuid: sourceUuid,
-				filterName: filterName,
-				filterEnabled: filterVisibility,
+				sourceUuid,
+				filterName,
+				filterEnabled: utils.resolveVisibility(visible, filter?.filterEnabled),
 			})
 		}
 	}

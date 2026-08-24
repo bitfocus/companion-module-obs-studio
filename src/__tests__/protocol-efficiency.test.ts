@@ -209,3 +209,108 @@ describe('media status polling', () => {
 		expect(self.obsState.mediaSourceUuids).toEqual(['clip-uuid', 'clip2-uuid'])
 	})
 })
+
+describe('poll feedback gating', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	function statsResponse(availableDiskSpace: number) {
+		return {
+			activeFps: 30,
+			renderTotalFrames: 100,
+			renderSkippedFrames: 0,
+			outputTotalFrames: 100,
+			outputSkippedFrames: 0,
+			averageFrameRenderTime: 1,
+			cpuUsage: 1,
+			memoryUsage: 1,
+			availableDiskSpace,
+		}
+	}
+
+	test('getStats only re-checks the disk threshold when free space moves', async () => {
+		self.socket.call.mockResolvedValue(statsResponse(50000))
+		await self.obs.getStats()
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('freeDiskSpaceRemaining')
+
+		self.checkFeedbacks.mockClear()
+		await self.obs.getStats()
+		expect(self.checkFeedbacks).not.toHaveBeenCalled()
+
+		self.socket.call.mockResolvedValue(statsResponse(49000))
+		await self.obs.getStats()
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('freeDiskSpaceRemaining')
+	})
+
+	test('getStreamStatus only re-checks streaming and congestion when they change', async () => {
+		const streamResponse = (outputActive: boolean, outputCongestion: number) => ({
+			outputActive,
+			outputCongestion,
+			outputTimecode: '00:01:00.000',
+			outputBytes: 1000,
+			outputSkippedFrames: 0,
+			outputTotalFrames: 100,
+		})
+
+		self.socket.call.mockResolvedValue(streamResponse(true, 0.1))
+		await self.obs.getStreamStatus()
+
+		// A tick with nothing moving must not re-evaluate either feedback.
+		self.checkFeedbacks.mockClear()
+		await self.obs.getStreamStatus()
+		expect(self.checkFeedbacks).not.toHaveBeenCalled()
+
+		self.socket.call.mockResolvedValue(streamResponse(true, 0.9))
+		await self.obs.getStreamStatus()
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('streamCongestion')
+		expect(self.checkFeedbacks).not.toHaveBeenCalledWith('streaming')
+
+		self.checkFeedbacks.mockClear()
+		self.socket.call.mockResolvedValue(streamResponse(false, 0.9))
+		await self.obs.getStreamStatus()
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('streaming')
+	})
+
+	test('getRecordStatus only re-checks recording feedbacks on a state change', async () => {
+		self.socket.call.mockResolvedValue({ outputActive: true, outputPaused: false, outputTimecode: '00:00:10.000' })
+		await self.obs.getRecordStatus()
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('recording', 'recordingPaused')
+
+		// Same state, later timecode: the timecode variables still update, the feedbacks do not re-run.
+		self.checkFeedbacks.mockClear()
+		self.socket.call.mockResolvedValue({ outputActive: true, outputPaused: false, outputTimecode: '00:00:11.000' })
+		await self.obs.getRecordStatus()
+		expect(self.checkFeedbacks).not.toHaveBeenCalled()
+
+		self.socket.call.mockResolvedValue({ outputActive: true, outputPaused: true, outputTimecode: '00:00:12.000' })
+		await self.obs.getRecordStatus()
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('recording', 'recordingPaused')
+	})
+
+	test('stream frame counters do not overwrite the global encoder counters', async () => {
+		const written: Record<string, unknown> = {}
+		self.setVariableValues.mockImplementation((values: Record<string, unknown>) => Object.assign(written, values))
+
+		self.socket.call.mockResolvedValue({ ...statsResponse(1), outputTotalFrames: 1111, outputSkippedFrames: 22 })
+		await self.obs.getStats()
+
+		self.socket.call.mockResolvedValue({
+			outputActive: true,
+			outputCongestion: 0,
+			outputTimecode: '00:01:00.000',
+			outputBytes: 1000,
+			outputTotalFrames: 8888,
+			outputSkippedFrames: 77,
+		})
+		await self.obs.getStreamStatus()
+
+		// GetStats owns the global counters; the stream's own counters get their own names.
+		expect(written.output_total_frames).toBe(1111)
+		expect(written.output_skipped_frames).toBe(22)
+		expect(written.stream_output_total_frames).toBe(8888)
+		expect(written.stream_output_skipped_frames).toBe(77)
+	})
+})

@@ -1,5 +1,5 @@
 import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSource, OBSScene } from './types.js'
-import { INPUT_KIND_IMAGE_SOURCE, isMediaInputKind, isTextInputKind } from './constants.js'
+import { INPUT_KIND_IMAGE_SOURCE, isMediaInputKind, isSelectableOutput, isTextInputKind } from './constants.js'
 
 interface ChoiceCache {
 	sourceChoices?: ModuleChoice[]
@@ -283,7 +283,7 @@ export class OBSState {
 		return this.cached('outputList', () =>
 			this.buildChoices(
 				Array.from(this.state.outputs.keys()),
-				(id) => !id.includes('file_output') && !id.includes('ffmpeg_output'),
+				(id) => isSelectableOutput(id),
 				(name) => ({ id: name, label: name === 'virtualcam_output' ? 'Virtual Cam' : name }),
 				(a, b) => a.label.localeCompare(b.label),
 			),

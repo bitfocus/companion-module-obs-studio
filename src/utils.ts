@@ -48,6 +48,15 @@ export const Color = {
 	Crimson: combineRgb(200, 0, 90),
 }
 
+/**
+ * Resolves a `'true' | 'false' | 'toggle'` option against the current state. Toggling a state that
+ * could not be read yields `false`, matching what OBS does with an unknown scene item.
+ */
+export function resolveVisibility(visible: string, current: boolean | undefined): boolean {
+	if (visible !== 'toggle') return visible === 'true'
+	return current === undefined ? false : !current
+}
+
 export function validName(name: string): string {
 	// Generate a valid name for use as a variable ID
 	try {

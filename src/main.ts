@@ -14,6 +14,7 @@ import { getFeedbacks, type OBSFeedbackSchemas } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
 import { ModuleConfig, ModuleSecrets, OBSNormalizedState } from './types.js'
 import { OBSState } from './state.js'
+import { VariablePublisher } from './variable-publisher.js'
 
 import OBSWebSocket from 'obs-websocket-js'
 import { OBSApi } from './api.js'
@@ -38,7 +39,10 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 
 	public reconnectionPoll?: NodeJS.Timeout
 	public statsPoll?: NodeJS.Timeout
-	public mediaPoll?: NodeJS.Timeout | null
+	public mediaPoll?: NodeJS.Timeout
+
+	// Suppresses republishing variable values that have not changed.
+	private readonly variablePublisher = new VariablePublisher()
 
 	// Coalesces definition rebuilds into a single pass.
 	private rebuildTimer?: NodeJS.Timeout
@@ -91,7 +95,19 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 		this.obs.stopReconnectionPoll()
 	}
 
+	/**
+	 * Every variable write goes through here, so the polls can keep publishing their whole set each
+	 * tick while only changed values actually reach the host.
+	 */
+	override setVariableValues(values: CompanionVariableValues): void {
+		const changed = this.variablePublisher.filterChanged(values)
+		if (changed) super.setVariableValues(changed)
+	}
+
 	initVariables(): void {
+		// Redefining variables drops the host's values for them, so the next write must republish in
+		// full rather than being filtered against what the host no longer has.
+		this.variablePublisher.reset()
 		const variables = getVariables.call(this)
 		this.setVariableDefinitions(variables)
 		updateVariableValues.call(this)
