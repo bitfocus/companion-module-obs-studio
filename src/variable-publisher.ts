@@ -1,18 +1,22 @@
-import type { CompanionVariableValues } from '@companion-module/base'
+import type { CompanionVariableValue, CompanionVariableValues } from '@companion-module/base'
 
-type VariableValue = CompanionVariableValues[string]
-
+/**
+ * Drops variable writes whose value has not changed since the last publish.
+ *
+ * The host already ignores unchanged values, so this is not what stops dependents re-evaluating. It
+ * compares with `!==` though, which is identity for arrays: values rebuilt each tick
+ * (`current_media_name` and friends) look changed to it every time, and only an element-wise
+ * comparison here catches that.
+ */
 export class VariablePublisher {
-	private lastPublished = new Map<string, VariableValue>()
+	private lastPublished = new Map<string, CompanionVariableValue>()
 
-	/**
-	 * Returns only the entries that differ from the last publish, or `undefined` when none do.
-	 * Recording them here assumes the caller then publishes what it was handed.
-	 */
-	public filterChanged(values: CompanionVariableValues): CompanionVariableValues | undefined {
+	/** Returns the changed entries and records them as published, so the caller must publish them. */
+	public takeChanged(values: CompanionVariableValues): CompanionVariableValues | undefined {
 		let changed: CompanionVariableValues | undefined
 		for (const key of Object.keys(values)) {
 			const value = values[key]
+			// `has` before `get`, so a stored `undefined` differs from "never published".
 			if (this.lastPublished.has(key) && isSameValue(this.lastPublished.get(key), value)) continue
 			this.lastPublished.set(key, value)
 			changed ??= {}
@@ -22,21 +26,19 @@ export class VariablePublisher {
 	}
 
 	/**
-	 * Forgets everything published so far, so the next write republishes in full.
-	 *
-	 * Called whenever the variable definitions are rebuilt: the host drops values for definitions it
-	 * no longer has, so a suppressed write after a rebuild would leave a variable permanently blank.
+	 * Republishes in full on the next write. Called wherever the host may no longer hold these values;
+	 * a redundant republish costs nothing, a missed one leaves a variable blank with no error.
 	 */
 	public reset(): void {
 		this.lastPublished.clear()
 	}
 }
 
-/** Variable values are primitives or flat string arrays; arrays are compared element-wise. */
-function isSameValue(a: VariableValue, b: VariableValue): boolean {
-	if (Array.isArray(a) || Array.isArray(b)) {
-		if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
-		return a.every((entry, index) => entry === b[index])
+/** Values are primitives or flat arrays. */
+function isSameValue(a: CompanionVariableValue, b: CompanionVariableValue): boolean {
+	if (Array.isArray(a) && Array.isArray(b)) {
+		return a.length === b.length && a.every((entry, index) => entry === b[index])
 	}
+	if (Array.isArray(a) || Array.isArray(b)) return false
 	return a === b
 }

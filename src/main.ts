@@ -80,6 +80,8 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 	}
 
 	async configUpdated(config: ModuleConfig, secrets: ModuleSecrets): Promise<void> {
+		// May point at a different OBS, and a bad config never reaches a definition rebuild.
+		this.variablePublisher.reset()
 		await this.obs.disconnectOBS()
 		this.config = config
 		this.secrets = secrets
@@ -95,18 +97,14 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 		this.obs.stopReconnectionPoll()
 	}
 
-	/**
-	 * Every variable write goes through here, so the polls can keep publishing their whole set each
-	 * tick while only changed values actually reach the host.
-	 */
+	/** Lets the polls publish their whole set each tick without re-sending values that have not moved. */
 	override setVariableValues(values: CompanionVariableValues): void {
-		const changed = this.variablePublisher.filterChanged(values)
+		const changed = this.variablePublisher.takeChanged(values)
 		if (changed) super.setVariableValues(changed)
 	}
 
 	initVariables(): void {
-		// Redefining variables drops the host's values for them, so the next write must republish in
-		// full rather than being filtered against what the host no longer has.
+		// Redefining variables drops the host's values for them, so the next write must republish in full.
 		this.variablePublisher.reset()
 		const variables = getVariables.call(this)
 		this.setVariableDefinitions(variables)
