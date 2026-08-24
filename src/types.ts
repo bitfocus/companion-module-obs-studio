@@ -162,7 +162,7 @@ export interface OBSSource {
 	inputVolume?: number
 	inputAudioBalance?: number
 	inputAudioSyncOffset?: number
-	monitorType?: ObsAudioMonitorType
+	monitorType?: ObsAudioMonitorType | string
 	validName: string
 	sourceName: string
 	sourceUuid: string

@@ -9,7 +9,6 @@ import {
 	OBSOutputState,
 	OBSRecordingState,
 	OBSStreamingState,
-	ObsAudioMonitorType,
 	MEDIA_CONTROL_ACTIONS,
 } from './types.js'
 import { DEFAULT_TIMECODE, VIRTUALCAM_OUTPUT_NAME } from './constants.js'
@@ -252,7 +251,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('InputAudioMonitorTypeChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
-			self.obs.updateSourceMonitorType(source, data.monitorType as ObsAudioMonitorType)
+			self.obs.updateSourceMonitorType(source, data.monitorType)
 			const monitoring = utils.isMonitoringEnabled(data.monitorType)
 			self.checkFeedbacks('audio_monitor_type')
 			self.sendToActionRecorder({

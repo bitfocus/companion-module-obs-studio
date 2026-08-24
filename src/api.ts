@@ -1041,7 +1041,7 @@ export class OBSApi {
 		this.self.setVariableValues({ [`sync_offset_${source.validName}`]: offset })
 	}
 
-	public updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType): void {
+	public updateSourceMonitorType(source: OBSSource, monitorType: ObsAudioMonitorType | string): void {
 		source.monitorType = monitorType
 		this.self.setVariableValues({
 			[`monitor_${source.validName}`]: utils.getMonitorTypeLabel(monitorType),
