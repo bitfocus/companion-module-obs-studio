@@ -6,6 +6,7 @@
 	"scripts": {
 		"postinstall": "husky",
 		"format": "prettier -w .",
+		"format:check": "prettier --check .",
 		"package": "run build && companion-module-build",
 		"build": "rimraf dist && run build:main",
 		"build:main": "tsc -p tsconfig.build.json",
