@@ -1,7 +1,7 @@
 import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, styleActive } from './style.js'
+import { baseStyle, presetSlug, styleActive } from './style.js'
 
 /** Custom output presets (Virtual Cam, Decklink, etc.), grouped by output. */
 export function getOutputPresets(self: OBSInstance): {
@@ -13,7 +13,7 @@ export function getOutputPresets(self: OBSInstance): {
 
 	for (const output of self.obsState.outputList) {
 		const outputId = String(output.id)
-		const slug = outputId.replace(/[^a-zA-Z0-9]+/g, '_')
+		const slug = presetSlug(outputId)
 		const value = { value: outputId, isExpression: false as const }
 		const ids = {
 			toggle: `output_${slug}_toggle`,
@@ -25,7 +25,7 @@ export function getOutputPresets(self: OBSInstance): {
 		presets[ids.toggle] = {
 			type: 'simple',
 			name: 'Toggle Output',
-			style: baseStyle({ text: output.label }),
+			style: baseStyle({ text: `${output.label}\nToggle` }),
 			steps: [{ down: [{ actionId: 'output', options: { action: 'toggle', output: value } }], up: [] }],
 			feedbacks: [
 				{
@@ -39,7 +39,7 @@ export function getOutputPresets(self: OBSInstance): {
 		presets[ids.start] = {
 			type: 'simple',
 			name: 'Start Output',
-			style: baseStyle({ text: `START\n${output.label}` }),
+			style: baseStyle({ text: `Start\n${output.label}` }),
 			steps: [{ down: [{ actionId: 'output', options: { action: 'start', output: value } }], up: [] }],
 			feedbacks: [{ feedbackId: 'output_active', options: { output: value }, style: styleActive() }],
 		}
@@ -47,7 +47,7 @@ export function getOutputPresets(self: OBSInstance): {
 		presets[ids.stop] = {
 			type: 'simple',
 			name: 'Stop Output',
-			style: baseStyle({ text: `STOP\n${output.label}` }),
+			style: baseStyle({ text: `Stop\n${output.label}` }),
 			steps: [{ down: [{ actionId: 'output', options: { action: 'stop', output: value } }], up: [] }],
 			feedbacks: [],
 		}
@@ -55,7 +55,7 @@ export function getOutputPresets(self: OBSInstance): {
 		presets[ids.status] = {
 			type: 'simple',
 			name: 'Output Status',
-			style: baseStyle({ text: output.label }),
+			style: baseStyle({ text: `${output.label}\nStopped` }),
 			steps: [{ down: [], up: [] }],
 			feedbacks: [
 				{

@@ -13,9 +13,9 @@ export function getStudioConfigPresets(self: OBSInstance): {
 	presets['toggleStudioMode'] = {
 		type: 'simple',
 		name: 'Toggle Studio Mode',
-		style: baseStyle({ text: 'ENABLE\nStudio Mode' }),
+		style: baseStyle({ text: 'Enable\nStudio Mode' }),
 		steps: [{ down: [{ actionId: 'studio_mode', options: { enabled: 'toggle' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'studioMode', options: {}, style: { ...styleActive(), text: 'DISABLE\nStudio Mode' } }],
+		feedbacks: [{ feedbackId: 'studioMode', options: {}, style: { ...styleActive(), text: 'Disable\nStudio Mode' } }],
 	}
 
 	presets['tmp_profile'] = {

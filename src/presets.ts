@@ -18,7 +18,8 @@ export function getPresets(this: OBSInstance): {
 	presets: CompanionPresetDefinitions<OBSInstanceTypes>
 	structure: CompanionPresetSection<OBSInstanceTypes>[]
 } {
-	// Assemble preset definitions and sections.
+	// Assemble preset definitions and sections. Every get*Presets takes the instance, even where it
+	// builds only static presets, so the aggregator can call them uniformly.
 	const parts = [
 		getRecordingPresets(this),
 		getStreamingPresets(this),

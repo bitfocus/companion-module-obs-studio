@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Color } from '../utils.js'
+import { styleActive, stylePreview, styleProgram } from '../presets/style.js'
 
 export type SourceFeedbackSchemas = {
 	scene_item_active: {
@@ -19,10 +19,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			name: 'Source - Visible in Program',
 			description:
 				'If a source is currently visible in the program output (either directly or via a scene), change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleProgram(),
 			options: [
 				{
 					type: 'checkbox',
@@ -73,10 +70,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Source - Active in Preview',
 			description: 'If a source is currently enabled in the preview scene, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: stylePreview(),
 			options: [
 				{
 					type: 'dropdown',
@@ -96,10 +90,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Source - Enabled in Scene',
 			description: 'If a specific source is enabled in a specific scene, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -157,10 +148,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Filter - Enabled',
 			description: 'If a specific filter is enabled on a source, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',

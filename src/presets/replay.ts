@@ -13,16 +13,18 @@ export function getReplayPresets(_self: OBSInstance): {
 	presets['replayToggle'] = {
 		type: 'simple',
 		name: 'Toggle Replay Buffer',
-		previewStyle: baseStyle({ text: 'TOGGLE\nREPLAY' }),
-		style: baseStyle({ text: 'START\nREPLAY' }),
+		previewStyle: baseStyle({ text: 'Toggle\nReplay Buffer' }),
+		style: baseStyle({ text: 'Start\nReplay Buffer' }),
 		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'toggle' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'STOP\nREPLAY' } }],
+		feedbacks: [
+			{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'Stop\nReplay Buffer' } },
+		],
 	}
 
 	presets['replayStart'] = {
 		type: 'simple',
 		name: 'Start Replay Buffer',
-		style: baseStyle({ text: 'START\nREPLAY' }),
+		style: baseStyle({ text: 'Start\nReplay Buffer' }),
 		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'start' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -30,7 +32,7 @@ export function getReplayPresets(_self: OBSInstance): {
 	presets['replayStop'] = {
 		type: 'simple',
 		name: 'Stop Replay Buffer',
-		style: baseStyle({ text: 'STOP\nREPLAY' }),
+		style: baseStyle({ text: 'Stop\nReplay Buffer' }),
 		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'stop' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -38,7 +40,7 @@ export function getReplayPresets(_self: OBSInstance): {
 	presets['replaySave'] = {
 		type: 'simple',
 		name: 'Save Replay Buffer',
-		style: baseStyle({ text: 'SAVE\nREPLAY' }),
+		style: baseStyle({ text: 'Save\nReplay' }),
 		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'save' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -46,9 +48,19 @@ export function getReplayPresets(_self: OBSInstance): {
 	presets['replayStatus'] = {
 		type: 'simple',
 		name: 'Replay Buffer Status',
-		style: baseStyle({ text: 'REPLAY\nBUFFER STATUS' }),
+		style: baseStyle({ text: 'Replay:\nStopped' }),
 		steps: [{ down: [], up: [] }],
-		feedbacks: [{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'REPLAY\nACTIVE' } }],
+		feedbacks: [
+			{ feedbackId: 'replayBufferActive', options: {}, style: { ...styleActive(), text: 'Replay:\nActive' } },
+		],
+	}
+
+	presets['replayBufferPath'] = {
+		type: 'simple',
+		name: 'Last Saved Replay Path',
+		style: baseStyle({ text: 'Replay File:\n$(obs:replay_buffer_path)' }),
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
 	}
 
 	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
@@ -62,7 +74,7 @@ export function getReplayPresets(_self: OBSInstance): {
 					type: 'simple',
 					presets: ['replayToggle', 'replayStart', 'replayStop', 'replaySave'],
 				},
-				{ id: 'replay-status', name: 'Status', type: 'simple', presets: ['replayStatus'] },
+				{ id: 'replay-status', name: 'Status', type: 'simple', presets: ['replayStatus', 'replayBufferPath'] },
 			],
 		},
 	]

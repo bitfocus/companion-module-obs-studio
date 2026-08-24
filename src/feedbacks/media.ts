@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { styleActive, styleCaution } from '../presets/style.js'
 import { OBSMediaStatus } from '../types.js'
-import { Color } from '../utils.js'
 
 export type MediaFeedbackSchemas = {
 	media_playing: { type: 'boolean'; options: { source: string } }
@@ -23,10 +23,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Media - Playing',
 			description: 'If a specific media source is currently playing, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -47,10 +44,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Media - Remaining Time',
 			description: 'If remaining time of a media source is below a threshold, change the style of the button',
-			defaultStyle: {
-				color: Color.Black,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleCaution(),
 			options: [
 				{
 					type: 'dropdown',

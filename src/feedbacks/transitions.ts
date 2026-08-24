@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Color } from '../utils.js'
+import { styleActive } from '../presets/style.js'
 
 export type TransitionFeedbackSchemas = {
 	transition_active: { type: 'boolean'; options: Record<string, never> }
@@ -14,10 +14,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 			type: 'boolean',
 			name: 'Transitions - In Progress',
 			description: 'If an OBS transition is currently in progress, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [],
 			callback: () => {
 				return !!self.states.transitionActive
@@ -29,10 +26,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 			name: 'Transitions - Type',
 			description:
 				'If a specific transition type is currently selected as the active transition, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -55,10 +49,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 			type: 'boolean',
 			name: 'Transition - Duration',
 			description: 'If the current transition duration matches a specific time, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'number',

@@ -13,24 +13,24 @@ export function getStreamingPresets(_self: OBSInstance): {
 	presets['streaming'] = {
 		type: 'simple',
 		name: 'Toggle Streaming',
-		previewStyle: baseStyle({ text: 'TOGGLE\nSTREAM' }),
-		style: baseStyle({ text: 'START\nSTREAM' }),
+		previewStyle: baseStyle({ text: 'Toggle\nStreaming' }),
+		style: baseStyle({ text: 'Start\nStreaming' }),
 		steps: [{ down: [{ actionId: 'streaming', options: { action: 'toggle' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'streaming', options: {}, style: { ...styleActive(), text: 'STOP\nSTREAM' } }],
+		feedbacks: [{ feedbackId: 'streaming', options: {}, style: { ...styleActive(), text: 'Stop\nStreaming' } }],
 	}
 
 	presets['streamingStart'] = {
 		type: 'simple',
-		name: 'Start Stream',
-		style: baseStyle({ text: 'START\nSTREAM' }),
+		name: 'Start Streaming',
+		style: baseStyle({ text: 'Start\nStreaming' }),
 		steps: [{ down: [{ actionId: 'streaming', options: { action: 'start' } }], up: [] }],
 		feedbacks: [],
 	}
 
 	presets['streamingStop'] = {
 		type: 'simple',
-		name: 'Stop Stream',
-		style: baseStyle({ text: 'STOP\nSTREAM' }),
+		name: 'Stop Streaming',
+		style: baseStyle({ text: 'Stop\nStreaming' }),
 		steps: [{ down: [{ actionId: 'streaming', options: { action: 'stop' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -38,7 +38,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 	presets['streamingStatus'] = {
 		type: 'simple',
 		name: 'Streaming Status / Timecode',
-		style: baseStyle({ text: 'STREAM\n$(obs:streaming)\n$(obs:stream_timecode)' }),
+		style: baseStyle({ text: 'Stream:\n$(obs:streaming)\n$(obs:stream_timecode)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [
 			{ feedbackId: 'streaming', options: {}, style: styleActive() },
@@ -49,13 +49,13 @@ export function getStreamingPresets(_self: OBSInstance): {
 	presets['streamingCongestion'] = {
 		type: 'simple',
 		name: 'Stream Congestion',
-		style: baseStyle({ text: 'STREAM\nHEALTH' }),
+		style: baseStyle({ text: 'Stream:\nHealth' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [
 			{
 				feedbackId: 'streamCongestion',
 				options: {
-					colorNoStream: Style.idleBg,
+					colorNoStream: Style.disabled,
 					colorLow: Style.active,
 					colorMedium: Style.warning,
 					colorHigh: Style.alert,
@@ -67,15 +67,17 @@ export function getStreamingPresets(_self: OBSInstance): {
 	presets['streamingReconnecting'] = {
 		type: 'simple',
 		name: 'Stream Reconnecting',
-		style: baseStyle({ text: 'STREAM\nOK' }),
+		style: baseStyle({ text: 'Stream:\nOK' }),
 		steps: [{ down: [], up: [] }],
-		feedbacks: [{ feedbackId: 'streamReconnecting', options: {}, style: { ...styleWarn(), text: 'RE-\nCONNECTING' } }],
+		feedbacks: [
+			{ feedbackId: 'streamReconnecting', options: {}, style: { ...styleWarn(), text: 'Stream:\nReconnecting' } },
+		],
 	}
 
 	presets['streamingService'] = {
 		type: 'simple',
-		name: 'Streaming Service Info',
-		style: baseStyle({ text: 'STREAM DEST\n$(obs:stream_service)' }),
+		name: 'Stream Service Info',
+		style: baseStyle({ text: 'Stream Dest:\n$(obs:stream_service)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
@@ -83,7 +85,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 	presets['streamingBitrate'] = {
 		type: 'simple',
 		name: 'Stream Bitrate',
-		style: baseStyle({ text: 'STREAM\n$(obs:kbits_per_sec)\nkb/s' }),
+		style: baseStyle({ text: 'Bitrate:\n$(obs:kbits_per_sec) kb/s' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}

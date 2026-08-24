@@ -13,11 +13,11 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recording'] = {
 		type: 'simple',
 		name: 'Toggle Recording',
-		previewStyle: baseStyle({ text: 'TOGGLE\nRECORD' }),
-		style: baseStyle({ text: 'START\nRECORD' }),
+		previewStyle: baseStyle({ text: 'Toggle\nRecording' }),
+		style: baseStyle({ text: 'Start\nRecording' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'toggle', chapterName: '' } }], up: [] }],
 		feedbacks: [
-			{ feedbackId: 'recording', options: {}, style: { ...styleProgram(), text: 'STOP\nRECORD' } },
+			{ feedbackId: 'recording', options: {}, style: { ...styleProgram(), text: 'Stop\nRecording' } },
 			{ feedbackId: 'recordingPaused', options: {}, style: styleWarn() },
 		],
 	}
@@ -25,7 +25,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordStart'] = {
 		type: 'simple',
 		name: 'Start Recording',
-		style: baseStyle({ text: 'START\nRECORD' }),
+		style: baseStyle({ text: 'Start\nRecording' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'start', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -33,7 +33,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordStop'] = {
 		type: 'simple',
 		name: 'Stop Recording',
-		style: baseStyle({ text: 'STOP\nRECORD' }),
+		style: baseStyle({ text: 'Stop\nRecording' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'stop', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -41,7 +41,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordPause'] = {
 		type: 'simple',
 		name: 'Pause Recording',
-		style: baseStyle({ text: 'PAUSE\nRECORD' }),
+		style: baseStyle({ text: 'Pause\nRecording' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'pause', chapterName: '' } }], up: [] }],
 		feedbacks: [{ feedbackId: 'recordingPaused', options: {}, style: styleWarn() }],
 	}
@@ -49,23 +49,23 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordResume'] = {
 		type: 'simple',
 		name: 'Resume Recording',
-		style: baseStyle({ text: 'RESUME\nRECORD' }),
+		style: baseStyle({ text: 'Resume\nRecording' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'resume', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
 	presets['recordSplit'] = {
 		type: 'simple',
-		name: 'Split Recording File',
-		style: baseStyle({ text: 'SPLIT\nRECORD' }),
+		name: 'Split File',
+		style: baseStyle({ text: 'Split\nFile' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'split', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
 
 	presets['recordChapter'] = {
 		type: 'simple',
-		name: 'Create Recording Chapter',
-		style: baseStyle({ text: 'CREATE\nCHAPTER' }),
+		name: 'Add Chapter Marker',
+		style: baseStyle({ text: 'Add\nChapter' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'chapter', chapterName: '' } }], up: [] }],
 		feedbacks: [],
 	}
@@ -73,7 +73,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordingStatusTimecode'] = {
 		type: 'simple',
 		name: 'Recording Status / Timecode',
-		style: baseStyle({ text: 'REC STATUS\n$(obs:recording)\n$(obs:recording_timecode)' }),
+		style: baseStyle({ text: 'Recording:\n$(obs:recording)\n$(obs:recording_timecode)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [
 			{ feedbackId: 'recording', options: {}, style: styleProgram() },
@@ -84,7 +84,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordingTimecodeHH'] = {
 		type: 'simple',
 		name: 'Recording Timecode HH',
-		previewStyle: baseStyle({ text: 'REC Time:\nHours' }),
+		previewStyle: baseStyle({ text: 'Rec Time:\nHours' }),
 		style: baseStyle({ text: '$(obs:recording_timecode_hh)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
@@ -93,7 +93,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordingTimecodeMM'] = {
 		type: 'simple',
 		name: 'Recording Timecode MM',
-		previewStyle: baseStyle({ text: 'REC Time:\nMins' }),
+		previewStyle: baseStyle({ text: 'Rec Time:\nMinutes' }),
 		style: baseStyle({ text: '$(obs:recording_timecode_mm)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
@@ -102,7 +102,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordingTimecodeSS'] = {
 		type: 'simple',
 		name: 'Recording Timecode SS',
-		previewStyle: baseStyle({ text: 'REC Time:\nSeconds' }),
+		previewStyle: baseStyle({ text: 'Rec Time:\nSeconds' }),
 		style: baseStyle({ text: '$(obs:recording_timecode_ss)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
@@ -111,7 +111,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordingFilePath'] = {
 		type: 'simple',
 		name: 'Recording File Path',
-		style: baseStyle({ text: 'REC PATH:\n$(obs:recording_path)' }),
+		style: baseStyle({ text: 'Rec Path:\n$(obs:recording_path)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
@@ -119,7 +119,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 	presets['recordingFileName'] = {
 		type: 'simple',
 		name: 'Recording File Name',
-		style: baseStyle({ text: 'REC FILE:\n$(obs:recording_file_name)' }),
+		style: baseStyle({ text: 'Rec File:\n$(obs:recording_file_name)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}

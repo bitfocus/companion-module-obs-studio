@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { Style, styleActive, styleProgram, styleWarn } from '../presets/style.js'
 import { OBSRecordingState } from '../types.js'
-import { Color } from '../utils.js'
 
 export type OutputFeedbackSchemas = {
 	streaming: { type: 'boolean'; options: Record<string, never> }
@@ -22,10 +22,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Streaming - Active',
 			description: 'If streaming is active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [],
 			callback: () => {
 				return !!self.states.streaming
@@ -36,10 +33,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Streaming - Reconnecting',
 			description: 'If the stream is currently reconnecting, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Orange,
-			},
+			defaultStyle: styleWarn(),
 			options: [],
 			callback: () => {
 				return !!self.states.streamReconnecting
@@ -50,10 +44,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Recording - Active',
 			description: 'If recording is active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleProgram(),
 			options: [],
 			callback: () => {
 				return self.states.recording === OBSRecordingState.Recording
@@ -64,10 +55,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Recording - Paused',
 			description: 'If recording is paused, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Orange,
-			},
+			defaultStyle: styleWarn(),
 			options: [],
 			callback: () => {
 				return self.states.recording === OBSRecordingState.Paused
@@ -78,10 +66,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Output - Active',
 			description: 'If an output is currently active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -104,10 +89,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			type: 'boolean',
 			name: 'Replay Buffer - Active',
 			description: 'If the replay buffer is currently active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleActive(),
 			options: [],
 			callback: () => {
 				return !!self.states.replayBuffer
@@ -124,25 +106,25 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 					type: 'colorpicker',
 					label: 'Background color (No Stream)',
 					id: 'colorNoStream',
-					default: Color.Gray,
+					default: Style.disabled,
 				},
 				{
 					type: 'colorpicker',
 					label: 'Background color (Low Congestion)',
 					id: 'colorLow',
-					default: Color.Green,
+					default: Style.preview,
 				},
 				{
 					type: 'colorpicker',
 					label: 'Background color (Medium Congestion)',
 					id: 'colorMedium',
-					default: Color.Orange,
+					default: Style.warning,
 				},
 				{
 					type: 'colorpicker',
 					label: 'Background color (High Congestion)',
 					id: 'colorHigh',
-					default: Color.Red,
+					default: Style.program,
 				},
 			],
 			callback: (feedback) => {

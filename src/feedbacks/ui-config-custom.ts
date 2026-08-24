@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Color } from '../utils.js'
+import { styleActive, styleCaution } from '../presets/style.js'
 
 export type UiConfigCustomFeedbackSchemas = {
 	profile_active: { type: 'boolean'; options: { profile: string } }
@@ -21,10 +21,7 @@ export function getUiConfigCustomFeedbacks(
 			type: 'boolean',
 			name: 'Profile Active',
 			description: 'If a specific OBS profile is currently active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -44,10 +41,7 @@ export function getUiConfigCustomFeedbacks(
 			type: 'boolean',
 			name: 'Scene Collection Active',
 			description: 'If a specific scene collection is currently active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -67,10 +61,7 @@ export function getUiConfigCustomFeedbacks(
 			type: 'boolean',
 			name: 'Studio Mode Active',
 			description: 'If Studio Mode is currently enabled, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [],
 			callback: () => {
 				return !!self.states.studioMode
@@ -82,10 +73,7 @@ export function getUiConfigCustomFeedbacks(
 			name: 'Disk Space Remaining',
 			description:
 				'If the remaining disk space on the drive OBS is recording to is below a certain threshold, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleCaution(),
 			options: [
 				{
 					type: 'number',
@@ -106,10 +94,7 @@ export function getUiConfigCustomFeedbacks(
 			type: 'boolean',
 			name: 'Custom - Vendor Event',
 			description: 'Change the style of the button based on third party vendor events',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'textinput',

@@ -32,14 +32,20 @@ export function describeError(error: unknown): string {
 	return String(error)
 }
 
+/**
+ * Colors chosen to sit alongside the OBS UI: the neutral blue-grays of its panels, and its Qt
+ * selection blue for anything OBS itself highlights (selected scene, active Studio Mode).
+ */
 export const Color = {
-	Black: combineRgb(0, 0, 0),
-	White: combineRgb(255, 255, 255),
-	Gray: combineRgb(72, 72, 72),
+	Black: combineRgb(30, 33, 39), // OBS panel background
+	White: combineRgb(225, 227, 230), // OBS body text
+	Gray: combineRgb(72, 78, 88), // OBS disabled control
+	Blue: combineRgb(42, 130, 218), // OBS selection accent
 	Red: combineRgb(200, 0, 0),
 	Orange: combineRgb(255, 102, 0),
 	Yellow: combineRgb(212, 174, 0),
-	Green: combineRgb(0, 200, 0),
+	Green: combineRgb(49, 163, 49), // OBS audio meter green
+	Crimson: combineRgb(200, 0, 90),
 }
 
 export function validName(name: string): string {

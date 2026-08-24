@@ -1,5 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
+import { styleActive, styleAlert } from '../presets/style.js'
 import { Color, isMonitoringEnabled } from '../utils.js'
 
 export type AudioFeedbackSchemas = {
@@ -17,10 +18,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Audio - Muted',
 			description: 'If an audio source is muted, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleAlert(),
 			options: [
 				{
 					type: 'dropdown',
@@ -41,10 +39,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Audio - Monitoring',
 			description: 'If audio monitoring is enabled for a source, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -65,10 +60,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Audio - Track Enabled',
 			description: 'If a mixer output track of an audio source is enabled, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -104,10 +96,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Audio - Volume',
 			description: 'If an audio source volume is matched, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -137,10 +126,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Audio - Peaking',
 			description: 'If audio is above a certain dB value, change the style of the button',
-			defaultStyle: {
-				color: Color.Black,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleActive(),
 			options: [
 				{
 					type: 'dropdown',
@@ -205,6 +191,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				const peak = self.obsState.findSourceByName(sourceName)?.peak ?? -100
 				const threshold = feedback.options.threshold ?? -60
 				if (peak > -9) {
+					// Mirrors the OBS mixer's own meter gradient, so raw colors rather than the Style palette.
 					return { bgcolor: Color.Red }
 				} else if (peak > -20) {
 					return { bgcolor: Color.Orange }

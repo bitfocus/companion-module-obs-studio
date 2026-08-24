@@ -98,6 +98,19 @@ export function getScenePresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
+	presets['sceneReturnPrevious'] = {
+		type: 'simple',
+		name: 'Return to Previous Scene',
+		style: baseStyle({ text: 'Back To:\n$(obs:scene_previous)' }),
+		steps: [
+			{
+				down: [{ actionId: 'set_scene', options: { scene: { value: '$(obs:scene_previous)', isExpression: true } } }],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
 	const sceneValues = self.obsState.sceneChoices.map((s) => ({ name: s.label, value: s.id }))
 
 	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
@@ -133,7 +146,7 @@ export function getScenePresets(self: OBSInstance): {
 					id: 'scenes-nav',
 					name: 'Navigation',
 					type: 'simple',
-					presets: ['scenePreviewNext', 'scenePreviewPrevious'],
+					presets: ['scenePreviewNext', 'scenePreviewPrevious', 'sceneReturnPrevious'],
 				},
 			],
 		},

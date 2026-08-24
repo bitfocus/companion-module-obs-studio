@@ -1,6 +1,6 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Color } from '../utils.js'
+import { Style, stylePreview, styleProgram } from '../presets/style.js'
 
 export type SceneFeedbackSchemas = {
 	scene_active: {
@@ -51,25 +51,25 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					type: 'colorpicker',
 					label: 'Foreground color (Program)',
 					id: 'fg',
-					default: Color.White,
+					default: Style.idleFg,
 				},
 				{
 					type: 'colorpicker',
 					label: 'Background color (Program)',
 					id: 'bg',
-					default: Color.Red,
+					default: Style.program,
 				},
 				{
 					type: 'colorpicker',
 					label: 'Foreground color (Preview)',
 					id: 'fg_preview',
-					default: Color.White,
+					default: Style.idleFg,
 				},
 				{
 					type: 'colorpicker',
 					label: 'Background color (Preview)',
 					id: 'bg_preview',
-					default: Color.Green,
+					default: Style.preview,
 				},
 			],
 			callback: (feedback) => {
@@ -99,10 +99,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Scene - Program',
 			description: 'If a scene is in the program output, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Red,
-			},
+			defaultStyle: styleProgram(),
 			options: [
 				{
 					type: 'dropdown',
@@ -123,10 +120,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Scene - Preview',
 			description: 'If a scene is in the preview monitor (Studio Mode only), change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: stylePreview(),
 			options: [
 				{
 					type: 'dropdown',
@@ -147,10 +141,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			type: 'boolean',
 			name: 'Scene - Previous',
 			description: 'If a scene was the last scene previously active, change the style of the button',
-			defaultStyle: {
-				color: Color.White,
-				bgcolor: Color.Green,
-			},
+			defaultStyle: stylePreview(),
 			options: [
 				{
 					type: 'dropdown',

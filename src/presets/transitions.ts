@@ -12,8 +12,8 @@ export function getTransitionPresets(self: OBSInstance): {
 
 	presets['transitionAuto'] = {
 		type: 'simple',
-		name: 'Send previewed scene to program',
-		style: baseStyle({ text: 'AUTO' }),
+		name: 'Transition (Preview to Program)',
+		style: baseStyle({ text: 'Transition' }),
 		steps: [{ down: [{ actionId: 'do_transition', options: {} }], up: [] }],
 		feedbacks: [{ feedbackId: 'transition_active', options: {}, style: styleActive() }],
 	}
@@ -90,15 +90,15 @@ export function getTransitionPresets(self: OBSInstance): {
 	presets['transitionCurrentInfo'] = {
 		type: 'simple',
 		name: 'Current Transition Info',
-		style: baseStyle({ text: 'Transition\n$(obs:current_transition)\n$(obs:transition_duration)ms' }),
+		style: baseStyle({ text: 'Transition:\n$(obs:current_transition)\n$(obs:transition_duration) ms' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
 
 	presets['transitionDecreaseDuration'] = {
 		type: 'simple',
-		name: 'Decrease transition time (-50ms)',
-		style: baseStyle({ text: 'Duration\n-50ms' }),
+		name: 'Decrease Transition Time (-50ms)',
+		style: baseStyle({ text: 'Duration\n-50 ms' }),
 		steps: [
 			{ down: [{ actionId: 'transition_duration', options: { mode: 'adjust', value: 500, amount: -50 } }], up: [] },
 		],
@@ -107,8 +107,8 @@ export function getTransitionPresets(self: OBSInstance): {
 
 	presets['transitionIncreaseDuration'] = {
 		type: 'simple',
-		name: 'Increase transition time (+50ms)',
-		style: baseStyle({ text: 'Duration\n+50ms' }),
+		name: 'Increase Transition Time (+50ms)',
+		style: baseStyle({ text: 'Duration\n+50 ms' }),
 		steps: [
 			{ down: [{ actionId: 'transition_duration', options: { mode: 'adjust', value: 500, amount: 50 } }], up: [] },
 		],
@@ -122,7 +122,7 @@ export function getTransitionPresets(self: OBSInstance): {
 		presets[id] = {
 			type: 'simple',
 			name: `Transition Set ${time}ms`,
-			style: baseStyle({ text: `${time}ms` }),
+			style: baseStyle({ text: `${time} ms` }),
 			steps: [
 				{ down: [{ actionId: 'transition_duration', options: { mode: 'set', value: time, amount: 50 } }], up: [] },
 			],
@@ -137,7 +137,7 @@ export function getTransitionPresets(self: OBSInstance): {
 			id: 'transitions',
 			name: 'Transitions',
 			definitions: [
-				{ id: 'transitions-do', name: 'Auto', type: 'simple', presets: ['transitionAuto'] },
+				{ id: 'transitions-do', name: 'Transition', type: 'simple', presets: ['transitionAuto'] },
 				{
 					id: 'transitions-type',
 					name: 'Set Type',

@@ -13,7 +13,7 @@ export function getSystemPresets(_self: OBSInstance): {
 	presets['cpuRamUsage'] = {
 		type: 'simple',
 		name: 'CPU/RAM Usage',
-		style: baseStyle({ text: 'CPU:\n$(obs:cpu_usage)\nRAM:\n$(obs:memory_usage) MB' }),
+		style: baseStyle({ text: 'CPU:\n$(obs:cpu_usage) %\nRAM:\n$(obs:memory_usage) MB' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
@@ -29,7 +29,7 @@ export function getSystemPresets(_self: OBSInstance): {
 	presets['ramUsage'] = {
 		type: 'simple',
 		name: 'RAM Usage',
-		style: baseStyle({ text: 'RAM:\n$(obs:memory_usage)' }),
+		style: baseStyle({ text: 'RAM:\n$(obs:memory_usage) MB' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
@@ -82,6 +82,24 @@ export function getSystemPresets(_self: OBSInstance): {
 		feedbacks: [],
 	}
 
+	presets['videoSettings'] = {
+		type: 'simple',
+		name: 'Video Settings (Resolution / FPS)',
+		style: baseStyle({
+			text: 'Canvas:\n$(obs:base_resolution)\nOutput:\n$(obs:output_resolution)\n$(obs:target_framerate) fps',
+		}),
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['screenshotPath'] = {
+		type: 'simple',
+		name: 'Last Saved Screenshot Path',
+		style: baseStyle({ text: 'Screenshot:\n$(obs:screenshot_saved_path)' }),
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
+	}
+
 	presets['remainingDiskSpace'] = {
 		type: 'simple',
 		name: 'Remaining Disk Space',
@@ -91,6 +109,32 @@ export function getSystemPresets(_self: OBSInstance): {
 			{ feedbackId: 'freeDiskSpaceRemaining', options: { diskSpace: 50000 }, style: styleCaution() },
 			{ feedbackId: 'freeDiskSpaceRemaining', options: { diskSpace: 10000 }, style: styleAlert() },
 		],
+	}
+
+	presets['triggerHotkey'] = {
+		type: 'simple',
+		name: 'Trigger Hotkey by ID (example)',
+		style: baseStyle({ text: 'Trigger\nHotkey' }),
+		steps: [{ down: [{ actionId: 'trigger-hotkey', options: { id: '' } }], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['triggerHotkeySequence'] = {
+		type: 'simple',
+		name: 'Trigger Hotkey by Key (example)',
+		style: baseStyle({ text: 'Hotkey\nSequence' }),
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'trigger-hotkey-sequence',
+						options: { keyId: '', keyShift: false, keyAlt: false, keyControl: false, keyCommand: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
 	}
 
 	// Example window/projector presets (set target options after dropping).
@@ -155,14 +199,21 @@ export function getSystemPresets(_self: OBSInstance): {
 						'outputTotalFrames',
 						'outputSkippedFrames',
 						'averageFrameTime',
+						'videoSettings',
 					],
 				},
-				{ id: 'system-disk', name: 'Disk', type: 'simple', presets: ['remainingDiskSpace'] },
+				{ id: 'system-disk', name: 'Disk', type: 'simple', presets: ['remainingDiskSpace', 'screenshotPath'] },
 				{
 					id: 'system-dialogs',
 					name: 'Open OBS UI Windows',
 					type: 'simple',
 					presets: ['openMultiviewProjector', 'openSourceProperties', 'openSourceFilters', 'openSourceInteract'],
+				},
+				{
+					id: 'system-hotkeys',
+					name: 'Hotkeys',
+					type: 'simple',
+					presets: ['triggerHotkey', 'triggerHotkeySequence'],
 				},
 			],
 		},
