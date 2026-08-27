@@ -203,6 +203,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 				},
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Use Authentication',
 					id: 'useAuth',
 					default: false,

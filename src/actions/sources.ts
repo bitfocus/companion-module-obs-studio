@@ -124,6 +124,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				choiceDropdown(self, 'textSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'multidropdown',
+					disableAutoExpression: true,
 					label: 'Properties',
 					id: 'props',
 					default: [],
@@ -562,6 +563,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'All Sources',
 					id: 'allSources',
 					default: false,
@@ -666,12 +668,14 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Current Program Scene',
 					id: 'useProgramScene',
 					default: false,
 				},
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Current Preview Scene',
 					id: 'usePreviewScene',
 					default: false,
@@ -700,6 +704,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				},
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Custom Path',
 					id: 'customName',
 					default: false,
@@ -759,6 +764,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Current Program Scene',
 					id: 'useProgramScene',
 					default: true,
@@ -771,6 +777,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
 				{
 					type: 'multidropdown',
+					disableAutoExpression: true,
 					label: 'Properties',
 					id: 'props',
 					default: [],
@@ -898,12 +905,14 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'All Scenes',
 					id: 'anyScene',
 					default: true,
 				},
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Current Scene',
 					id: 'useCurrentScene',
 					default: false,
@@ -954,6 +963,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Current Scene',
 					id: 'useCurrentScene',
 					default: true,

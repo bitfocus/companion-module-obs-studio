@@ -37,6 +37,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				choiceDropdown(self, 'transition', { id: 'transition', label: 'Transition', allowCustom: false }),
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Custom Duration',
 					id: 'customDuration',
 					default: false,

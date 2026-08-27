@@ -24,12 +24,14 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'All Scenes',
 					id: 'anyScene',
 					default: true,
 				},
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Current Scene',
 					id: 'useCurrentScene',
 					default: false,
@@ -76,6 +78,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' }),
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Any Source',
 					id: 'any',
 					default: false,

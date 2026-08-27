@@ -28,6 +28,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Currently Playing',
 					id: 'useCurrentMedia',
 					default: false,
@@ -77,6 +78,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Currently Playing',
 					id: 'useCurrentMedia',
 					default: false,
@@ -131,6 +133,7 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 			options: [
 				{
 					type: 'checkbox',
+					disableAutoExpression: true,
 					label: 'Currently Playing',
 					id: 'useCurrentMedia',
 					default: false,
