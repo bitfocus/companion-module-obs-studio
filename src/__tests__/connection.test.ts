@@ -66,15 +66,24 @@ describe('processWebSocketError', () => {
 		expect(self.updateStatus.mock.calls).toEqual([[InstanceStatus.ConnectionFailure]])
 	})
 
-	test('stays quiet while a reconnection poll is already running', () => {
+	test('stops a running poll once a terminal cause is known', () => {
 		self.obs.startReconnectionPoll()
-		const poll = self.reconnectionPoll
 
 		self.obs.processWebSocketError(new Error('Authentication failed'))
 
-		// The poll is already reporting the problem; re-running the mapping would both overwrite the
-		// status and, for the non-retryable branches, leave the poll running with no way to stop it.
-		expect(self.updateStatus).not.toHaveBeenCalled()
+		// The cause can only become knowable after the poll has started, so the status still has to be
+		// reported and the retry loop stopped rather than left hammering OBS with a bad password.
+		expect(self.updateStatus.mock.calls).toEqual([[InstanceStatus.AuthenticationFailure]])
+		expect(self.reconnectionPoll).toBeUndefined()
+	})
+
+	test('keeps an existing poll while a transient failure repeats', () => {
+		self.obs.startReconnectionPoll()
+		const poll = self.reconnectionPoll
+
+		self.obs.processWebSocketError(new Error('connect ECONNREFUSED 127.0.0.1:4455'))
+
+		expect(self.updateStatus.mock.calls).toEqual([[InstanceStatus.ConnectionFailure]])
 		expect(self.reconnectionPoll).toBe(poll)
 	})
 

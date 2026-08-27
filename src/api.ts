@@ -158,35 +158,36 @@ export class OBSApi {
 	}
 
 	public processWebSocketError(error: unknown): void {
-		if (!this.self.reconnectionPoll) {
-			let tryReconnect: boolean
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			if (errorMessage.match(/(Server sent no subprotocol)/i)) {
-				tryReconnect = false
-				logger.error('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
-				this.self.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated OBS version')
-			} else if (errorMessage.match(/(missing an `authentication` string)/i)) {
-				tryReconnect = false
-				logger.error(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
-				this.self.updateStatus(InstanceStatus.BadConfig, 'Missing password')
-			} else if (errorMessage.match(/(Authentication failed)/i)) {
-				tryReconnect = false
-				logger.error(
-					`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
-				)
-				this.self.updateStatus(InstanceStatus.AuthenticationFailure)
-			} else if (errorMessage.match(/(ECONNREFUSED)/i)) {
-				tryReconnect = true
-				logger.error(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
-				this.self.updateStatus(InstanceStatus.ConnectionFailure)
-			} else {
-				tryReconnect = true
-				logger.error(`Failed to connect to OBS (${errorMessage})`)
-				this.self.updateStatus(InstanceStatus.UnknownError)
-			}
-			if (tryReconnect) {
-				this.startReconnectionPoll()
-			}
+		let tryReconnect: boolean
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		if (errorMessage.match(/(Server sent no subprotocol)/i)) {
+			tryReconnect = false
+			logger.error('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
+			this.self.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated OBS version')
+		} else if (errorMessage.match(/(missing an `authentication` string)/i)) {
+			tryReconnect = false
+			logger.error(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
+			this.self.updateStatus(InstanceStatus.BadConfig, 'Missing password')
+		} else if (errorMessage.match(/(Authentication failed)/i)) {
+			tryReconnect = false
+			logger.error(
+				`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
+			)
+			this.self.updateStatus(InstanceStatus.AuthenticationFailure)
+		} else if (errorMessage.match(/(ECONNREFUSED)/i)) {
+			tryReconnect = true
+			logger.error(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
+			this.self.updateStatus(InstanceStatus.ConnectionFailure)
+		} else {
+			tryReconnect = true
+			logger.error(`Failed to connect to OBS (${errorMessage})`)
+			this.self.updateStatus(InstanceStatus.UnknownError)
+		}
+		// A terminal failure stops the retry loop even if it started before the cause was known.
+		if (tryReconnect) {
+			if (!this.self.reconnectionPoll) this.startReconnectionPoll()
+		} else {
+			this.stopReconnectionPoll()
 		}
 	}
 
@@ -1149,12 +1150,15 @@ export class OBSApi {
 				if (item.isGroup) {
 					this.self.states.sceneItems.delete(item.sourceUuid)
 					this.self.states.sources.delete(item.sourceUuid)
+					this.self.states.sourceFilters.delete(item.sourceUuid)
 				}
 			}
 		}
 
 		this.self.states.scenes.delete(sceneUuid)
 		this.self.states.sceneItems.delete(sceneUuid)
+		// Scenes carry filters of their own, keyed by scene UUID (see fetchSceneFilters).
+		this.self.states.sourceFilters.delete(sceneUuid)
 		this.self.obsState.invalidateSceneNameIndex()
 		this.self.obsState.invalidateSourceNameIndex()
 		this.reconcileMediaPoll()
@@ -1372,11 +1376,18 @@ export class OBSApi {
 			const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
 			if (!scene) return instances
 
-			// Resolve grouped source container via parent group.
+			// The targeted scene wins: a source can sit in a group and directly in another scene, and the
+			// parent group is only the right container when the scene itself does not hold the source.
 			const source = this.self.states.sources.get(sourceUuid)
-			const containerUuid = source?.parentGroupUuid ?? scene.sceneUuid
-			const item = this.self.states.sceneItems.get(containerUuid)?.find((i) => i.sourceUuid === sourceUuid)
-			if (item) instances.push({ containerUuid, sceneItemId: item.sceneItemId })
+			const candidates = [scene.sceneUuid, source?.parentGroupUuid]
+			for (const containerUuid of candidates) {
+				if (!containerUuid) continue
+				const item = this.self.states.sceneItems.get(containerUuid)?.find((i) => i.sourceUuid === sourceUuid)
+				if (item) {
+					instances.push({ containerUuid, sceneItemId: item.sceneItemId })
+					break
+				}
+			}
 		}
 
 		return instances
