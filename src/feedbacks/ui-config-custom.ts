@@ -1,6 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleCaution } from '../presets/style.js'
+import { firstChoiceId } from '../actions/options.js'
 
 export type UiConfigCustomFeedbackSchemas = {
 	profile_active: { type: 'boolean'; options: { profile: string } }
@@ -48,7 +49,7 @@ export function getUiConfigCustomFeedbacks(
 					allowCustom: true,
 					label: 'Scene Collection',
 					id: 'scene_collection',
-					default: self.obsState.sceneCollectionList?.[0] ? self.obsState.sceneCollectionList[0].id : '',
+					default: firstChoiceId(self.obsState.sceneCollectionList),
 					choices: self.obsState.sceneCollectionList,
 				},
 			],

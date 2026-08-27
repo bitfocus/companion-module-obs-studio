@@ -72,3 +72,17 @@ export function resolveSetAdjust(
 	if (current === undefined) return undefined
 	return clamp(current + options.amount, min, max)
 }
+
+/** OBS exposes six mixer tracks; the action and feedback that target them share this list. */
+export const AUDIO_TRACK_CHOICES: DropdownChoice[] = [1, 2, 3, 4, 5, 6].map((track) => ({
+	id: String(track),
+	label: `Track ${track}`,
+}))
+
+/**
+ * The first entry of a choice list, for use as an option default. Lists are rebuilt from OBS state,
+ * so they are routinely empty before the first connection completes.
+ */
+export function firstChoiceId(choices: DropdownChoice[], fallback = ''): string {
+	return choices[0] === undefined ? fallback : String(choices[0].id)
+}

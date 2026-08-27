@@ -2,7 +2,7 @@ import { clamp } from '../utils.js'
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { SLEEP_MAX_MS } from '../constants.js'
-import { modeDropdown, modeNumber, resolveSetAdjust, visibleWhenMode } from './options.js'
+import { firstChoiceId, modeDropdown, modeNumber, resolveSetAdjust, visibleWhenMode } from './options.js'
 
 const logger = createModuleLogger('Actions/Transitions')
 
@@ -38,7 +38,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					type: 'dropdown',
 					label: 'Transition',
 					id: 'transition',
-					default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
+					default: firstChoiceId(self.obsState.transitionList),
 					choices: self.obsState.transitionList,
 				},
 				{
@@ -124,7 +124,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					type: 'dropdown',
 					label: 'Transitions',
 					id: 'transitions',
-					default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
+					default: firstChoiceId(self.obsState.transitionList),
 					choices: self.obsState.transitionList,
 					isVisibleExpression: visibleWhenMode('set'),
 				},

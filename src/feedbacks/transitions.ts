@@ -1,6 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive } from '../presets/style.js'
+import { firstChoiceId } from '../actions/options.js'
 
 export type TransitionFeedbackSchemas = {
 	transition_active: { type: 'boolean'; options: Record<string, never> }
@@ -32,7 +33,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 					type: 'dropdown',
 					label: 'Transition',
 					id: 'transition',
-					default: self.obsState.transitionList?.[0] ? self.obsState.transitionList[0].id : '',
+					default: firstChoiceId(self.obsState.transitionList),
 					choices: self.obsState.transitionList,
 					allowCustom: true,
 				},

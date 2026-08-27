@@ -3,6 +3,7 @@ import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
 import type { OBSTextSourceFont } from '../types.js'
 import { INPUT_KIND_PREFIX_TEXT_GDIPLUS } from '../constants.js'
+import { firstChoiceId } from './options.js'
 
 const logger = createModuleLogger('Actions/Sources')
 
@@ -98,7 +99,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					allowCustom: true,
 					label: 'Source',
 					id: 'source',
-					default: self.obsState.textSourceList?.[0] ? self.obsState.textSourceList[0].id : 'None',
+					default: firstChoiceId(self.obsState.textSourceList, 'None'),
 					choices: self.obsState.textSourceList,
 				},
 				{

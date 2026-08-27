@@ -2,6 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleCaution } from '../presets/style.js'
 import { OBSMediaStatus } from '../types.js'
+import { firstChoiceId } from '../actions/options.js'
 
 export type MediaFeedbackSchemas = {
 	media_playing: { type: 'boolean'; options: { source: string } }
@@ -30,7 +31,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					allowCustom: true,
 					label: 'Media Source',
 					id: 'source',
-					default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+					default: firstChoiceId(self.obsState.mediaSourceList),
 					choices: self.obsState.mediaSourceList,
 				},
 			],
@@ -51,7 +52,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					allowCustom: true,
 					label: 'Source name',
 					id: 'source',
-					default: self.obsState.mediaSourceList?.[0] ? self.obsState.mediaSourceList[0].id : '',
+					default: firstChoiceId(self.obsState.mediaSourceList),
 					choices: self.obsState.mediaSourceList,
 				},
 				{

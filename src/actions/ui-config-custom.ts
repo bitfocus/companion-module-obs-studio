@@ -2,6 +2,7 @@ import { CompanionActionDefinitions, createModuleLogger, type JsonObject, type J
 import type { OBSRequestTypes } from 'obs-websocket-js'
 import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
+import { firstChoiceId } from './options.js'
 
 const logger = createModuleLogger('Actions/Custom')
 
@@ -113,7 +114,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 					allowCustom: true,
 					label: 'Scene Collection',
 					id: 'scene_collection',
-					default: self.obsState.sceneCollectionList?.[0] ? self.obsState.sceneCollectionList[0].id : '',
+					default: firstChoiceId(self.obsState.sceneCollectionList),
 					choices: self.obsState.sceneCollectionList,
 				},
 			],
@@ -134,7 +135,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 					allowCustom: true,
 					label: 'Hotkey ID',
 					id: 'id',
-					default: self.states.hotkeyNames?.[0] ? self.states.hotkeyNames[0].id : '',
+					default: firstChoiceId(self.states.hotkeyNames),
 					choices: self.states.hotkeyNames,
 				},
 			],

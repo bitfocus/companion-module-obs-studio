@@ -54,7 +54,6 @@ export const styleActive = (): FeedbackStyle => ({ bgcolor: Style.active, color:
 export const styleWarn = (): FeedbackStyle => ({ bgcolor: Style.warning, color: Style.idleFg })
 export const styleAlert = (): FeedbackStyle => ({ bgcolor: Style.alert, color: Style.idleFg })
 export const styleCaution = (): FeedbackStyle => ({ bgcolor: Style.caution, color: Style.idleBg })
-export const styleDisabled = (): FeedbackStyle => ({ bgcolor: Style.disabled, color: Style.idleFg })
 
 /** Slug used for preset and preset-group ids derived from an OBS source/output name. */
 export function presetSlug(name: string): string {

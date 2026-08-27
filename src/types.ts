@@ -114,25 +114,14 @@ export interface OBSNormalizedState {
 	currentSceneCollection: string
 	currentProfile: string
 	sceneCollectionChanging: boolean
-	congestion: number
 	streamCongestion: number
-	averageFrameTime: number
-	fps: number
-	renderMissedFrames: number
-	renderTotalFrames: number
-	outputSkippedFrames: number
-	outputTotalFrames: number
-	availableDiskSpace: number
 	version: OBSVersion | null
 	stats: OBSStats | null
 	resolution: string
 	outputResolution: string
 	framerate: string
 	outputBytes: number
-	streamingTimecode: string
-	recordingTimecode: string
 	recordDirectory: string
-	previewSceneIndex: number | undefined
 	vendorEvent: Record<string, unknown>
 	currentMedia: string
 	custom_command_request: string

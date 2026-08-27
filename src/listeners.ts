@@ -78,8 +78,7 @@ function setupConfigListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneCollectionListChanged', () => {
 		void self.obs.buildSceneCollectionList()
 	})
-	// Nothing to suppress: CurrentProfileChanged rebuilds the profile-scoped state on its own.
-	obs.on('CurrentProfileChanging', () => {})
+	// CurrentProfileChanging needs no handling: CurrentProfileChanged rebuilds the profile-scoped state.
 	obs.on('CurrentProfileChanged', (data) => {
 		self.states.currentProfile = data.profileName
 		void self.checkFeedbacks('profile_active')

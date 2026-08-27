@@ -7,10 +7,11 @@ import type {
 import type { OBSScene, OBSSource } from './types.js'
 import * as utils from './utils.js'
 import {
-	INPUT_KIND_FFMPEG_SOURCE,
+	DEFAULT_TIMECODE,
 	INPUT_KIND_IMAGE_SOURCE,
-	INPUT_KIND_VLC_SOURCE,
 	VIRTUALCAM_OUTPUT_NAME,
+	isMediaInputKind,
+	isTextInputKind,
 } from './constants.js'
 
 type VariableValue = string | number | boolean | (string | number)[] | undefined
@@ -27,46 +28,35 @@ function sourceVariableEntries(source: OBSSource): VariableEntry[] {
 	const sourceName = source.validName
 	const settings = source.settings
 
-	switch (source.inputKind) {
-		case 'text_ft2_source_v2':
-		case 'text_gdiplus_v2':
-		case 'text_gdiplus_v3': {
-			const text = utils.readTextSourceValue(settings)
-			entries.push({ id: `current_text_${sourceName}`, name: `${sourceName} - Current text`, value: text })
-			break
-		}
-		case INPUT_KIND_FFMPEG_SOURCE:
-		case INPUT_KIND_VLC_SOURCE: {
-			const file = utils.readMediaFileName(settings)
-			entries.push(
-				{
-					id: `media_status_${sourceName}`,
-					name: `${sourceName} - Media status`,
-					value: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
-				},
-				{ id: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name`, value: file },
-				{
-					id: `media_time_elapsed_${sourceName}`,
-					name: `${sourceName} - Time elapsed`,
-					value: source.timeElapsed ?? '00:00:00',
-				},
-				{
-					id: `media_time_remaining_${sourceName}`,
-					name: `${sourceName} - Time remaining`,
-					value: source.timeRemaining ?? '00:00:00',
-				},
-			)
-			break
-		}
-		case INPUT_KIND_IMAGE_SOURCE:
-			entries.push({
-				id: `image_file_name_${sourceName}`,
-				name: `${sourceName} - Image file name`,
-				value: utils.extractFileName(settings?.file),
-			})
-			break
-		default:
-			break
+	if (isTextInputKind(source.inputKind)) {
+		const text = utils.readTextSourceValue(settings)
+		entries.push({ id: `current_text_${sourceName}`, name: `${sourceName} - Current text`, value: text })
+	} else if (isMediaInputKind(source.inputKind)) {
+		const file = utils.readMediaFileName(settings)
+		entries.push(
+			{
+				id: `media_status_${sourceName}`,
+				name: `${sourceName} - Media status`,
+				value: utils.getOBSMediaStatusLabel(source.OBSMediaStatus),
+			},
+			{ id: `media_file_name_${sourceName}`, name: `${sourceName} - Media file name`, value: file },
+			{
+				id: `media_time_elapsed_${sourceName}`,
+				name: `${sourceName} - Time elapsed`,
+				value: source.timeElapsed ?? DEFAULT_TIMECODE,
+			},
+			{
+				id: `media_time_remaining_${sourceName}`,
+				name: `${sourceName} - Time remaining`,
+				value: source.timeRemaining ?? DEFAULT_TIMECODE,
+			},
+		)
+	} else if (source.inputKind === INPUT_KIND_IMAGE_SOURCE) {
+		entries.push({
+			id: `image_file_name_${sourceName}`,
+			name: `${sourceName} - Image file name`,
+			value: utils.extractFileName(settings?.file),
+		})
 	}
 
 	// Game Capture (and similar) sources report mute/volume but never populate inputAudioTracks,
@@ -235,19 +225,19 @@ export function updateVariableValues(this: OBSInstance): void {
 		screenshot_saved_path: 'None',
 		current_media_time_elapsed: [],
 		current_media_time_remaining: [],
-		scene_preview: this.states.previewScene ?? 'None',
-		scene_active: this.states.programScene ?? 'None',
-		scene_previous: this.states.previousScene ?? 'None',
-		current_transition: this.states.currentTransition ?? 'None',
-		transition_duration: this.states.transitionDuration ?? 0,
-		transition_active: this.states.transitionActive ?? false,
-		transition_list: this.obsState.transitionList?.map((item) => item.id) ?? [],
-		audio_source_list: this.obsState.audioSourceList?.map((item) => item.id) ?? [],
-		profile: this.states.currentProfile ?? 'None',
-		scene_collection: this.states.currentSceneCollection ?? 'None',
-		base_resolution: this.states.resolution ?? '',
-		output_resolution: this.states.outputResolution ?? '',
-		target_framerate: this.states.framerate ?? '',
+		scene_preview: this.states.previewScene,
+		scene_active: this.states.programScene,
+		scene_previous: this.states.previousScene,
+		current_transition: this.states.currentTransition,
+		transition_duration: this.states.transitionDuration,
+		transition_active: this.states.transitionActive,
+		transition_list: this.obsState.transitionList.map((item) => item.id),
+		audio_source_list: this.obsState.audioSourceList.map((item) => item.id),
+		profile: this.states.currentProfile,
+		scene_collection: this.states.currentSceneCollection,
+		base_resolution: this.states.resolution,
+		output_resolution: this.states.outputResolution,
+		target_framerate: this.states.framerate,
 	}
 
 	for (const entry of dynamicVariableEntries(this)) {

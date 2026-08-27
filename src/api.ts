@@ -285,14 +285,11 @@ export class OBSApi {
 	}
 
 	/**
-	 * `TResponseData` lets each caller declare the payload it batched for; see {@link OBSBatchResponse}.
-	 * Callers that batch more than one kind of request should use {@link runBatch} instead.
+	 * Sends a fire-and-forget batch. Callers that need the responses correlated back to what they asked
+	 * for should build the batch with a {@link BatchBuilder} and use {@link runBatch} instead.
 	 */
-	public async sendBatch<TResponseData = Record<string, unknown>>(
-		batch: OBSBatchRequest[],
-	): Promise<OBSBatchResponse<TResponseData>[] | undefined> {
-		const data = await this._callBatch(batch, () => false)
-		return data as OBSBatchResponse<TResponseData>[] | undefined
+	public async sendBatch(batch: OBSBatchRequest[]): Promise<void> {
+		await this._callBatch(batch, () => false)
 	}
 
 	/**
@@ -654,7 +651,6 @@ export class OBSApi {
 			const timecode = timecodeMatch?.[0] ?? '00:00:00'
 			const previousStreaming = this.self.states.streaming
 			this.self.states.streaming = streamStatus.outputActive
-			this.self.states.streamingTimecode = timecode
 			const streamingTimecodeSplit = utils.splitTimecode(timecode)
 
 			const streamingChanged = this.self.states.streaming !== previousStreaming
@@ -718,7 +714,6 @@ export class OBSApi {
 		const outputTimecode = data?.outputTimecode
 		if (outputTimecode) {
 			const timecode = String(outputTimecode).split('.')[0]
-			this.self.states.recordingTimecode = timecode
 			const recordingTimecodeSplit = utils.splitTimecode(timecode)
 			this.self.setVariableValues({
 				recording: utils.getOBSRecordingStateLabel(this.self.states.recording),

@@ -2,6 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleAlert } from '../presets/style.js'
 import { Color, isMonitoringEnabled } from '../utils.js'
+import { AUDIO_TRACK_CHOICES } from '../actions/options.js'
 
 export type AudioFeedbackSchemas = {
 	audio_muted: { type: 'boolean'; options: { source: string } }
@@ -76,14 +77,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					label: 'Track',
 					id: 'track',
 					default: '1',
-					choices: [
-						{ id: '1', label: 'Track 1' },
-						{ id: '2', label: 'Track 2' },
-						{ id: '3', label: 'Track 3' },
-						{ id: '4', label: 'Track 4' },
-						{ id: '5', label: 'Track 5' },
-						{ id: '6', label: 'Track 6' },
-					],
+					choices: AUDIO_TRACK_CHOICES,
 				},
 			],
 			callback: (feedback) => {

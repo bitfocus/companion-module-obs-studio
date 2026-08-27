@@ -2,7 +2,7 @@ import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { clamp, dbToPercent, isMonitoringEnabled, percentToDb } from '../utils.js'
 import { ObsAudioMonitorType } from '../types.js'
-import { modeDropdown, modeNumber, resolveSetAdjust } from './options.js'
+import { AUDIO_TRACK_CHOICES, modeDropdown, modeNumber, resolveSetAdjust } from './options.js'
 import {
 	VOLUME_MIN_DB,
 	VOLUME_MAX_DB,
@@ -302,14 +302,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 					id: 'tracks',
 					tooltip: 'Leave empty to affect all tracks',
 					default: [],
-					choices: [
-						{ id: '1', label: 'Track 1' },
-						{ id: '2', label: 'Track 2' },
-						{ id: '3', label: 'Track 3' },
-						{ id: '4', label: 'Track 4' },
-						{ id: '5', label: 'Track 5' },
-						{ id: '6', label: 'Track 6' },
-					],
+					choices: AUDIO_TRACK_CHOICES,
 				},
 				{
 					type: 'dropdown',
