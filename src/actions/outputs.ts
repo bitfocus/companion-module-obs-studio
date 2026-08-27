@@ -6,6 +6,7 @@ import {
 } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { VIRTUALCAM_OUTPUT_NAME } from '../constants.js'
+import { choiceDropdown } from './options.js'
 
 function isVirtualCam(outputName: string): boolean {
 	return outputName === VIRTUALCAM_OUTPUT_NAME
@@ -287,16 +288,7 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 				isVirtualCam(output)
 					? self.obs.sendRequest('StopVirtualCam')
 					: self.obs.sendRequest('StopOutput', { outputName: output }),
-			extraOptions: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Output',
-					id: 'output',
-					default: VIRTUALCAM_OUTPUT_NAME,
-					choices: self.obsState.outputList,
-				},
-			],
+			extraOptions: [choiceDropdown(self, 'output', { id: 'output', label: 'Output' })],
 		}),
 	}
 }

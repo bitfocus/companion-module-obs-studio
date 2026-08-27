@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleCaution } from '../presets/style.js'
-import { firstChoiceId } from '../actions/options.js'
+import { choiceDropdown } from '../actions/options.js'
 
 export type UiConfigCustomFeedbackSchemas = {
 	profile_active: { type: 'boolean'; options: { profile: string } }
@@ -23,16 +23,7 @@ export function getUiConfigCustomFeedbacks(
 			name: 'Profile Active',
 			description: 'If a specific OBS profile is currently active, change the style of the button',
 			defaultStyle: styleActive(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Profile',
-					id: 'profile',
-					default: self.obsState.profileChoicesDefault,
-					choices: self.obsState.profileChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'profile', { id: 'profile', label: 'Profile' })],
 			callback: (feedback) => {
 				return self.states.currentProfile === feedback.options.profile
 			},
@@ -43,16 +34,7 @@ export function getUiConfigCustomFeedbacks(
 			name: 'Scene Collection Active',
 			description: 'If a specific scene collection is currently active, change the style of the button',
 			defaultStyle: styleActive(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene Collection',
-					id: 'scene_collection',
-					default: firstChoiceId(self.obsState.sceneCollectionList),
-					choices: self.obsState.sceneCollectionList,
-				},
-			],
+			options: [choiceDropdown(self, 'sceneCollection', { id: 'scene_collection', label: 'Scene Collection' })],
 			callback: (feedback) => {
 				return self.states.currentSceneCollection === feedback.options.scene_collection
 			},

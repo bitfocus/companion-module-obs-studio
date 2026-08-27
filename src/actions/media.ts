@@ -2,7 +2,7 @@ import { CompanionActionDefinitions, createModuleLogger } from '@companion-modul
 import type OBSInstance from '../main.js'
 import { OBSMediaStatus, OBSMediaInputAction, MEDIA_CONTROL_ACTIONS, type MediaControlAction } from '../types.js'
 import * as utils from '../utils.js'
-import { modeDropdown, modeNumber } from './options.js'
+import { choiceDropdown, modeDropdown, modeNumber } from './options.js'
 
 const logger = createModuleLogger('Actions/Media')
 
@@ -32,15 +32,11 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					id: 'useCurrentMedia',
 					default: false,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
+				choiceDropdown(self, 'mediaSource', {
 					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
+					label: 'Media Source',
 					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
+				}),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -85,15 +81,11 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					id: 'useCurrentMedia',
 					default: false,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
+				choiceDropdown(self, 'mediaSource', {
 					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
+					label: 'Media Source',
 					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
+				}),
 				modeDropdown([
 					{ id: 'set', label: 'Set Time' },
 					{ id: 'adjust', label: 'Scrub' },
@@ -143,15 +135,11 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					id: 'useCurrentMedia',
 					default: false,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
+				choiceDropdown(self, 'mediaSource', {
 					id: 'source',
-					default: self.obsState.mediaSourceListDefault,
-					choices: self.obsState.mediaSourceList,
+					label: 'Media Source',
 					isVisibleExpression: `!$(options:useCurrentMedia)`,
-				},
+				}),
 				{
 					type: 'textinput',
 					label: 'File Path',

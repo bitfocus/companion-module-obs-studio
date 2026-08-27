@@ -1,5 +1,7 @@
 import type { CompanionInputFieldDropdown, CompanionInputFieldNumber, DropdownChoice } from '@companion-module/base'
+import type OBSInstance from '../main.js'
 import { clamp } from '../utils.js'
+import { VIRTUALCAM_OUTPUT_NAME } from '../constants.js'
 
 /**
  * Several action families take a leading dropdown that chooses between assigning a value and
@@ -83,6 +85,111 @@ export const AUDIO_TRACK_CHOICES: DropdownChoice[] = [1, 2, 3, 4, 5, 6].map((tra
  * The first entry of a choice list, for use as an option default. Lists are rebuilt from OBS state,
  * so they are routinely empty before the first connection completes.
  */
-export function firstChoiceId(choices: DropdownChoice[], fallback = ''): string {
+function firstChoiceId(choices: DropdownChoice[], fallback = ''): string {
 	return choices[0] === undefined ? fallback : String(choices[0].id)
+}
+
+/**
+ * The choice lists an option can be bound to, each paired with the default that belongs to it.
+ *
+ * Choices and default travel together deliberately. They were previously written out at each option,
+ * which let a dropdown be given a default drawn from a different list than the one it offers — a
+ * mismatch nothing would catch. Naming the list is now the only way to ask for either.
+ */
+interface ChoiceListSpec {
+	choices: (self: OBSInstance) => DropdownChoice[]
+	default: (self: OBSInstance) => string | number
+}
+
+const CHOICE_LISTS = {
+	source: {
+		choices: (self) => self.obsState.sourceChoices,
+		default: (self) => self.obsState.sourceListDefault,
+	},
+	/** Sources and scenes together, for options that accept either (filters attach to both). */
+	sourceWithScenes: {
+		choices: (self) => self.obsState.sourceChoicesWithScenes,
+		// The source list leads, so its first entry is the default even though scenes are appended.
+		default: (self) => self.obsState.sourceListDefault,
+	},
+	scene: {
+		choices: (self) => self.obsState.sceneChoices,
+		default: (self) => self.obsState.sceneListDefault,
+	},
+	audioSource: {
+		choices: (self) => self.obsState.audioSourceList,
+		default: (self) => self.obsState.audioSourceListDefault,
+	},
+	mediaSource: {
+		choices: (self) => self.obsState.mediaSourceList,
+		default: (self) => self.obsState.mediaSourceListDefault,
+	},
+	textSource: {
+		choices: (self) => self.obsState.textSourceList,
+		default: (self) => firstChoiceId(self.obsState.textSourceList, 'None'),
+	},
+	filter: {
+		choices: (self) => self.obsState.filterList,
+		default: (self) => self.obsState.filterListDefault,
+	},
+	transition: {
+		choices: (self) => self.obsState.transitionList,
+		default: (self) => firstChoiceId(self.obsState.transitionList),
+	},
+	profile: {
+		choices: (self) => self.obsState.profileChoices,
+		default: (self) => self.obsState.profileChoicesDefault,
+	},
+	sceneCollection: {
+		choices: (self) => self.obsState.sceneCollectionList,
+		default: (self) => firstChoiceId(self.obsState.sceneCollectionList),
+	},
+	output: {
+		choices: (self) => self.obsState.outputList,
+		default: () => VIRTUALCAM_OUTPUT_NAME,
+	},
+	hotkey: {
+		choices: (self) => self.states.hotkeyNames,
+		default: (self) => firstChoiceId(self.states.hotkeyNames),
+	},
+	monitor: {
+		choices: (self) => self.states.monitors,
+		default: () => 0,
+	},
+	imageFormat: {
+		choices: (self) => self.states.imageFormats,
+		default: () => 'png',
+	},
+} as const satisfies Record<string, ChoiceListSpec>
+
+export type ChoiceListName = keyof typeof CHOICE_LISTS
+
+interface ChoiceDropdownField<TKey extends string> {
+	id: TKey
+	label: string
+	/** Defaults to true: nearly every list is of user-named OBS entities, which expressions may target. */
+	allowCustom?: boolean
+	disableAutoExpression?: boolean
+	isVisibleExpression?: string
+	/** Overrides the list's own default; only for options that intentionally start elsewhere. */
+	default?: string | number
+}
+
+/** A dropdown bound to one of the module's state-derived choice lists. */
+export function choiceDropdown<TKey extends string>(
+	self: OBSInstance,
+	list: ChoiceListName,
+	field: ChoiceDropdownField<TKey>,
+): CompanionInputFieldDropdown<TKey> {
+	const spec: ChoiceListSpec = CHOICE_LISTS[list]
+	return {
+		type: 'dropdown',
+		label: field.label,
+		id: field.id,
+		default: field.default ?? spec.default(self),
+		choices: spec.choices(self),
+		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
+		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),
+		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
+	}
 }

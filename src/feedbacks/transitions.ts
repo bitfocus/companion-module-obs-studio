@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive } from '../presets/style.js'
-import { firstChoiceId } from '../actions/options.js'
+import { choiceDropdown } from '../actions/options.js'
 
 export type TransitionFeedbackSchemas = {
 	transition_active: { type: 'boolean'; options: Record<string, never> }
@@ -28,16 +28,7 @@ export function getTransitionFeedbacks(self: OBSInstance): CompanionFeedbackDefi
 			description:
 				'If a specific transition type is currently selected as the active transition, change the style of the button',
 			defaultStyle: styleActive(),
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Transition',
-					id: 'transition',
-					default: firstChoiceId(self.obsState.transitionList),
-					choices: self.obsState.transitionList,
-					allowCustom: true,
-				},
-			],
+			options: [choiceDropdown(self, 'transition', { id: 'transition', label: 'Transition' })],
 			callback: (feedback) => {
 				if (self.states.currentTransition === feedback.options.transition) {
 					return true

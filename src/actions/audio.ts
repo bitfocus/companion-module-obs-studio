@@ -2,7 +2,7 @@ import { CompanionActionDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { clamp, dbToPercent, isMonitoringEnabled, percentToDb } from '../utils.js'
 import { ObsAudioMonitorType } from '../types.js'
-import { AUDIO_TRACK_CHOICES, modeDropdown, modeNumber, resolveSetAdjust } from './options.js'
+import { AUDIO_TRACK_CHOICES, choiceDropdown, modeDropdown, modeNumber, resolveSetAdjust } from './options.js'
 import {
 	VOLUME_MIN_DB,
 	VOLUME_MAX_DB,
@@ -36,14 +36,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 			name: 'Audio - Mute',
 			description: 'Mutes, unmutes, or toggles the mute state of a specific audio source',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -81,14 +74,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 			name: 'Audio - Source Volume',
 			description: 'Sets, fades, or adjusts the volume of a specific audio source',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				modeDropdown(),
 				{
 					type: 'dropdown',
@@ -146,14 +132,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 			name: 'Audio - Source Audio Offset',
 			description: 'Sets or adjusts the audio sync offset for a specific source in milliseconds',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				modeDropdown(),
 				modeNumber('set', {
 					label: 'Offset in ms',
@@ -194,14 +173,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 			description:
 				'Sets or adjusts the audio balance for a specific source (0.0 for Left, 0.5 for Center, 1.0 for Right)',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				modeDropdown(),
 				modeNumber('set', {
 					label: 'Balance (0.0 to 1.0)',
@@ -242,14 +214,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 			name: 'Audio - Set Audio Monitoring',
 			description: 'Enables, disables, or toggles audio monitoring for a specific source',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -288,14 +253,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 			name: 'Audio - Set Audio Tracks',
 			description: 'Sets or toggles the mixer output tracks of a specific audio source',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'multidropdown',
 					label: 'Tracks',

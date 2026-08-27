@@ -3,7 +3,7 @@ import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
 import type { OBSTextSourceFont } from '../types.js'
 import { INPUT_KIND_PREFIX_TEXT_GDIPLUS } from '../constants.js'
-import { firstChoiceId } from './options.js'
+import { choiceDropdown } from './options.js'
 
 const logger = createModuleLogger('Actions/Sources')
 
@@ -94,14 +94,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		setText: {
 			name: 'Source - Set Source Text',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: firstChoiceId(self.obsState.textSourceList, 'None'),
-					choices: self.obsState.textSourceList,
-				},
+				choiceDropdown(self, 'textSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'textinput',
 					label: 'Text',
@@ -128,14 +121,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		setTextProperties: {
 			name: 'Source - Set Text Properties',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.textSourceList?.[0]?.id ?? 'None',
-					choices: self.obsState.textSourceList,
-				},
+				choiceDropdown(self, 'textSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'multidropdown',
 					label: 'Properties',
@@ -556,16 +542,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		resetCaptureDevice: {
 			name: 'Source - Reset Video Capture Device',
 			description: 'Deactivates and Reactivates a Video Capture Source to reset it',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source' })],
 			callback: async (action) => {
 				const sourceName = action.options.source
 				const source = self.obsState.findSourceByName(sourceName)
@@ -589,23 +566,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'allSources',
 					default: false,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
+				choiceDropdown(self, 'sourceWithScenes', {
 					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoicesWithScenes,
+					label: 'Source',
 					isVisibleExpression: `!$(options:allSources)`,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Filter',
-					id: 'filter',
-					default: self.obsState.filterListDefault,
-					choices: self.obsState.filterList,
-				},
+				}),
+				choiceDropdown(self, 'filter', { id: 'filter', label: 'Filter' }),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -644,22 +610,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Filters - Set Settings',
 			description: 'Sets the settings for a filter using a JSON object',
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoicesWithScenes,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Filter',
-					id: 'filter',
-					default: self.obsState.filterListDefault,
-					choices: self.obsState.filterList,
-				},
+				choiceDropdown(self, 'sourceWithScenes', { id: 'source', label: 'Source' }),
+				choiceDropdown(self, 'filter', { id: 'filter', label: 'Filter' }),
 				{
 					type: 'textinput',
 					label: 'Settings (JSON)',
@@ -696,16 +648,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		refresh_browser_source: {
 			name: 'Source - Refresh Browser Source',
 			description: 'Refreshes the cache of a specific browser source',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source' })],
 			callback: async (action) => {
 				const sourceName = action.options.source
 				if (self.obsState.findSourceByName(sourceName)?.inputKind === 'browser_source') {
@@ -734,23 +677,17 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					default: false,
 					isVisibleExpression: `!$(options:useProgramScene)`,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
+				choiceDropdown(self, 'source', {
 					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
+					label: 'Source',
 					isVisibleExpression: `!$(options:useProgramScene) && !$(options:usePreviewScene)`,
-				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Format',
+				}),
+				choiceDropdown(self, 'imageFormat', {
 					id: 'format',
-					default: 'png',
-					choices: self.states.imageFormats,
-				},
+					label: 'Format',
+					allowCustom: false,
+					disableAutoExpression: true,
+				}),
 				{
 					type: 'number',
 					label: 'Compression Quality (Default: -1/0)',
@@ -826,23 +763,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'useProgramScene',
 					default: true,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene',
+				choiceDropdown(self, 'scene', {
 					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
+					label: 'Scene',
 					isVisibleExpression: `!$(options:useProgramScene)`,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
+				}),
+				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
 				{
 					type: 'multidropdown',
 					label: 'Properties',
@@ -983,23 +909,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					default: false,
 					isVisibleExpression: '!$(options:anyScene)',
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene',
+				choiceDropdown(self, 'scene', {
 					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
+					label: 'Scene',
 					isVisibleExpression: '!$(options:anyScene) &&!$(options:useCurrentScene)',
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
+				}),
+				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -1043,15 +958,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					id: 'useCurrentScene',
 					default: true,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene',
+				choiceDropdown(self, 'scene', {
 					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
+					label: 'Scene',
 					isVisibleExpression: '!$(options:useCurrentScene)',
-				},
+				}),
 				{
 					type: 'multidropdown',
 					label: 'Except',

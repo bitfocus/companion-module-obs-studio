@@ -2,7 +2,7 @@ import { CompanionActionDefinitions, createModuleLogger, type JsonObject, type J
 import type { OBSRequestTypes } from 'obs-websocket-js'
 import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
-import { firstChoiceId } from './options.js'
+import { choiceDropdown } from './options.js'
 
 const logger = createModuleLogger('Actions/Custom')
 
@@ -91,16 +91,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		set_profile: {
 			name: 'Set Profile',
 			description: 'Switches the current OBS profile',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Profile',
-					id: 'profile',
-					default: self.obsState.profileChoicesDefault,
-					choices: self.obsState.profileChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'profile', { id: 'profile', label: 'Profile' })],
 			callback: async (action) => {
 				await self.obs.sendRequest('SetCurrentProfile', { profileName: action.options.profile })
 			},
@@ -108,16 +99,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		set_scene_collection: {
 			name: 'Set Scene Collection',
 			description: 'Switches the current OBS scene collection',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene Collection',
-					id: 'scene_collection',
-					default: firstChoiceId(self.obsState.sceneCollectionList),
-					choices: self.obsState.sceneCollectionList,
-				},
-			],
+			options: [choiceDropdown(self, 'sceneCollection', { id: 'scene_collection', label: 'Scene Collection' })],
 			callback: async (action) => {
 				await self.obs.sendRequest('SetCurrentSceneCollection', {
 					sceneCollectionName: action.options.scene_collection,
@@ -129,16 +111,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		'trigger-hotkey': {
 			name: 'Hotkey - Trigger by ID',
 			description: 'Triggers a hotkey by its internal name in OBS',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Hotkey ID',
-					id: 'id',
-					default: firstChoiceId(self.states.hotkeyNames),
-					choices: self.states.hotkeyNames,
-				},
-			],
+			options: [choiceDropdown(self, 'hotkey', { id: 'id', label: 'Hotkey ID' })],
 			callback: async (action) => {
 				const hotkey = action.options.id
 				await self.obs.sendRequest('TriggerHotkeyByName', { hotkeyName: hotkey })
@@ -280,16 +253,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		openInputPropertiesDialog: {
 			name: 'UI - Open Source Properties Window',
 			description: 'Opens the properties dialog for a source within the OBS UI',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source' })],
 			callback: async (action) => {
 				await self.obs.sendRequest('OpenInputPropertiesDialog', { inputName: action.options.source })
 			},
@@ -297,16 +261,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		openInputFiltersDialog: {
 			name: 'UI - Open Source Filter Window',
 			description: 'Opens the filters dialog for a source within the OBS UI',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source' })],
 			callback: async (action) => {
 				await self.obs.sendRequest('OpenInputFiltersDialog', { inputName: action.options.source })
 			},
@@ -314,16 +269,7 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 		openInputInteractDialog: {
 			name: 'UI - Open Source Interaction Window',
 			description: 'Opens the interact dialog for a source (e.g., browser source) within the OBS UI',
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source' })],
 			callback: async (action) => {
 				await self.obs.sendRequest('OpenInputInteractDialog', { inputName: action.options.source })
 			},
@@ -357,33 +303,21 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 						{ id: 'fullscreen', label: 'Fullscreen' },
 					],
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Display',
+				choiceDropdown(self, 'monitor', {
 					id: 'display',
-					default: 0,
-					choices: self.states.monitors,
+					label: 'Display',
 					isVisibleExpression: `$(options:window) === 'fullscreen'`,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
+				}),
+				choiceDropdown(self, 'source', {
 					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
+					label: 'Source',
 					isVisibleExpression: `$(options:type) === 'Source'`,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene',
+				}),
+				choiceDropdown(self, 'scene', {
 					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
+					label: 'Scene',
 					isVisibleExpression: `$(options:type) === 'Scene'`,
-				},
+				}),
 			],
 			callback: async (action) => {
 				// The display dropdown allows custom values, so it can arrive as a string.

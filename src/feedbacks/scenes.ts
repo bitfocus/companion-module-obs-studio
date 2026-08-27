@@ -1,6 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { Style, stylePreview, styleProgram } from '../presets/style.js'
+import { choiceDropdown } from '../actions/options.js'
 
 export type SceneFeedbackSchemas = {
 	scene_active: {
@@ -39,14 +40,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 						{ id: 'preview', label: 'Preview Only' },
 					],
 				},
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-				},
+				choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' }),
 				{
 					type: 'colorpicker',
 					label: 'Foreground color (Program)',
@@ -100,16 +94,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			name: 'Scene - Program',
 			description: 'If a scene is in the program output, change the style of the button',
 			defaultStyle: styleProgram(),
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-				},
-			],
+			options: [choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' })],
 			callback: (feedback) => {
 				const sceneName = feedback.options.scene
 				return self.states.programScene === sceneName
@@ -121,16 +106,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			name: 'Scene - Preview',
 			description: 'If a scene is in the preview monitor (Studio Mode only), change the style of the button',
 			defaultStyle: stylePreview(),
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-				},
-			],
+			options: [choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' })],
 			callback: (feedback) => {
 				const sceneName = feedback.options.scene
 				return self.states.previewScene === sceneName
@@ -142,16 +118,7 @@ export function getSceneFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			name: 'Scene - Previous',
 			description: 'If a scene was the last scene previously active, change the style of the button',
 			defaultStyle: stylePreview(),
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-				},
-			],
+			options: [choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' })],
 			callback: (feedback) => {
 				const sceneName = feedback.options.scene
 				return self.states.previousScene === sceneName

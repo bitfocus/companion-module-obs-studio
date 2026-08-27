@@ -2,6 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { Style, styleActive, styleProgram, styleWarn } from '../presets/style.js'
 import { OBSRecordingState } from '../types.js'
+import { choiceDropdown } from '../actions/options.js'
 
 export type OutputFeedbackSchemas = {
 	streaming: { type: 'boolean'; options: Record<string, never> }
@@ -67,16 +68,7 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			name: 'Output - Active',
 			description: 'If an output is currently active, change the style of the button',
 			defaultStyle: styleActive(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Output name',
-					id: 'output',
-					default: 'virtualcam_output',
-					choices: self.obsState.outputList,
-				},
-			],
+			options: [choiceDropdown(self, 'output', { id: 'output', label: 'Output name' })],
 			callback: (feedback) => {
 				// Tell the API to keep polling output statuses while this feedback exists.
 				self.obs.addOutputStatusSubscriber(feedback.id)

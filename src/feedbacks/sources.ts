@@ -1,6 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, stylePreview, styleProgram } from '../presets/style.js'
+import { choiceDropdown } from '../actions/options.js'
 
 export type SourceFeedbackSchemas = {
 	scene_item_active: {
@@ -34,23 +35,12 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 					default: false,
 					isVisibleExpression: `!$(options:anyScene)`,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene',
+				choiceDropdown(self, 'scene', {
 					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
+					label: 'Scene',
 					isVisibleExpression: `!$(options:anyScene) && !$(options:useCurrentScene)`,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
+				}),
+				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
 			],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
@@ -71,16 +61,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			name: 'Source - Active in Preview',
 			description: 'If a source is currently enabled in the preview scene, change the style of the button',
 			defaultStyle: stylePreview(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source name',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-				},
-			],
+			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source name' })],
 			callback: (feedback) => {
 				return !!self.obsState.findSourceByName(feedback.options.source)?.videoShowing
 			},
@@ -92,29 +73,14 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			description: 'If a specific source is enabled in a specific scene, change the style of the button',
 			defaultStyle: styleActive(),
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-				},
+				choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' }),
 				{
 					type: 'checkbox',
 					label: 'Any Source',
 					id: 'any',
 					default: false,
 				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoices,
-					isVisibleExpression: `!$(options:any)`,
-				},
+				choiceDropdown(self, 'source', { id: 'source', label: 'Source', isVisibleExpression: `!$(options:any)` }),
 			],
 			callback: (feedback) => {
 				const sceneName = feedback.options.scene
@@ -145,22 +111,8 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			description: 'If a specific filter is enabled on a source, change the style of the button',
 			defaultStyle: styleActive(),
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.sourceListDefault,
-					choices: self.obsState.sourceChoicesWithScenes,
-				},
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Filter',
-					id: 'filter',
-					default: self.obsState.filterListDefault,
-					choices: self.obsState.filterList,
-				},
+				choiceDropdown(self, 'sourceWithScenes', { id: 'source', label: 'Source' }),
+				choiceDropdown(self, 'filter', { id: 'filter', label: 'Filter' }),
 			],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source

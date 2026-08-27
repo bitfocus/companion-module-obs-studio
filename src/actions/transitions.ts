@@ -2,7 +2,7 @@ import { clamp } from '../utils.js'
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { SLEEP_MAX_MS } from '../constants.js'
-import { firstChoiceId, modeDropdown, modeNumber, resolveSetAdjust, visibleWhenMode } from './options.js'
+import { choiceDropdown, modeDropdown, modeNumber, resolveSetAdjust, visibleWhenMode } from './options.js'
 
 const logger = createModuleLogger('Actions/Transitions')
 
@@ -34,13 +34,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 			name: 'Transitions - Quick Transition',
 			description: 'Performs a quick transition using a specific transition type and optional custom duration',
 			options: [
-				{
-					type: 'dropdown',
-					label: 'Transition',
-					id: 'transition',
-					default: firstChoiceId(self.obsState.transitionList),
-					choices: self.obsState.transitionList,
-				},
+				choiceDropdown(self, 'transition', { id: 'transition', label: 'Transition', allowCustom: false }),
 				{
 					type: 'checkbox',
 					label: 'Custom Duration',
@@ -120,14 +114,12 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 					{ id: 'next', label: 'Next Type' },
 					{ id: 'previous', label: 'Previous Type' },
 				]),
-				{
-					type: 'dropdown',
-					label: 'Transitions',
+				choiceDropdown(self, 'transition', {
 					id: 'transitions',
-					default: firstChoiceId(self.obsState.transitionList),
-					choices: self.obsState.transitionList,
+					label: 'Transitions',
+					allowCustom: false,
 					isVisibleExpression: visibleWhenMode('set'),
-				},
+				}),
 			],
 			callback: async (action) => {
 				if (action.options.mode === 'set') {

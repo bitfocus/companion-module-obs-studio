@@ -2,7 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleCaution } from '../presets/style.js'
 import { OBSMediaStatus } from '../types.js'
-import { firstChoiceId } from '../actions/options.js'
+import { choiceDropdown } from '../actions/options.js'
 
 export type MediaFeedbackSchemas = {
 	media_playing: { type: 'boolean'; options: { source: string } }
@@ -25,16 +25,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			name: 'Media - Playing',
 			description: 'If a specific media source is currently playing, change the style of the button',
 			defaultStyle: styleActive(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Media Source',
-					id: 'source',
-					default: firstChoiceId(self.obsState.mediaSourceList),
-					choices: self.obsState.mediaSourceList,
-				},
-			],
+			options: [choiceDropdown(self, 'mediaSource', { id: 'source', label: 'Media Source' })],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
 				return self.obsState.findSourceByName(sourceName)?.OBSMediaStatus === OBSMediaStatus.Playing
@@ -47,14 +38,7 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			description: 'If remaining time of a media source is below a threshold, change the style of the button',
 			defaultStyle: styleCaution(),
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source name',
-					id: 'source',
-					default: firstChoiceId(self.obsState.mediaSourceList),
-					choices: self.obsState.mediaSourceList,
-				},
+				choiceDropdown(self, 'mediaSource', { id: 'source', label: 'Source name' }),
 				{
 					type: 'number',
 					label: 'Remaining time threshold (in seconds)',

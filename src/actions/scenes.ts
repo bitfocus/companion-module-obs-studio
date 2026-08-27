@@ -1,6 +1,6 @@
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { modeDropdown, visibleWhenMode } from './options.js'
+import { choiceDropdown, modeDropdown, visibleWhenMode } from './options.js'
 
 const logger = createModuleLogger('Actions/Scenes')
 
@@ -15,16 +15,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 		set_scene: {
 			name: 'Scene - Set Program Scene',
 			description: 'Switches the current program output to the specified scene',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-				},
-			],
+			options: [choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' })],
 			callback: async (action) => {
 				await self.obs.sendRequest('SetCurrentProgramScene', { sceneName: action.options.scene })
 			},
@@ -44,15 +35,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 					{ id: 'next', label: 'Next Scene' },
 					{ id: 'previous', label: 'Previous Scene' },
 				]),
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-					isVisibleExpression: visibleWhenMode('set'),
-				},
+				choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene', isVisibleExpression: visibleWhenMode('set') }),
 			],
 			callback: async (action) => {
 				if (action.options.mode === 'set') {
@@ -80,16 +63,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 		smart_switcher: {
 			name: 'Scene - Smart Scene Switcher',
 			description: 'Preview a scene, or transition it if it is already in preview',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Scene',
-					id: 'scene',
-					default: self.obsState.sceneListDefault,
-					choices: self.obsState.sceneChoices,
-					allowCustom: true,
-				},
-			],
+			options: [choiceDropdown(self, 'scene', { id: 'scene', label: 'Scene' })],
 			callback: async (action) => {
 				const sceneName = action.options.scene
 

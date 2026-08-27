@@ -2,7 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleAlert } from '../presets/style.js'
 import { Color, isMonitoringEnabled } from '../utils.js'
-import { AUDIO_TRACK_CHOICES } from '../actions/options.js'
+import { AUDIO_TRACK_CHOICES, choiceDropdown } from '../actions/options.js'
 
 export type AudioFeedbackSchemas = {
 	audio_muted: { type: 'boolean'; options: { source: string } }
@@ -20,16 +20,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			name: 'Audio - Muted',
 			description: 'If an audio source is muted, change the style of the button',
 			defaultStyle: styleAlert(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source name',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
-			],
+			options: [choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' })],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
 				return !!self.obsState.findSourceByName(sourceName)?.inputMuted
@@ -41,16 +32,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			name: 'Audio - Monitoring',
 			description: 'If audio monitoring is enabled for a source, change the style of the button',
 			defaultStyle: styleActive(),
-			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
-			],
+			options: [choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' })],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
 				return isMonitoringEnabled(self.obsState.findSourceByName(sourceName)?.monitorType)
@@ -63,14 +45,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			description: 'If a mixer output track of an audio source is enabled, change the style of the button',
 			defaultStyle: styleActive(),
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -92,14 +67,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			description: 'If an audio source volume is matched, change the style of the button',
 			defaultStyle: styleActive(),
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source name',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' }),
 				{
 					type: 'number',
 					label: 'Volume in dB (-100 to 26) ',
@@ -122,14 +90,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			description: 'If audio is above a certain dB value, change the style of the button',
 			defaultStyle: styleActive(),
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source name',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' }),
 				{
 					type: 'number',
 					label: 'Threshold (dB)',
@@ -159,14 +120,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			description: 'Change the style of the button to show colors based on peak values, similar to the OBS audio meter',
 			affectedProperties: ['bgcolor'],
 			options: [
-				{
-					type: 'dropdown',
-					allowCustom: true,
-					label: 'Source name',
-					id: 'source',
-					default: self.obsState.audioSourceListDefault,
-					choices: self.obsState.audioSourceList,
-				},
+				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' }),
 				{
 					type: 'number',
 					label: 'Threshold (dB)',
