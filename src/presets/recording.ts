@@ -12,6 +12,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 
 	presets['recording'] = {
 		type: 'simple',
+		keywords: ['record', 'rec', 'capture'],
 		name: 'Toggle Recording',
 		previewStyle: baseStyle({ text: 'Toggle\nRecording' }),
 		style: baseStyle({ text: 'Start\nRecording' }),
@@ -56,6 +57,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 
 	presets['recordSplit'] = {
 		type: 'simple',
+		keywords: ['split file', 'new file'],
 		name: 'Split File',
 		style: baseStyle({ text: 'Split\nFile' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'split', chapterName: '' } }], up: [] }],
@@ -64,6 +66,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 
 	presets['recordChapter'] = {
 		type: 'simple',
+		keywords: ['chapter', 'marker'],
 		name: 'Add Chapter Marker',
 		style: baseStyle({ text: 'Add\nChapter' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'chapter', chapterName: '' } }], up: [] }],
@@ -72,6 +75,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 
 	presets['recordingStatusTimecode'] = {
 		type: 'simple',
+		keywords: ['record', 'timer', 'elapsed', 'duration'],
 		name: 'Recording Status / Timecode',
 		style: baseStyle({ text: 'Recording:\n$(obs:recording)\n$(obs:recording_timecode)' }),
 		steps: [{ down: [], up: [] }],
@@ -128,6 +132,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 		{
 			id: 'recording',
 			name: 'Recording',
+			keywords: ['record', 'rec', 'capture', 'chapter', 'split', 'timecode'],
 			definitions: [
 				{
 					id: 'recording-control',

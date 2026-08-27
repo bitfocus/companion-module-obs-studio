@@ -12,6 +12,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 
 	presets['streaming'] = {
 		type: 'simple',
+		keywords: ['stream', 'live', 'go live', 'broadcast'],
 		name: 'Toggle Streaming',
 		previewStyle: baseStyle({ text: 'Toggle\nStreaming' }),
 		style: baseStyle({ text: 'Start\nStreaming' }),
@@ -48,6 +49,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 
 	presets['streamingCongestion'] = {
 		type: 'simple',
+		keywords: ['health', 'dropped frames', 'network'],
 		name: 'Stream Congestion',
 		style: baseStyle({ text: 'Stream:\nHealth' }),
 		steps: [{ down: [], up: [] }],
@@ -84,6 +86,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 
 	presets['streamingBitrate'] = {
 		type: 'simple',
+		keywords: ['kbps', 'bandwidth', 'data rate'],
 		name: 'Stream Bitrate',
 		style: baseStyle({ text: 'Bitrate:\n$(obs:kbits_per_sec) kb/s' }),
 		steps: [{ down: [], up: [] }],
@@ -121,6 +124,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 		{
 			id: 'streaming',
 			name: 'Streaming',
+			keywords: ['stream', 'live', 'broadcast', 'bitrate', 'congestion', 'rtmp'],
 			definitions: [
 				{
 					id: 'streaming-control',

@@ -59,3 +59,17 @@ export const styleCaution = (): FeedbackStyle => ({ bgcolor: Style.caution, colo
 export function presetSlug(name: string): string {
 	return name.replace(/[^a-zA-Z0-9]+/g, '_')
 }
+
+/**
+ * Builds slugs that stay unique within one preset builder. Distinct OBS names can reduce to the same
+ * slug (`Cam 1` and `Cam-1`), which would otherwise make one item's presets overwrite the other's.
+ */
+export function generateSlug(): (name: string) => string {
+	const seen = new Map<string, number>()
+	return (name: string): string => {
+		const slug = presetSlug(name)
+		const count = seen.get(slug) ?? 0
+		seen.set(slug, count + 1)
+		return count === 0 ? slug : `${slug}_${count + 1}`
+	}
+}

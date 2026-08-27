@@ -1,7 +1,7 @@
 import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, presetSlug, styleActive, styleAlert } from './style.js'
+import { baseStyle, generateSlug, styleActive, styleAlert } from './style.js'
 
 /** Audio presets: per-source controls for volume, mute, and monitoring, grouped by source. */
 export function getAudioPresets(self: OBSInstance): {
@@ -10,10 +10,11 @@ export function getAudioPresets(self: OBSInstance): {
 } {
 	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 	const groups: CompanionPresetGroup<OBSInstanceTypes>[] = []
+	const slugFor = generateSlug()
 
 	for (const source of self.obsState.audioSourceList) {
 		const sourceId = String(source.id)
-		const slug = presetSlug(sourceId)
+		const slug = slugFor(sourceId)
 		const value = { value: sourceId, isExpression: false as const }
 		const ids = {
 			mute: `audio_${slug}_mute`,
@@ -145,17 +146,21 @@ export function getAudioPresets(self: OBSInstance): {
 			id: `audio-${slug}`,
 			type: 'simple',
 			name: source.label,
+			keywords: [source.label, 'audio', 'mute', 'volume', 'monitor', 'track'],
 			presets: [ids.mute, ids.volUp, ids.volDown, ids.unity, ids.monitor, ids.track1, ids.status, ids.meter],
 		})
 	}
 
-	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
-		{
-			id: 'audio',
-			name: 'Audio',
-			definitions: groups,
-		},
-	]
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = groups.length
+		? [
+				{
+					id: 'audio',
+					name: 'Audio',
+					keywords: ['audio', 'sound', 'volume', 'mute', 'gain', 'fader', 'mixer', 'monitor'],
+					definitions: groups,
+				},
+			]
+		: []
 
 	return { presets, sections }
 }

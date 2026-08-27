@@ -12,6 +12,7 @@ export function getSourcePresets(self: OBSInstance): {
 
 	presets['tmp_sourceStatus'] = {
 		type: 'simple',
+		keywords: ['tally', 'on air', 'live'],
 		name: 'Source Status (Program / Preview Tally)',
 		localVariables: [{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Source name' }],
 		style: baseStyle({ text: '$(local:source)' }),
@@ -115,6 +116,7 @@ export function getSourcePresets(self: OBSInstance): {
 
 	presets['tmp_setText'] = {
 		type: 'simple',
+		keywords: ['gt', 'lower third', 'caption', 'title'],
 		name: 'Set Text Source',
 		localVariables: [
 			{ variableType: 'simple', variableName: 'source', startupValue: '', headline: 'Text source name' },
@@ -135,6 +137,7 @@ export function getSourcePresets(self: OBSInstance): {
 	// Example action presets (user selects specific source after dropping).
 	presets['refreshBrowserSource'] = {
 		type: 'simple',
+		keywords: ['reload', 'browser', 'web'],
 		name: 'Refresh Browser Source (example)',
 		style: baseStyle({ text: 'Refresh\nBrowser' }),
 		steps: [{ down: [{ actionId: 'refresh_browser_source', options: { source: '' } }], up: [] }],
@@ -143,6 +146,7 @@ export function getSourcePresets(self: OBSInstance): {
 
 	presets['resetCaptureDevice'] = {
 		type: 'simple',
+		keywords: ['restart', 'camera', 'capture card'],
 		name: 'Reset Capture Device (example)',
 		style: baseStyle({ text: 'Reset\nCapture' }),
 		steps: [{ down: [{ actionId: 'resetCaptureDevice', options: { source: '' } }], up: [] }],
@@ -151,6 +155,7 @@ export function getSourcePresets(self: OBSInstance): {
 
 	presets['takeScreenshot'] = {
 		type: 'simple',
+		keywords: ['snapshot', 'still', 'grab'],
 		name: 'Screenshot (Program)',
 		style: baseStyle({ text: 'Screenshot' }),
 		steps: [
@@ -184,6 +189,7 @@ export function getSourcePresets(self: OBSInstance): {
 		{
 			id: 'sources',
 			name: 'Sources',
+			keywords: ['source', 'input', 'tally', 'visibility', 'hide', 'show', 'filter', 'text'],
 			definitions: [
 				{
 					id: 'sources-status',

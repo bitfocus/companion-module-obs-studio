@@ -57,6 +57,7 @@ export function getScenePresets(self: OBSInstance): {
 
 	presets['tmp_sceneSmart'] = {
 		type: 'simple',
+		keywords: ['smart switcher', 'preview then take'],
 		name: 'Smart Switch Scene',
 		localVariables: [{ variableType: 'simple', variableName: 'scene', startupValue: '', headline: 'Scene name' }],
 		style: baseStyle({ text: '$(local:scene)' }),
@@ -100,6 +101,7 @@ export function getScenePresets(self: OBSInstance): {
 
 	presets['sceneReturnPrevious'] = {
 		type: 'simple',
+		keywords: ['back', 'undo', 'last scene'],
 		name: 'Return to Previous Scene',
 		style: baseStyle({ text: 'Back To:\n$(obs:scene_previous)' }),
 		steps: [
@@ -117,6 +119,7 @@ export function getScenePresets(self: OBSInstance): {
 		{
 			id: 'scenes',
 			name: 'Scenes',
+			keywords: ['scene', 'program', 'preview', 'take', 'cut', 'switch'],
 			definitions: [
 				{
 					id: 'scenes-program',

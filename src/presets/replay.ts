@@ -12,6 +12,7 @@ export function getReplayPresets(_self: OBSInstance): {
 
 	presets['replayToggle'] = {
 		type: 'simple',
+		keywords: ['instant replay', 'buffer'],
 		name: 'Toggle Replay Buffer',
 		previewStyle: baseStyle({ text: 'Toggle\nReplay Buffer' }),
 		style: baseStyle({ text: 'Start\nReplay Buffer' }),
@@ -39,6 +40,7 @@ export function getReplayPresets(_self: OBSInstance): {
 
 	presets['replaySave'] = {
 		type: 'simple',
+		keywords: ['instant replay', 'highlight', 'clip'],
 		name: 'Save Replay Buffer',
 		style: baseStyle({ text: 'Save\nReplay' }),
 		steps: [{ down: [{ actionId: 'replay_buffer', options: { action: 'save' } }], up: [] }],
@@ -67,6 +69,7 @@ export function getReplayPresets(_self: OBSInstance): {
 		{
 			id: 'replay',
 			name: 'Replay Buffer',
+			keywords: ['replay', 'instant replay', 'buffer', 'save', 'highlight'],
 			definitions: [
 				{
 					id: 'replay-control',

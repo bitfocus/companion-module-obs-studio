@@ -113,6 +113,56 @@ describe('presets', () => {
 		expect(mismatched).toEqual([])
 	})
 
+	test('preset and group ids are unique across all builders', () => {
+		const groupIds = new Set<string>()
+		const duplicates: string[] = []
+		for (const section of structure) {
+			for (const definition of section.definitions) {
+				if (typeof definition === 'string') continue
+				if (groupIds.has(definition.id)) duplicates.push(definition.id)
+				groupIds.add(definition.id)
+			}
+		}
+		expect(duplicates).toEqual([])
+	})
+
+	test('sources whose names slug identically still get distinct presets', () => {
+		// `Cam 1` and `Cam-1` both reduce to `Cam_1`, which would silently overwrite one another.
+		const collide = makeMockInstance()
+		seedFullState(collide)
+		for (const name of ['Cam 1', 'Cam-1']) {
+			collide.states.sources.set(name, {
+				sourceName: name,
+				sourceUuid: name,
+				validName: name.replace(/[^a-zA-Z0-9]/g, '_'),
+				isGroup: false,
+				inputKind: 'wasapi_input_capture',
+				inputMuted: false,
+				inputVolume: 0,
+				inputAudioTracks: { '1': true },
+			})
+		}
+		const result = getPresets.call(collide)
+		const muteGroups = result.structure
+			.find((section) => section.id === 'audio')
+			?.definitions.filter((d): d is Exclude<typeof d, string> => typeof d !== 'string')
+			.filter((d) => d.name === 'Cam 1' || d.name === 'Cam-1')
+		expect(muteGroups).toHaveLength(2)
+		expect(new Set(muteGroups?.map((g) => g.id)).size).toBe(2)
+		const referenced = muteGroups?.flatMap((g) => (g.type === 'simple' ? g.presets : []))
+		expect(new Set(referenced).size).toBe(referenced?.length)
+		for (const id of referenced ?? []) expect(result.presets[id]).toBeDefined()
+	})
+
+	test('sections with no items are omitted rather than left empty', () => {
+		const empty = makeMockInstance()
+		const result = getPresets.call(empty)
+		// `media` always survives: its "Current Media" group is static rather than per-source.
+		expect(result.structure.map((section) => section.id)).not.toContain('audio')
+		expect(result.structure.map((section) => section.id)).not.toContain('outputs')
+		for (const section of result.structure) expect(section.definitions.length).toBeGreaterThan(0)
+	})
+
 	test('every preset style uses a color from the semantic palette', () => {
 		const stray: string[] = []
 		const palette = new Set<number>(Object.values(Style))

@@ -102,6 +102,7 @@ export function getSystemPresets(_self: OBSInstance): {
 
 	presets['remainingDiskSpace'] = {
 		type: 'simple',
+		keywords: ['storage', 'drive', 'free space'],
 		name: 'Remaining Disk Space',
 		style: baseStyle({ text: 'Disk Space:\n$(obs:free_disk_space)' }),
 		steps: [{ down: [], up: [] }],
@@ -113,6 +114,7 @@ export function getSystemPresets(_self: OBSInstance): {
 
 	presets['triggerHotkey'] = {
 		type: 'simple',
+		keywords: ['keyboard', 'shortcut'],
 		name: 'Trigger Hotkey by ID (example)',
 		style: baseStyle({ text: 'Trigger\nHotkey' }),
 		steps: [{ down: [{ actionId: 'trigger-hotkey', options: { id: '' } }], up: [] }],
@@ -140,6 +142,7 @@ export function getSystemPresets(_self: OBSInstance): {
 	// Example window/projector presets (set target options after dropping).
 	presets['openMultiviewProjector'] = {
 		type: 'simple',
+		keywords: ['multiview', 'fullscreen', 'display'],
 		name: 'Open Multiview Projector (example)',
 		style: baseStyle({ text: 'Open\nMultiview' }),
 		steps: [
@@ -184,6 +187,7 @@ export function getSystemPresets(_self: OBSInstance): {
 		{
 			id: 'system',
 			name: 'System / Stats',
+			keywords: ['stats', 'cpu', 'ram', 'memory', 'fps', 'frames', 'disk', 'hotkey', 'projector'],
 			definitions: [
 				{
 					id: 'system-stats',

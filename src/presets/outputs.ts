@@ -1,7 +1,7 @@
 import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, presetSlug, styleActive } from './style.js'
+import { baseStyle, generateSlug, styleActive } from './style.js'
 
 /** Custom output presets (Virtual Cam, Decklink, etc.), grouped by output. */
 export function getOutputPresets(self: OBSInstance): {
@@ -10,10 +10,11 @@ export function getOutputPresets(self: OBSInstance): {
 } {
 	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 	const groups: CompanionPresetGroup<OBSInstanceTypes>[] = []
+	const slugFor = generateSlug()
 
 	for (const output of self.obsState.outputList) {
 		const outputId = String(output.id)
-		const slug = presetSlug(outputId)
+		const slug = slugFor(outputId)
 		const value = { value: outputId, isExpression: false as const }
 		const ids = {
 			toggle: `output_${slug}_toggle`,
@@ -70,17 +71,21 @@ export function getOutputPresets(self: OBSInstance): {
 			id: `outputs-${slug}`,
 			type: 'simple',
 			name: output.label,
+			keywords: [output.label, 'output', 'start', 'stop'],
 			presets: [ids.toggle, ids.start, ids.stop, ids.status],
 		})
 	}
 
-	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
-		{
-			id: 'outputs',
-			name: 'Custom Outputs',
-			definitions: groups,
-		},
-	]
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = groups.length
+		? [
+				{
+					id: 'outputs',
+					name: 'Custom Outputs',
+					keywords: ['output', 'virtual camera', 'virtualcam', 'decklink', 'sdi', 'ndi'],
+					definitions: groups,
+				},
+			]
+		: []
 
 	return { presets, sections }
 }

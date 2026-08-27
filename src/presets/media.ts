@@ -1,7 +1,7 @@
 import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, presetSlug, styleActive, styleCaution } from './style.js'
+import { baseStyle, generateSlug, styleActive, styleCaution } from './style.js'
 import { validName } from '../utils.js'
 
 /** Media presets: play/pause, time-remaining, and current media controls, grouped by source. */
@@ -18,6 +18,7 @@ export function getMediaPresets(self: OBSInstance): {
 			presets: ['playPauseCurrentMedia', 'currentMediaElapsed', 'currentMediaRemaining'],
 		},
 	]
+	const slugFor = generateSlug()
 
 	presets['playPauseCurrentMedia'] = {
 		type: 'simple',
@@ -50,7 +51,7 @@ export function getMediaPresets(self: OBSInstance): {
 
 	for (const source of self.obsState.mediaSourceList) {
 		const sourceId = String(source.id)
-		const slug = presetSlug(sourceId)
+		const slug = slugFor(sourceId)
 		const varName = validName(sourceId)
 		const value = { value: sourceId, isExpression: false as const }
 		const ids = {
@@ -142,17 +143,21 @@ export function getMediaPresets(self: OBSInstance): {
 			id: `media-${slug}`,
 			type: 'simple',
 			name: source.label,
+			keywords: [source.label, 'media', 'play', 'pause', 'scrub', 'remaining'],
 			presets: [ids.toggle, ids.scrubBack, ids.scrubForward, ids.elapsed, ids.status],
 		})
 	}
 
-	const sections: CompanionPresetSection<OBSInstanceTypes>[] = [
-		{
-			id: 'media',
-			name: 'Media',
-			definitions: groups,
-		},
-	]
+	const sections: CompanionPresetSection<OBSInstanceTypes>[] = groups.length
+		? [
+				{
+					id: 'media',
+					name: 'Media',
+					keywords: ['media', 'video', 'clip', 'playback', 'play', 'pause', 'vt', 'roll'],
+					definitions: groups,
+				},
+			]
+		: []
 
 	return { presets, sections }
 }

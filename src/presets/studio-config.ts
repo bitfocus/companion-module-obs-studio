@@ -12,6 +12,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 
 	presets['toggleStudioMode'] = {
 		type: 'simple',
+		keywords: ['studio mode', 'preview', 'program'],
 		name: 'Toggle Studio Mode',
 		style: baseStyle({ text: 'Enable\nStudio Mode' }),
 		steps: [{ down: [{ actionId: 'studio_mode', options: { enabled: 'toggle' } }], up: [] }],
@@ -72,6 +73,7 @@ export function getStudioConfigPresets(self: OBSInstance): {
 		{
 			id: 'studio-config',
 			name: 'Studio Mode & Config',
+			keywords: ['studio mode', 'preview', 'profile', 'scene collection', 'config'],
 			definitions: [
 				{ id: 'studio-mode', name: 'Studio Mode', type: 'simple', presets: ['toggleStudioMode'] },
 				{

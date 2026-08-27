@@ -12,6 +12,7 @@ export function getTransitionPresets(self: OBSInstance): {
 
 	presets['transitionAuto'] = {
 		type: 'simple',
+		keywords: ['auto', 'take', 'mix'],
 		name: 'Transition (Preview to Program)',
 		style: baseStyle({ text: 'Transition' }),
 		steps: [{ down: [{ actionId: 'do_transition', options: {} }], up: [] }],
@@ -115,19 +116,36 @@ export function getTransitionPresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
-	const durationIds: string[] = []
+	presets['tmp_transitionDuration'] = {
+		type: 'simple',
+		name: 'Set Transition Duration',
+		localVariables: [
+			{ variableType: 'simple', variableName: 'duration', startupValue: 500, headline: 'Duration (ms)' },
+		],
+		style: baseStyle({ text: '$(local:duration) ms' }),
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'transition_duration',
+						options: { mode: 'set', value: { value: '$(local:duration)', isExpression: true }, amount: 50 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'transition_duration',
+				options: { duration: { value: '$(local:duration)', isExpression: true } },
+				style: styleActive(),
+			},
+		],
+	}
+
+	const durationValues: { name: string; value: number }[] = []
 	for (let time = 500; time < 5100; time += 500) {
-		const id = `transitionDurationSet${time}`
-		durationIds.push(id)
-		presets[id] = {
-			type: 'simple',
-			name: `Transition Set ${time}ms`,
-			style: baseStyle({ text: `${time} ms` }),
-			steps: [
-				{ down: [{ actionId: 'transition_duration', options: { mode: 'set', value: time, amount: 50 } }], up: [] },
-			],
-			feedbacks: [{ feedbackId: 'transition_duration', options: { duration: time }, style: styleActive() }],
-		}
+		durationValues.push({ name: `${time} ms`, value: time })
 	}
 
 	const transitionValues = self.obsState.transitionList.map((t) => ({ name: t.label, value: t.id }))
@@ -136,6 +154,7 @@ export function getTransitionPresets(self: OBSInstance): {
 		{
 			id: 'transitions',
 			name: 'Transitions',
+			keywords: ['transition', 'auto', 'take', 'fade', 'cut', 'stinger', 'duration'],
 			definitions: [
 				{ id: 'transitions-do', name: 'Transition', type: 'simple', presets: ['transitionAuto'] },
 				{
@@ -164,12 +183,15 @@ export function getTransitionPresets(self: OBSInstance): {
 					id: 'transitions-duration',
 					name: 'Duration',
 					type: 'simple',
-					presets: [
-						'transitionCurrentInfo',
-						'transitionDecreaseDuration',
-						'transitionIncreaseDuration',
-						...durationIds,
-					],
+					presets: ['transitionCurrentInfo', 'transitionDecreaseDuration', 'transitionIncreaseDuration'],
+				},
+				{
+					id: 'transitions-duration-set',
+					name: 'Set Duration',
+					type: 'template',
+					presetId: 'tmp_transitionDuration',
+					templateVariableName: 'duration',
+					templateValues: durationValues,
 				},
 			],
 		},
