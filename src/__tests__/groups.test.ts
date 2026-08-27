@@ -7,6 +7,13 @@ import { feedbackEvent } from './mock/events.js'
 import { MockContext } from './mock-context.js'
 import { looseFeedbacks } from './loose-definitions.js'
 
+/** Every request issued across all batches, flattened — container fetches are batched. */
+function batchedRequests(self: MockInstance): Array<{ requestType: string; requestData?: unknown }> {
+	return self.socket.callBatch.mock.calls.flatMap(
+		(call) => call[0] as Array<{ requestType: string; requestData?: unknown }>,
+	)
+}
+
 /** Seed a group source and its own item list of members. */
 function seedGroup(self: MockInstance, groupUuid: string, memberUuids: string[]): void {
 	self.states.sources.set(groupUuid, {
@@ -36,28 +43,39 @@ describe('container model — scene item creation routing', () => {
 
 	test('SceneItemCreated inside a group uses GetGroupSceneItemList, not GetSceneItemList', async () => {
 		seedGroup(self, 'group-1', ['member-1'])
-		self.socket.call.mockResolvedValue({
-			sceneItems: [
-				{ sceneItemId: 200, sourceUuid: 'member-1', sourceName: 'member-1', sceneItemEnabled: true },
-				{ sceneItemId: 201, sourceUuid: 'member-2', sourceName: 'member-2', sceneItemEnabled: true },
-			],
-		})
+		mockBatchResponses(self.socket, (request) =>
+			request.requestType === 'GetGroupSceneItemList'
+				? {
+						sceneItems: [
+							sceneItem({ sceneItemId: 200, sourceUuid: 'member-1' }),
+							sceneItem({ sceneItemId: 201, sourceUuid: 'member-2' }),
+						],
+					}
+				: {},
+		)
 
 		await self.obs.addSceneItem('group-1', 'member-2')
 
-		expect(self.socket.call).toHaveBeenCalledWith('GetGroupSceneItemList', { sceneUuid: 'group-1' })
-		expect(self.socket.call).not.toHaveBeenCalledWith('GetSceneItemList', { sceneUuid: 'group-1' })
+		const requests = batchedRequests(self)
+		expect(requests).toContainEqual(
+			expect.objectContaining({ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' } }),
+		)
+		expect(requests).not.toContainEqual(
+			expect.objectContaining({ requestType: 'GetSceneItemList', requestData: { sceneUuid: 'group-1' } }),
+		)
 		// New member registered with parent group.
 		expect(self.states.sources.get('member-2')?.parentGroupUuid).toBe('group-1')
 	})
 
 	test('SceneItemCreated inside a plain scene uses GetSceneItemList', async () => {
 		seedScene(self, 'Scene A', 'scene-a')
-		self.socket.call.mockResolvedValue({ sceneItems: [] })
+		mockBatchResponses(self.socket, () => ({ sceneItems: [] }))
 
 		await self.obs.addSceneItem('scene-a', 'src-1')
 
-		expect(self.socket.call).toHaveBeenCalledWith('GetSceneItemList', { sceneUuid: 'scene-a' })
+		expect(batchedRequests(self)).toContainEqual(
+			expect.objectContaining({ requestType: 'GetSceneItemList', requestData: { sceneUuid: 'scene-a' } }),
+		)
 	})
 })
 
@@ -169,22 +187,20 @@ describe('groups added after connect', () => {
 	test('addSceneItem fetches the contents of a newly added group', async () => {
 		seedScene(self, 'Scene A', 'scene-a')
 
-		// GetSceneItemList for the scene now returns a group item.
-		self.socket.call.mockResolvedValue({
-			sceneItems: [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })],
+		// The scene's item list now returns a group item, whose own contents are fetched in a second round.
+		mockBatchResponses(self.socket, (request) => {
+			if (request.requestType === 'GetSceneItemList')
+				return { sceneItems: [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })] }
+			if (request.requestType === 'GetGroupSceneItemList')
+				return { sceneItems: [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })] }
+			return {}
 		})
-		mockBatchResponses(self.socket, (request) =>
-			request.requestType === 'GetGroupSceneItemList'
-				? { sceneItems: [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1' })] }
-				: {},
-		)
 
 		await self.obs.addSceneItem('scene-a', 'group-1')
 
 		// The group's own item list was requested and cached.
-		expect(self.socket.callBatch).toHaveBeenCalledWith(
-			[{ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' }, requestId: expect.any(String) }],
-			expect.anything(),
+		expect(batchedRequests(self)).toContainEqual(
+			expect.objectContaining({ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'group-1' } }),
 		)
 		expect(self.states.sceneItems.get('group-1')).toHaveLength(1)
 		expect(self.states.sources.get('member-1')!.parentGroupUuid).toBe('group-1')

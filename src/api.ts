@@ -11,7 +11,6 @@ import * as utils from './utils.js'
 import {
 	OBSMediaStatus,
 	OBSRecordingState,
-	OBSSceneItem,
 	ObsAudioMonitorType,
 	OBSSource,
 	OBSBatchRequest,
@@ -806,17 +805,11 @@ export class OBSApi {
 		const allSourceUuids = new Set<string>(await this.buildInputList())
 		if (this.self.obsState.epoch !== epoch) return
 
-		// Walk scenes to find groups, then fetch group contents.
+		// Walking the scenes pulls in their groups' contents too.
 		const sceneUuids = Array.from(this.self.states.scenes.keys())
-		await this.fetchContainerItems(sceneUuids, false, allSourceUuids)
-		if (this.self.obsState.epoch !== epoch) return
-
-		const groupUuids = Array.from(this.self.states.sources.values())
-			.filter((s) => s.isGroup)
-			.map((s) => s.sourceUuid)
-
-		await this.fetchContainerItems(groupUuids, true, allSourceUuids)
-		if (this.self.obsState.epoch !== epoch) return
+		const contained = await this.fetchContainers(sceneUuids)
+		if (!contained) return
+		for (const sourceUuid of contained) allSourceUuids.add(sourceUuid)
 
 		await this.fetchSourcesData(Array.from(allSourceUuids))
 		if (this.self.obsState.epoch !== epoch) return
@@ -854,35 +847,51 @@ export class OBSApi {
 		}
 	}
 
-	// Fetch container item lists and set parentGroupUuid on group items.
-	private async fetchContainerItems(
-		containerUuids: string[],
-		isGroup: boolean,
-		allSourceUuids: Set<string>,
-	): Promise<void> {
-		if (containerUuids.length === 0) return
+	/**
+	 * Fetches the item lists of the given containers and registers everything they hold.
+	 *
+	 * Scenes and groups share one item map and differ only in the request that reads them, so the
+	 * request is chosen per container from what the source map already knows rather than being passed
+	 * in. Groups found inside a container are fetched in a follow-up round; OBS does not nest groups
+	 * any further, so the loop settles after one.
+	 *
+	 * Returns every contained source UUID, or undefined if the state was reset while in flight.
+	 */
+	private async fetchContainers(containerUuids: string[]): Promise<Set<string> | undefined> {
+		const contained = new Set<string>()
 		const epoch = this.self.obsState.epoch
+		let pending = containerUuids
 
-		const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
-		const builder = new BatchBuilder<ContainerItemsBatchSpec>()
-		for (const containerUuid of containerUuids) {
-			builder.add('items', requestType, { sceneUuid: containerUuid }, { containerUuid }, false)
-		}
-
-		const entries = await this.runBatch(builder)
-		if (!entries || this.self.obsState.epoch !== epoch) return
-
-		for (const entry of entries) {
-			if (!entry.requestStatus.result) continue
-			const containerUuid = entry.meta.containerUuid
-			const items = entry.responseData?.sceneItems ?? []
-			this.self.states.sceneItems.set(containerUuid, items)
-			for (const item of items) {
-				allSourceUuids.add(item.sourceUuid)
-				const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
-				if (isGroup) source.parentGroupUuid = containerUuid
+		while (pending.length > 0) {
+			const builder = new BatchBuilder<ContainerItemsBatchSpec>()
+			for (const containerUuid of pending) {
+				// Scenes are absent from the source map, so anything unknown here is a scene.
+				const isGroup = this.self.states.sources.get(containerUuid)?.isGroup ?? false
+				const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
+				builder.add('items', requestType, { sceneUuid: containerUuid }, { containerUuid, isGroup }, false)
 			}
+
+			const entries = await this.runBatch(builder)
+			if (!entries || this.self.obsState.epoch !== epoch) return undefined
+
+			const nested: string[] = []
+			for (const entry of entries) {
+				if (!entry.requestStatus.result) continue
+				const { containerUuid, isGroup } = entry.meta
+				const items = entry.responseData?.sceneItems ?? []
+				this.self.states.sceneItems.set(containerUuid, items)
+				for (const item of items) {
+					contained.add(item.sourceUuid)
+					// addSource upserts, so known sources are refreshed, not duplicated.
+					const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
+					if (isGroup) source.parentGroupUuid = containerUuid
+					if (item.isGroup && !isGroup) nested.push(item.sourceUuid)
+				}
+			}
+			pending = nested
 		}
+
+		return contained
 	}
 
 	public async fetchSourcesData(sourceUuids: string[]): Promise<void> {
@@ -1046,48 +1055,17 @@ export class OBSApi {
 		})
 	}
 
-	// Refresh container item list and return contained source UUIDs.
-	private async refreshContainerItemList(containerUuid: string): Promise<string[] | undefined> {
-		const epoch = this.self.obsState.epoch
-		const isGroup = this.self.states.sources.get(containerUuid)?.isGroup ?? false
-		const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
-		const data = await this.sendRequest(requestType, { sceneUuid: containerUuid })
-		if (!data || this.self.obsState.epoch !== epoch) return undefined
-
-		const items = (data.sceneItems ?? []) as OBSSceneItem[]
-		this.self.states.sceneItems.set(containerUuid, items)
-		const sourceUuids: string[] = []
-		const groupUuids: string[] = []
-		for (const item of items) {
-			sourceUuids.push(item.sourceUuid)
-			// addSource upserts, so known sources are refreshed, not duplicated.
-			const source = this.addSource(item.sourceUuid, item.sourceName, item.inputKind, item.isGroup)
-			if (isGroup) source.parentGroupUuid = containerUuid
-			if (item.isGroup && !isGroup) groupUuids.push(item.sourceUuid)
-		}
-
-		// Groups nested in this container hold their own items; OBS does not nest groups further.
-		if (groupUuids.length > 0) {
-			const contained = new Set<string>()
-			await this.fetchContainerItems(groupUuids, true, contained)
-			if (this.self.obsState.epoch !== epoch) return undefined
-			sourceUuids.push(...contained)
-		}
-
-		return sourceUuids
-	}
-
 	public async buildSourceList(containerUuid: string): Promise<void> {
-		const sourceUuids = await this.refreshContainerItemList(containerUuid)
-		if (sourceUuids) await this.fetchSourcesData(sourceUuids)
+		const contained = await this.fetchContainers([containerUuid])
+		if (contained) await this.fetchSourcesData(Array.from(contained))
 	}
 
 	// Refresh container item list and fetch data for the new source plus any group contents it pulled in.
 	public async addSceneItem(containerUuid: string, sourceUuid: string): Promise<void> {
-		const sourceUuids = await this.refreshContainerItemList(containerUuid)
-		if (!sourceUuids) return
+		const contained = await this.fetchContainers([containerUuid])
+		if (!contained) return
 		// A newly added group contributes its children, which have no data cached yet.
-		const groupChildren = sourceUuids.filter((uuid) => this.self.states.sources.get(uuid)?.parentGroupUuid)
+		const groupChildren = Array.from(contained).filter((uuid) => this.self.states.sources.get(uuid)?.parentGroupUuid)
 		await this.fetchSourcesData(Array.from(new Set([sourceUuid, ...groupChildren])))
 	}
 

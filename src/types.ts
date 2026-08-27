@@ -251,7 +251,7 @@ export type SceneFilterBatchSpec = {
 }
 
 export type ContainerItemsBatchSpec = {
-	items: { meta: { containerUuid: string }; payload: OBSSceneItemListPayload }
+	items: { meta: { containerUuid: string; isGroup: boolean }; payload: OBSSceneItemListPayload }
 }
 
 export type MediaStatusBatchSpec = {
