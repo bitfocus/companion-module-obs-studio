@@ -9,12 +9,11 @@ import {
 import { GetConfigFields } from './config.js'
 import { getActions, type OBSActionSchemas } from './actions.js'
 import { getPresets } from './presets.js'
-import { getVariables, updateVariableValues } from './variables.js'
+import { VariablePublisher, getVariables, updateVariableValues } from './variables.js'
 import { getFeedbacks, type OBSFeedbackSchemas } from './feedbacks.js'
 import UpgradeScripts from './upgrades.js'
 import { ModuleConfig, ModuleSecrets, OBSNormalizedState } from './types.js'
 import { OBSState } from './state.js'
-import { VariablePublisher } from './variable-publisher.js'
 
 import OBSWebSocket from 'obs-websocket-js'
 import { OBSApi } from './api.js'
@@ -99,7 +98,7 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 
 	/** Lets the polls publish their whole set each tick without re-sending values that have not moved. */
 	override setVariableValues(values: CompanionVariableValues): void {
-		const changed = this.variablePublisher.takeChanged(values)
+		const changed = this.variablePublisher.publishVariables(values)
 		if (changed) super.setVariableValues(changed)
 	}
 
