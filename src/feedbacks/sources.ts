@@ -130,14 +130,9 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 						}
 					}
 				} else {
-					const source = self.obsState.findSourceByName(sourceName)
-					// Find item in group container, or selected scene items.
-					const items = source?.parentGroupUuid
-						? self.obsState.getContainerItems(source.parentGroupUuid)
-						: self.obsState.findSceneItemsByName(sceneName)
-					const sceneItem = items?.find((item) => item.sourceUuid === source?.sourceUuid)
-					if (sceneItem) {
-						return sceneItem.sceneItemEnabled
+					const match = self.obsState.findSceneItemByName(sceneName, sourceName)
+					if (match) {
+						return match.item.sceneItemEnabled
 					}
 				}
 				return false

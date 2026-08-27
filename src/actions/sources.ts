@@ -911,22 +911,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				if (props.includes('scaleY') && action.options.scaleY) transform.scaleY = Number(action.options.scaleY)
 				if (props.includes('rotation') && action.options.rotation) transform.rotation = Number(action.options.rotation)
 
-				try {
-					const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
-						sceneName: sourceSceneName,
-						sourceName: sourceName,
-					})
+				const match = self.obsState.findSceneItemByName(sourceSceneName, sourceName)
+				if (!match) {
+					logger.warn(`Scene item not found for source: ${sourceName} in scene: ${sourceSceneName}`)
+					return
+				}
 
-					if (sceneItem?.sceneItemId) {
-						await self.obs.sendRequest('SetSceneItemTransform', {
-							sceneName: sourceSceneName,
-							sceneItemId: sceneItem?.sceneItemId,
-							sceneItemTransform: transform,
-						})
-					} else {
-						logger.warn(`Scene item not found for source: ${sourceName} in scene: ${sourceSceneName}`)
-						return
-					}
+				try {
+					await self.obs.sendRequest('SetSceneItemTransform', {
+						sceneUuid: match.containerUuid,
+						sceneItemId: match.item.sceneItemId,
+						sceneItemTransform: transform,
+					})
 				} catch (e) {
 					logger.error(`Set Scene Item Properties Error: ${utils.describeError(e)}`)
 				}
@@ -935,16 +931,13 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const sourceSceneName = action.options.useProgramScene ? self.states.programScene : action.options.scene
 				const sourceName = action.options.source
 
-				try {
-					const sceneItem = await self.obs.sendRequest('GetSceneItemId', {
-						sceneName: sourceSceneName,
-						sourceName: sourceName,
-					})
-					if (!sceneItem?.sceneItemId) return undefined
+				const match = self.obsState.findSceneItemByName(sourceSceneName, sourceName)
+				if (!match) return undefined
 
+				try {
 					const res = await self.obs.sendRequest('GetSceneItemTransform', {
-						sceneName: sourceSceneName,
-						sceneItemId: sceneItem.sceneItemId,
+						sceneUuid: match.containerUuid,
+						sceneItemId: match.item.sceneItemId,
 					})
 					const sceneItemTransform = res?.sceneItemTransform
 					if (!sceneItemTransform) return undefined
@@ -1030,15 +1023,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			},
 			learn: (action) => {
 				if (action.options.anyScene) return undefined
-				const sourceName = action.options.source
-				const source = self.obsState.findSourceByName(sourceName)
-				if (!source) return undefined
 				const sceneName = action.options.useCurrentScene ? self.states.programScene : action.options.scene
-				const sceneItems = self.obsState.findSceneItemsByName(sceneName)
-				const item = sceneItems?.find((i) => i.sourceUuid === source.sourceUuid)
-				if (!item) return undefined
+				const match = self.obsState.findSceneItemByName(sceneName, action.options.source)
+				if (!match) return undefined
 				return {
-					visible: item.sceneItemEnabled ? 'true' : 'false',
+					visible: match.item.sceneItemEnabled ? 'true' : 'false',
 				}
 			},
 		},

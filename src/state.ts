@@ -1,4 +1,4 @@
-import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSource, OBSScene } from './types.js'
+import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSceneItem, OBSSource, OBSScene } from './types.js'
 import {
 	INPUT_KIND_IMAGE_SOURCE,
 	VIRTUALCAM_OUTPUT_NAME,
@@ -19,6 +19,12 @@ interface ChoiceCache {
 	profileChoices?: ModuleChoice[]
 	sceneCollectionList?: ModuleChoice[]
 	outputList?: ModuleChoice[]
+}
+
+/** A scene item together with the container (scene or group) it was found in. */
+export interface SceneItemMatch {
+	containerUuid: string
+	item: OBSSceneItem
 }
 
 export class OBSState {
@@ -355,6 +361,42 @@ export class OBSState {
 		const scene = this.findSceneByName(sceneName)
 		if (scene) return this.state.sceneItems.get(scene.sceneUuid)
 		return undefined
+	}
+
+	/**
+	 * The scene item representing `sourceUuid` within `sceneUuid`, and the container holding it.
+	 *
+	 * A source can sit directly in one scene and inside a group in another, so the targeted scene's own
+	 * items win; the parent group is consulted only when the scene does not hold the source itself.
+	 * Every caller that asks "which item is this source, here" goes through this, so the precedence is
+	 * decided once rather than re-derived per call site.
+	 */
+	public findSceneItem(sceneUuid: string, sourceUuid: string): SceneItemMatch | undefined {
+		const parentGroupUuid = this.state.sources.get(sourceUuid)?.parentGroupUuid
+		for (const containerUuid of [sceneUuid, parentGroupUuid]) {
+			if (!containerUuid) continue
+			const item = this.state.sceneItems.get(containerUuid)?.find((i) => i.sourceUuid === sourceUuid)
+			if (item) return { containerUuid, item }
+		}
+		return undefined
+	}
+
+	/** Name-based form for the action and feedback layers, which work in user-facing names. */
+	public findSceneItemByName(sceneName: string, sourceName: string): SceneItemMatch | undefined {
+		const scene = this.findSceneByName(sceneName)
+		const source = this.findSourceByName(sourceName)
+		if (!scene || !source) return undefined
+		return this.findSceneItem(scene.sceneUuid, source.sourceUuid)
+	}
+
+	/** Every item for a source across all containers; scenes and groups share the one map. */
+	public findSceneItemsAnywhere(sourceUuid: string): SceneItemMatch[] {
+		const matches: SceneItemMatch[] = []
+		for (const [containerUuid, items] of this.state.sceneItems) {
+			const item = items.find((i) => i.sourceUuid === sourceUuid)
+			if (item) matches.push({ containerUuid, item })
+		}
+		return matches
 	}
 
 	// Items of a container (scene or group) by UUID (shared map).

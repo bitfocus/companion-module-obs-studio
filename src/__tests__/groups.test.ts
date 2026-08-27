@@ -190,3 +190,66 @@ describe('groups added after connect', () => {
 		expect(self.states.sources.get('member-1')!.parentGroupUuid).toBe('group-1')
 	})
 })
+
+describe('scene item lookup precedence', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		seedScene(self, 'Scene B', 'scene-b')
+		seedGroup(self, 'group-1', ['member-1'])
+		// The group lives in Scene A; the same source is also added directly to Scene B.
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })])
+		self.states.sceneItems.set('scene-b', [sceneItem({ sceneItemId: 50, sourceUuid: 'member-1' })])
+	})
+
+	test('the targeted scene wins over the parent group when it holds the source itself', () => {
+		const match = self.obsState.findSceneItemByName('Scene B', 'member-1')
+
+		expect(match).toEqual({ containerUuid: 'scene-b', item: expect.objectContaining({ sceneItemId: 50 }) })
+	})
+
+	test('falls back to the parent group when the scene does not hold the source directly', () => {
+		const match = self.obsState.findSceneItemByName('Scene A', 'member-1')
+
+		expect(match).toEqual({ containerUuid: 'group-1', item: expect.objectContaining({ sceneItemId: 200 }) })
+	})
+
+	test('returns undefined for an unknown scene or source', () => {
+		expect(self.obsState.findSceneItemByName('Nope', 'member-1')).toBeUndefined()
+		expect(self.obsState.findSceneItemByName('Scene A', 'nope')).toBeUndefined()
+	})
+
+	test('findSceneItemsAnywhere reports every container holding the source', () => {
+		const containers = self.obsState.findSceneItemsAnywhere('member-1').map((m) => m.containerUuid)
+
+		expect(containers.sort()).toEqual(['group-1', 'scene-b'])
+	})
+
+	test('setSourceVisibility targets the scene copy, not the group copy', async () => {
+		await self.obs.setSourceVisibility('member-1', 'false', {
+			anyScene: false,
+			useCurrentScene: false,
+			scene: 'Scene B',
+		})
+
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		expect(batch).toHaveLength(1)
+		expect(batch[0].requestData.sceneUuid).toBe('scene-b')
+		expect(batch[0].requestData.sceneItemId).toBe(50)
+	})
+
+	test('scene_item_active_in_scene reports the targeted scene copy', () => {
+		// Group copy enabled, Scene B copy disabled: a group-first lookup would answer true.
+		self.states.sceneItems.get('scene-b')![0].sceneItemEnabled = false
+		const feedbacks = looseFeedbacks(getSourceFeedbacks(self))
+
+		const result = feedbacks['scene_item_active_in_scene'].callback(
+			feedbackEvent('scene_item_active_in_scene', { scene: 'Scene B', any: false, source: 'member-1' }),
+			new MockContext(),
+		)
+
+		expect(result).toBe(false)
+	})
+})

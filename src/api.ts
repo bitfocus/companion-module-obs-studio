@@ -29,6 +29,7 @@ import {
 	type OBSFilter,
 } from './types.js'
 import { BatchBuilder, successfulEntry, type BatchEntry, type BatchSpec, type SuccessfulBatchEntry } from './batch.js'
+import type { SceneItemMatch } from './state.js'
 
 import {
 	INPUT_KIND_IMAGE_SOURCE,
@@ -1359,33 +1360,20 @@ export class OBSApi {
 		sourceUuid: string,
 		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
 	): { containerUuid: string; sceneItemId: number }[] {
-		const instances: { containerUuid: string; sceneItemId: number }[] = []
+		const toInstance = ({ containerUuid, item }: SceneItemMatch) => ({
+			containerUuid,
+			sceneItemId: item.sceneItemId,
+		})
 
 		if (options.anyScene) {
-			// Search both scenes and groups since they share the same map.
-			for (const [containerUuid, items] of this.self.states.sceneItems) {
-				const item = items.find((i) => i.sourceUuid === sourceUuid)
-				if (item) instances.push({ containerUuid, sceneItemId: item.sceneItemId })
-			}
-		} else {
-			const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
-			if (!scene) return instances
-
-			// The targeted scene wins: a source can sit in a group and directly in another scene, and the
-			// parent group is only the right container when the scene itself does not hold the source.
-			const source = this.self.states.sources.get(sourceUuid)
-			const candidates = [scene.sceneUuid, source?.parentGroupUuid]
-			for (const containerUuid of candidates) {
-				if (!containerUuid) continue
-				const item = this.self.states.sceneItems.get(containerUuid)?.find((i) => i.sourceUuid === sourceUuid)
-				if (item) {
-					instances.push({ containerUuid, sceneItemId: item.sceneItemId })
-					break
-				}
-			}
+			return this.self.obsState.findSceneItemsAnywhere(sourceUuid).map(toInstance)
 		}
 
-		return instances
+		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
+		if (!scene) return []
+
+		const match = this.self.obsState.findSceneItem(scene.sceneUuid, sourceUuid)
+		return match ? [toInstance(match)] : []
 	}
 
 	private buildSourceVisibilityRequests(
