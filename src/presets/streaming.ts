@@ -228,7 +228,6 @@ export function getStreamingPresets(_self: OBSInstance): {
 					presets: [
 						'streamingStatus',
 						'streamingCongestion',
-						'streamingReconnecting',
 						'streamingService',
 						'streamingBitrate',
 						'streamingTimecodeHH',
