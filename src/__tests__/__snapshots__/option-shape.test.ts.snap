@@ -2120,6 +2120,21 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "number",
     },
   ],
+  "audioPeakLevel": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
   "audioPeaking": [
     {
       "allowCustom": true,

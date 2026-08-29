@@ -11,6 +11,7 @@ export type AudioFeedbackSchemas = {
 	volume: { type: 'boolean'; options: { source: string; volume: number } }
 	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number } }
 	audioMeter: { type: 'advanced'; options: { source: string; threshold: number } }
+	audioPeakLevel: { type: 'value'; options: { source: string } }
 }
 
 export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions<AudioFeedbackSchemas> {
@@ -148,6 +149,19 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				} else {
 					return { bgcolor: Color.Black }
 				}
+			},
+			unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
+		},
+
+		audioPeakLevel: {
+			type: 'value',
+			name: 'Audio - Peak Level (dB)',
+			description: 'The current peak level of an audio source, in dB, for use with a gauge or local variable',
+			options: [choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' })],
+			callback: (feedback) => {
+				self.obs.addMeterSubscriber(feedback.id)
+				const sourceName = feedback.options.source
+				return self.obsState.findSourceByName(sourceName)?.peak ?? -100
 			},
 			unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
 		},

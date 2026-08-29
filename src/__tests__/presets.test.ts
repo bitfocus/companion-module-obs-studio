@@ -7,11 +7,12 @@ import type { OBSInstanceTypes } from '../main.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 import { Style } from '../presets/style.js'
 
-/** Narrows away the `alternatives` grouping, leaving the simple/layered button presets. */
-function isButtonPreset(
+/** Flattens a preset entry to the button presets it contains, expanding `alternatives` to its variants. */
+function buttonVariants(
 	preset: CompanionSomePresetDefinition<OBSInstanceTypes> | undefined,
-): preset is CompanionPresetDefinition<OBSInstanceTypes> {
-	return !!preset && preset.type !== 'alternatives'
+): CompanionPresetDefinition<OBSInstanceTypes>[] {
+	if (!preset) return []
+	return preset.type === 'alternatives' ? preset.variants : [preset]
 }
 
 /** Narrows to the simple presets, which are the only ones carrying a flat button `style`. */
@@ -46,7 +47,7 @@ describe('presets', () => {
 	// `alternatives` entries group variants and carry no name of their own.
 	test('every preset has a non-empty name', () => {
 		const unnamed = Object.entries(presets)
-			.filter(([, preset]) => isButtonPreset(preset) && preset.name.length === 0)
+			.filter(([, preset]) => buttonVariants(preset).some((variant) => variant.name.length === 0))
 			.map(([id]) => id)
 		expect(unnamed).toEqual([])
 	})
@@ -54,11 +55,12 @@ describe('presets', () => {
 	test('every preset action references an action that exists', () => {
 		const missing: string[] = []
 		for (const [id, preset] of Object.entries(presets)) {
-			if (!isButtonPreset(preset)) continue
-			for (const step of preset.steps ?? []) {
-				for (const set of Object.values(step)) {
-					for (const action of set as { actionId: string }[]) {
-						if (!actionIds.has(action.actionId)) missing.push(`${id} -> ${action.actionId}`)
+			for (const variant of buttonVariants(preset)) {
+				for (const step of variant.steps ?? []) {
+					for (const set of Object.values(step)) {
+						for (const action of set as { actionId: string }[]) {
+							if (!actionIds.has(action.actionId)) missing.push(`${id} -> ${action.actionId}`)
+						}
 					}
 				}
 			}
@@ -69,9 +71,10 @@ describe('presets', () => {
 	test('every preset feedback references a feedback that exists', () => {
 		const missing: string[] = []
 		for (const [id, preset] of Object.entries(presets)) {
-			if (!isButtonPreset(preset)) continue
-			for (const feedback of preset.feedbacks ?? []) {
-				if (!feedbackIds.has(feedback.feedbackId)) missing.push(`${id} -> ${feedback.feedbackId}`)
+			for (const variant of buttonVariants(preset)) {
+				for (const feedback of variant.feedbacks ?? []) {
+					if (!feedbackIds.has(feedback.feedbackId)) missing.push(`${id} -> ${feedback.feedbackId}`)
+				}
 			}
 		}
 		expect(missing).toEqual([])
@@ -219,19 +222,23 @@ describe('presets', () => {
 		'updateMediaLocalFile',
 		'vendorRequest',
 	]
-	const PRESETLESS_FEEDBACKS = ['scenePrevious', 'vendorEvent']
+	const PRESETLESS_FEEDBACKS = ['audioMeter', 'scenePrevious', 'vendorEvent']
 
 	test('every action and feedback is reachable from a preset, or listed as deliberately not', () => {
 		const usedActions = new Set<string>()
 		const usedFeedbacks = new Set<string>()
 		for (const preset of Object.values(presets)) {
-			if (!isButtonPreset(preset)) continue
-			for (const step of preset.steps ?? []) {
-				for (const set of Object.values(step)) {
-					for (const action of set as { actionId: string }[]) usedActions.add(action.actionId)
+			for (const variant of buttonVariants(preset)) {
+				for (const step of variant.steps ?? []) {
+					for (const set of Object.values(step)) {
+						for (const action of set as { actionId: string }[]) usedActions.add(action.actionId)
+					}
+				}
+				for (const feedback of variant.feedbacks ?? []) usedFeedbacks.add(feedback.feedbackId)
+				for (const local of variant.localVariables ?? []) {
+					if (local.variableType === 'feedback') usedFeedbacks.add(local.feedbackId)
 				}
 			}
-			for (const feedback of preset.feedbacks ?? []) usedFeedbacks.add(feedback.feedbackId)
 		}
 		expect([...actionIds].filter((id) => !usedActions.has(id)).sort()).toEqual(PRESETLESS_ACTIONS)
 		expect([...feedbackIds].filter((id) => !usedFeedbacks.has(id)).sort()).toEqual(PRESETLESS_FEEDBACKS)

@@ -37,7 +37,7 @@ describe('feedbacks', () => {
 		test.each(FEEDBACK_IDS)('%s', async (id) => {
 			const def = feedbacks[id]
 			const result = await Promise.resolve(def.callback(feedbackEvent(id, defaultOptions(def)), new MockContext()))
-			const expectedType = def.type === 'boolean' ? 'boolean' : 'object'
+			const expectedType = def.type === 'boolean' ? 'boolean' : def.type === 'value' ? 'number' : 'object'
 			expect(typeof result).toBe(expectedType)
 		})
 	})

@@ -1,7 +1,21 @@
-import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
+import {
+	ButtonGraphicsDecorationType,
+	CompanionPresetDefinitions,
+	CompanionPresetGroup,
+	CompanionPresetSection,
+} from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, generateSlug, styleActive, styleAlert, stylePreview } from './style.js'
+import {
+	baseStyle,
+	generateSlug,
+	Style,
+	styleActive,
+	styleAlert,
+	stylePreview,
+	styleProgram,
+	styleWarn,
+} from './style.js'
 
 /** Audio presets: per-source controls for volume, mute, and monitoring, grouped by source. */
 export function getAudioPresets(self: OBSInstance): {
@@ -21,7 +35,6 @@ export function getAudioPresets(self: OBSInstance): {
 			volUp: `audio_${slug}_volUp`,
 			volDown: `audio_${slug}_volDown`,
 			monitor: `audio_${slug}_monitor`,
-			status: `audio_${slug}_status`,
 			meter: `audio_${slug}_meter`,
 			track1: `audio_${slug}_track1`,
 			unity: `audio_${slug}_unity`,
@@ -91,13 +104,88 @@ export function getAudioPresets(self: OBSInstance): {
 			feedbacks: [{ feedbackId: 'audio_monitor_type', options: { source: value }, style: stylePreview() }],
 		}
 
+		// Alternatives: the gauge layered variant where the host supports it, otherwise a flat button
+		// coloured by stacked peaking thresholds, mirroring the OBS mixer meter.
 		presets[ids.meter] = {
-			type: 'simple',
-			name: 'Audio Meter',
-			style: baseStyle({ text: source.label }),
-			steps: [{ down: [], up: [] }],
-			// Advanced feedback: it drives bgcolor itself, mirroring the OBS mixer meter.
-			feedbacks: [{ feedbackId: 'audioMeter', options: { source: value, threshold: -60 } }],
+			type: 'alternatives',
+			variants: [
+				{
+					type: 'layered',
+					name: 'Audio Meter',
+					canvas: { decoration: ButtonGraphicsDecorationType.None },
+					localVariables: [
+						{
+							variableType: 'feedback',
+							variableName: 'peak',
+							feedbackId: 'audioPeakLevel',
+							options: { source: value },
+							headline: 'Peak level (dB)',
+						},
+					],
+					elements: [
+						{
+							type: 'box',
+							id: 'background',
+							name: 'Background',
+							x: 0,
+							y: 0,
+							width: 100,
+							height: 100,
+							color: Style.idleBg,
+						},
+						{
+							type: 'gauge',
+							id: 'meter',
+							name: 'Meter',
+							x: 4,
+							y: 4,
+							width: 15,
+							height: 90,
+							orientation: 'vertical',
+							value: { value: '$(local:peak)', isExpression: true },
+							min: -60,
+							max: 0,
+							fillEnabled: true,
+							multiColour: true,
+							trackStyle: 'dimmed',
+							stops: [
+								{ value: -60, color: Style.preview, gradient: false },
+								{ value: -20, color: Style.warning, gradient: false },
+								{ value: -9, color: Style.program, gradient: false },
+							],
+						},
+						{
+							type: 'text',
+							id: 'label',
+							name: 'Label',
+							x: 22,
+							y: 4,
+							width: 75,
+							height: 90,
+							text: source.label,
+							fontsize: 25,
+							fontsizeAllowShrink: true,
+							color: Style.idleFg,
+							halign: 'center',
+							valign: 'center',
+						},
+					],
+					steps: [{ down: [], up: [] }],
+					feedbacks: [],
+				},
+				{
+					type: 'simple',
+					name: 'Audio Meter',
+					style: baseStyle({ text: source.label }),
+					steps: [{ down: [], up: [] }],
+					// Stacked thresholds, loudest last so it wins when several are true.
+					feedbacks: [
+						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -60 }, style: stylePreview() },
+						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -20 }, style: styleWarn() },
+						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -9 }, style: styleProgram() },
+					],
+				},
+			],
 		}
 
 		presets[ids.track1] = {
@@ -136,7 +224,7 @@ export function getAudioPresets(self: OBSInstance): {
 			type: 'simple',
 			name: source.label,
 			keywords: [source.label, 'audio', 'mute', 'volume', 'monitor', 'track'],
-			presets: [ids.mute, ids.volUp, ids.volDown, ids.unity, ids.monitor, ids.track1, ids.status, ids.meter],
+			presets: [ids.mute, ids.volUp, ids.volDown, ids.unity, ids.monitor, ids.track1, ids.meter],
 		})
 	}
 

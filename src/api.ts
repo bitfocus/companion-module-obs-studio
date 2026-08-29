@@ -1280,7 +1280,7 @@ export class OBSApi {
 		if (this.meterFeedbackPending && now - this.lastMeterFeedbackCheck >= OBSApi.METER_FEEDBACK_THROTTLE_MS) {
 			this.lastMeterFeedbackCheck = now
 			this.meterFeedbackPending = false
-			this.self.checkFeedbacks('audioPeaking', 'audioMeter')
+			this.self.checkFeedbacks('audioPeaking', 'audioMeter', 'audioPeakLevel')
 		}
 	}
 
