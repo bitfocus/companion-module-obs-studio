@@ -47,3 +47,10 @@ export function isSelectableOutput(outputName: string): boolean {
 export function isTextInputKind(inputKind: string | undefined | null): boolean {
 	return !!inputKind?.startsWith(INPUT_KIND_PREFIX_TEXT)
 }
+
+/**
+ * Stream congestion thresholds, matching the icon buckets OBS uses in its own status bar
+ * (`excellent` at no congestion, then `good`, `mediocre` and `bad` thirds).
+ */
+export const CONGESTION_GOOD = 1 / 3
+export const CONGESTION_MEDIOCRE = 2 / 3

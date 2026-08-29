@@ -69,3 +69,30 @@ describe('audio_monitor_type', () => {
 		expect(check({ source: 'Nope' })).toBe(false)
 	})
 })
+
+describe('sourceVolume', () => {
+	let self: MockInstance
+
+	const check = (source: string): unknown => {
+		const feedbacks = looseFeedbacks(getAudioFeedbacks(self))
+		return feedbacks['sourceVolume'].callback(feedbackEvent('sourceVolume', { source }), new MockContext())
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedSource(self, 'Mic')
+	})
+
+	test('reports the current volume in dB', () => {
+		self.states.sources.get('Mic')!.inputVolume = -12
+		expect(check('Mic')).toBe(-12)
+	})
+
+	test('falls back to silence for a source with no reported volume', () => {
+		expect(check('Mic')).toBe(-100)
+	})
+
+	test('falls back to silence for an unknown source', () => {
+		expect(check('Nope')).toBe(-100)
+	})
+})

@@ -66,7 +66,12 @@ describe('output state listeners', () => {
 		expect(self.states.streamReconnecting).toBe(true)
 		expect(self.states.streaming).toBe(true)
 		expect(self.setVariableValues).toHaveBeenCalledWith({ streaming: 'Reconnecting' })
-		expect(self.checkFeedbacks).toHaveBeenCalledWith('streaming', 'streamCongestion', 'streamReconnecting')
+		expect(self.checkFeedbacks).toHaveBeenCalledWith(
+			'streaming',
+			'streamCongestion',
+			'streamCongestionLevel',
+			'streamReconnecting',
+		)
 	})
 
 	test('StreamStateChanged RECONNECTED clears reconnecting state', () => {

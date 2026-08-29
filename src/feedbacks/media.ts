@@ -16,6 +16,8 @@ export type MediaFeedbackSchemas = {
 			blinkingEnabled: boolean
 		}
 	}
+	mediaProgress: { type: 'value'; options: { source: string } }
+	mediaTimeRemaining: { type: 'value'; options: { source: string } }
 }
 
 export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions<MediaFeedbackSchemas> {
@@ -95,6 +97,32 @@ export function getMediaFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					}
 				}
 				return false
+			},
+		},
+
+		mediaProgress: {
+			type: 'value',
+			name: 'Media - Playback Progress (%)',
+			description: 'How far through a media source playback is, as a percentage, for use with a gauge',
+			options: [choiceDropdown(self, 'mediaSource', { id: 'source', label: 'Media Source' })],
+			callback: (feedback) => {
+				const source = self.obsState.findSourceByName(feedback.options.source)
+				const duration = source?.mediaDuration ?? 0
+				if (duration <= 0) return 0
+				const progress = ((source?.mediaCursor ?? 0) / duration) * 100
+				return Math.min(100, Math.max(0, Math.round(progress)))
+			},
+		},
+
+		mediaTimeRemaining: {
+			type: 'value',
+			name: 'Media - Remaining Time (seconds)',
+			description: 'The remaining playback time of a media source, in seconds',
+			options: [choiceDropdown(self, 'mediaSource', { id: 'source', label: 'Media Source' })],
+			callback: (feedback) => {
+				const source = self.obsState.findSourceByName(feedback.options.source)
+				const remaining = (source?.mediaDuration ?? 0) - (source?.mediaCursor ?? 0)
+				return remaining > 0 ? Math.round(remaining / 1000) : 0
 			},
 		},
 	}

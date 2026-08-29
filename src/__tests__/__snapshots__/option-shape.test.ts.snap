@@ -2311,6 +2311,36 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "number",
     },
   ],
+  "mediaProgress": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+  ],
+  "mediaTimeRemaining": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+  ],
   "media_playing": [
     {
       "allowCustom": true,
@@ -2676,6 +2706,21 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "dropdown",
     },
   ],
+  "sourceVolume": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
   "streamCongestion": [
     {
       "default": 4738648,
@@ -2702,6 +2747,7 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "colorpicker",
     },
   ],
+  "streamCongestionLevel": [],
   "streamReconnecting": [],
   "streaming": [],
   "studioMode": [],

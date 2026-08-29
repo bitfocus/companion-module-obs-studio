@@ -6,6 +6,7 @@ import {
 } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
+import { validName } from '../utils.js'
 import {
 	baseStyle,
 	generateSlug,
@@ -36,6 +37,7 @@ export function getAudioPresets(self: OBSInstance): {
 			volDown: `audio_${slug}_volDown`,
 			monitor: `audio_${slug}_monitor`,
 			meter: `audio_${slug}_meter`,
+			level: `audio_${slug}_level`,
 			track1: `audio_${slug}_track1`,
 			unity: `audio_${slug}_unity`,
 		}
@@ -188,6 +190,79 @@ export function getAudioPresets(self: OBSInstance): {
 			],
 		}
 
+		// Volume readout: a fader-style gauge where the host can draw it, otherwise the variable as text.
+		presets[ids.level] = {
+			type: 'alternatives',
+			variants: [
+				{
+					type: 'layered',
+					name: 'Volume Level',
+					canvas: { decoration: ButtonGraphicsDecorationType.None },
+					localVariables: [
+						{
+							variableType: 'feedback',
+							variableName: 'volume',
+							feedbackId: 'sourceVolume',
+							options: { source: value },
+							headline: 'Volume (dB)',
+						},
+					],
+					elements: [
+						{
+							type: 'box',
+							id: 'background',
+							name: 'Background',
+							x: 0,
+							y: 0,
+							width: 100,
+							height: 100,
+							color: Style.idleBg,
+						},
+						{
+							type: 'text',
+							id: 'label',
+							name: 'Label',
+							x: 4,
+							y: 8,
+							width: 92,
+							height: 40,
+							text: `${source.label}\n$(local:volume) dB`,
+							fontsize: 100,
+							fontsizeAllowShrink: true,
+							color: Style.idleFg,
+							halign: 'center',
+							valign: 'center',
+						},
+						{
+							type: 'gauge',
+							id: 'fader',
+							name: 'Fader',
+							x: 8,
+							y: 62,
+							width: 84,
+							height: 20,
+							orientation: 'horizontal',
+							value: { value: '$(local:volume)', isExpression: true },
+							min: -60,
+							max: 0,
+							fillEnabled: true,
+							trackStyle: 'dimmed',
+							stops: [{ value: -60, color: Style.active, gradient: false }],
+						},
+					],
+					steps: [{ down: [], up: [] }],
+					feedbacks: [],
+				},
+				{
+					type: 'simple',
+					name: 'Volume Level',
+					style: baseStyle({ text: `${source.label}\n$(obs:volume_${validName(sourceId)}) dB` }),
+					steps: [{ down: [], up: [] }],
+					feedbacks: [],
+				},
+			],
+		}
+
 		presets[ids.track1] = {
 			type: 'simple',
 			name: 'Toggle Track 1',
@@ -224,7 +299,7 @@ export function getAudioPresets(self: OBSInstance): {
 			type: 'simple',
 			name: source.label,
 			keywords: [source.label, 'audio', 'mute', 'volume', 'monitor', 'track'],
-			presets: [ids.mute, ids.volUp, ids.volDown, ids.unity, ids.monitor, ids.track1, ids.meter],
+			presets: [ids.mute, ids.volUp, ids.volDown, ids.unity, ids.monitor, ids.track1, ids.meter, ids.level],
 		})
 	}
 

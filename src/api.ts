@@ -664,7 +664,7 @@ export class OBSApi {
 			const streamingState = utils.getStreamingState(this.self.states)
 
 			if (streamingChanged) this.self.checkFeedbacks('streaming')
-			if (congestionChanged) this.self.checkFeedbacks('streamCongestion')
+			if (congestionChanged) this.self.checkFeedbacks('streamCongestion', 'streamCongestionLevel')
 			this.self.setVariableValues({
 				streaming: utils.getOBSStreamingStateLabel(streamingState),
 				stream_timecode: timecode,
@@ -906,7 +906,14 @@ export class OBSApi {
 			this.processSourceDataBatchResponses(entries)
 		}
 
-		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'audio_monitor_type')
+		this.self.checkFeedbacks(
+			'scene_item_previewed',
+			'scene_item_active_in_scene',
+			'audio_muted',
+			'volume',
+			'sourceVolume',
+			'audio_monitor_type',
+		)
 		this.reconcileMediaPoll()
 	}
 
@@ -1165,7 +1172,7 @@ export class OBSApi {
 			allValues.current_media_time_remaining = currentMedia.map((v) => v.remaining)
 
 			this.self.setVariableValues(allValues)
-			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining')
+			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining', 'mediaProgress', 'mediaTimeRemaining')
 		}
 	}
 

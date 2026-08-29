@@ -33,6 +33,37 @@ describe('feedbacks', () => {
 		expect(unnamed).toEqual([])
 	})
 
+	// Feedback ids are plain strings at the `checkFeedbacks` call sites, so a renamed or mistyped id
+	// silently becomes a no-op recheck. Catch that here rather than in the field.
+	test('every id passed to checkFeedbacks exists', async () => {
+		const { readFile, readdir } = await import('node:fs/promises')
+		const { join } = await import('node:path')
+
+		const sourceFiles: string[] = []
+		const walk = async (dir: string): Promise<void> => {
+			for (const entry of await readdir(dir, { withFileTypes: true })) {
+				const path = join(dir, entry.name)
+				if (entry.isDirectory()) {
+					if (entry.name !== '__tests__' && entry.name !== 'node_modules') await walk(path)
+				} else if (entry.name.endsWith('.ts')) {
+					sourceFiles.push(path)
+				}
+			}
+		}
+		await walk(join(import.meta.dirname, '..'))
+
+		const unknown: string[] = []
+		for (const file of sourceFiles) {
+			const contents = await readFile(file, 'utf8')
+			for (const call of contents.matchAll(/checkFeedbacks\(([^)]*)\)/gs)) {
+				for (const quoted of call[1].matchAll(/'([^']+)'/g)) {
+					if (!FEEDBACK_IDS.includes(quoted[1])) unknown.push(`${file} -> ${quoted[1]}`)
+				}
+			}
+		}
+		expect(unknown).toEqual([])
+	})
+
 	describe('every feedback callback runs without throwing and returns a valid shape', () => {
 		test.each(FEEDBACK_IDS)('%s', async (id) => {
 			const def = feedbacks[id]

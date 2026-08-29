@@ -2,6 +2,7 @@ import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { Style, styleActive, styleProgram, styleWarn } from '../presets/style.js'
 import { OBSRecordingState } from '../types.js'
+import { CONGESTION_GOOD, CONGESTION_MEDIOCRE } from '../constants.js'
 import { choiceDropdown } from '../actions/options.js'
 
 export type OutputFeedbackSchemas = {
@@ -15,6 +16,7 @@ export type OutputFeedbackSchemas = {
 		type: 'advanced'
 		options: { colorNoStream: number; colorLow: number; colorMedium: number; colorHigh: number }
 	}
+	streamCongestionLevel: { type: 'value'; options: Record<string, never> }
 }
 
 export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions<OutputFeedbackSchemas> {
@@ -91,7 +93,8 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		streamCongestion: {
 			type: 'advanced',
 			name: 'Streaming - Stream Congestion',
-			description: 'Change the style of the button to show stream congestion',
+			description:
+				'Change the style of the button to show stream congestion. Prefer the value feedback "Streaming - Stream Congestion Level" with a gauge where the button supports it.',
 			affectedProperties: ['bgcolor'],
 			options: [
 				{
@@ -123,14 +126,26 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				if (self.states.streaming === false) {
 					return { bgcolor: feedback.options.colorNoStream }
 				} else {
-					if (self.states.streamCongestion > 0.8) {
+					if (self.states.streamCongestion > CONGESTION_MEDIOCRE) {
 						return { bgcolor: feedback.options.colorHigh }
-					} else if (self.states.streamCongestion > 0.4) {
+					} else if (self.states.streamCongestion > CONGESTION_GOOD) {
 						return { bgcolor: feedback.options.colorMedium }
 					} else {
 						return { bgcolor: feedback.options.colorLow }
 					}
 				}
+			},
+		},
+
+		streamCongestionLevel: {
+			type: 'value',
+			name: 'Streaming - Stream Congestion Level',
+			description:
+				'The current stream congestion, from 0 to 100, for use with a gauge or bar meter. OBS treats 0 as excellent, up to 33 as good, up to 67 as mediocre, and above that as bad. Reads 0 when not streaming',
+			options: [],
+			callback: () => {
+				if (!self.states.streaming) return 0
+				return Math.round(self.states.streamCongestion * 100)
 			},
 		},
 	}

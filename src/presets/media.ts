@@ -1,7 +1,12 @@
-import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
+import {
+	ButtonGraphicsDecorationType,
+	CompanionPresetDefinitions,
+	CompanionPresetGroup,
+	CompanionPresetSection,
+} from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, generateSlug, styleActive, styleCaution } from './style.js'
+import { baseStyle, generateSlug, Style, styleActive, styleCaution } from './style.js'
 import { validName } from '../utils.js'
 
 /** Media presets: play/pause, time-remaining, and current media controls, grouped by source. */
@@ -75,22 +80,117 @@ export function getMediaPresets(self: OBSInstance): {
 			feedbacks: [{ feedbackId: 'media_playing', options: { source: value }, style: styleActive() }],
 		}
 
+		// Alternatives: a progress gauge where the host can draw it, otherwise the flat timecode button.
 		presets[ids.status] = {
-			type: 'simple',
-			name: 'Media Time Remaining',
-			style: baseStyle({ text: `${source.label}\n$(obs:media_time_remaining_${varName})` }),
-			steps: [{ down: [], up: [] }],
-			feedbacks: [
+			type: 'alternatives',
+			variants: [
 				{
-					feedbackId: 'media_source_time_remaining',
-					options: {
-						source: value,
-						rtThreshold: 20,
-						onlyIfSourceIsOnProgram: false,
-						onlyIfSourceIsPlaying: true,
-						blinkingEnabled: false,
-					},
-					style: styleCaution(),
+					type: 'layered',
+					name: 'Media Time Remaining',
+					canvas: { decoration: ButtonGraphicsDecorationType.None },
+					localVariables: [
+						{
+							variableType: 'feedback',
+							variableName: 'progress',
+							feedbackId: 'mediaProgress',
+							options: { source: value },
+							headline: 'Playback progress (%)',
+						},
+					],
+					elements: [
+						{
+							type: 'box',
+							id: 'background',
+							name: 'Background',
+							x: 0,
+							y: 0,
+							width: 100,
+							height: 100,
+							color: Style.idleBg,
+						},
+						{
+							type: 'gauge',
+							id: 'progress',
+							name: 'Progress',
+							x: 8,
+							y: 70,
+							width: 84,
+							height: 16,
+							orientation: 'horizontal',
+							value: { value: '$(local:progress)', isExpression: true },
+							min: 0,
+							max: 100,
+							fillEnabled: true,
+							trackStyle: 'dimmed',
+							trackAmount: 33,
+							stops: [{ value: 0, color: Style.active, gradient: false }],
+							markerEnabled: true,
+						},
+						{
+							type: 'text',
+							id: 'timeRemaining',
+							name: 'Time Remaining',
+							x: 8,
+							y: 45,
+							width: 84,
+							height: 25,
+							text: `-$(obs:media_time_remaining_${varName})`,
+							fontsize: 80,
+							fontsizeAllowShrink: true,
+							color: Style.idleFg,
+							halign: 'center',
+							valign: 'center',
+						},
+						{
+							type: 'text',
+							id: 'label',
+							name: 'Media Name',
+							x: 0,
+							y: 0,
+							width: 100,
+							height: 45,
+							text: `${source.label}`,
+							fontsize: 50,
+							weight: 'bold',
+							fontsizeAllowShrink: true,
+							color: Style.idleFg,
+							halign: 'center',
+							valign: 'center',
+						},
+					],
+					steps: [{ down: [], up: [] }],
+					feedbacks: [
+						{
+							feedbackId: 'media_source_time_remaining',
+							options: {
+								source: value,
+								rtThreshold: 20,
+								onlyIfSourceIsOnProgram: false,
+								onlyIfSourceIsPlaying: true,
+								blinkingEnabled: false,
+							},
+							styleOverrides: [{ elementId: 'label', elementProperty: 'color', override: Style.caution }],
+						},
+					],
+				},
+				{
+					type: 'simple',
+					name: 'Media Time Remaining',
+					style: baseStyle({ text: `${source.label}\n$(obs:media_time_remaining_${varName})` }),
+					steps: [{ down: [], up: [] }],
+					feedbacks: [
+						{
+							feedbackId: 'media_source_time_remaining',
+							options: {
+								source: value,
+								rtThreshold: 20,
+								onlyIfSourceIsOnProgram: false,
+								onlyIfSourceIsPlaying: true,
+								blinkingEnabled: false,
+							},
+							style: styleCaution(),
+						},
+					],
 				},
 			],
 		}

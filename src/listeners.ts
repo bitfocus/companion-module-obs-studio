@@ -197,7 +197,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			self.obs.updateSourceVolume(source, data.inputVolumeDb)
-			self.checkFeedbacks('volume')
+			self.checkFeedbacks('volume', 'sourceVolume')
 			self.sendToActionRecorder({
 				actionId: 'volume',
 				options: { source: source.sourceName, mode: 'set', unit: 'db', value: source.inputVolume, duration: 0 },
@@ -444,7 +444,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		const streamingState = utils.getStreamingState(self.states)
 		self.setVariableValues({ streaming: utils.getOBSStreamingStateLabel(streamingState) })
-		self.checkFeedbacks('streaming', 'streamCongestion', 'streamReconnecting')
+		self.checkFeedbacks('streaming', 'streamCongestion', 'streamCongestionLevel', 'streamReconnecting')
 		if (self.states.streaming === false) {
 			const blank = utils.splitTimecode(DEFAULT_TIMECODE)
 			self.setVariableValues({
