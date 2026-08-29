@@ -1,7 +1,7 @@
 import { CompanionPresetDefinitions, CompanionPresetGroup, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, generateSlug, styleActive, styleAlert } from './style.js'
+import { baseStyle, generateSlug, styleActive, styleAlert, stylePreview } from './style.js'
 
 /** Audio presets: per-source controls for volume, mute, and monitoring, grouped by source. */
 export function getAudioPresets(self: OBSInstance): {
@@ -88,18 +88,7 @@ export function getAudioPresets(self: OBSInstance): {
 			name: 'Toggle Monitoring',
 			style: baseStyle({ text: `${source.label}\nMonitor` }),
 			steps: [{ down: [{ actionId: 'set_audio_monitor', options: { source: value, monitor: 'toggle' } }], up: [] }],
-			feedbacks: [{ feedbackId: 'audio_monitor_type', options: { source: value }, style: styleActive() }],
-		}
-
-		presets[ids.status] = {
-			type: 'simple',
-			name: 'Audio Status',
-			style: baseStyle({ text: source.label }),
-			steps: [{ down: [], up: [] }],
-			feedbacks: [
-				{ feedbackId: 'audioPeaking', options: { source: value, threshold: -20 }, style: styleActive() },
-				{ feedbackId: 'audio_muted', options: { source: value }, style: styleAlert() },
-			],
+			feedbacks: [{ feedbackId: 'audio_monitor_type', options: { source: value }, style: stylePreview() }],
 		}
 
 		presets[ids.meter] = {

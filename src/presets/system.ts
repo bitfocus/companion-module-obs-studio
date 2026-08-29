@@ -86,7 +86,7 @@ export function getSystemPresets(_self: OBSInstance): {
 		type: 'simple',
 		name: 'Video Settings (Resolution / FPS)',
 		style: baseStyle({
-			text: 'Canvas:\n$(obs:base_resolution)\nOutput:\n$(obs:output_resolution)\n$(obs:target_framerate) fps',
+			text: 'Canvas:\n$(obs:base_resolution)\nOutput:\n$(obs:output_resolution)\n$(obs:target_framerate)',
 		}),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
