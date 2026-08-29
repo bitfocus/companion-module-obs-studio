@@ -222,7 +222,7 @@ describe('presets', () => {
 		'updateMediaLocalFile',
 		'vendorRequest',
 	]
-	const PRESETLESS_FEEDBACKS = ['audioMeter', 'mediaTimeRemaining', 'scenePrevious', 'vendorEvent']
+	const PRESETLESS_FEEDBACKS = ['audioMeter', 'scenePrevious', 'vendorEvent']
 
 	test('every action and feedback is reachable from a preset, or listed as deliberately not', () => {
 		const usedActions = new Set<string>()

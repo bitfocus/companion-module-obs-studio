@@ -54,6 +54,14 @@ export function getMediaPresets(self: OBSInstance): {
 		feedbacks: [],
 	}
 
+	// Run-out warning on the progress bar: yellow under 20s left, red under 10s. The `> 0` guard keeps
+	// a stopped or unloaded source (remaining 0) from sitting permanently red.
+	const running = '$(local:remaining) > 0'
+	const progressColor =
+		`(${running} && $(local:remaining) <= 10) ? ${Style.program} : ` +
+		`(${running} && $(local:remaining) <= 20) ? ${Style.caution} : ` +
+		`${Style.active}`
+
 	for (const source of self.obsState.mediaSourceList) {
 		const sourceId = String(source.id)
 		const slug = slugFor(sourceId)
@@ -96,6 +104,13 @@ export function getMediaPresets(self: OBSInstance): {
 							options: { source: value },
 							headline: 'Playback progress (%)',
 						},
+						{
+							variableType: 'feedback',
+							variableName: 'remaining',
+							feedbackId: 'mediaTimeRemaining',
+							options: { source: value },
+							headline: 'Time remaining (seconds)',
+						},
 					],
 					elements: [
 						{
@@ -123,7 +138,7 @@ export function getMediaPresets(self: OBSInstance): {
 							fillEnabled: true,
 							trackStyle: 'dimmed',
 							trackAmount: 33,
-							stops: [{ value: 0, color: Style.active, gradient: false }],
+							stops: [{ value: 0, color: { value: progressColor, isExpression: true }, gradient: false }],
 							markerEnabled: true,
 						},
 						{
