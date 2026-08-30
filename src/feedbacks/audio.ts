@@ -12,6 +12,8 @@ export type AudioFeedbackSchemas = {
 	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number } }
 	audioPeakLevel: { type: 'value'; options: { source: string } }
 	sourceVolume: { type: 'value'; options: { source: string } }
+	sourceBalance: { type: 'value'; options: { source: string } }
+	sourceSyncOffset: { type: 'value'; options: { source: string } }
 }
 
 export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitions<AudioFeedbackSchemas> {
@@ -136,6 +138,28 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
 				return self.obsState.findSourceByName(sourceName)?.inputVolume ?? -100
+			},
+		},
+
+		sourceBalance: {
+			type: 'value',
+			name: 'Audio - Balance (%)',
+			description:
+				'The current audio balance of a source, from 0 (full left) to 100 (full right), for use with a gauge',
+			options: [choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' })],
+			callback: (feedback) => {
+				const balance = self.obsState.findSourceByName(feedback.options.source)?.inputAudioBalance
+				return Math.round((balance ?? 0.5) * 100)
+			},
+		},
+
+		sourceSyncOffset: {
+			type: 'value',
+			name: 'Audio - Sync Offset (ms)',
+			description: 'The current audio sync offset of a source, in milliseconds',
+			options: [choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' })],
+			callback: (feedback) => {
+				return self.obsState.findSourceByName(feedback.options.source)?.inputAudioSyncOffset ?? 0
 			},
 		},
 	}

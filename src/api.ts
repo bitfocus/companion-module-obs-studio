@@ -906,7 +906,15 @@ export class OBSApi {
 			this.processSourceDataBatchResponses(entries)
 		}
 
-		this.self.checkFeedbacks('scene_item_active', 'audio_muted', 'volume', 'sourceVolume', 'audio_monitor_type')
+		this.self.checkFeedbacks(
+			'scene_item_active',
+			'audio_muted',
+			'volume',
+			'sourceVolume',
+			'sourceBalance',
+			'sourceSyncOffset',
+			'audio_monitor_type',
+		)
 		this.reconcileMediaPoll()
 	}
 

@@ -25,13 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `replay_buffer_active`, `virtualcam_active`, `studio_mode`, and per-source `tracks_<source>` variables
 - Action Recorder ("Learn") support for actions, to capture current values from OBS
 - Value feedbacks, for use with gauges and other button graphics elements, or bound to a local variable:
-  "Audio - Peak Level (dB)", "Audio - Volume (dB)", "Media - Playback Progress (%)", "Media - Remaining
-  Time (seconds)", and "Streaming - Stream Congestion Level"
+  "Audio - Peak Level (dB)", "Audio - Volume (dB)", "Audio - Balance (%)", "Audio - Sync Offset (ms)",
+  "Media - Playback Progress (%)", "Media - Remaining Time (seconds)", and "Streaming - Stream Congestion
+  Level"
 - "Streaming - Stream Congestion Above" feedback, active while congestion is above a chosen threshold
 - Layered presets, which draw a button from graphics elements rather than a single style, for the audio
   meter, volume level, media time remaining, and stream congestion buttons. Each ships with a simple
   fallback, so hosts that cannot draw layers (such as Bitfocus Buttons) still get a usable button:
-  - Audio meter and volume level draw a gauge for the source's peak level and fader position
+  - Audio meter and volume level draw a gauge for the source's peak level and fader position, and the
+    meter shows mute and monitoring status as icons beneath the source name
+  - "Volume Rotary" adjusts volume by 1 dB per detent on a rotary encoder, with a ring showing the
+    current fader position
+  - "Balance" draws a left/right slider, adjusted 5% per detent on a rotary encoder
+  - "Sync Offset Rotary" nudges the source's sync offset by 1 ms per detent
+  - "Track Status" shows all six mixer tracks on one button, as a square per track that fills while that
+    track is enabled
   - Media time remaining draws a playback progress bar, turning yellow under 20 seconds remaining and red
     under 10
   - Stream congestion draws OBS's four-bar signal indicator, using the same congestion thresholds OBS uses

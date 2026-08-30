@@ -202,6 +202,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			self.obs.updateSourceBalance(source, data.inputAudioBalance)
+			self.checkFeedbacks('sourceBalance')
 			self.sendToActionRecorder({
 				actionId: 'audio_balance',
 				options: { source: source.sourceName, mode: 'set', value: source.inputAudioBalance },
@@ -212,6 +213,7 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		const source = self.states.sources.get(data.inputUuid)
 		if (source) {
 			self.obs.updateSourceSyncOffset(source, data.inputAudioSyncOffset)
+			self.checkFeedbacks('sourceSyncOffset')
 			self.sendToActionRecorder({
 				actionId: 'audio_offset',
 				options: { source: source.sourceName, mode: 'set', value: data.inputAudioSyncOffset },

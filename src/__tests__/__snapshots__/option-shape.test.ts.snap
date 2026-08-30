@@ -2617,6 +2617,36 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "dropdown",
     },
   ],
+  "sourceBalance": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "sourceSyncOffset": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
   "sourceVolume": [
     {
       "allowCustom": true,

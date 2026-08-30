@@ -184,7 +184,13 @@ export function getMediaPresets(self: OBSInstance): {
 								onlyIfSourceIsPlaying: true,
 								blinkingEnabled: false,
 							},
-							styleOverrides: [{ elementId: 'label', elementProperty: 'color', override: Style.caution }],
+							styleOverrides: [
+								{
+									elementId: 'label',
+									elementProperty: 'color',
+									override: { isExpression: false, value: Style.caution },
+								},
+							],
 						},
 					],
 				},

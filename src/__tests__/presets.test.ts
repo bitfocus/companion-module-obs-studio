@@ -68,6 +68,27 @@ describe('presets', () => {
 		expect(missing).toEqual([])
 	})
 
+	// Unlike element properties and options, a style override's value is not accepted in the bare form:
+	// Companion filters overrides on `isExpressionOrValue` and drops the whole feedback when none survive,
+	// so a bare value silently disables the feedback rather than failing loudly.
+	test('every style override value is in the expression-or-value form', () => {
+		const bare: string[] = []
+		for (const [id, preset] of Object.entries(presets)) {
+			for (const variant of buttonVariants(preset)) {
+				if (variant.type !== 'layered') continue
+				for (const feedback of variant.feedbacks ?? []) {
+					for (const override of feedback.styleOverrides ?? []) {
+						const value: unknown = override.override
+						if (!value || typeof value !== 'object' || !('isExpression' in value)) {
+							bare.push(`${id} -> ${override.elementId}.${override.elementProperty}`)
+						}
+					}
+				}
+			}
+		}
+		expect(bare).toEqual([])
+	})
+
 	test('every preset feedback references a feedback that exists', () => {
 		const missing: string[] = []
 		for (const [id, preset] of Object.entries(presets)) {
@@ -211,8 +232,6 @@ describe('presets', () => {
 	// here means a new action shipped without a preset to discover it by.
 	const PRESETLESS_ACTIONS = [
 		'SendStreamCaption',
-		'audio_balance',
-		'audio_offset',
 		'custom_command',
 		'setFilterSettings',
 		'setTextProperties',
@@ -222,7 +241,7 @@ describe('presets', () => {
 		'updateMediaLocalFile',
 		'vendorRequest',
 	]
-	const PRESETLESS_FEEDBACKS = ['scenePrevious', 'vendorEvent']
+	const PRESETLESS_FEEDBACKS = ['scenePrevious', 'sourceSyncOffset', 'vendorEvent', 'volume']
 
 	test('every action and feedback is reachable from a preset, or listed as deliberately not', () => {
 		const usedActions = new Set<string>()
