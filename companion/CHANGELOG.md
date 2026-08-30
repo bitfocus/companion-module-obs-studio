@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Media - Playback Progress (%)", "Media - Remaining Time (seconds)", and "Streaming - Stream Congestion
   Level"
 - "Streaming - Stream Congestion Above" feedback, active while congestion is above a chosen threshold
+- "Restart", "Stop", "Previous" and "Next" presets for each media source, alongside the existing play/pause
+  and scrub buttons
 - Layered presets, which draw a button from graphics elements rather than a single style, for the audio
   meter, volume level, media time remaining, and stream congestion buttons. Each ships with a simple
   fallback, so hosts that cannot draw layers (such as Bitfocus Buttons) still get a usable button:
@@ -40,8 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "Sync Offset Rotary" nudges the source's sync offset by 1 ms per detent
   - "Track Status" shows all six mixer tracks on one button, as a square per track that fills while that
     track is enabled
-  - Media time remaining draws a playback progress bar, turning yellow under 20 seconds remaining and red
-    under 10
+  - Media time remaining draws a playback progress bar with elapsed and remaining times, turning yellow
+    under 20 seconds remaining and red under 10
+  - "Play / Pause Media" shows the source's transport state as a play, pause or stop icon
+  - "Scrub Rotary" jogs a media source 5 seconds per detent, with a ring showing playback progress
   - Stream congestion draws OBS's four-bar signal indicator, using the same congestion thresholds OBS uses
     for its own status bar icon
 

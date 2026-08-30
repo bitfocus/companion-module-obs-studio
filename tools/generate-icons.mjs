@@ -135,11 +135,23 @@ const headband = arc(32, 30, 19, 5, 180, 360)
 const earCups = union(roundedRect(9, 26, 11, 20, 5), roundedRect(44, 26, 11, 20, 5))
 const headphones = union(headband, earCups)
 
+// Media transport state, drawn to the same optical weight as the mixer glyphs.
+const play = polygon([
+	[20, 12],
+	[52, 32],
+	[20, 52],
+])
+const pause = union(roundedRect(18, 12, 11, 40, 3), roundedRect(35, 12, 11, 40, 3))
+const stop = roundedRect(17, 15, 34, 34, 4)
+
 const icons = {
 	speaker: { shape: union(speakerBody, speakerWaves), color: WHITE },
 	speakerMuted: { shape: union(speakerBody, cross(45, 32, 8, 5)), color: RED },
 	headphones: { shape: headphones, color: WHITE },
 	headphonesOff: { shape: union(headphones, cross(32, 34, 24, 5)), color: GRAY },
+	play: { shape: play, color: WHITE },
+	pause: { shape: pause, color: WHITE },
+	stop: { shape: stop, color: GRAY },
 }
 
 const entries = Object.entries(icons).map(([name, { shape, color }]) => {
