@@ -29,7 +29,6 @@ describe('scene change listeners', () => {
 		expect(self.states.previousScene).toBe('Scene A')
 		expect(self.setVariableValues).toHaveBeenCalledWith({ scene_active: 'Scene B', scene_previous: 'Scene A' })
 		expect(self.checkFeedbacks).toHaveBeenCalledWith(
-			'scene_active',
 			'sceneProgram',
 			'scenePrevious',
 			'scene_item_active',
@@ -68,7 +67,7 @@ describe('output state listeners', () => {
 		expect(self.setVariableValues).toHaveBeenCalledWith({ streaming: 'Reconnecting' })
 		expect(self.checkFeedbacks).toHaveBeenCalledWith(
 			'streaming',
-			'streamCongestion',
+			'streamCongestionAbove',
 			'streamCongestionLevel',
 			'streamReconnecting',
 		)

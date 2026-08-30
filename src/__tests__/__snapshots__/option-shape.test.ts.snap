@@ -2095,31 +2095,6 @@ exports[`option shape > action options are unchanged 1`] = `
 
 exports[`option shape > feedback options are unchanged 1`] = `
 {
-  "audioMeter": [
-    {
-      "allowCustom": true,
-      "choices": [
-        {
-          "id": "Mic",
-          "label": "Mic",
-        },
-      ],
-      "default": "Mic",
-      "id": "source",
-      "label": "Source name",
-      "type": "dropdown",
-    },
-    {
-      "clampValues": true,
-      "default": -60,
-      "id": "threshold",
-      "label": "Threshold (dB)",
-      "max": -21,
-      "min": -100,
-      "tooltip": "Minimum value (between -100dB and -21dB) for the feedback to turn green. Color defaults to black for values below this.",
-      "type": "number",
-    },
-  ],
   "audioPeakLevel": [
     {
       "allowCustom": true,
@@ -2488,70 +2463,6 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "dropdown",
     },
   ],
-  "scene_active": [
-    {
-      "choices": [
-        {
-          "id": "programAndPreview",
-          "label": "Program and Preview",
-        },
-        {
-          "id": "program",
-          "label": "Program Only",
-        },
-        {
-          "id": "preview",
-          "label": "Preview Only",
-        },
-      ],
-      "default": "programAndPreview",
-      "disableAutoExpression": true,
-      "id": "mode",
-      "label": "Mode",
-      "type": "dropdown",
-    },
-    {
-      "allowCustom": true,
-      "choices": [
-        {
-          "id": "Scene B",
-          "label": "Scene B",
-        },
-        {
-          "id": "Scene A",
-          "label": "Scene A",
-        },
-      ],
-      "default": "Scene B",
-      "id": "scene",
-      "label": "Scene",
-      "type": "dropdown",
-    },
-    {
-      "default": 14803942,
-      "id": "fg",
-      "label": "Foreground color (Program)",
-      "type": "colorpicker",
-    },
-    {
-      "default": 13107200,
-      "id": "bg",
-      "label": "Background color (Program)",
-      "type": "colorpicker",
-    },
-    {
-      "default": 14803942,
-      "id": "fg_preview",
-      "label": "Foreground color (Preview)",
-      "type": "colorpicker",
-    },
-    {
-      "default": 3253041,
-      "id": "bg_preview",
-      "label": "Background color (Preview)",
-      "type": "colorpicker",
-    },
-  ],
   "scene_collection_active": [
     {
       "allowCustom": true,
@@ -2721,30 +2632,15 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "type": "dropdown",
     },
   ],
-  "streamCongestion": [
+  "streamCongestionAbove": [
     {
-      "default": 4738648,
-      "id": "colorNoStream",
-      "label": "Background color (No Stream)",
-      "type": "colorpicker",
-    },
-    {
-      "default": 3253041,
-      "id": "colorLow",
-      "label": "Background color (Low Congestion)",
-      "type": "colorpicker",
-    },
-    {
-      "default": 16737792,
-      "id": "colorMedium",
-      "label": "Background color (Medium Congestion)",
-      "type": "colorpicker",
-    },
-    {
-      "default": 13107200,
-      "id": "colorHigh",
-      "label": "Background color (High Congestion)",
-      "type": "colorpicker",
+      "clampValues": true,
+      "default": 67,
+      "id": "threshold",
+      "label": "Congestion threshold (0-100)",
+      "max": 100,
+      "min": 0,
+      "type": "number",
     },
   ],
   "streamCongestionLevel": [],

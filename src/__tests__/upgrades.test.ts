@@ -7,6 +7,7 @@ import type {
 } from '@companion-module/base'
 import upgrades from '../upgrades.js'
 import { ObsAudioMonitorType } from '../types.js'
+import { Color } from '../utils.js'
 import type { LegacyModuleConfig, ModuleConfig, ModuleSecrets } from '../types.js'
 
 const context = {} as CompanionUpgradeContext<ModuleConfig>
@@ -14,12 +15,13 @@ const context = {} as CompanionUpgradeContext<ModuleConfig>
 function makeProps(
 	config: ModuleConfig | null,
 	actions: CompanionMigrationAction[] = [],
+	feedbacks: CompanionMigrationFeedback[] = [],
 ): CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets> {
 	return {
 		config,
 		secrets: null,
 		actions,
-		feedbacks: [],
+		feedbacks,
 	}
 }
 
@@ -407,5 +409,78 @@ describe('v4_0_0 audio monitoring migration', () => {
 		const result = v4_0_0(context, makeProps(null, [action]))
 
 		expect(result.updatedActions).toHaveLength(0)
+	})
+})
+
+describe('v4_0_0 advanced feedback conversion', () => {
+	const makeFeedback = (feedbackId: string, options: Record<string, unknown>): CompanionMigrationFeedback => ({
+		id: 'fb1',
+		controlId: 'ctl1',
+		feedbackId,
+		options: options as CompanionMigrationFeedback['options'],
+	})
+
+	test('converts a program scene_active to the program boolean, keeping its colors', () => {
+		const feedback = makeFeedback('scene_active', {
+			mode: 'program',
+			scene: 'Scene A',
+			fg: 1,
+			bg: 2,
+			fg_preview: 3,
+			bg_preview: 4,
+		})
+		const result = v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(result.updatedFeedbacks).toEqual([feedback])
+		expect(feedback.feedbackId).toBe('sceneProgram')
+		expect(feedback.style).toEqual({ color: 1, bgcolor: 2 })
+		expect(feedback.options).toEqual({ scene: 'Scene A' })
+	})
+
+	test('converts a preview-only scene_active to the preview boolean', () => {
+		const feedback = makeFeedback('scene_active', { mode: 'preview', scene: 'Scene B', fg_preview: 3, bg_preview: 4 })
+		v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(feedback.feedbackId).toBe('scenePreview')
+		expect(feedback.style).toEqual({ color: 3, bgcolor: 4 })
+	})
+
+	test('converts a programAndPreview scene_active to the program boolean', () => {
+		const feedback = makeFeedback('scene_active', { mode: 'programAndPreview', scene: 'Scene A', fg: 1, bg: 2 })
+		v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(feedback.feedbackId).toBe('sceneProgram')
+		expect(feedback.style).toEqual({ color: 1, bgcolor: 2 })
+	})
+
+	test('converts audioMeter to audioPeaking, keeping source and threshold', () => {
+		const feedback = makeFeedback('audioMeter', { source: 'Mic', threshold: -50 })
+		v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(feedback.feedbackId).toBe('audioPeaking')
+		expect(feedback.options).toEqual({ source: 'Mic', threshold: -50 })
+		expect(feedback.style).toEqual({ color: Color.White, bgcolor: Color.Green })
+	})
+
+	test('converts streamCongestion to the boolean, keeping the high-congestion color', () => {
+		const feedback = makeFeedback('streamCongestion', {
+			colorNoStream: 1,
+			colorLow: 2,
+			colorMedium: 3,
+			colorHigh: 4,
+		})
+		v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(feedback.feedbackId).toBe('streamCongestionAbove')
+		expect(feedback.style).toEqual({ color: Color.White, bgcolor: 4 })
+		expect(feedback.options).toEqual({ threshold: 67 })
+	})
+
+	test('leaves feedbacks it does not convert alone', () => {
+		const feedback = makeFeedback('streaming', {})
+		const result = v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(result.updatedFeedbacks).toEqual([])
+		expect(feedback.feedbackId).toBe('streaming')
 	})
 })

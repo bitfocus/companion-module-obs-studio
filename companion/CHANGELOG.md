@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `source_active` variable for each source, reporting whether it is active
 - `replay_buffer_active`, `virtualcam_active`, `studio_mode`, and per-source `tracks_<source>` variables
 - Action Recorder ("Learn") support for actions, to capture current values from OBS
+- Value feedbacks, for use with gauges and other button graphics elements, or bound to a local variable:
+  "Audio - Peak Level (dB)", "Audio - Volume (dB)", "Media - Playback Progress (%)", "Media - Remaining
+  Time (seconds)", and "Streaming - Stream Congestion Level"
+- "Streaming - Stream Congestion Above" feedback, active while congestion is above a chosen threshold
+- Layered presets, which draw a button from graphics elements rather than a single style, for the audio
+  meter, volume level, media time remaining, and stream congestion buttons. Each ships with a simple
+  fallback, so hosts that cannot draw layers (such as Bitfocus Buttons) still get a usable button:
+  - Audio meter and volume level draw a gauge for the source's peak level and fader position
+  - Media time remaining draws a playback progress bar, turning yellow under 20 seconds remaining and red
+    under 10
+  - Stream congestion draws OBS's four-bar signal indicator, using the same congestion thresholds OBS uses
+    for its own status bar icon
 
 ### Changed
 
@@ -35,6 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Audio - Monitor Type") is simply active while monitoring is enabled, matching the audio mixer in OBS
   32.1 and newer. Existing actions and feedbacks are converted automatically, with feedbacks that matched
   "Off" becoming inverted
+
+### Deprecated
+
+- The "advanced" feedbacks have been replaced by boolean and value feedbacks. A best effort is made to convert any existing affected feedbacks:
+  - "Scene - Preview / Program" becomes "Scene - Program" (or "Scene - Preview" if it was set to preview
+    only). A feedback set to "Program and Preview" can only carry over the program
+    half, so add a "Scene - Preview" feedback alongside it if you want both
+  - "Audio - Meter" becomes "Audio - Peaking", using the same source and threshold. For metering,
+    use the new "Audio - Peak Level (dB)" value feedback
+  - "Streaming - Stream Congestion" becomes "Streaming - Stream Congestion Above", keeping the color that
+    was chosen for high congestion. For the full range, use the new "Streaming - Stream Congestion Level"
+    value feedback
 
 ### Fixed
 

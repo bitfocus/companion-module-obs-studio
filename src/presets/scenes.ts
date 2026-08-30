@@ -1,7 +1,7 @@
 import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, styleProgram, stylePreview, Style, Color } from './style.js'
+import { baseStyle, styleProgram, stylePreview } from './style.js'
 
 /** Scene presets: program, preview, and smart switch template presets. */
 export function getScenePresets(self: OBSInstance): {
@@ -67,18 +67,16 @@ export function getScenePresets(self: OBSInstance): {
 				up: [],
 			},
 		],
-		// scene_active colors live in options because it is an advanced feedback.
 		feedbacks: [
 			{
-				feedbackId: 'scene_active',
-				options: {
-					scene: { value: '$(local:scene)', isExpression: true },
-					mode: 'programAndPreview',
-					fg: Color.White,
-					bg: Style.program,
-					fg_preview: Color.White,
-					bg_preview: Style.preview,
-				},
+				feedbackId: 'scenePreview',
+				options: { scene: { value: '$(local:scene)', isExpression: true } },
+				style: stylePreview(),
+			},
+			{
+				feedbackId: 'sceneProgram',
+				options: { scene: { value: '$(local:scene)', isExpression: true } },
+				style: styleProgram(),
 			},
 		],
 	}

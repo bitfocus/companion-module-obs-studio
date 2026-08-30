@@ -152,8 +152,8 @@ describe('connectOBS', () => {
 	test('subscribes to volume meters when a meter feedback is already on a button', async () => {
 		// Base 2.1 has no subscribe hook — the feedback registers itself from its callback.
 		const feedbacks = looseFeedbacks(getAudioFeedbacks(self))
-		void feedbacks['audioMeter'].callback(
-			feedbackEvent('audioMeter', { source: 'Mic', threshold: -60 }),
+		void feedbacks['audioPeaking'].callback(
+			feedbackEvent('audioPeaking', { source: 'Mic', threshold: -60 }),
 			new MockContext(),
 		)
 

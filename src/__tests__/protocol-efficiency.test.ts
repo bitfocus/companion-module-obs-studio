@@ -265,7 +265,7 @@ describe('poll feedback gating', () => {
 
 		self.socket.call.mockResolvedValue(streamResponse(true, 0.9))
 		await self.obs.getStreamStatus()
-		expect(self.checkFeedbacks).toHaveBeenCalledWith('streamCongestion', 'streamCongestionLevel')
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('streamCongestionAbove', 'streamCongestionLevel')
 		expect(self.checkFeedbacks).not.toHaveBeenCalledWith('streaming')
 
 		self.checkFeedbacks.mockClear()

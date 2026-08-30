@@ -1,56 +1,40 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { getSceneFeedbacks } from '../../feedbacks/scenes.js'
-import { Color } from '../../utils.js'
 import { makeMockInstance, seedScene, type MockInstance } from '../mock/instance.js'
 import { feedbackEvent } from '../mock/events.js'
 import { MockContext } from '../mock-context.js'
 import { looseFeedbacks } from '../loose-definitions.js'
 
-describe('scene_active feedback', () => {
+describe('scene program / preview feedbacks', () => {
 	let self: MockInstance
+
+	const check = (id: 'sceneProgram' | 'scenePreview', scene: string): unknown => {
+		const feedbacks = looseFeedbacks(getSceneFeedbacks(self))
+		return feedbacks[id].callback(feedbackEvent(id, { scene }), new MockContext())
+	}
 
 	beforeEach(() => {
 		self = makeMockInstance()
 		seedScene(self, 'Scene A')
 		seedScene(self, 'Scene B')
-	})
-
-	test('returns program colors when the scene is on program', () => {
 		self.states.programScene = 'Scene A'
-		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
-
-		const result = fb.callback(
-			feedbackEvent('scene_active', { mode: 'program', scene: 'Scene A', fg: Color.White, bg: Color.Red }),
-			new MockContext(),
-		)
-		expect(result).toEqual({ color: Color.White, bgcolor: Color.Red })
-	})
-
-	test('returns preview colors when the scene is on preview in studio mode', () => {
 		self.states.previewScene = 'Scene B'
 		self.states.studioMode = true
-		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
-
-		const result = fb.callback(
-			feedbackEvent('scene_active', {
-				mode: 'preview',
-				scene: 'Scene B',
-				fg_preview: Color.White,
-				bg_preview: Color.Green,
-			}),
-			new MockContext(),
-		)
-		expect(result).toEqual({ color: Color.White, bgcolor: Color.Green })
 	})
 
-	test('returns empty object when the scene is neither program nor preview', () => {
-		self.states.programScene = 'Scene A'
-		const fb = looseFeedbacks(getSceneFeedbacks(self))['scene_active']
+	test('sceneProgram is true for the program scene', () => {
+		expect(check('sceneProgram', 'Scene A')).toBe(true)
+	})
 
-		const result = fb.callback(
-			feedbackEvent('scene_active', { mode: 'programAndPreview', scene: 'Scene B' }),
-			new MockContext(),
-		)
-		expect(result).toEqual({})
+	test('sceneProgram is false for a scene that is not on program', () => {
+		expect(check('sceneProgram', 'Scene B')).toBe(false)
+	})
+
+	test('scenePreview is true for the preview scene', () => {
+		expect(check('scenePreview', 'Scene B')).toBe(true)
+	})
+
+	test('scenePreview is false for a scene that is not on preview', () => {
+		expect(check('scenePreview', 'Scene A')).toBe(false)
 	})
 })

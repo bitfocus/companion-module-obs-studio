@@ -1,7 +1,7 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, styleAlert } from '../presets/style.js'
-import { Color, isMonitoringEnabled } from '../utils.js'
+import { isMonitoringEnabled } from '../utils.js'
 import { AUDIO_TRACK_CHOICES, choiceDropdown } from '../actions/options.js'
 
 export type AudioFeedbackSchemas = {
@@ -10,7 +10,6 @@ export type AudioFeedbackSchemas = {
 	audio_track: { type: 'boolean'; options: { source: string; track: string } }
 	volume: { type: 'boolean'; options: { source: string; volume: number } }
 	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number } }
-	audioMeter: { type: 'advanced'; options: { source: string; threshold: number } }
 	audioPeakLevel: { type: 'value'; options: { source: string } }
 	sourceVolume: { type: 'value'; options: { source: string } }
 }
@@ -112,45 +111,6 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					return true
 				}
 				return false
-			},
-			unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
-		},
-
-		audioMeter: {
-			type: 'advanced',
-			name: 'Audio - Meter',
-			description:
-				'Change the style of the button to show colors based on peak values, similar to the OBS audio meter. Prefer the value feedback "Audio - Peak Level (dB)" with a gauge where the button supports it.',
-			affectedProperties: ['bgcolor'],
-			options: [
-				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source name' }),
-				{
-					type: 'number',
-					label: 'Threshold (dB)',
-					tooltip:
-						'Minimum value (between -100dB and -21dB) for the feedback to turn green. Color defaults to black for values below this.',
-					id: 'threshold',
-					default: -60,
-					min: -100,
-					max: -21,
-					clampValues: true,
-				},
-			],
-			callback: (feedback) => {
-				self.obs.addMeterSubscriber(feedback.id)
-				const sourceName = feedback.options.source
-				const peak = self.obsState.findSourceByName(sourceName)?.peak ?? -100
-				const threshold = feedback.options.threshold ?? -60
-				if (peak > -9) {
-					// Mirrors the OBS mixer's own meter gradient, so raw colors rather than the Style palette.
-					return { bgcolor: Color.Red }
-				} else if (peak > -20) {
-					return { bgcolor: Color.Orange }
-				} else if (peak > threshold) {
-					return { bgcolor: Color.Green }
-				} else {
-					return { bgcolor: Color.Black }
-				}
 			},
 			unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
 		},

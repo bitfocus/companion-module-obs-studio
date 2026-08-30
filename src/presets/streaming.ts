@@ -150,15 +150,18 @@ export function getStreamingPresets(_self: OBSInstance): {
 				name: 'Stream Congestion',
 				style: baseStyle({ text: 'Stream:\nHealth' }),
 				steps: [{ down: [], up: [] }],
+				// Stacked thresholds, worst last so it wins when several are true.
 				feedbacks: [
+					{ feedbackId: 'streaming', options: {}, style: { bgcolor: Style.active, color: Style.idleFg } },
 					{
-						feedbackId: 'streamCongestion',
-						options: {
-							colorNoStream: Style.disabled,
-							colorLow: Style.active,
-							colorMedium: Style.warning,
-							colorHigh: Style.alert,
-						},
+						feedbackId: 'streamCongestionAbove',
+						options: { threshold: Math.round(CONGESTION_GOOD * 100) },
+						style: { bgcolor: Style.caution, color: Style.idleBg },
+					},
+					{
+						feedbackId: 'streamCongestionAbove',
+						options: { threshold: Math.round(CONGESTION_MEDIOCRE * 100) },
+						style: { bgcolor: Style.program, color: Style.idleFg },
 					},
 				],
 			},

@@ -7,6 +7,8 @@ import {
 	CompanionMigrationFeedback,
 } from '@companion-module/base'
 import { LegacyModuleConfig, ModuleConfig, ModuleSecrets, ObsAudioMonitorType } from './types.js'
+import { Color } from './utils.js'
+import { CONGESTION_MEDIOCRE } from './constants.js'
 
 function getOpt(options: Record<string, unknown>, key: string): unknown {
 	const opt = options[key]
@@ -551,6 +553,30 @@ export default [
 				}
 				delete feedback.options.custom
 				delete feedback.options.customSceneName
+				feedbackChanged = true
+			} else if (feedback.feedbackId === 'scene_active') {
+				const preview = getOpt(feedback.options, 'mode') === 'preview'
+				feedback.feedbackId = preview ? 'scenePreview' : 'sceneProgram'
+				feedback.style = {
+					color: (getOpt(feedback.options, preview ? 'fg_preview' : 'fg') as number | undefined) ?? Color.White,
+					bgcolor:
+						(getOpt(feedback.options, preview ? 'bg_preview' : 'bg') as number | undefined) ??
+						(preview ? Color.Green : Color.Red),
+				}
+				for (const key of ['mode', 'fg', 'bg', 'fg_preview', 'bg_preview']) delete feedback.options[key]
+				feedbackChanged = true
+			} else if (feedback.feedbackId === 'audioMeter') {
+				feedback.feedbackId = 'audioPeaking'
+				feedback.style = { color: Color.White, bgcolor: Color.Green }
+				feedbackChanged = true
+			} else if (feedback.feedbackId === 'streamCongestion') {
+				feedback.feedbackId = 'streamCongestionAbove'
+				feedback.style = {
+					color: Color.White,
+					bgcolor: (getOpt(feedback.options, 'colorHigh') as number | undefined) ?? Color.Red,
+				}
+				for (const key of ['colorNoStream', 'colorLow', 'colorMedium', 'colorHigh']) delete feedback.options[key]
+				setOpt(feedback.options, 'threshold', Math.round(CONGESTION_MEDIOCRE * 100))
 				feedbackChanged = true
 			} else if (feedback.feedbackId === 'audio_monitor_type') {
 				feedbackChanged = convertMonitorFeedback(feedback)

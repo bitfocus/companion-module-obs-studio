@@ -118,20 +118,14 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.programScene = data.sceneName
 		self.states.programSceneUuid = data.sceneUuid
 		self.setVariableValues({ scene_active: self.states.programScene, scene_previous: self.states.previousScene })
-		self.checkFeedbacks(
-			'scene_active',
-			'sceneProgram',
-			'scenePrevious',
-			'scene_item_active',
-			'scene_item_active_in_scene',
-		)
+		self.checkFeedbacks('sceneProgram', 'scenePrevious', 'scene_item_active', 'scene_item_active_in_scene')
 		self.sendToActionRecorder({ actionId: 'set_scene', options: { scene: data.sceneName } })
 	})
 	obs.on('CurrentPreviewSceneChanged', (data) => {
 		self.states.previewScene = data.sceneName ?? 'None'
 		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
-		self.checkFeedbacks('scene_active', 'scenePreview')
+		self.checkFeedbacks('scenePreview')
 		self.sendToActionRecorder({ actionId: 'preview_scene', options: { mode: 'set', scene: data.sceneName } })
 	})
 	obs.on('SceneListChanged', (data) => {
@@ -444,7 +438,7 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 
 		const streamingState = utils.getStreamingState(self.states)
 		self.setVariableValues({ streaming: utils.getOBSStreamingStateLabel(streamingState) })
-		self.checkFeedbacks('streaming', 'streamCongestion', 'streamCongestionLevel', 'streamReconnecting')
+		self.checkFeedbacks('streaming', 'streamCongestionAbove', 'streamCongestionLevel', 'streamReconnecting')
 		if (self.states.streaming === false) {
 			const blank = utils.splitTimecode(DEFAULT_TIMECODE)
 			self.setVariableValues({

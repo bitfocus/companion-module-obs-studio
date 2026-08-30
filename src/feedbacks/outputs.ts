@@ -1,8 +1,8 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { Style, styleActive, styleProgram, styleWarn } from '../presets/style.js'
+import { styleActive, styleProgram, styleWarn } from '../presets/style.js'
 import { OBSRecordingState } from '../types.js'
-import { CONGESTION_GOOD, CONGESTION_MEDIOCRE } from '../constants.js'
+import { CONGESTION_MEDIOCRE } from '../constants.js'
 import { choiceDropdown } from '../actions/options.js'
 
 export type OutputFeedbackSchemas = {
@@ -12,10 +12,7 @@ export type OutputFeedbackSchemas = {
 	recordingPaused: { type: 'boolean'; options: Record<string, never> }
 	output_active: { type: 'boolean'; options: { output: string } }
 	replayBufferActive: { type: 'boolean'; options: Record<string, never> }
-	streamCongestion: {
-		type: 'advanced'
-		options: { colorNoStream: number; colorLow: number; colorMedium: number; colorHigh: number }
-	}
+	streamCongestionAbove: { type: 'boolean'; options: { threshold: number } }
 	streamCongestionLevel: { type: 'value'; options: Record<string, never> }
 }
 
@@ -90,50 +87,26 @@ export function getOutputFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 			},
 		},
 
-		streamCongestion: {
-			type: 'advanced',
-			name: 'Streaming - Stream Congestion',
+		streamCongestionAbove: {
+			type: 'boolean',
+			name: 'Streaming - Stream Congestion Above',
 			description:
-				'Change the style of the button to show stream congestion. Prefer the value feedback "Streaming - Stream Congestion Level" with a gauge where the button supports it.',
-			affectedProperties: ['bgcolor'],
+				'If stream congestion is above a threshold, change the style of the button. OBS treats 0 as excellent, up to 33 as good, up to 67 as mediocre, and above that as bad',
+			defaultStyle: styleWarn(),
 			options: [
 				{
-					type: 'colorpicker',
-					label: 'Background color (No Stream)',
-					id: 'colorNoStream',
-					default: Style.disabled,
-				},
-				{
-					type: 'colorpicker',
-					label: 'Background color (Low Congestion)',
-					id: 'colorLow',
-					default: Style.preview,
-				},
-				{
-					type: 'colorpicker',
-					label: 'Background color (Medium Congestion)',
-					id: 'colorMedium',
-					default: Style.warning,
-				},
-				{
-					type: 'colorpicker',
-					label: 'Background color (High Congestion)',
-					id: 'colorHigh',
-					default: Style.program,
+					type: 'number',
+					label: 'Congestion threshold (0-100)',
+					id: 'threshold',
+					default: Math.round(CONGESTION_MEDIOCRE * 100),
+					min: 0,
+					max: 100,
+					clampValues: true,
 				},
 			],
 			callback: (feedback) => {
-				if (self.states.streaming === false) {
-					return { bgcolor: feedback.options.colorNoStream }
-				} else {
-					if (self.states.streamCongestion > CONGESTION_MEDIOCRE) {
-						return { bgcolor: feedback.options.colorHigh }
-					} else if (self.states.streamCongestion > CONGESTION_GOOD) {
-						return { bgcolor: feedback.options.colorMedium }
-					} else {
-						return { bgcolor: feedback.options.colorLow }
-					}
-				}
+				if (!self.states.streaming) return false
+				return self.states.streamCongestion * 100 > feedback.options.threshold
 			},
 		},
 
