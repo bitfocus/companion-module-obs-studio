@@ -6,6 +6,7 @@ import {
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
 import { baseStyle, styleActive, styleWarn, Style } from './style.js'
+import { broadcastIcon, broadcastOffIcon } from './icons.js'
 import { CONGESTION_GOOD, CONGESTION_MEDIOCRE } from '../constants.js'
 
 /** Streaming control + status presets (split out of the former monolithic outputs file). */
@@ -39,6 +40,121 @@ export function getStreamingPresets(_self: OBSInstance): {
 		style: baseStyle({ text: 'Stop\nStreaming' }),
 		steps: [{ down: [{ actionId: 'streaming', options: { action: 'stop' } }], up: [] }],
 		feedbacks: [],
+	}
+
+	// Status at a glance, mirroring the OBS status bar: the broadcast glyph beside the elapsed timecode.
+	// Two icons rather than one recoloured: an image element's colours are baked into the artwork.
+	presets['streamingStatusIcon'] = {
+		type: 'alternatives',
+		variants: [
+			{
+				type: 'layered',
+				name: 'Streaming Status',
+				keywords: ['stream', 'timer', 'elapsed', 'duration', 'live', 'on air'],
+				canvas: { decoration: ButtonGraphicsDecorationType.None },
+				localVariables: [
+					{ variableType: 'feedback', variableName: 'live', feedbackId: 'streaming', options: {} },
+					{ variableType: 'feedback', variableName: 'reconnecting', feedbackId: 'streamReconnecting', options: {} },
+				],
+				elements: [
+					{
+						type: 'box',
+						id: 'background',
+						name: 'Background',
+						x: 0,
+						y: 0,
+						width: 100,
+						height: 100,
+						color: {
+							value: `$(local:reconnecting) ? ${Style.warning} : ${Style.idleBg}`,
+							isExpression: true,
+						},
+					},
+					{
+						type: 'text',
+						id: 'state',
+						name: 'State',
+						x: 2,
+						y: 2,
+						width: 96,
+						height: 24,
+						text: '$(obs:streaming)',
+						fontsize: 95,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+					{
+						type: 'image',
+						id: 'iconLive',
+						name: 'On Air',
+						x: 3,
+						y: 33,
+						width: 30,
+						height: 30,
+						base64Image: broadcastIcon,
+						fillMode: 'fit',
+						enabled: { value: '$(local:live)', isExpression: true },
+					},
+					{
+						type: 'image',
+						id: 'iconOffline',
+						name: 'Off Air',
+						x: 3,
+						y: 33,
+						width: 30,
+						height: 30,
+						base64Image: broadcastOffIcon,
+						fillMode: 'fit',
+						enabled: { value: '!$(local:live)', isExpression: true },
+					},
+					{
+						type: 'text',
+						id: 'timecode',
+						name: 'Timecode',
+						x: 26,
+						y: 30,
+						width: 72,
+						height: 34,
+						text: '$(obs:stream_timecode)',
+						fontsize: 95,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+					{
+						type: 'text',
+						id: 'bitrate',
+						name: 'Bitrate',
+						x: 2,
+						y: 68,
+						width: 96,
+						height: 30,
+						text: '$(obs:kbits_per_sec) kbps',
+						fontsize: 60,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+				],
+				steps: [{ down: [], up: [] }],
+				feedbacks: [],
+			},
+			{
+				type: 'simple',
+				name: 'Streaming Status',
+				keywords: ['stream', 'timer', 'elapsed', 'duration', 'live', 'on air'],
+				style: baseStyle({ text: 'Stream:\n$(obs:streaming)\n$(obs:stream_timecode)' }),
+				steps: [{ down: [], up: [] }],
+				feedbacks: [
+					{ feedbackId: 'streaming', options: {}, style: styleActive() },
+					{ feedbackId: 'streamReconnecting', options: {}, style: styleWarn() },
+				],
+			},
+		],
 	}
 
 	presets['streamingStatus'] = {
@@ -229,6 +345,7 @@ export function getStreamingPresets(_self: OBSInstance): {
 					name: 'Status',
 					type: 'simple',
 					presets: [
+						'streamingStatusIcon',
 						'streamingStatus',
 						'streamingCongestion',
 						'streamingService',

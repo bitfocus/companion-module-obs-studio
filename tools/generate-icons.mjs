@@ -11,6 +11,7 @@ const SAMPLES = 4
 const WHITE = [225, 227, 230]
 const RED = [200, 0, 0]
 const GRAY = [110, 118, 130]
+const BLUE = [42, 130, 218]
 
 /** Signed-distance helpers, each returning true when the sample point is inside the shape. */
 const rect = (x, y, w, h) => (px, py) => px >= x && px <= x + w && py >= y && py <= y + h
@@ -144,6 +145,15 @@ const play = polygon([
 const pause = union(roundedRect(18, 12, 11, 40, 3), roundedRect(35, 12, 11, 40, 3))
 const stop = roundedRect(17, 15, 34, 34, 4)
 
+// Broadcast/stream indicator: a dot with signal arcs either side, echoing the OBS status bar.
+const broadcast = union(
+	roundedRect(27, 27, 10, 10, 5),
+	arc(32, 32, 14, 4, 130, 230),
+	arc(32, 32, 14, 4, 310, 50),
+	arc(32, 32, 22, 4, 140, 220),
+	arc(32, 32, 22, 4, 320, 40),
+)
+
 const icons = {
 	speaker: { shape: union(speakerBody, speakerWaves), color: WHITE },
 	speakerMuted: { shape: union(speakerBody, cross(45, 32, 8, 5)), color: RED },
@@ -152,6 +162,8 @@ const icons = {
 	play: { shape: play, color: WHITE },
 	pause: { shape: pause, color: WHITE },
 	stop: { shape: stop, color: GRAY },
+	broadcast: { shape: broadcast, color: BLUE },
+	broadcastOff: { shape: broadcast, color: GRAY },
 }
 
 const entries = Object.entries(icons).map(([name, { shape, color }]) => {

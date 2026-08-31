@@ -1,7 +1,11 @@
-import { CompanionPresetDefinitions, CompanionPresetSection } from '@companion-module/base'
+import {
+	ButtonGraphicsDecorationType,
+	CompanionPresetDefinitions,
+	CompanionPresetSection,
+} from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import type { OBSInstanceTypes } from '../main.js'
-import { baseStyle, styleProgram, styleWarn } from './style.js'
+import { baseStyle, Style, styleProgram, styleWarn } from './style.js'
 
 /** Recording control + status presets (split out of the former monolithic outputs file). */
 export function getRecordingPresets(_self: OBSInstance): {
@@ -71,6 +75,92 @@ export function getRecordingPresets(_self: OBSInstance): {
 		style: baseStyle({ text: 'Add\nChapter' }),
 		steps: [{ down: [{ actionId: 'recording', options: { action: 'chapter', chapterName: '' } }], up: [] }],
 		feedbacks: [],
+	}
+
+	// Status at a glance, mirroring the OBS status bar: a record dot beside the elapsed timecode. The dot
+	// is a circle element rather than an icon so its colour can follow the state without extra artwork.
+	presets['recordingStatusDot'] = {
+		type: 'alternatives',
+		variants: [
+			{
+				type: 'layered',
+				name: 'Recording Status',
+				keywords: ['record', 'timer', 'elapsed', 'duration', 'dot', 'tally'],
+				canvas: { decoration: ButtonGraphicsDecorationType.None },
+				localVariables: [
+					{ variableType: 'feedback', variableName: 'recording', feedbackId: 'recording', options: {} },
+					{ variableType: 'feedback', variableName: 'paused', feedbackId: 'recordingPaused', options: {} },
+				],
+				elements: [
+					{
+						type: 'box',
+						id: 'background',
+						name: 'Background',
+						x: 0,
+						y: 0,
+						width: 100,
+						height: 100,
+						color: Style.idleBg,
+					},
+					{
+						type: 'text',
+						id: 'state',
+						name: 'State',
+						x: 2,
+						y: 10,
+						width: 96,
+						height: 30,
+						text: '$(obs:recording)',
+						fontsize: 95,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+					{
+						type: 'circle',
+						id: 'dot',
+						name: 'Record Dot',
+						x: 6,
+						y: 54,
+						width: 20,
+						height: 20,
+						color: {
+							value: `$(local:paused) ? ${Style.warning} : $(local:recording) ? ${Style.program} : ${Style.disabled}`,
+							isExpression: true,
+						},
+					},
+					{
+						type: 'text',
+						id: 'timecode',
+						name: 'Timecode',
+						x: 28,
+						y: 50,
+						width: 70,
+						height: 28,
+						text: '$(obs:recording_timecode)',
+						fontsize: 95,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+				],
+				steps: [{ down: [], up: [] }],
+				feedbacks: [],
+			},
+			{
+				type: 'simple',
+				name: 'Recording Status',
+				keywords: ['record', 'timer', 'elapsed', 'duration'],
+				style: baseStyle({ text: '$(obs:recording)\n$(obs:recording_timecode)' }),
+				steps: [{ down: [], up: [] }],
+				feedbacks: [
+					{ feedbackId: 'recording', options: {}, style: styleProgram() },
+					{ feedbackId: 'recordingPaused', options: {}, style: styleWarn() },
+				],
+			},
+		],
 	}
 
 	presets['recordingStatusTimecode'] = {
@@ -153,6 +243,7 @@ export function getRecordingPresets(_self: OBSInstance): {
 					name: 'Status',
 					type: 'simple',
 					presets: [
+						'recordingStatusDot',
 						'recordingStatusTimecode',
 						'recordingTimecodeHH',
 						'recordingTimecodeMM',
