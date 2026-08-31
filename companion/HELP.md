@@ -41,8 +41,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Filter Settings
 - Set Source Transform (Position / Scale / Rotation)
 - Source Mute (Set / Toggle)
-- Set Source Volume
-- Adjust Source Volume
+- Source Volume (Set / Adjust, in dB or percent, with an optional fade duration)
 - Set Audio Monitoring (Enable / Disable / Toggle)
 - Set Audio Sync Offset
 - Set Audio Balance
@@ -51,6 +50,7 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Text Properties
 - Refresh Browser Source
 - Reset Video Capture Device
+- Take Screenshot
 - Play / Pause Media
 - Restart Media
 - Stop Media
@@ -87,14 +87,18 @@ active in program.
 **Recording & Streaming & Outputs**
 
 - Streaming Active
-- Recording Status (If recording is active or paused, change the style of the button)
+- Streaming Reconnecting
+- Recording Active
+- Recording Paused
 - Output Active
 - Replay Buffer Active
-- Stream Congestion
+- Stream Congestion Above (Active while congestion is above a chosen threshold, 0-100)
+- Stream Congestion Level (Value, the current congestion from 0 to 100, for use with a gauge)
 
 **Switching & Transitions**
 
-- Scene in Preview / Program (Program and Preview, Program Only, or Preview Only)
+- Scene in Program
+- Scene in Preview
 - Previous Scene Active
 - Transition in Progress
 - Current Transition Type
@@ -102,15 +106,27 @@ active in program.
 
 **Sources**
 
-- Source Visible (If a source is visible in the program, change the style of the button)
+- Source Visible in Program (If a source is visible in the program, change the style of the button)
+- Source Active in Preview
 - Source Enabled in Scene (If a source is enabled in a specific scene, change the style of the button)
 - Filter Enabled
 - Audio Muted
 - Audio Monitoring
 - Audio Track Enabled
-- Volume
+- Audio Volume (If a source is at an exact volume in dB)
+- Audio Peaking (If a source's peak level is above a threshold)
 - Media Playing
-- Media Source Remaining Time (If remaining time of a media source is below a threshold, change the style of the button)
+- Media Remaining Time (If remaining time of a media source is below a threshold, change the style of the button)
+
+Value feedbacks report a number rather than a style. Bind one to a button's local variable and use it in an
+expression, such as the value of a gauge:
+
+- Audio Peak Level (dB)
+- Audio Volume (dB)
+- Audio Balance (%)
+- Audio Sync Offset (ms)
+- Media Playback Progress (%)
+- Media Remaining Time (seconds)
 
 **General**
 
@@ -130,15 +146,17 @@ active in program.
 - recording
 - recording_file_name
 - recording_path
-- recording_timecode
+- recording_timecode (also recording_timecode_hh, recording_timecode_mm and recording_timecode_ss)
 - streaming
-- stream_timecode
+- stream_timecode (also stream_timecode_hh, stream_timecode_mm and stream_timecode_ss)
 - stream_service
 - kbits_per_sec (Amount of data per second transmitted by the stream encoder)
 - render_missed_frames
 - render_total_frames
 - output_skipped_frames
 - output_total_frames
+- stream_output_skipped_frames (Frames skipped by the current stream)
+- stream_output_total_frames (Total frames for the current stream)
 - average_frame_time
 - replay_buffer_path
 - replay_buffer_active
@@ -187,6 +205,7 @@ active in program.
 - memory_usage
 - free_disk_space
 - free_disk_space_mb
+- screenshot_saved_path (File path of the last saved screenshot)
 - base_resolution
 - output_resolution
 - target_framerate
