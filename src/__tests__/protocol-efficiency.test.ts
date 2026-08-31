@@ -201,6 +201,53 @@ describe('media status polling', () => {
 		expect(self.setVariableValues).toHaveBeenCalledWith(expect.objectContaining({ media_status_Clip: 'Playing' }))
 	})
 
+	// The "newest playing clip" action target and these variables have to agree, so both are derived from
+	// the same poll: the clip with the most recent start time, among those playing/paused and on program.
+	test('publishes the newest playing clip alongside the list of all of them', async () => {
+		for (const [name, uuid] of [
+			['Clip A', 'a-uuid'],
+			['Clip B', 'b-uuid'],
+		]) {
+			seedSource(self, name, uuid, 'ffmpeg_source')
+			self.states.sources.get(uuid)!.active = true
+		}
+		self.states.sources.get('a-uuid')!.mediaStartedAt = 1000
+		self.states.sources.get('b-uuid')!.mediaStartedAt = 2000
+
+		mockBatchResponses(self.socket, () => ({
+			mediaState: 'OBS_MEDIA_STATE_PLAYING',
+			mediaCursor: 1000,
+			mediaDuration: 5000,
+		}))
+
+		await self.obs.getOBSMediaStatus()
+
+		expect(self.setVariableValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				current_media_name: ['Clip A', 'Clip B'],
+				latest_media_name: 'Clip B',
+				latest_media_time_elapsed: '00:00:01',
+				latest_media_time_remaining: '00:00:04',
+			}),
+		)
+	})
+
+	test('reports no newest clip when nothing is rolling', async () => {
+		seedSource(self, 'Clip', 'clip-uuid', 'ffmpeg_source')
+
+		mockBatchResponses(self.socket, () => ({
+			mediaState: 'OBS_MEDIA_STATE_STOPPED',
+			mediaCursor: 0,
+			mediaDuration: 5000,
+		}))
+
+		await self.obs.getOBSMediaStatus()
+
+		expect(self.setVariableValues).toHaveBeenCalledWith(
+			expect.objectContaining({ current_media_name: [], latest_media_name: '' }),
+		)
+	})
+
 	test('invalidates the cache when a new media source is added', () => {
 		seedSource(self, 'Clip', 'clip-uuid', 'ffmpeg_source')
 		expect(self.obsState.mediaSourceUuids).toEqual(['clip-uuid'])

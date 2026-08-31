@@ -121,7 +121,6 @@ export class OBSState {
 			outputBytes: 0,
 			recordDirectory: '',
 			vendorEvent: {},
-			currentMedia: '',
 			custom_command_request: '',
 			custom_command_response: '',
 

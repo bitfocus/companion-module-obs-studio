@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Streaming - Stream Congestion Above" feedback, active while congestion is above a chosen threshold
 - "Restart", "Stop", "Previous" and "Next" presets for each media source, alongside the existing play/pause
   and scrub buttons
+- `latest_media_name`, `latest_media_time_elapsed` and `latest_media_time_remaining` variables, describing
+  the most recently started media source
+- "Playing Clips", "Play / Pause All Clips", "Stop All Playing Clips" and "Newest Clip Time Remaining"
+  presets
 - Layered presets, which draw a button from graphics elements rather than a single style, for the audio
   meter, volume level, media time remaining, and stream congestion buttons. Each ships with a simple
   fallback, so hosts that cannot draw layers (such as Bitfocus Buttons) still get a usable button:
@@ -71,6 +75,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "Streaming - Stream Congestion" becomes "Streaming - Stream Congestion Above", keeping the color that
     was chosen for high congestion. For the full range, use the new "Streaming - Stream Congestion Level"
     value feedback
+
+- Media actions now take a **Target** — a specific source, the newest playing clip, or all playing clips —
+  in place of the "Currently Playing" checkbox. That checkbox acted on the last clip that had started
+  playing at any point, even after it stopped, which rarely matched the `current_media_*` variables shown
+  on the same button. "Newest" and "All" cover the clips that are playing or paused and active in program. Existing actions are converted automatically, with the checkbox becoming the "newest playing clip" target
 
 ### Fixed
 

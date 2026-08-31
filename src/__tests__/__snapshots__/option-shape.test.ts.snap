@@ -134,11 +134,25 @@ exports[`option shape > action options are unchanged 1`] = `
   "do_transition": [],
   "media_control": [
     {
-      "default": false,
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "newest",
+          "label": "Newest Playing Clip",
+        },
+        {
+          "id": "all",
+          "label": "All Playing Clips",
+        },
+      ],
+      "default": "source",
       "disableAutoExpression": true,
-      "id": "useCurrentMedia",
-      "label": "Currently Playing",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -150,7 +164,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Clip",
       "id": "source",
-      "isVisibleExpression": "!$(options:useCurrentMedia)",
+      "isVisibleExpression": "$(options:target) == 'source'",
       "label": "Media Source",
       "type": "dropdown",
     },
@@ -194,11 +208,25 @@ exports[`option shape > action options are unchanged 1`] = `
   ],
   "media_time": [
     {
-      "default": false,
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "newest",
+          "label": "Newest Playing Clip",
+        },
+        {
+          "id": "all",
+          "label": "All Playing Clips",
+        },
+      ],
+      "default": "source",
       "disableAutoExpression": true,
-      "id": "useCurrentMedia",
-      "label": "Currently Playing",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -210,7 +238,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Clip",
       "id": "source",
-      "isVisibleExpression": "!$(options:useCurrentMedia)",
+      "isVisibleExpression": "$(options:target) == 'source'",
       "label": "Media Source",
       "type": "dropdown",
     },
@@ -1960,11 +1988,21 @@ exports[`option shape > action options are unchanged 1`] = `
   ],
   "updateMediaLocalFile": [
     {
-      "default": false,
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "newest",
+          "label": "Newest Playing Clip",
+        },
+      ],
+      "default": "source",
       "disableAutoExpression": true,
-      "id": "useCurrentMedia",
-      "label": "Currently Playing",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -1976,7 +2014,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Clip",
       "id": "source",
-      "isVisibleExpression": "!$(options:useCurrentMedia)",
+      "isVisibleExpression": "$(options:target) == 'source'",
       "label": "Media Source",
       "type": "dropdown",
     },

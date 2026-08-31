@@ -515,9 +515,13 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	})
 }
 
-// Set source media status and variable.
+// Set source media status and variable. A clip that is no longer loaded loses its start time, so it drops
+// out of the "newest" and "all" media targets; pausing keeps it, since a paused clip is still addressable.
 function setMediaStatus(self: OBSInstance, source: OBSSource, status: OBSMediaStatus): void {
 	source.OBSMediaStatus = status
+	if (status !== OBSMediaStatus.Playing && status !== OBSMediaStatus.Paused) {
+		source.mediaStartedAt = undefined
+	}
 	self.setVariableValues({ [`media_status_${source.validName}`]: utils.getOBSMediaStatusLabel(status) })
 }
 
@@ -530,9 +534,10 @@ const MEDIA_ACTION_RECORDER_MAP: Partial<Record<OBSMediaInputAction, MediaContro
 function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('MediaInputPlaybackStarted', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
-		// Store name instead of UUID since currentMedia is consumed as input name.
-		self.states.currentMedia = source?.sourceName ?? ''
-		if (source) setMediaStatus(self, source, OBSMediaStatus.Playing)
+		if (source) {
+			source.mediaStartedAt = Date.now()
+			setMediaStatus(self, source, OBSMediaStatus.Playing)
+		}
 	})
 	obs.on('MediaInputPlaybackEnded', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
@@ -553,7 +558,7 @@ function setupMediaListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (recordedAction) {
 			const mediaOptions: CompanionOptionValues = {
 				source: source?.sourceName ?? '',
-				useCurrentMedia: false,
+				target: 'source',
 				action: recordedAction,
 			}
 			self.sendToActionRecorder({ actionId: 'media_control', options: mediaOptions })

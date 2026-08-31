@@ -287,23 +287,23 @@ describe('v4_0_0 action consolidation', () => {
 	])('maps %s onto media_control', (oldId, expected) => {
 		const updated = upgradeAction(oldId, { useCurrentMedia: false, source: 'Clip' })
 		expect(updated.actionId).toBe('media_control')
-		expect(updated.options).toEqual({ useCurrentMedia: false, source: 'Clip', action: expected })
+		expect(updated.options).toEqual({ target: 'source', source: 'Clip', action: expected })
 	})
 
 	test('renames the play_pause_media dropdown, keeping its value', () => {
 		const updated = upgradeAction('play_pause_media', { useCurrentMedia: true, source: '', playPause: 'pause' })
 		expect(updated.actionId).toBe('media_control')
-		expect(updated.options).toEqual({ useCurrentMedia: true, source: '', action: 'pause' })
+		expect(updated.options).toEqual({ target: 'newest', source: '', action: 'pause' })
 	})
 
 	test('migrates set_media_time and scrub_media onto media_time', () => {
 		const set = upgradeAction('set_media_time', { useCurrentMedia: true, source: '', mediaTime: 5000 })
 		expect(set.actionId).toBe('media_time')
-		expect(set.options).toEqual({ useCurrentMedia: true, source: '', mode: 'set', value: 5000 })
+		expect(set.options).toEqual({ target: 'newest', source: '', mode: 'set', value: 5000 })
 
 		const scrub = upgradeAction('scrub_media', { useCurrentMedia: true, source: '', scrubAmount: -5 })
 		expect(scrub.actionId).toBe('media_time')
-		expect(scrub.options).toEqual({ useCurrentMedia: true, source: '', mode: 'adjust', amount: -5 })
+		expect(scrub.options).toEqual({ target: 'newest', source: '', mode: 'adjust', amount: -5 })
 	})
 
 	test('leaves an action outside the consolidated families untouched', () => {
@@ -409,6 +409,50 @@ describe('v4_0_0 audio monitoring migration', () => {
 		const result = v4_0_0(context, makeProps(null, [action]))
 
 		expect(result.updatedActions).toHaveLength(0)
+	})
+})
+
+describe('v4_0_0 media target migration', () => {
+	const makeAction = (actionId: string, useCurrentMedia: boolean): CompanionMigrationAction =>
+		({
+			id: 'a1',
+			controlId: 'ctl1',
+			actionId,
+			options: { useCurrentMedia, source: 'Clip' },
+		}) as unknown as CompanionMigrationAction
+
+	test.each(['media_control', 'media_time', 'updateMediaLocalFile'])(
+		'%s with the checkbox set targets the newest playing clip',
+		(actionId) => {
+			const action = makeAction(actionId, true)
+			const result = v4_0_0(context, makeProps(null, [action]))
+
+			expect(result.updatedActions).toEqual([action])
+			expect(action.options).toEqual({ source: 'Clip', target: 'newest' })
+		},
+	)
+
+	test.each(['media_control', 'media_time', 'updateMediaLocalFile'])(
+		'%s without the checkbox targets its named source',
+		(actionId) => {
+			const action = makeAction(actionId, false)
+			v4_0_0(context, makeProps(null, [action]))
+
+			expect(action.options).toEqual({ source: 'Clip', target: 'source' })
+		},
+	)
+
+	test('an already-migrated action is left alone', () => {
+		const action = {
+			id: 'a1',
+			controlId: 'ctl1',
+			actionId: 'media_control',
+			options: { target: 'all', source: '' },
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions).toEqual([])
+		expect(action.options).toEqual({ target: 'all', source: '' })
 	})
 })
 

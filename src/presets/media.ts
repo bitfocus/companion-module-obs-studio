@@ -19,40 +19,133 @@ export function getMediaPresets(self: OBSInstance): {
 	const presets: CompanionPresetDefinitions<OBSInstanceTypes> = {}
 	const groups: CompanionPresetGroup<OBSInstanceTypes>[] = [
 		{
-			id: 'media-current',
+			id: 'media-all-playing',
 			type: 'simple',
-			name: 'Current Media',
-			presets: ['playPauseCurrentMedia', 'currentMediaElapsed', 'currentMediaRemaining'],
+			name: 'All Playing Media',
+			keywords: ['all', 'playing', 'clips'],
+			presets: ['playingClipsStatus', 'playPauseAllMedia', 'stopAllMedia'],
+		},
+		{
+			id: 'media-latest-playing',
+			type: 'simple',
+			name: 'Latest Playing Media',
+			keywords: ['latest', 'newest', 'playing'],
+			presets: ['playPauseCurrentMedia', 'latestMediaRemaining'],
 		},
 	]
 	const slugFor = generateSlug()
 
+	// Targets the newest playing clip, and names that clip rather than listing every one that is rolling.
 	presets['playPauseCurrentMedia'] = {
 		type: 'simple',
-		name: 'Play / Pause Current Media',
-		style: baseStyle({ text: 'Play /\nPause\n$(obs:current_media_name)' }),
+		name: 'Play / Pause Newest Clip',
+		style: baseStyle({ text: 'Play /\nPause\n$(obs:latest_media_name)' }),
 		steps: [
 			{
-				down: [{ actionId: 'media_control', options: { useCurrentMedia: true, source: '', action: 'toggle' } }],
+				down: [{ actionId: 'media_control', options: { target: 'newest', source: '', action: 'toggle' } }],
 				up: [],
 			},
 		],
 		feedbacks: [],
 	}
 
-	presets['currentMediaElapsed'] = {
+	presets['latestMediaRemaining'] = {
 		type: 'simple',
-		name: 'Current Media Time Elapsed',
-		style: baseStyle({ text: 'Elapsed:\n$(obs:current_media_time_elapsed)' }),
+		name: 'Newest Clip Time Remaining',
+		style: baseStyle({ text: 'Remaining:\n$(obs:latest_media_time_remaining)' }),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [],
 	}
 
-	presets['currentMediaRemaining'] = {
+	// current_media_name is a list. A simple style cannot join it, so the layered variant does that with an
+	// expression and the fallback prints the variable as the host renders it.
+	presets['playingClipsStatus'] = {
+		type: 'alternatives',
+		variants: [
+			{
+				type: 'layered',
+				name: 'Playing Clips',
+				canvas: { decoration: ButtonGraphicsDecorationType.None },
+				elements: [
+					{
+						type: 'box',
+						id: 'background',
+						name: 'Background',
+						x: 0,
+						y: 0,
+						width: 100,
+						height: 100,
+						color: Style.idleBg,
+					},
+					{
+						type: 'text',
+						id: 'label',
+						name: 'Label',
+						x: 4,
+						y: 4,
+						width: 92,
+						height: 24,
+						text: 'Playing Clips:',
+						fontsize: 60,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+					{
+						type: 'text',
+						id: 'clips',
+						name: 'Clips',
+						x: 4,
+						y: 30,
+						width: 92,
+						height: 66,
+						text: { value: `join($(obs:current_media_name), "\\n")`, isExpression: true },
+						fontsize: 30,
+						fontsizeAllowShrink: true,
+						color: Style.idleFg,
+						halign: 'center',
+						valign: 'center',
+					},
+				],
+				steps: [{ down: [], up: [] }],
+				feedbacks: [],
+			},
+			{
+				type: 'simple',
+				name: 'Playing Clips',
+				style: baseStyle({ text: 'Playing Clips:\n$(obs:current_media_name)' }),
+				steps: [{ down: [], up: [] }],
+				feedbacks: [],
+			},
+		],
+	}
+
+	presets['playPauseAllMedia'] = {
 		type: 'simple',
-		name: 'Current Media Time Remaining',
-		style: baseStyle({ text: 'Remaining:\n$(obs:current_media_time_remaining)' }),
-		steps: [{ down: [], up: [] }],
+		name: 'Play / Pause All Clips',
+		keywords: ['all', 'play', 'pause'],
+		style: baseStyle({ text: 'Play /\nPause\nAll Clips' }),
+		steps: [
+			{
+				down: [{ actionId: 'media_control', options: { target: 'all', source: '', action: 'toggle' } }],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+
+	presets['stopAllMedia'] = {
+		type: 'simple',
+		name: 'Stop All Playing Clips',
+		keywords: ['panic', 'all', 'stop'],
+		style: baseStyle({ text: 'Stop All\nClips' }),
+		steps: [
+			{
+				down: [{ actionId: 'media_control', options: { target: 'all', source: '', action: 'stop' } }],
+				up: [],
+			},
+		],
 		feedbacks: [],
 	}
 
@@ -85,7 +178,7 @@ export function getMediaPresets(self: OBSInstance): {
 		const playing = `${status} == 'Playing'`
 
 		const toggleStep: CompanionButtonStepActions<OBSInstanceTypes> = {
-			down: [{ actionId: 'media_control', options: { useCurrentMedia: false, source: value, action: 'toggle' } }],
+			down: [{ actionId: 'media_control', options: { target: 'source', source: value, action: 'toggle' } }],
 			up: [],
 		}
 
@@ -179,7 +272,7 @@ export function getMediaPresets(self: OBSInstance): {
 						down: [
 							{
 								actionId: 'media_control',
-								options: { useCurrentMedia: false, source: value, action: transport.action },
+								options: { target: 'source', source: value, action: transport.action },
 							},
 						],
 						up: [],
@@ -368,13 +461,13 @@ export function getMediaPresets(self: OBSInstance): {
 			rotate_left: [
 				{
 					actionId: 'media_time',
-					options: { useCurrentMedia: false, source: value, mode: 'adjust', value: 0, amount: -5 },
+					options: { target: 'source', source: value, mode: 'adjust', value: 0, amount: -5 },
 				},
 			],
 			rotate_right: [
 				{
 					actionId: 'media_time',
-					options: { useCurrentMedia: false, source: value, mode: 'adjust', value: 0, amount: 5 },
+					options: { target: 'source', source: value, mode: 'adjust', value: 0, amount: 5 },
 				},
 			],
 		}
@@ -481,7 +574,7 @@ export function getMediaPresets(self: OBSInstance): {
 					down: [
 						{
 							actionId: 'media_time',
-							options: { useCurrentMedia: false, source: value, mode: 'adjust', value: 0, amount: -10 },
+							options: { target: 'source', source: value, mode: 'adjust', value: 0, amount: -10 },
 						},
 					],
 					up: [],
@@ -499,7 +592,7 @@ export function getMediaPresets(self: OBSInstance): {
 					down: [
 						{
 							actionId: 'media_time',
-							options: { useCurrentMedia: false, source: value, mode: 'adjust', value: 0, amount: 10 },
+							options: { target: 'source', source: value, mode: 'adjust', value: 0, amount: 10 },
 						},
 					],
 					up: [],
@@ -511,7 +604,7 @@ export function getMediaPresets(self: OBSInstance): {
 		groups.push({
 			id: `media-${slug}`,
 			type: 'simple',
-			name: source.label,
+			name: `Media Source: ${source.label}`,
 			keywords: [source.label, 'media', 'play', 'pause', 'stop', 'scrub', 'jog', 'remaining'],
 			presets: [
 				ids.status,

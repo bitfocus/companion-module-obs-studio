@@ -59,6 +59,11 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Media Time
 - Scrub Media
 - Update Media Source Local File Path
+
+Every media action has a **Target**: a specific source, the newest playing clip, or (except when setting a
+file path) all playing clips at once. "Newest" and "all" cover the clips that are playing or paused and
+active in program.
+
 - Open Source Properties Window
 - Open Source Filters Window
 - Open Source Interact Window
@@ -154,6 +159,9 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - current_media_name (List, containing an entry for every currently playing media source)
 - current_media_time_elapsed (List, containing an entry for every currently playing media source)
 - current_media_time_remaining (List, containing an entry for every currently playing media source)
+- latest_media_name (The most recently started media source, matching the "Newest Playing Clip" action target)
+- latest_media_time_elapsed (Elapsed time of the most recently started media source)
+- latest_media_time_remaining (Remaining time of the most recently started media source)
 - media_status_source_name(Current status of media sources, including: playing, paused, stopped, ended)
 - media_file_name (Current file name of media sources, not including the extension)
 - media_time_elapsed

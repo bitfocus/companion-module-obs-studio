@@ -123,7 +123,6 @@ export interface OBSNormalizedState {
 	outputBytes: number
 	recordDirectory: string
 	vendorEvent: Record<string, unknown>
-	currentMedia: string
 	custom_command_request: string
 	custom_command_response: string
 
@@ -162,6 +161,8 @@ export interface OBSSource {
 	// Settings arrive verbatim from OBS over the wire, so they are JSON by construction.
 	settings?: JsonObject
 	OBSMediaStatus?: OBSMediaStatus
+	// When this source last started playing, used to order the "newest" media action target.
+	mediaStartedAt?: number
 	mediaCursor?: number
 	mediaDuration?: number
 	timeElapsed?: string

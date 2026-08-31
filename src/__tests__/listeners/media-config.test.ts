@@ -13,26 +13,28 @@ describe('media listeners', () => {
 		initOBSListeners(self)
 	})
 
-	test('MediaInputPlaybackStarted marks the source playing and becomes the current media', () => {
+	test('MediaInputPlaybackStarted marks the source playing and stamps when it started', () => {
 		self.socket.emit('MediaInputPlaybackStarted', { inputName: 'My Clip', inputUuid: 'clip-uuid' })
 
-		expect(self.states.sources.get('clip-uuid')!.OBSMediaStatus).toBe(OBSMediaStatus.Playing)
-		// Consumed as an input name by the "current media" actions, so it stores the name, not the UUID.
-		expect(self.states.currentMedia).toBe('My Clip')
+		const source = self.states.sources.get('clip-uuid')!
+		expect(source.OBSMediaStatus).toBe(OBSMediaStatus.Playing)
+		// Orders the "newest" media target, so it has to be set whenever playback begins.
+		expect(source.mediaStartedAt).toBeGreaterThan(0)
 		expect(self.setVariableValues).toHaveBeenCalledWith({ media_status_My_Clip: 'Playing' })
 	})
 
-	test('MediaInputPlaybackEnded marks the source ended', () => {
+	test('MediaInputPlaybackEnded marks the source ended and drops its start time', () => {
+		self.socket.emit('MediaInputPlaybackStarted', { inputName: 'My Clip', inputUuid: 'clip-uuid' })
 		self.socket.emit('MediaInputPlaybackEnded', { inputName: 'My Clip', inputUuid: 'clip-uuid' })
 
 		expect(self.states.sources.get('clip-uuid')!.OBSMediaStatus).toBe(OBSMediaStatus.Ended)
+		expect(self.states.sources.get('clip-uuid')!.mediaStartedAt).toBeUndefined()
 		expect(self.setVariableValues).toHaveBeenCalledWith({ media_status_My_Clip: 'Ended' })
 	})
 
-	test('a playback event for an unknown input leaves currentMedia empty', () => {
+	test('a playback event for an unknown input is ignored', () => {
 		self.socket.emit('MediaInputPlaybackStarted', { inputName: 'Ghost', inputUuid: 'ghost' })
 
-		expect(self.states.currentMedia).toBe('')
 		expect(self.setVariableValues).not.toHaveBeenCalled()
 	})
 
@@ -57,7 +59,7 @@ describe('media listeners', () => {
 
 		expect(self.sendToActionRecorder).toHaveBeenCalledWith({
 			actionId: 'media_control',
-			options: { source: 'My Clip', useCurrentMedia: false, action },
+			options: { source: 'My Clip', target: 'source', action },
 		})
 	})
 

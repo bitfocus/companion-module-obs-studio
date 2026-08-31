@@ -162,6 +162,18 @@ const ACTION_MIGRATIONS: Record<
 	scrub_media: { actionId: 'media_time', options: { mode: 'adjust' }, renames: { scrubAmount: 'amount' } },
 }
 
+const MEDIA_TARGET_ACTIONS = ['media_control', 'media_time', 'updateMediaLocalFile']
+
+/** Converts the old "Currently Playing" checkbox on the media actions to the explicit target dropdown. */
+function convertMediaTarget(action: CompanionMigrationAction): boolean {
+	if (!MEDIA_TARGET_ACTIONS.includes(action.actionId)) return false
+	if (getOpt(action.options, 'useCurrentMedia') === undefined) return false
+
+	setOpt(action.options, 'target', getOpt(action.options, 'useCurrentMedia') === true ? 'newest' : 'source')
+	delete action.options.useCurrentMedia
+	return true
+}
+
 function consolidateAction(action: CompanionMigrationAction): boolean {
 	const migration = ACTION_MIGRATIONS[action.actionId]
 	if (!migration) return false
@@ -528,6 +540,13 @@ export default [
 
 			// Runs last so it also picks up the ids the branches above just rewrote.
 			if (consolidateAction(action)) {
+				actionChanged = true
+			}
+
+			// After consolidation, so legacy media ids (play_pause_media, set_media_time, …) are covered too.
+			// The "Currently Playing" checkbox pointed at a single hidden value — the last clip that ever
+			// started — and becomes the explicit "newest playing clip" target.
+			if (convertMediaTarget(action)) {
 				actionChanged = true
 			}
 

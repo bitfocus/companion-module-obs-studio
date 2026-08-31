@@ -27,6 +27,7 @@ import {
 	type SourceDataBatchSpec,
 	type OBSFilter,
 } from './types.js'
+import { DEFAULT_TIMECODE } from './constants.js'
 import { BatchBuilder, successfulEntry, type BatchEntry, type BatchSpec, type SuccessfulBatchEntry } from './batch.js'
 import type { SceneItemMatch } from './state.js'
 
@@ -1160,7 +1161,7 @@ export class OBSApi {
 		const entries = await this.runBatch(builder)
 		if (entries) {
 			const allValues: Record<string, string | number | boolean | string[] | undefined> = {}
-			const currentMedia: Array<{ name: string; elapsed: string; remaining: string }> = []
+			const currentMedia: Array<{ name: string; elapsed: string; remaining: string; startedAt: number }> = []
 			for (const entry of entries) {
 				const successful = successfulEntry<MediaStatusBatchSpec>(entry)
 				if (successful) {
@@ -1172,6 +1173,16 @@ export class OBSApi {
 			allValues.current_media_time_elapsed = currentMedia.map((v) => v.elapsed)
 			allValues.current_media_time_remaining = currentMedia.map((v) => v.remaining)
 
+			// The same clip the "newest" action target resolves to. The list is in source order, not playback
+			// order, so pick by start time rather than taking the last entry.
+			const latest = currentMedia.reduce<(typeof currentMedia)[number] | undefined>(
+				(newest, entry) => (!newest || entry.startedAt > newest.startedAt ? entry : newest),
+				undefined,
+			)
+			allValues.latest_media_name = latest?.name ?? ''
+			allValues.latest_media_time_elapsed = latest?.elapsed ?? DEFAULT_TIMECODE
+			allValues.latest_media_time_remaining = latest?.remaining ?? DEFAULT_TIMECODE
+
 			this.self.setVariableValues(allValues)
 			this.self.checkFeedbacks('media_playing', 'media_source_time_remaining', 'mediaProgress', 'mediaTimeRemaining')
 		}
@@ -1180,7 +1191,7 @@ export class OBSApi {
 	private processMediaStatusResponse(
 		entry: SuccessfulBatchEntry<MediaStatusBatchSpec>,
 		allValues: Record<string, string | number | boolean | string[] | undefined>,
-		currentMedia: Array<{ name: string; elapsed: string; remaining: string }>,
+		currentMedia: Array<{ name: string; elapsed: string; remaining: string; startedAt: number }>,
 	): void {
 		const source = this.self.states.sources.get(entry.meta.sourceUuid)
 		if (!source) return
@@ -1202,9 +1213,18 @@ export class OBSApi {
 		source.timeRemaining = remainingValue > 0 ? utils.formatTimecode(remainingValue) : '--:--:--'
 
 		const isPlayingOrPaused = mediaState === OBSMediaStatus.Playing || mediaState === OBSMediaStatus.Paused
+		// A clip already rolling when Companion connected never raised a playback-started event, so stamp it
+		// here; without a start time it could never win the "newest" target.
+		if (isPlayingOrPaused) {
+			source.mediaStartedAt ??= Date.now()
+		} else {
+			source.mediaStartedAt = undefined
+		}
+
 		if (isPlayingOrPaused && source.active) {
 			currentMedia.push({
 				name: sourceName,
+				startedAt: source.mediaStartedAt ?? 0,
 				elapsed: source.timeElapsed,
 				remaining: source.timeRemaining,
 			})
