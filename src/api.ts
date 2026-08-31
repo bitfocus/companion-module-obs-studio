@@ -55,6 +55,7 @@ export class OBSApi {
 
 	// Guard against overlapping connection attempts.
 	private connecting = false
+	private lastLoggedError: string | null = null
 
 	// Subscription tracking for volume meters (keyed by feedback ID).
 	private meterSubscribers = new Set<string>()
@@ -122,6 +123,7 @@ export class OBSApi {
 			if (obsWebSocketVersion) {
 				this.self.updateStatus(InstanceStatus.Ok)
 				this.stopReconnectionPoll()
+				this.lastLoggedError = null
 				logger.info('Connected to OBS')
 
 				// Setup initial state.
@@ -160,30 +162,37 @@ export class OBSApi {
 		}
 	}
 
+	// Repeated identical failures are logged only once, so a reconnection loop doesn't spam the log.
+	private logError(message: string): void {
+		if (this.lastLoggedError === message) return
+		this.lastLoggedError = message
+		logger.error(message)
+	}
+
 	public processWebSocketError(error: unknown): void {
 		let tryReconnect: boolean
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		if (errorMessage.match(/(Server sent no subprotocol)/i)) {
 			tryReconnect = false
-			logger.error('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
+			this.logError('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
 			this.self.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated OBS version')
 		} else if (errorMessage.match(/(missing an `authentication` string)/i)) {
 			tryReconnect = false
-			logger.error(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
+			this.logError(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
 			this.self.updateStatus(InstanceStatus.BadConfig, 'Missing password')
 		} else if (errorMessage.match(/(Authentication failed)/i)) {
 			tryReconnect = false
-			logger.error(
+			this.logError(
 				`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
 			)
 			this.self.updateStatus(InstanceStatus.AuthenticationFailure)
 		} else if (errorMessage.match(/(ECONNREFUSED)/i)) {
 			tryReconnect = true
-			logger.error(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
+			this.logError(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
 			this.self.updateStatus(InstanceStatus.ConnectionFailure)
 		} else {
 			tryReconnect = true
-			logger.error(`Failed to connect to OBS (${errorMessage})`)
+			this.logError(`Failed to connect to OBS (${errorMessage})`)
 			this.self.updateStatus(InstanceStatus.UnknownError)
 		}
 		// A terminal failure stops the retry loop even if it started before the cause was known.
