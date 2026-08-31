@@ -1,6 +1,6 @@
 {
 	"name": "obs-studio",
-	"version": "4.0.0-beta1",
+	"version": "4.0.0-beta.1",
 	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
