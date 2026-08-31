@@ -1,31 +1,56 @@
 {
 	"name": "obs-studio",
-	"version": "3.16.0",
-	"main": "index.js",
+	"version": "4.0.0-beta.1",
+	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
+		"postinstall": "husky",
 		"format": "prettier -w .",
-		"package": "companion-module-build",
+		"format:check": "prettier --check .",
+		"package": "run build && companion-module-build",
+		"build": "rimraf dist && run build:main",
+		"check": "run format && run lint && run test",
+		"build:main": "tsc -p tsconfig.build.json",
+		"check-types": "tsc -p tsconfig.json --noEmit",
+		"dev": "tsc -p tsconfig.build.json --watch",
 		"lint:raw": "eslint",
-		"lint": "yarn lint:raw ."
+		"lint": "run lint:raw .",
+		"test": "vitest --run"
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@companion-module/base": "~1.12.1",
-		"obs-websocket-js": "5.0.7"
+		"@companion-module/base": "~2.1.3",
+		"obs-websocket-js": "5.0.8"
 	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/bitfocus/companion-module-obs-studio.git"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.8.0",
-		"eslint": "^9.39.2",
-		"prettier": "^3.7.4"
+		"@companion-module/tools": "^3.1.0",
+		"@types/node": "^26.4.0",
+		"@vitest/eslint-plugin": "^1.6.27",
+		"eslint": "^10.9.1",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.4.1",
+		"prettier": "^3.9.6",
+		"rimraf": "^6.1.3",
+		"typescript": "~6.0.3",
+		"typescript-eslint": "^8.68.0",
+		"vitest": "^4.1.11"
 	},
 	"engines": {
-		"node": "^22.12"
+		"node": "26",
+		"yarn": "^4"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.12.0"
+	"lint-staged": {
+		"*.{css,json,md,scss}": [
+			"prettier --write"
+		],
+		"*.{ts,tsx,js,jsx}": [
+			"yarn lint:raw --fix"
+		]
+	},
+	"packageManager": "yarn@4.18.0"
 }

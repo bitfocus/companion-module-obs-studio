@@ -7,7 +7,8 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Download and install [**OBS 28 or above**](https://obsproject.com), which includes the obs-websocket plugin by default.
 - Enable and configure the obs-websocket plugin within OBS under Tools > WebSocket Server Settings
 - In the WebSocket Server Settings window, click Show Connect Info. This info can be referenced in the next step.
-- In the Companion module settings for OBS, enter the Server IP address (or hostname), the Server Port (by default the port is 4455), and the Server Password (leave blank if authentication is disabled)
+- In the module configuration for this module, enter the Server IP address (or hostname), the Server Port (by default the port is 4455), and the Server Password (leave blank if authentication is disabled)
+- By default, a WebSocket (ws) connection is used. Set to Secure WebSocket (wss) if you have specifically configured a secure connection.
 
 ### Available actions
 
@@ -34,20 +35,22 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 
 **Sources**
 
-- Set Source Visibility _(Individual sources, or All Sources within a scene)_
+- Set Source Visibility _(Individual source)_
+- Set Visibility of All Sources in Scene _(with an optional except list, set to the opposite visibility)_
 - Set Filter Visibility
 - Set Filter Settings
 - Set Source Transform (Position / Scale / Rotation)
 - Source Mute (Set / Toggle)
-- Set Source Volume
-- Adjust Source Volume
-- Set Audio Monitor
+- Source Volume (Set / Adjust, in dB or percent, with an optional fade duration)
+- Set Audio Monitoring (Enable / Disable / Toggle)
 - Set Audio Sync Offset
 - Set Audio Balance
+- Set Audio Tracks (Set / Toggle mixer output tracks)
 - Set Source Text
 - Set Text Properties
 - Refresh Browser Source
 - Reset Video Capture Device
+- Take Screenshot
 - Play / Pause Media
 - Restart Media
 - Stop Media
@@ -56,6 +59,11 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - Set Media Time
 - Scrub Media
 - Update Media Source Local File Path
+
+Every media action has a **Target**: a specific source, the newest playing clip, or (except when setting a
+file path) all playing clips at once. "Newest" and "all" cover the clips that are playing or paused and
+active in program.
+
 - Open Source Properties Window
 - Open Source Filters Window
 - Open Source Interact Window
@@ -79,14 +87,18 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 **Recording & Streaming & Outputs**
 
 - Streaming Active
-- Recording Status (If recording is active or paused, change the style of the button)
+- Streaming Reconnecting
+- Recording Active
+- Recording Paused
 - Output Active
 - Replay Buffer Active
-- Stream Congestion
+- Stream Congestion Above (Active while congestion is above a chosen threshold, 0-100)
+- Stream Congestion Level (Value, the current congestion from 0 to 100, for use with a gauge)
 
 **Switching & Transitions**
 
-- Scene in Preview / Program (Program and Preview, Program Only, or Preview Only)
+- Scene in Program
+- Scene in Preview
 - Previous Scene Active
 - Transition in Progress
 - Current Transition Type
@@ -94,14 +106,27 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 
 **Sources**
 
-- Source Visible (If a source is visible in the program, change the style of the button)
+- Source Visible in Program (If a source is visible in the program, change the style of the button)
+- Source Active in Preview
 - Source Enabled in Scene (If a source is enabled in a specific scene, change the style of the button)
 - Filter Enabled
 - Audio Muted
-- Audio Monitor Type
-- Volume
+- Audio Monitoring
+- Audio Track Enabled
+- Audio Volume (If a source is at an exact volume in dB)
+- Audio Peaking (If a source's peak level is above a threshold)
 - Media Playing
-- Media Source Remaining Time (If remaining time of a media source is below a threshold, change the style of the button)
+- Media Remaining Time (If remaining time of a media source is below a threshold, change the style of the button)
+
+Value feedbacks report a number rather than a style. Bind one to a button's local variable and use it in an
+expression, such as the value of a gauge:
+
+- Audio Peak Level (dB)
+- Audio Volume (dB)
+- Audio Balance (%)
+- Audio Sync Offset (ms)
+- Media Playback Progress (%)
+- Media Remaining Time (seconds)
 
 **General**
 
@@ -121,17 +146,21 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - recording
 - recording_file_name
 - recording_path
-- recording_timecode
+- recording_timecode (also recording_timecode_hh, recording_timecode_mm and recording_timecode_ss)
 - streaming
-- stream_timecode
+- stream_timecode (also stream_timecode_hh, stream_timecode_mm and stream_timecode_ss)
 - stream_service
-- kbits_per_sec (Amount of data per second (in kilobits) transmitted by the stream encoder)
+- kbits_per_sec (Amount of data per second transmitted by the stream encoder)
 - render_missed_frames
 - render_total_frames
 - output_skipped_frames
 - output_total_frames
+- stream_output_skipped_frames (Frames skipped by the current stream)
+- stream_output_total_frames (Total frames for the current stream)
 - average_frame_time
 - replay_buffer_path
+- replay_buffer_active
+- virtualcam_active
 
 **Switching & Transitions**
 
@@ -140,13 +169,17 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - scene_previous
 - current_transition
 - transition_duration
-- transition_list
+- transition_list (List of every available transition)
+- transition_active (Boolean, true while a transition is in progress)
 
 **Sources**
 
-- current_media_name (Will only reflect one source if multiple media sources are playing)
-- current_media_time_elapsed (Will only reflect one source if multiple media sources are playing)
-- current_media_time_remaining (Will only reflect one source if multiple media sources are playing)
+- current_media_name (List, containing an entry for every currently playing media source)
+- current_media_time_elapsed (List, containing an entry for every currently playing media source)
+- current_media_time_remaining (List, containing an entry for every currently playing media source)
+- latest_media_name (The most recently started media source, matching the "Newest Playing Clip" action target)
+- latest_media_time_elapsed (Elapsed time of the most recently started media source)
+- latest_media_time_remaining (Remaining time of the most recently started media source)
 - media_status_source_name(Current status of media sources, including: playing, paused, stopped, ended)
 - media_file_name (Current file name of media sources, not including the extension)
 - media_time_elapsed
@@ -155,19 +188,24 @@ This module will allow you to control OBS Studio using the built-in WebSocket Se
 - current_text (Current text value of text sources)
 - volume (Current volume in dB of a source)
 - mute (Current audio mute state of a source)
-- monitor (Current audio monitoring state of a source)
+- monitor (Current audio monitoring type of a source)
+- monitor_active (Whether audio monitoring is enabled for a source)
 - sync_offset (Current audio sync offset of a source)
 - balance (Current audio balance of a source)
+- tracks (List of the audio mixer track numbers a source is routed to, e.g. [1, 3])
+- audio_source_list (List of every audio source)
 
 **General**
 
 - profile
 - scene_collection
+- studio_mode (Boolean, true while studio mode is enabled)
 - fps
 - cpu_usage
 - memory_usage
 - free_disk_space
 - free_disk_space_mb
+- screenshot_saved_path (File path of the last saved screenshot)
 - base_resolution
 - output_resolution
 - target_framerate

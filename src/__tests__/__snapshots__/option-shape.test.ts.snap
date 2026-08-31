@@ -1,0 +1,2781 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`option shape > action options are unchanged 1`] = `
+{
+  "SendStreamCaption": [
+    {
+      "default": "",
+      "id": "text",
+      "label": "Caption Text",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "audio_balance": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set",
+        },
+        {
+          "id": "adjust",
+          "label": "Adjust",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 0.5,
+      "id": "value",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Balance (0.0 to 1.0)",
+      "max": 1,
+      "min": 0,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 0.1,
+      "id": "amount",
+      "isVisibleExpression": "$(options:mode) === 'adjust'",
+      "label": "Amount (percentage of range)",
+      "max": 1,
+      "min": -1,
+      "type": "number",
+    },
+  ],
+  "audio_offset": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set",
+        },
+        {
+          "id": "adjust",
+          "label": "Adjust",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "value",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Offset in ms",
+      "max": 20000,
+      "min": -950,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 50,
+      "id": "amount",
+      "isVisibleExpression": "$(options:mode) === 'adjust'",
+      "label": "Amount in ms",
+      "max": 20000,
+      "min": -950,
+      "type": "number",
+    },
+  ],
+  "custom_command": [
+    {
+      "default": "SetCurrentProgramScene",
+      "id": "command",
+      "label": "Request Type",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "{"sceneName": "Scene 1"}",
+      "id": "arg",
+      "label": "Request Data (optional, JSON formatted)",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "do_transition": [],
+  "media_control": [
+    {
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "newest",
+          "label": "Newest Playing Clip",
+        },
+        {
+          "id": "all",
+          "label": "All Playing Clips",
+        },
+      ],
+      "default": "source",
+      "disableAutoExpression": true,
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "$(options:target) == 'source'",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "toggle",
+          "label": "Toggle Play/Pause",
+        },
+        {
+          "id": "play",
+          "label": "Play",
+        },
+        {
+          "id": "pause",
+          "label": "Pause",
+        },
+        {
+          "id": "restart",
+          "label": "Restart",
+        },
+        {
+          "id": "stop",
+          "label": "Stop",
+        },
+        {
+          "id": "next",
+          "label": "Next",
+        },
+        {
+          "id": "previous",
+          "label": "Previous",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "action",
+      "label": "Action",
+      "type": "dropdown",
+    },
+  ],
+  "media_time": [
+    {
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "newest",
+          "label": "Newest Playing Clip",
+        },
+        {
+          "id": "all",
+          "label": "All Playing Clips",
+        },
+      ],
+      "default": "source",
+      "disableAutoExpression": true,
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "$(options:target) == 'source'",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set Time",
+        },
+        {
+          "id": "adjust",
+          "label": "Scrub",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "value",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Time (in ms)",
+      "max": 360000000,
+      "min": 0,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 1,
+      "id": "amount",
+      "isVisibleExpression": "$(options:mode) === 'adjust'",
+      "label": "Scrub Amount (in seconds, can be negative)",
+      "max": 3600,
+      "min": -3600,
+      "type": "number",
+    },
+  ],
+  "mute": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "Mute",
+        },
+        {
+          "id": "false",
+          "label": "Unmute",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "mute",
+      "label": "Mute",
+      "type": "dropdown",
+    },
+  ],
+  "openInputFiltersDialog": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "openInputInteractDialog": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "openInputPropertiesDialog": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "open_projector": [
+    {
+      "choices": [
+        {
+          "id": "Multiview",
+          "label": "Multiview",
+        },
+        {
+          "id": "Preview",
+          "label": "Preview",
+        },
+        {
+          "id": "StudioProgram",
+          "label": "Program",
+        },
+        {
+          "id": "Source",
+          "label": "Source",
+        },
+        {
+          "id": "Scene",
+          "label": "Scene",
+        },
+      ],
+      "default": "Multiview",
+      "disableAutoExpression": true,
+      "id": "type",
+      "label": "Projector Type",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "window",
+          "label": "Window",
+        },
+        {
+          "id": "fullscreen",
+          "label": "Fullscreen",
+        },
+      ],
+      "default": "window",
+      "disableAutoExpression": true,
+      "id": "window",
+      "label": "Window Type",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [],
+      "default": 0,
+      "id": "display",
+      "isVisibleExpression": "$(options:window) === 'fullscreen'",
+      "label": "Display",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "$(options:type) === 'Source'",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "isVisibleExpression": "$(options:type) === 'Scene'",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "output": [
+    {
+      "choices": [
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+        {
+          "id": "start",
+          "label": "Start",
+        },
+        {
+          "id": "stop",
+          "label": "Stop",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "action",
+      "label": "Action",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "virtualcam_output",
+          "label": "Virtual Cam",
+        },
+      ],
+      "default": "virtualcam_output",
+      "id": "output",
+      "label": "Output",
+      "type": "dropdown",
+    },
+  ],
+  "preview_scene": [
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set Scene",
+        },
+        {
+          "id": "next",
+          "label": "Next Scene",
+        },
+        {
+          "id": "previous",
+          "label": "Previous Scene",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "quick_transition": [
+    {
+      "choices": [
+        {
+          "id": "Fade",
+          "label": "Fade",
+        },
+      ],
+      "default": "Fade",
+      "id": "transition",
+      "label": "Transition",
+      "type": "dropdown",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "customDuration",
+      "label": "Custom Duration",
+      "type": "checkbox",
+    },
+    {
+      "clampValues": true,
+      "default": 500,
+      "id": "transition_time",
+      "isVisibleExpression": "$(options:customDuration)",
+      "label": "Transition time (in ms)",
+      "max": 60000,
+      "min": 0,
+      "type": "number",
+    },
+  ],
+  "recording": [
+    {
+      "choices": [
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+        {
+          "id": "start",
+          "label": "Start",
+        },
+        {
+          "id": "stop",
+          "label": "Stop",
+        },
+        {
+          "id": "pause",
+          "label": "Pause",
+        },
+        {
+          "id": "resume",
+          "label": "Resume",
+        },
+        {
+          "id": "toggle_pause",
+          "label": "Toggle Pause",
+        },
+        {
+          "id": "split",
+          "label": "Split File",
+        },
+        {
+          "id": "chapter",
+          "label": "Create Chapter",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "action",
+      "label": "Action",
+      "type": "dropdown",
+    },
+    {
+      "default": "",
+      "id": "chapterName",
+      "isVisibleExpression": "$(options:action) === 'chapter'",
+      "label": "Chapter Name (Optional)",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "refresh_browser_source": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "replay_buffer": [
+    {
+      "choices": [
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+        {
+          "id": "start",
+          "label": "Start",
+        },
+        {
+          "id": "stop",
+          "label": "Stop",
+        },
+        {
+          "id": "save",
+          "label": "Save",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "action",
+      "label": "Action",
+      "type": "dropdown",
+    },
+  ],
+  "resetCaptureDevice": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "setFilterSettings": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Gain",
+          "label": "Gain",
+        },
+      ],
+      "default": "Gain",
+      "id": "filter",
+      "label": "Filter",
+      "type": "dropdown",
+    },
+    {
+      "default": "{}",
+      "id": "settings",
+      "label": "Settings (JSON)",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "setText": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Title",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "id": "text",
+      "label": "Text",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "setTextProperties": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Title",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "fontSize",
+          "label": "Font Size",
+        },
+        {
+          "id": "fontFace",
+          "label": "Font Face",
+        },
+        {
+          "id": "fontStyle",
+          "label": "Font Style",
+        },
+        {
+          "id": "text",
+          "label": "Text",
+        },
+        {
+          "id": "textTransform",
+          "label": "Text Transform",
+        },
+        {
+          "id": "color1",
+          "label": "Color 1",
+        },
+        {
+          "id": "color2",
+          "label": "Color 2 / Gradient Color",
+        },
+        {
+          "id": "gradient",
+          "label": "Gradient",
+        },
+        {
+          "id": "backgroundColor",
+          "label": "Background Color",
+        },
+        {
+          "id": "backgroundOpacity",
+          "label": "Background Opacity",
+        },
+        {
+          "id": "outline",
+          "label": "Outline",
+        },
+        {
+          "id": "outlineSize",
+          "label": "Outline Size",
+        },
+        {
+          "id": "outlineColor",
+          "label": "Outline Color",
+        },
+        {
+          "id": "dropShadow",
+          "label": "Drop Shadow",
+        },
+        {
+          "id": "alignment",
+          "label": "Alignment",
+        },
+        {
+          "id": "verticalAlignment",
+          "label": "Vertical Alignment",
+        },
+        {
+          "id": "extents",
+          "label": "Use Custom Text Extents",
+        },
+        {
+          "id": "extentsWidth",
+          "label": "Text Extents Width",
+        },
+        {
+          "id": "extentsHeight",
+          "label": "Text Extents Height",
+        },
+        {
+          "id": "wrap",
+          "label": "Wrap",
+        },
+        {
+          "id": "vertical",
+          "label": "Vertical",
+        },
+      ],
+      "default": [],
+      "disableAutoExpression": true,
+      "id": "props",
+      "label": "Properties",
+      "type": "multidropdown",
+    },
+    {
+      "id": "text",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'text')",
+      "label": "Text",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "choices": [
+        {
+          "id": 0,
+          "label": "None",
+        },
+        {
+          "id": 1,
+          "label": "Uppercase",
+        },
+        {
+          "id": 2,
+          "label": "Lowercase",
+        },
+        {
+          "id": 3,
+          "label": "Start Case",
+        },
+      ],
+      "default": 0,
+      "description": "GDI+ Text Sources Only",
+      "disableAutoExpression": true,
+      "id": "textTransform",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'textTransform')",
+      "label": "Text Transform",
+      "type": "dropdown",
+    },
+    {
+      "id": "fontSize",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'fontSize')",
+      "label": "Font Size",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "id": "fontFace",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'fontFace')",
+      "label": "Font Face",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "id": "fontStyle",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'fontStyle')",
+      "label": "Font Style",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "#000000",
+      "enableAlpha": true,
+      "id": "color1",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'color1')",
+      "label": "Color 1",
+      "returnType": "string",
+      "type": "colorpicker",
+    },
+    {
+      "default": "#000000",
+      "enableAlpha": true,
+      "id": "color2",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'color2')",
+      "label": "Color 2 / Gradient Color",
+      "returnType": "string",
+      "type": "colorpicker",
+    },
+    {
+      "default": false,
+      "id": "gradient",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'gradient')",
+      "label": "Gradient",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "id": "outline",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'outline')",
+      "label": "Outline",
+      "type": "checkbox",
+    },
+    {
+      "default": "1",
+      "description": "GDI+ Text Sources Only",
+      "id": "outlineSize",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'outlineSize')",
+      "label": "Outline Size",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "#000000",
+      "description": "GDI+ Text Sources Only",
+      "enableAlpha": true,
+      "id": "outlineColor",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'outlineColor')",
+      "label": "Outline Color",
+      "returnType": "string",
+      "type": "colorpicker",
+    },
+    {
+      "default": "#000000",
+      "description": "GDI+ Text Sources Only",
+      "enableAlpha": true,
+      "id": "backgroundColor",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'backgroundColor')",
+      "label": "Background Color",
+      "returnType": "string",
+      "type": "colorpicker",
+    },
+    {
+      "default": "100",
+      "description": "GDI+ Text Sources Only",
+      "id": "backgroundOpacity",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'backgroundOpacity')",
+      "label": "Background Opacity",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": false,
+      "description": "FreeType Text Sources Only",
+      "id": "dropShadow",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'dropShadow')",
+      "label": "Drop Shadow",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "id": "wrap",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'wrap')",
+      "label": "Wrap",
+      "type": "checkbox",
+    },
+    {
+      "choices": [
+        {
+          "id": "left",
+          "label": "Left",
+        },
+        {
+          "id": "center",
+          "label": "Center",
+        },
+        {
+          "id": "right",
+          "label": "Right",
+        },
+      ],
+      "default": "left",
+      "description": "GDI+ Text Sources Only",
+      "disableAutoExpression": true,
+      "id": "alignment",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'alignment')",
+      "label": "Alignment",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "top",
+          "label": "Top",
+        },
+        {
+          "id": "center",
+          "label": "Center",
+        },
+        {
+          "id": "bottom",
+          "label": "Bottom",
+        },
+      ],
+      "default": "top",
+      "description": "GDI+ Text Sources Only",
+      "disableAutoExpression": true,
+      "id": "verticalAlignment",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'verticalAlignment')",
+      "label": "Vertical Alignment",
+      "type": "dropdown",
+    },
+    {
+      "default": false,
+      "description": "GDI+ Text Sources Only",
+      "id": "vertical",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'vertical')",
+      "label": "Vertical",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "description": "GDI+ Text Sources Only",
+      "id": "extents",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'extents')",
+      "label": "Use Custom Text Extents",
+      "type": "checkbox",
+    },
+    {
+      "default": "100",
+      "description": "GDI+ Text Sources Only",
+      "id": "extentsWidth",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'extentsWidth')",
+      "label": "Text Extents Width",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "100",
+      "description": "GDI+ Text Sources Only",
+      "id": "extentsHeight",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'extentsHeight')",
+      "label": "Text Extents Height",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "set_audio_monitor": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "Enabled",
+        },
+        {
+          "id": "false",
+          "label": "Disabled",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "monitor",
+      "label": "Monitoring",
+      "type": "dropdown",
+    },
+  ],
+  "set_audio_tracks": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "1",
+          "label": "Track 1",
+        },
+        {
+          "id": "2",
+          "label": "Track 2",
+        },
+        {
+          "id": "3",
+          "label": "Track 3",
+        },
+        {
+          "id": "4",
+          "label": "Track 4",
+        },
+        {
+          "id": "5",
+          "label": "Track 5",
+        },
+        {
+          "id": "6",
+          "label": "Track 6",
+        },
+      ],
+      "default": [],
+      "id": "tracks",
+      "label": "Tracks",
+      "tooltip": "Leave empty to affect all tracks",
+      "type": "multidropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "True",
+        },
+        {
+          "id": "false",
+          "label": "False",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "value",
+      "label": "Enabled",
+      "type": "dropdown",
+    },
+  ],
+  "set_profile": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Profile 1",
+          "label": "Profile 1",
+        },
+      ],
+      "default": "Profile 1",
+      "id": "profile",
+      "label": "Profile",
+      "type": "dropdown",
+    },
+  ],
+  "set_scene": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "set_scene_collection": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Collection 1",
+          "label": "Collection 1",
+        },
+      ],
+      "default": "Collection 1",
+      "id": "scene_collection",
+      "label": "Scene Collection",
+      "type": "dropdown",
+    },
+  ],
+  "set_stream_settings": [
+    {
+      "choices": [
+        {
+          "id": "rtmp_custom",
+          "label": "Custom RTMP",
+        },
+        {
+          "id": "rtmp_common",
+          "label": "Common RTMP",
+        },
+        {
+          "id": "whip_custom",
+          "label": "Custom WHIP",
+        },
+      ],
+      "default": "rtmp_custom",
+      "disableAutoExpression": true,
+      "id": "streamType",
+      "label": "Stream Type",
+      "type": "dropdown",
+    },
+    {
+      "default": "",
+      "id": "streamURL",
+      "isVisibleExpression": "$(options:streamType) !== 'rtmp_common'",
+      "label": "Stream URL",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "streamKey",
+      "isVisibleExpression": "$(options:streamType) !== 'whip_custom'",
+      "label": "Stream Key",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "useAuth",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_custom'",
+      "label": "Use Authentication",
+      "type": "checkbox",
+    },
+    {
+      "default": "",
+      "id": "username",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_custom' && $(options:useAuth) === true",
+      "label": "Username",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "password",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_custom' && $(options:useAuth) === true",
+      "label": "Password",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "bearerToken",
+      "isVisibleExpression": "$(options:streamType) === 'whip_custom'",
+      "label": "Bearer Token",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "smart_switcher": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "source_properties": [
+    {
+      "default": true,
+      "disableAutoExpression": true,
+      "id": "useProgramScene",
+      "label": "Current Program Scene",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "isVisibleExpression": "!$(options:useProgramScene)",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "positionX",
+          "label": "Position X",
+        },
+        {
+          "id": "positionY",
+          "label": "Position Y",
+        },
+        {
+          "id": "scaleX",
+          "label": "Scale X",
+        },
+        {
+          "id": "scaleY",
+          "label": "Scale Y",
+        },
+        {
+          "id": "rotation",
+          "label": "Rotation",
+        },
+      ],
+      "default": [],
+      "disableAutoExpression": true,
+      "id": "props",
+      "label": "Properties",
+      "type": "multidropdown",
+    },
+    {
+      "default": "",
+      "id": "positionX",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'positionX')",
+      "label": "Position X",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "positionY",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'positionY')",
+      "label": "Position Y",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "scaleX",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'scaleX')",
+      "label": "Scale X",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "scaleY",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'scaleY')",
+      "label": "Scale Y",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "rotation",
+      "isVisibleExpression": "arrayIncludes($(options:props), 'rotation')",
+      "label": "Rotation",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "streaming": [
+    {
+      "choices": [
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+        {
+          "id": "start",
+          "label": "Start",
+        },
+        {
+          "id": "stop",
+          "label": "Stop",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "action",
+      "label": "Action",
+      "type": "dropdown",
+    },
+  ],
+  "studio_mode": [
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "Enabled",
+        },
+        {
+          "id": "false",
+          "label": "Disabled",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "enabled",
+      "label": "Studio Mode",
+      "type": "dropdown",
+    },
+  ],
+  "take_screenshot": [
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "useProgramScene",
+      "label": "Current Program Scene",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "usePreviewScene",
+      "isVisibleExpression": "!$(options:useProgramScene)",
+      "label": "Current Preview Scene",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "!$(options:useProgramScene) && !$(options:usePreviewScene)",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [],
+      "default": "png",
+      "disableAutoExpression": true,
+      "id": "format",
+      "label": "Format",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "description": "PNG: 0-9. JPG: 0-100. -1 or 0 for default.",
+      "id": "compression",
+      "label": "Compression Quality (Default: -1/0)",
+      "max": 100,
+      "min": -1,
+      "type": "number",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "customName",
+      "label": "Custom Path",
+      "type": "checkbox",
+    },
+    {
+      "default": "",
+      "id": "path",
+      "isVisibleExpression": "$(options:customName)",
+      "label": "Path (including filename)",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "Screenshot ",
+      "id": "prefix",
+      "isVisibleExpression": "!$(options:customName)",
+      "label": "Prefix (for default path)",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "toggle_all_scene_items": [
+    {
+      "default": true,
+      "disableAutoExpression": true,
+      "id": "useCurrentScene",
+      "label": "Current Scene",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "isVisibleExpression": "!$(options:useCurrentScene)",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": [],
+      "id": "except",
+      "label": "Except",
+      "type": "multidropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "Show",
+        },
+        {
+          "id": "false",
+          "label": "Hide",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "visible",
+      "label": "Visibility",
+      "type": "dropdown",
+    },
+  ],
+  "toggle_filter": [
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "allSources",
+      "label": "All Sources",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "!$(options:allSources)",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Gain",
+          "label": "Gain",
+        },
+      ],
+      "default": "Gain",
+      "id": "filter",
+      "label": "Filter",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "Show",
+        },
+        {
+          "id": "false",
+          "label": "Hide",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "visible",
+      "label": "Visibility",
+      "type": "dropdown",
+    },
+  ],
+  "toggle_scene_item": [
+    {
+      "default": true,
+      "disableAutoExpression": true,
+      "id": "anyScene",
+      "label": "All Scenes",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "useCurrentScene",
+      "isVisibleExpression": "!$(options:anyScene)",
+      "label": "Current Scene",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "isVisibleExpression": "!$(options:anyScene) &&!$(options:useCurrentScene)",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "true",
+          "label": "Show",
+        },
+        {
+          "id": "false",
+          "label": "Hide",
+        },
+        {
+          "id": "toggle",
+          "label": "Toggle",
+        },
+      ],
+      "default": "toggle",
+      "disableAutoExpression": true,
+      "id": "visible",
+      "label": "Visibility",
+      "type": "dropdown",
+    },
+  ],
+  "transition_duration": [
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set",
+        },
+        {
+          "id": "adjust",
+          "label": "Adjust",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 500,
+      "id": "value",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Transition time (in ms)",
+      "max": 60000,
+      "min": 0,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 50,
+      "id": "amount",
+      "isVisibleExpression": "$(options:mode) === 'adjust'",
+      "label": "Amount (in ms)",
+      "max": 60000,
+      "min": -60000,
+      "type": "number",
+    },
+  ],
+  "transition_type": [
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set Type",
+        },
+        {
+          "id": "next",
+          "label": "Next Type",
+        },
+        {
+          "id": "previous",
+          "label": "Previous Type",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "Fade",
+          "label": "Fade",
+        },
+      ],
+      "default": "Fade",
+      "id": "transitions",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Transitions",
+      "type": "dropdown",
+    },
+  ],
+  "trigger-hotkey": [
+    {
+      "allowCustom": true,
+      "choices": [],
+      "default": "",
+      "id": "id",
+      "label": "Hotkey ID",
+      "type": "dropdown",
+    },
+  ],
+  "trigger-hotkey-sequence": [
+    {
+      "default": "OBS_KEY_NONE",
+      "id": "keyId",
+      "label": "Key ID (e.g. OBS_KEY_A)",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": false,
+      "id": "keyShift",
+      "label": "Shift",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "id": "keyAlt",
+      "label": "Alt",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "id": "keyControl",
+      "label": "Control",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "description": "(macOS only)",
+      "id": "keyCommand",
+      "label": "Command",
+      "type": "checkbox",
+    },
+  ],
+  "updateMediaLocalFile": [
+    {
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "newest",
+          "label": "Newest Playing Clip",
+        },
+      ],
+      "default": "source",
+      "disableAutoExpression": true,
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "$(options:target) == 'source'",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+    {
+      "default": "",
+      "id": "path",
+      "label": "File Path",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "vendorRequest": [
+    {
+      "default": "",
+      "id": "vendorName",
+      "label": "vendorName",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "requestType",
+      "label": "requestType",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "id": "requestData",
+      "label": "requestData",
+      "type": "textinput",
+      "useVariables": true,
+    },
+  ],
+  "volume": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "set",
+          "label": "Set",
+        },
+        {
+          "id": "adjust",
+          "label": "Adjust",
+        },
+      ],
+      "default": "set",
+      "disableAutoExpression": true,
+      "id": "mode",
+      "label": "Mode",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "db",
+          "label": "Decibels",
+        },
+        {
+          "id": "percent",
+          "label": "Percentage",
+        },
+      ],
+      "default": "db",
+      "disableAutoExpression": true,
+      "id": "unit",
+      "label": "Unit",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "value",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Target Volume",
+      "max": 100,
+      "min": -100,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "duration",
+      "isVisibleExpression": "$(options:mode) === 'set'",
+      "label": "Fade Duration (in ms, 0 for instant)",
+      "max": 5000,
+      "min": 0,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 1,
+      "id": "amount",
+      "isVisibleExpression": "$(options:mode) === 'adjust'",
+      "label": "Adjustment Amount",
+      "max": 100,
+      "min": -100,
+      "type": "number",
+    },
+  ],
+}
+`;
+
+exports[`option shape > feedback options are unchanged 1`] = `
+{
+  "audioPeakLevel": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "audioPeaking": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": -20,
+      "id": "threshold",
+      "label": "Threshold (dB)",
+      "max": 26,
+      "min": -100,
+      "type": "number",
+    },
+  ],
+  "audio_monitor_type": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "audio_muted": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "audio_track": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "choices": [
+        {
+          "id": "1",
+          "label": "Track 1",
+        },
+        {
+          "id": "2",
+          "label": "Track 2",
+        },
+        {
+          "id": "3",
+          "label": "Track 3",
+        },
+        {
+          "id": "4",
+          "label": "Track 4",
+        },
+        {
+          "id": "5",
+          "label": "Track 5",
+        },
+        {
+          "id": "6",
+          "label": "Track 6",
+        },
+      ],
+      "default": "1",
+      "disableAutoExpression": true,
+      "id": "track",
+      "label": "Track",
+      "type": "dropdown",
+    },
+  ],
+  "current_transition": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Fade",
+          "label": "Fade",
+        },
+      ],
+      "default": "Fade",
+      "id": "transition",
+      "label": "Transition",
+      "type": "dropdown",
+    },
+  ],
+  "filter_enabled": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Gain",
+          "label": "Gain",
+        },
+      ],
+      "default": "Gain",
+      "id": "filter",
+      "label": "Filter",
+      "type": "dropdown",
+    },
+  ],
+  "freeDiskSpaceRemaining": [
+    {
+      "clampValues": true,
+      "default": 10000,
+      "id": "diskSpace",
+      "label": "Remaining Space (MB)",
+      "max": 1000000,
+      "min": 0,
+      "type": "number",
+    },
+  ],
+  "mediaProgress": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+  ],
+  "mediaTimeRemaining": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+  ],
+  "media_playing": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Media Source",
+      "type": "dropdown",
+    },
+  ],
+  "media_source_time_remaining": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 20,
+      "id": "rtThreshold",
+      "label": "Remaining time threshold (in seconds)",
+      "max": 3600,
+      "min": 0,
+      "type": "number",
+    },
+    {
+      "default": false,
+      "id": "onlyIfSourceIsOnProgram",
+      "label": "Feedback only if source is on program",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "id": "onlyIfSourceIsPlaying",
+      "label": "Feedback only if source is playing",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "id": "blinkingEnabled",
+      "label": "Blinking",
+      "type": "checkbox",
+    },
+  ],
+  "output_active": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "virtualcam_output",
+          "label": "Virtual Cam",
+        },
+      ],
+      "default": "virtualcam_output",
+      "id": "output",
+      "label": "Output name",
+      "type": "dropdown",
+    },
+  ],
+  "profile_active": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Profile 1",
+          "label": "Profile 1",
+        },
+      ],
+      "default": "Profile 1",
+      "id": "profile",
+      "label": "Profile",
+      "type": "dropdown",
+    },
+  ],
+  "recording": [],
+  "recordingPaused": [],
+  "replayBufferActive": [],
+  "scenePreview": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "scenePrevious": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "sceneProgram": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+  ],
+  "scene_collection_active": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Collection 1",
+          "label": "Collection 1",
+        },
+      ],
+      "default": "Collection 1",
+      "id": "scene_collection",
+      "label": "Scene Collection",
+      "type": "dropdown",
+    },
+  ],
+  "scene_item_active": [
+    {
+      "default": true,
+      "disableAutoExpression": true,
+      "id": "anyScene",
+      "label": "All Scenes",
+      "type": "checkbox",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "useCurrentScene",
+      "isVisibleExpression": "!$(options:anyScene)",
+      "label": "Current Scene",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "isVisibleExpression": "!$(options:anyScene) && !$(options:useCurrentScene)",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "scene_item_active_in_scene": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Scene B",
+          "label": "Scene B",
+        },
+        {
+          "id": "Scene A",
+          "label": "Scene A",
+        },
+      ],
+      "default": "Scene B",
+      "id": "scene",
+      "label": "Scene",
+      "type": "dropdown",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "any",
+      "label": "Any Source",
+      "type": "checkbox",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "isVisibleExpression": "!$(options:any)",
+      "label": "Source",
+      "type": "dropdown",
+    },
+  ],
+  "scene_item_previewed": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": "Clip",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "sourceBalance": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "sourceSyncOffset": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "sourceVolume": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+  ],
+  "streamCongestionAbove": [
+    {
+      "clampValues": true,
+      "default": 67,
+      "id": "threshold",
+      "label": "Congestion threshold (0-100)",
+      "max": 100,
+      "min": 0,
+      "type": "number",
+    },
+  ],
+  "streamCongestionLevel": [],
+  "streamReconnecting": [],
+  "streaming": [],
+  "studioMode": [],
+  "transition_active": [],
+  "transition_duration": [
+    {
+      "clampValues": true,
+      "default": 500,
+      "id": "duration",
+      "label": "Transition time (in ms)",
+      "max": 60000,
+      "min": 0,
+      "type": "number",
+    },
+  ],
+  "vendorEvent": [
+    {
+      "default": "downstream-keyer",
+      "id": "vendorName",
+      "label": "vendorName",
+      "type": "textinput",
+    },
+    {
+      "default": "dsk_scene_changed",
+      "id": "eventType",
+      "label": "eventType",
+      "type": "textinput",
+    },
+    {
+      "default": "new_scene",
+      "id": "eventDataKey",
+      "label": "eventData Key",
+      "type": "textinput",
+    },
+    {
+      "default": "Scene 1",
+      "id": "eventDataValue",
+      "label": "eventData Value",
+      "type": "textinput",
+    },
+  ],
+  "volume": [
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+      ],
+      "default": "Mic",
+      "id": "source",
+      "label": "Source name",
+      "type": "dropdown",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "volume",
+      "label": "Volume in dB (-100 to 26) ",
+      "max": 26,
+      "min": -100,
+      "type": "number",
+    },
+  ],
+}
+`;

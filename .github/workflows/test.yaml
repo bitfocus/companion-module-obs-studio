@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+# A superseded run on the same branch has nothing left to tell us.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, types and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Corepack provides the Yarn 4 release pinned in package.json, and has to be active before
+      # setup-node's cache step shells out to yarn to locate the cache folder.
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          # Reads engines.node, so the version lives in package.json only.
+          node-version-file: package.json
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # Each check reports even when an earlier one fails, so a run surfaces every problem at once
+      # rather than one per push. Ordered cheapest first.
+      - name: Format
+        if: ${{ !cancelled() }}
+        run: yarn format:check
+
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: yarn lint
+
+      - name: Types
+        if: ${{ !cancelled() }}
+        run: yarn check-types
+
+      - name: Tests
+        if: ${{ !cancelled() }}
+        run: yarn test
