@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { getOutputFeedbacks } from '../feedbacks/outputs.js'
 import { makeMockInstance, seedSource, type MockInstance } from './mock/instance.js'
 import { mockBatchResponses } from './mock/socket.js'
 import { feedbackEvent } from './mock/events.js'
 import type { OBSBatchRequest } from '../types.js'
+import { POLL_INTERVALS } from '../constants.js'
 import { RequestBatchExecutionType } from 'obs-websocket-js'
 import { looseFeedbacks } from './loose-definitions.js'
 import { MockContext } from './mock-context.js'
@@ -122,6 +123,80 @@ describe('profileInfo', () => {
 				'GetStreamServiceSettings',
 			]),
 		)
+	})
+})
+
+describe('output list refresh', () => {
+	let self: MockInstance
+
+	const respondWithOutputs = (...outputNames: string[]): void => {
+		self.socket.call.mockImplementation(async (request: string) =>
+			request === 'GetOutputList'
+				? Promise.resolve({ outputs: outputNames.map((outputName) => ({ outputName, outputActive: false })) })
+				: Promise.resolve({}),
+		)
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		vi.useFakeTimers()
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	// OBS has no output-created event, so a plugin output (DistroAV NDI, for one) registered after
+	// connecting is only ever found by re-enumerating.
+	test('picks up an output that appears after the initial list was built', async () => {
+		respondWithOutputs('adv_stream')
+		await self.obs.buildOutputList()
+		expect(Array.from(self.states.outputs.keys())).toEqual(['adv_stream'])
+
+		respondWithOutputs('adv_stream', 'NDI Main Output')
+		vi.advanceTimersByTime(POLL_INTERVALS.OUTPUT_LIST)
+		await self.obs.refreshOutputList()
+
+		expect(Array.from(self.states.outputs.keys())).toEqual(['adv_stream', 'NDI Main Output'])
+	})
+
+	test('drops an output that has gone away', async () => {
+		respondWithOutputs('adv_stream', 'NDI Main Output')
+		await self.obs.buildOutputList()
+
+		respondWithOutputs('adv_stream')
+		vi.advanceTimersByTime(POLL_INTERVALS.OUTPUT_LIST)
+		await self.obs.refreshOutputList()
+
+		expect(Array.from(self.states.outputs.keys())).toEqual(['adv_stream'])
+	})
+
+	test('throttles the enumeration, so the poll does not ask every second', async () => {
+		respondWithOutputs('adv_stream')
+		await self.obs.buildOutputList()
+		self.socket.call.mockClear()
+
+		await self.obs.refreshOutputList()
+		expect(self.socket.call).not.toHaveBeenCalled()
+
+		vi.advanceTimersByTime(POLL_INTERVALS.OUTPUT_LIST)
+		await self.obs.refreshOutputList()
+		expect(self.socket.call).toHaveBeenCalledWith('GetOutputList', undefined)
+	})
+
+	test('only rebuilds the definitions when the set of outputs changed', async () => {
+		respondWithOutputs('adv_stream')
+		await self.obs.buildOutputList()
+		self.updateActionsFeedbacksVariables.mockClear()
+
+		vi.advanceTimersByTime(POLL_INTERVALS.OUTPUT_LIST)
+		await self.obs.refreshOutputList()
+		expect(self.updateActionsFeedbacksVariables).not.toHaveBeenCalled()
+
+		respondWithOutputs('adv_stream', 'NDI Main Output')
+		vi.advanceTimersByTime(POLL_INTERVALS.OUTPUT_LIST)
+		await self.obs.refreshOutputList()
+		expect(self.updateActionsFeedbacksVariables).toHaveBeenCalledTimes(1)
 	})
 })
 

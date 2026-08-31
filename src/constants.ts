@@ -15,6 +15,9 @@ export const POLL_INTERVALS = {
 	RECONNECTION: 5000,
 	STATS: 1000,
 	MEDIA: 1000,
+	// Outputs have no created/destroyed event, so plugin outputs (DistroAV NDI, for one) that appear after
+	// connecting are only found by re-enumerating. Slow, because it is a poll for something rare.
+	OUTPUT_LIST: 30000,
 }
 
 /**
@@ -38,9 +41,12 @@ export function isMediaInputKind(inputKind: string | undefined | null): boolean 
 /** OBS's built-in virtual camera output, which has its own state-changed event. */
 export const VIRTUALCAM_OUTPUT_NAME = 'virtualcam_output'
 
-/** Outputs OBS reports but that are not offered as targets: recording/replay writers. */
+/**
+ * Outputs OBS reports but that are not offered as targets: the recording/replay writers, and the simple
+ * streaming output, which the streaming actions and feedbacks already cover.
+ */
 export function isSelectableOutput(outputName: string): boolean {
-	return !outputName.includes('file_output') && !outputName.includes('ffmpeg_output')
+	return !outputName.includes('file_output') && !outputName.includes('ffmpeg_output') && outputName !== 'simple_stream'
 }
 
 /** True for any of the versioned text source kinds. */

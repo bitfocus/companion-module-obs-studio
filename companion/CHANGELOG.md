@@ -83,6 +83,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Outputs registered by a plugin after Companion connected (such as DistroAV's NDI output) not appearing in
+  the Output action and feedback until the connection was restarted. OBS has no event for an output being
+  created, so the list is now re-enumerated periodically
+- The simple streaming output appearing as an Output target, duplicating the dedicated streaming actions
+
 - Recording status briefly showing "Unknown" when resuming a paused recording
 - Cached source filter settings not refreshing when changed in OBS or by another client
 

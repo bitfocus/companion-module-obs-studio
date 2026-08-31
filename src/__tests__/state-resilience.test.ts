@@ -326,3 +326,32 @@ describe('scene filters', () => {
 		})
 	})
 })
+
+describe('output choice list', () => {
+	let self: MockInstance
+
+	const seedOutputs = (...names: string[]): void => {
+		for (const outputName of names) {
+			self.states.outputs.set(outputName, { outputName, outputActive: false })
+		}
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	test('offers the outputs a user can start and stop', () => {
+		seedOutputs('adv_stream', 'virtualcam_output')
+
+		expect(self.obsState.outputList).toEqual([
+			{ id: 'adv_stream', label: 'adv_stream' },
+			{ id: 'virtualcam_output', label: 'Virtual Cam' },
+		])
+	})
+
+	test('hides the writers and the simple streaming output, which the streaming actions already cover', () => {
+		seedOutputs('adv_stream', 'simple_stream', 'simple_file_output', 'adv_ffmpeg_output')
+
+		expect(self.obsState.outputList.map((choice) => choice.id)).toEqual(['adv_stream'])
+	})
+})

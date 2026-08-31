@@ -51,12 +51,14 @@ export class OBSApi {
 	private static readonly RECONNECTION_POLL_INTERVAL = POLL_INTERVALS.RECONNECTION
 	private static readonly STATS_POLL_INTERVAL = POLL_INTERVALS.STATS
 	private static readonly MEDIA_POLL_INTERVAL = POLL_INTERVALS.MEDIA
+	private static readonly OUTPUT_LIST_REFRESH_INTERVAL = POLL_INTERVALS.OUTPUT_LIST
 
 	// Guard against overlapping connection attempts.
 	private connecting = false
 
 	// Subscription tracking for volume meters (keyed by feedback ID).
 	private meterSubscribers = new Set<string>()
+	private lastOutputListRefresh = 0
 	private metersActive = false
 	private lastMeterFeedbackCheck = 0
 	private meterFeedbackPending = false
@@ -399,6 +401,9 @@ export class OBSApi {
 				// getAllOutputStatuses no-ops when there is nothing to poll or no subscriber.
 				promises.push(this.getAllOutputStatuses())
 
+				// Throttles itself; picks up outputs a plugin registered after connecting.
+				promises.push(this.refreshOutputList())
+
 				// Run poll requests in parallel.
 				void Promise.all(promises)
 			}, OBSApi.STATS_POLL_INTERVAL)
@@ -571,15 +576,57 @@ export class OBSApi {
 	public async buildOutputList(): Promise<void> {
 		this.self.states.outputs.clear()
 
-		const outputData = await this.sendRequest('GetOutputList')
-		if (!outputData) return
+		const outputs = await this.fetchOutputList()
+		if (!outputs) return
 
-		for (const output of (outputData.outputs ?? []) as unknown as OBSOutput[]) {
-			if (output) this.self.states.outputs.set(output.outputName, output)
+		for (const output of outputs) {
+			this.self.states.outputs.set(output.outputName, output)
 		}
+		this.lastOutputListRefresh = Date.now()
+
 		// Fetch statuses for all outputs in one request.
 		void this.getAllOutputStatuses()
 		void this.self.updateActionsFeedbacksVariables()
+	}
+
+	/**
+	 * Re-enumerates outputs, since a plugin can register one at any time and obs-websocket has no event for
+	 * it. Throttled, and only rebuilds the definitions when the set of outputs actually changed, so the
+	 * common case of nothing new costs one request every {@link OUTPUT_LIST_REFRESH_INTERVAL}.
+	 */
+	public async refreshOutputList(): Promise<void> {
+		if (this.self.states.sceneCollectionChanging) return
+		if (Date.now() - this.lastOutputListRefresh < OBSApi.OUTPUT_LIST_REFRESH_INTERVAL) return
+		this.lastOutputListRefresh = Date.now()
+
+		const outputs = await this.fetchOutputList()
+		if (!outputs) return
+
+		const known = this.self.states.outputs
+		const names = new Set(outputs.map((output) => output.outputName))
+		let changed = false
+
+		for (const output of outputs) {
+			// Keep the status already polled for an output that is still there; only add what is new.
+			if (!known.has(output.outputName)) {
+				known.set(output.outputName, output)
+				changed = true
+			}
+		}
+		for (const name of Array.from(known.keys())) {
+			if (!names.has(name)) {
+				known.delete(name)
+				changed = true
+			}
+		}
+
+		if (changed) void this.self.updateActionsFeedbacksVariables()
+	}
+
+	private async fetchOutputList(): Promise<OBSOutput[] | undefined> {
+		const outputData = await this.sendRequest('GetOutputList')
+		if (!outputData) return undefined
+		return ((outputData.outputs ?? []) as unknown as OBSOutput[]).filter((output) => !!output)
 	}
 
 	public async buildMonitorList(): Promise<void> {
