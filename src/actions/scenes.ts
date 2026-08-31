@@ -26,7 +26,7 @@ export function getSceneActions(self: OBSInstance): CompanionActionDefinitions<S
 		},
 
 		preview_scene: {
-			name: 'Scens - Set Preview Scene',
+			name: 'Scene - Set Preview Scene',
 			description:
 				'Sets the current preview scene, either directly or by moving through the scene list (Studio Mode only)',
 			options: [
