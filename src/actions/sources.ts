@@ -72,9 +72,9 @@ export type SourceActionSchemas = {
 	toggle_scene_item: {
 		options: {
 			allSources: boolean
-			anyScene: boolean
-			useCurrentScene: boolean
+			target: 'allScenes' | 'currentScene' | 'scene' | 'group'
 			scene: string
+			group: string
 			source: string[]
 			except: string[]
 			includeGroupChildren: boolean
@@ -903,28 +903,30 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		toggle_scene_item: {
 			name: 'Source - Set Visibility',
 			description:
-				'Shows, hides, or toggles the visibility of sources in the specified scene(s). With All Sources checked, every source in the scene is set, and the excepted sources are set to the opposite visibility (ignored when Visibility is Toggle).',
+				'Shows, hides, or toggles the visibility of sources in the specified scene(s). With All Sources checked, every source in the chosen scene or group is set, and the excepted sources are set to the opposite visibility (ignored when Visibility is Toggle).',
 			options: [
 				{
-					type: 'checkbox',
+					type: 'dropdown',
 					disableAutoExpression: true,
-					label: 'All Scenes',
-					id: 'anyScene',
-					default: true,
-					isVisibleExpression: '!$(options:allSources)',
-				},
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'Current Scene',
-					id: 'useCurrentScene',
-					default: false,
-					isVisibleExpression: '$(options:allSources) || !$(options:anyScene)',
+					label: 'Target',
+					id: 'target',
+					default: 'allScenes',
+					choices: [
+						{ id: 'allScenes', label: 'All Scenes' },
+						{ id: 'currentScene', label: 'Current Scene' },
+						{ id: 'scene', label: 'Specific Scene' },
+						{ id: 'group', label: 'Group' },
+					],
 				},
 				choiceDropdown(self, 'scene', {
 					id: 'scene',
 					label: 'Scene',
-					isVisibleExpression: '!$(options:useCurrentScene) && ($(options:allSources) || !$(options:anyScene))',
+					isVisibleExpression: `$(options:target) == 'scene'`,
+				}),
+				choiceDropdown(self, 'group', {
+					id: 'group',
+					label: 'Group',
+					isVisibleExpression: `$(options:target) == 'group'`,
 				}),
 				{
 					type: 'checkbox',
@@ -949,7 +951,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					label: 'Include Sources Inside Groups',
 					id: 'includeGroupChildren',
 					default: true,
-					isVisibleExpression: '$(options:allSources)',
+					// OBS has no nested groups, so a group target has nothing further to descend into.
+					isVisibleExpression: `$(options:allSources) && $(options:target) != 'group'`,
 				},
 				{
 					type: 'dropdown',
@@ -967,8 +970,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			callback: async (action) => {
 				if (action.options.allSources) {
 					await self.obs.setAllSourcesVisibility(action.options.visible, {
-						useCurrentScene: action.options.useCurrentScene,
+						target: action.options.target,
 						scene: action.options.scene,
+						group: action.options.group,
 						except: action.options.except,
 						includeGroupChildren: action.options.includeGroupChildren,
 					})
@@ -976,14 +980,16 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				}
 
 				await self.obs.setSourcesVisibility(action.options.source, action.options.visible, {
-					anyScene: action.options.anyScene,
-					useCurrentScene: action.options.useCurrentScene,
+					target: action.options.target,
 					scene: action.options.scene,
+					group: action.options.group,
 				})
 			},
 			learn: (action) => {
-				if (action.options.allSources || action.options.anyScene) return undefined
-				const sceneName = action.options.useCurrentScene ? self.states.programScene : action.options.scene
+				// Only a single source in a single scene has one visibility to read back.
+				if (action.options.allSources || action.options.target === 'allScenes') return undefined
+				if (action.options.target === 'group') return undefined
+				const sceneName = action.options.target === 'currentScene' ? self.states.programScene : action.options.scene
 				// A multi-source selection has no single visibility to learn, so only a lone source is learnable.
 				const sources = action.options.source
 				if (!Array.isArray(sources) || sources.length !== 1) return undefined

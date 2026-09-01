@@ -518,21 +518,19 @@ export default [
 					actionChanged = true
 				}
 			} else if (action.actionId === 'toggle_scene_item') {
-				// The old boolean "all" flag became the allSources mode of the rewritten action, and the
-				// single Source dropdown became a multi-select.
+				// The old boolean "all" flag became the allSources mode of the rewritten action, the single
+				// Source dropdown became a multi-select, and the scene magic strings became a Target dropdown.
+				const scene = getOpt(action.options, 'scene')
+				if (scene === 'Current Scene') {
+					setOpt(action.options, 'target', 'currentScene')
+				} else {
+					setOpt(action.options, 'target', 'scene')
+					if (scene === 'Preview Scene') setOpt(action.options, 'scene', '$(obs:scene_preview)')
+				}
+
 				if (getOpt(action.options, 'all') === true) {
-					const scene = getOpt(action.options, 'scene')
-					if (scene === 'Current Scene') {
-						setOpt(action.options, 'useCurrentScene', true)
-					} else if (scene === 'Preview Scene') {
-						setOpt(action.options, 'useCurrentScene', false)
-						setOpt(action.options, 'scene', '$(obs:scene_preview)')
-					} else {
-						setOpt(action.options, 'useCurrentScene', false)
-					}
 					setOpt(action.options, 'allSources', true)
 					setOpt(action.options, 'source', [])
-					delete action.options.anyScene
 				} else {
 					setOpt(action.options, 'allSources', false)
 					const source = getOpt(action.options, 'source')
@@ -543,7 +541,9 @@ export default [
 				}
 				setOpt(action.options, 'except', [])
 				setOpt(action.options, 'includeGroupChildren', true)
+				setOpt(action.options, 'group', '')
 				delete action.options.all
+				delete action.options.anyScene
 				actionChanged = true
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)

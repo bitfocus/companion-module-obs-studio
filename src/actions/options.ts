@@ -121,6 +121,11 @@ const CHOICE_LISTS = {
 		choices: (self) => self.obsState.sceneChoices,
 		default: (self) => self.obsState.sceneListDefault,
 	},
+	/** Only the sources that are groups, for options that target a group as a container. */
+	group: {
+		choices: (self) => self.obsState.groupChoices,
+		default: (self) => self.obsState.groupChoicesDefault,
+	},
 	audioSource: {
 		choices: (self) => self.obsState.audioSourceList,
 		default: (self) => self.obsState.audioSourceListDefault,

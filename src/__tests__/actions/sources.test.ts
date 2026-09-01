@@ -33,8 +33,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: false,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				except: [],
 				visible: 'false',
 			}),
@@ -57,8 +58,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: false,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				except: ['Overlay'],
 				visible: 'false',
 			}),
@@ -80,8 +82,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: false,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				except: ['Overlay'],
 				visible: 'toggle',
 			}),
@@ -98,7 +101,7 @@ describe('toggle_scene_item — all sources', () => {
 		expect(group?.requestData.sceneItemEnabled).toBe(true) // was false, toggled — not recursed into
 	})
 
-	test('useCurrentScene resolves via programSceneUuid', async () => {
+	test('the current-scene target resolves via programSceneUuid', async () => {
 		seedScene(self, 'Scene B', 'scene-b')
 		self.states.sceneItems.set('scene-b', [
 			sceneItem({ sceneItemId: 9, sourceUuid: 'src-9', sourceName: 'Other', sceneItemEnabled: true }),
@@ -110,8 +113,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: false,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				except: [],
 				visible: 'false',
 			}),
@@ -138,8 +142,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: true,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				except: [],
 				visible: 'false',
 			}),
@@ -170,8 +175,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: true,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				except: ['Child Cam'],
 				visible: 'false',
 			}),
@@ -193,8 +199,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: false,
-				useCurrentScene: false,
+				target: 'scene',
 				scene: 'Does Not Exist',
+				group: '',
 				except: [],
 				visible: 'false',
 			}),
@@ -212,8 +219,9 @@ describe('toggle_scene_item — all sources', () => {
 				allSources: true,
 				source: [],
 				includeGroupChildren: false,
-				useCurrentScene: false,
+				target: 'scene',
 				scene: 'Scene C',
+				group: '',
 				except: [],
 				visible: 'false',
 			}),
@@ -245,9 +253,9 @@ describe('toggle_scene_item — selected sources', () => {
 		await actions['toggle_scene_item'].callback(
 			actionEvent('toggle_scene_item', {
 				allSources: false,
-				anyScene: false,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				source: ['Camera', 'Overlay'],
 				except: [],
 				includeGroupChildren: true,
@@ -266,9 +274,9 @@ describe('toggle_scene_item — selected sources', () => {
 		await actions['toggle_scene_item'].callback(
 			actionEvent('toggle_scene_item', {
 				allSources: false,
-				anyScene: false,
-				useCurrentScene: true,
+				target: 'currentScene',
 				scene: '',
+				group: '',
 				source: [],
 				except: [],
 				includeGroupChildren: true,
@@ -295,9 +303,9 @@ describe('toggle_scene_item — selected sources', () => {
 		await actions['toggle_scene_item'].callback(
 			actionEvent('toggle_scene_item', {
 				allSources: false,
-				anyScene: true,
-				useCurrentScene: false,
+				target: 'allScenes',
 				scene: '',
+				group: '',
 				source: ['Child Cam'],
 				except: [],
 				includeGroupChildren: true,
@@ -337,9 +345,9 @@ describe('toggle_scene_item — a source added to a scene more than once', () =>
 		await actions['toggle_scene_item'].callback(
 			actionEvent('toggle_scene_item', {
 				allSources: false,
-				anyScene,
-				useCurrentScene: !anyScene,
+				target: anyScene ? 'allScenes' : 'currentScene',
 				scene: '',
+				group: '',
 				source: ['Camera'],
 				except: [],
 				includeGroupChildren: true,
@@ -371,5 +379,96 @@ describe('toggle_scene_item — a source added to a scene more than once', () =>
 
 		const batch = await run('false', true)
 		expect(batch.map((b) => b.requestData.sceneItemId).sort()).toEqual([1, 2, 7, 8])
+	})
+})
+
+describe('toggle_scene_item — all sources within a group', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.programScene = 'Scene A'
+		self.states.programSceneUuid = 'scene-a'
+		self.states.sources.set('grp-1', { sourceName: 'Webcam Group', sourceUuid: 'grp-1', isGroup: true } as any)
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+			sceneItem({
+				sceneItemId: 3,
+				sourceUuid: 'grp-1',
+				sourceName: 'Webcam Group',
+				sceneItemEnabled: true,
+				isGroup: true,
+			}),
+		])
+		self.states.sceneItems.set('grp-1', [
+			sceneItem({ sceneItemId: 10, sourceUuid: 'src-10', sourceName: 'Child Cam', sceneItemEnabled: true }),
+			sceneItem({ sceneItemId: 11, sourceUuid: 'src-11', sourceName: 'Child Overlay', sceneItemEnabled: false }),
+		])
+	})
+
+	const run = async (options: Record<string, unknown>) => {
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				target: 'group',
+				group: 'Webcam Group',
+				scene: '',
+				source: [],
+				except: [],
+				includeGroupChildren: true,
+				visible: 'false',
+				...options,
+			}),
+			new MockContext(),
+		)
+		return self.socket.callBatch.mock.calls[0]?.[0] as Array<{ requestData: any }> | undefined
+	}
+
+	test('sets only the members of the group, not the scene', async () => {
+		const batch = await run({})
+		expect(batch?.map((b) => b.requestData.sceneItemId).sort()).toEqual([10, 11])
+		expect(batch?.every((b) => b.requestData.sceneUuid === 'grp-1')).toBe(true)
+		expect(batch?.every((b) => b.requestData.sceneItemEnabled === false)).toBe(true)
+	})
+
+	test('a member can be excepted', async () => {
+		const batch = await run({ except: ['Child Overlay'] })
+		expect(batch?.find((b) => b.requestData.sceneItemId === 11)?.requestData.sceneItemEnabled).toBe(true)
+		expect(batch?.find((b) => b.requestData.sceneItemId === 10)?.requestData.sceneItemEnabled).toBe(false)
+	})
+
+	test('toggle inverts each member', async () => {
+		const batch = await run({ visible: 'toggle' })
+		expect(batch?.find((b) => b.requestData.sceneItemId === 10)?.requestData.sceneItemEnabled).toBe(false)
+		expect(batch?.find((b) => b.requestData.sceneItemId === 11)?.requestData.sceneItemEnabled).toBe(true)
+	})
+
+	test('a nested group is still descended into, though OBS does not create them', async () => {
+		self.states.sources.set('grp-2', { sourceName: 'Inner Group', sourceUuid: 'grp-2', isGroup: true } as any)
+		self.states.sceneItems.get('grp-1')!.push(
+			sceneItem({
+				sceneItemId: 12,
+				sourceUuid: 'grp-2',
+				sourceName: 'Inner Group',
+				sceneItemEnabled: true,
+				isGroup: true,
+			}),
+		)
+		self.states.sceneItems.set('grp-2', [
+			sceneItem({ sceneItemId: 20, sourceUuid: 'src-20', sourceName: 'Deep', sceneItemEnabled: true }),
+		])
+
+		expect((await run({}))?.map((b) => b.requestData.sceneItemId).sort()).toEqual([10, 11, 12, 20])
+	})
+
+	test('an unknown group sends no batch', async () => {
+		expect(await run({ group: 'Nope' })).toBeUndefined()
+	})
+
+	test('a source that is not a group sends no batch', async () => {
+		self.states.sources.set('src-1', { sourceName: 'Camera', sourceUuid: 'src-1', isGroup: false } as any)
+		expect(await run({ group: 'Camera' })).toBeUndefined()
 	})
 })

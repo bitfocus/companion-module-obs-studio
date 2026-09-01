@@ -10,6 +10,7 @@ import {
 interface ChoiceCache {
 	sourceChoices?: ModuleChoice[]
 	sceneChoices?: ModuleChoice[]
+	groupChoices?: ModuleChoice[]
 	audioSourceList?: ModuleChoice[]
 	mediaSourceList?: ModuleChoice[]
 	filterList?: ModuleChoice[]
@@ -183,6 +184,17 @@ export class OBSState {
 		)
 	}
 
+	public get groupChoices(): ModuleChoice[] {
+		return this.cached('groupChoices', () =>
+			this.buildChoices(
+				Array.from(this.state.sources.values()),
+				(s) => s.isGroup === true,
+				(s) => ({ id: s.sourceName, label: s.sourceName }),
+				(a, b) => a.label.localeCompare(b.label),
+			),
+		)
+	}
+
 	public get audioSourceList(): ModuleChoice[] {
 		return this.cached('audioSourceList', () =>
 			this.buildChoices(
@@ -295,6 +307,10 @@ export class OBSState {
 
 	public get sourceListDefault(): string {
 		return (this.sourceChoices[0]?.id as string) ?? ''
+	}
+
+	public get groupChoicesDefault(): string {
+		return (this.groupChoices[0]?.id as string) ?? ''
 	}
 
 	public get audioSourceListDefault(): string {

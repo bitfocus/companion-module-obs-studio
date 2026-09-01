@@ -26,6 +26,7 @@ import {
 	type OBSTransition,
 	type SourceDataBatchSpec,
 	type OBSFilter,
+	type VisibilityTarget,
 } from './types.js'
 import { DEFAULT_TIMECODE } from './constants.js'
 import { BatchBuilder, successfulEntry, type BatchEntry, type BatchSpec, type SuccessfulBatchEntry } from './batch.js'
@@ -1368,11 +1369,7 @@ export class OBSApi {
 		}
 	}
 
-	public async setSourceVisibility(
-		sourceName: string,
-		visible: string,
-		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
-	): Promise<void> {
+	public async setSourceVisibility(sourceName: string, visible: string, options: VisibilityTarget): Promise<void> {
 		const source = this.self.obsState.findSourceByName(sourceName)
 		if (!source) return
 
@@ -1383,11 +1380,7 @@ export class OBSApi {
 		}
 	}
 
-	public async setSourcesVisibility(
-		sourceNames: string[],
-		visible: string,
-		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
-	): Promise<void> {
+	public async setSourcesVisibility(sourceNames: string[], visible: string, options: VisibilityTarget): Promise<void> {
 		// An expression bound to the multidropdown can yield a lone name rather than a list.
 		const names = Array.isArray(sourceNames) ? sourceNames : [sourceNames as unknown as string]
 		const instances = names.flatMap((sourceName) => {
@@ -1401,12 +1394,11 @@ export class OBSApi {
 
 	public async setAllSourcesVisibility(
 		visible: string,
-		options: { useCurrentScene: boolean; scene: string; except: string[]; includeGroupChildren: boolean },
+		options: VisibilityTarget & { except: string[]; includeGroupChildren: boolean },
 	): Promise<void> {
-		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
-		if (!scene) return
-
-		const matches = this.self.obsState.getContainerItemsDeep(scene.sceneUuid, options.includeGroupChildren)
+		const matches = this.resolveTargetContainers(options).flatMap((containerUuid) =>
+			this.self.obsState.getContainerItemsDeep(containerUuid, options.includeGroupChildren),
+		)
 		if (matches.length === 0) return
 
 		const except = new Set(Array.isArray(options.except) ? options.except : [])
@@ -1427,30 +1419,52 @@ export class OBSApi {
 		}
 	}
 
-	/** Resolves the scene an action targets: either the live program scene, or one named explicitly. */
-	private resolveTargetScene(useCurrentScene: boolean, sceneName: string) {
-		return useCurrentScene
-			? this.self.states.scenes.get(this.self.states.programSceneUuid)
-			: this.self.obsState.findSceneByName(sceneName)
+	/**
+	 * The container whose items an "all sources" action covers: a named group, or a scene. Group names
+	 * are globally unique in OBS and a group's items live under its own UUID, so a group needs no scene.
+	 */
+	/**
+	 * The containers an action covers. Everything but `allScenes` resolves to a single container; a
+	 * group needs no scene, since group names are globally unique and a group's items live under its
+	 * own UUID. An unresolvable target yields nothing rather than silently falling back to a scene.
+	 */
+	private resolveTargetContainers(options: VisibilityTarget): string[] {
+		switch (options.target) {
+			case 'allScenes':
+				return Array.from(this.self.states.scenes.keys())
+			case 'currentScene': {
+				const scene = this.self.states.scenes.get(this.self.states.programSceneUuid)
+				return scene ? [scene.sceneUuid] : []
+			}
+			case 'group': {
+				const group = this.self.obsState.findSourceByName(options.group)
+				return group?.isGroup ? [group.sourceUuid] : []
+			}
+			default: {
+				const scene = this.self.obsState.findSceneByName(options.scene)
+				return scene ? [scene.sceneUuid] : []
+			}
+		}
 	}
 
 	private findSourceInstances(
 		sourceUuid: string,
-		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
+		options: VisibilityTarget,
 	): { containerUuid: string; sceneItemId: number }[] {
 		const toInstance = ({ containerUuid, item }: SceneItemMatch) => ({
 			containerUuid,
 			sceneItemId: item.sceneItemId,
 		})
 
-		if (options.anyScene) {
+		// Across every scene the source's own containers are what matter, groups included, so this
+		// walks the item map directly rather than resolving each scene in turn.
+		if (options.target === 'allScenes') {
 			return this.self.obsState.findSceneItemsAnywhere(sourceUuid).map(toInstance)
 		}
 
-		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
-		if (!scene) return []
-
-		return this.self.obsState.findSceneItems(scene.sceneUuid, sourceUuid).map(toInstance)
+		return this.resolveTargetContainers(options)
+			.flatMap((containerUuid) => this.self.obsState.findSceneItems(containerUuid, sourceUuid))
+			.map(toInstance)
 	}
 
 	private buildSourceVisibilityRequests(

@@ -1716,20 +1716,29 @@ exports[`option shape > action options are unchanged 1`] = `
   ],
   "toggle_scene_item": [
     {
-      "default": true,
+      "choices": [
+        {
+          "id": "allScenes",
+          "label": "All Scenes",
+        },
+        {
+          "id": "currentScene",
+          "label": "Current Scene",
+        },
+        {
+          "id": "scene",
+          "label": "Specific Scene",
+        },
+        {
+          "id": "group",
+          "label": "Group",
+        },
+      ],
+      "default": "allScenes",
       "disableAutoExpression": true,
-      "id": "anyScene",
-      "isVisibleExpression": "!$(options:allSources)",
-      "label": "All Scenes",
-      "type": "checkbox",
-    },
-    {
-      "default": false,
-      "disableAutoExpression": true,
-      "id": "useCurrentScene",
-      "isVisibleExpression": "$(options:allSources) || !$(options:anyScene)",
-      "label": "Current Scene",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -1745,8 +1754,17 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Scene B",
       "id": "scene",
-      "isVisibleExpression": "!$(options:useCurrentScene) && ($(options:allSources) || !$(options:anyScene))",
+      "isVisibleExpression": "$(options:target) == 'scene'",
       "label": "Scene",
+      "type": "dropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [],
+      "default": "",
+      "id": "group",
+      "isVisibleExpression": "$(options:target) == 'group'",
+      "label": "Group",
       "type": "dropdown",
     },
     {
@@ -1812,7 +1830,7 @@ exports[`option shape > action options are unchanged 1`] = `
       "default": true,
       "disableAutoExpression": true,
       "id": "includeGroupChildren",
-      "isVisibleExpression": "$(options:allSources)",
+      "isVisibleExpression": "$(options:allSources) && $(options:target) != 'group'",
       "label": "Include Sources Inside Groups",
       "type": "checkbox",
     },

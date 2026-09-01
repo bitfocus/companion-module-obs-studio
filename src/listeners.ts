@@ -416,9 +416,9 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				actionId: 'toggle_scene_item',
 				options: {
 					allSources: false,
-					anyScene: false,
-					useCurrentScene: false,
+					target: 'scene',
 					scene: sceneName,
+					group: '',
 					source: [sourceName],
 					except: [],
 					includeGroupChildren: true,

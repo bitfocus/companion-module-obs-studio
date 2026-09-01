@@ -121,13 +121,14 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		expect(updated.options.all).toBeUndefined()
 		expect(updated.options.source).toEqual([])
 		expect(updated.options.anyScene).toBeUndefined()
-		expect(updated.options.useCurrentScene).toBe(false)
+		expect(updated.options.target).toBe('scene')
 		expect(updated.options.scene).toBe('Scene A')
 		expect(updated.options.except).toEqual([])
 		expect(updated.options.includeGroupChildren).toBe(true)
+		expect(updated.options.group).toBe('')
 	})
 
-	test('maps "Current Scene" to useCurrentScene', () => {
+	test('maps "Current Scene" to the current-scene target', () => {
 		const action = {
 			id: 'a1',
 			actionId: 'toggle_scene_item',
@@ -135,7 +136,7 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		} as unknown as CompanionMigrationAction
 		const result = v4_0_0(context, makeProps(null, [action]))
 
-		expect(result.updatedActions[0].options.useCurrentScene).toBe(true)
+		expect(result.updatedActions[0].options.target).toBe('currentScene')
 	})
 
 	test('maps "Preview Scene" to the preview scene variable', () => {
@@ -146,7 +147,7 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		} as unknown as CompanionMigrationAction
 		const result = v4_0_0(context, makeProps(null, [action]))
 
-		expect(result.updatedActions[0].options.useCurrentScene).toBe(false)
+		expect(result.updatedActions[0].options.target).toBe('scene')
 		expect(result.updatedActions[0].options.scene).toBe('$(obs:scene_preview)')
 	})
 

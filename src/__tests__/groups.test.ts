@@ -122,9 +122,9 @@ describe('container model — visibility resolution', () => {
 
 	test('toggling a grouped source (any scene) targets the group container', async () => {
 		await self.obs.setSourceVisibility('member-1', 'toggle', {
-			anyScene: true,
-			useCurrentScene: false,
+			target: 'allScenes',
 			scene: '',
+			group: '',
 		})
 
 		expect(self.socket.callBatch).toHaveBeenCalledTimes(1)
@@ -138,9 +138,9 @@ describe('container model — visibility resolution', () => {
 
 	test('toggling a grouped source in a specific scene resolves via parentGroupUuid', async () => {
 		await self.obs.setSourceVisibility('member-1', 'true', {
-			anyScene: false,
-			useCurrentScene: false,
+			target: 'scene',
 			scene: 'Scene A',
+			group: '',
 		})
 
 		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
@@ -245,9 +245,9 @@ describe('scene item lookup precedence', () => {
 
 	test('setSourceVisibility targets the scene copy, not the group copy', async () => {
 		await self.obs.setSourceVisibility('member-1', 'false', {
-			anyScene: false,
-			useCurrentScene: false,
+			target: 'scene',
 			scene: 'Scene B',
+			group: '',
 		})
 
 		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>

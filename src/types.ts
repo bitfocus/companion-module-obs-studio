@@ -298,6 +298,13 @@ export interface OBSOutput {
 	[key: string]: unknown
 }
 
+/** Which scene(s) or group a source-visibility action acts within. */
+export interface VisibilityTarget {
+	target: 'allScenes' | 'currentScene' | 'scene' | 'group'
+	scene: string
+	group: string
+}
+
 export interface OBSSceneItem {
 	sceneItemId: number
 	sourceName: string
