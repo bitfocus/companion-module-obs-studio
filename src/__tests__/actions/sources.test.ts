@@ -315,3 +315,61 @@ describe('toggle_scene_item — selected sources', () => {
 		])
 	})
 })
+
+describe('toggle_scene_item — a source added to a scene more than once', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.programScene = 'Scene A'
+		self.states.programSceneUuid = 'scene-a'
+		self.states.sources.set('src-1', { sourceName: 'Camera', sourceUuid: 'src-1', isGroup: false } as any)
+		// The same source added twice: one source name, two scene items.
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+			sceneItem({ sceneItemId: 2, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: false }),
+		])
+	})
+
+	const run = async (visible: string, anyScene: boolean) => {
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: false,
+				anyScene,
+				useCurrentScene: !anyScene,
+				scene: '',
+				source: ['Camera'],
+				except: [],
+				includeGroupChildren: true,
+				visible,
+			}),
+			new MockContext(),
+		)
+		return self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+	}
+
+	test('Hide reaches every copy', async () => {
+		const batch = await run('false', false)
+		expect(batch.map((b) => b.requestData.sceneItemId).sort()).toEqual([1, 2])
+		expect(batch.every((b) => b.requestData.sceneItemEnabled === false)).toBe(true)
+	})
+
+	test('Toggle inverts each copy independently', async () => {
+		const batch = await run('toggle', false)
+		expect(batch.find((b) => b.requestData.sceneItemId === 1)?.requestData.sceneItemEnabled).toBe(false)
+		expect(batch.find((b) => b.requestData.sceneItemId === 2)?.requestData.sceneItemEnabled).toBe(true)
+	})
+
+	test('All Scenes reaches copies in every scene', async () => {
+		seedScene(self, 'Scene B', 'scene-b')
+		self.states.sceneItems.set('scene-b', [
+			sceneItem({ sceneItemId: 7, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+			sceneItem({ sceneItemId: 8, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+		])
+
+		const batch = await run('false', true)
+		expect(batch.map((b) => b.requestData.sceneItemId).sort()).toEqual([1, 2, 7, 8])
+	})
+})

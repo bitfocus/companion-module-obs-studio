@@ -1450,8 +1450,7 @@ export class OBSApi {
 		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
 		if (!scene) return []
 
-		const match = this.self.obsState.findSceneItem(scene.sceneUuid, sourceUuid)
-		return match ? [toInstance(match)] : []
+		return this.self.obsState.findSceneItems(scene.sceneUuid, sourceUuid).map(toInstance)
 	}
 
 	private buildSourceVisibilityRequests(

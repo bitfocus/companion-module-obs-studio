@@ -839,18 +839,24 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				if (props.includes('scaleY') && action.options.scaleY) transform.scaleY = Number(action.options.scaleY)
 				if (props.includes('rotation') && action.options.rotation) transform.rotation = Number(action.options.rotation)
 
-				const match = self.obsState.findSceneItemByName(sourceSceneName, sourceName)
-				if (!match) {
+				const matches = self.obsState.findSceneItemsByNameInScene(sourceSceneName, sourceName)
+				if (matches.length === 0) {
 					logger.warn(`Scene item not found for source: ${sourceName} in scene: ${sourceSceneName}`)
 					return
 				}
 
 				try {
-					await self.obs.sendRequest('SetSceneItemTransform', {
-						sceneUuid: match.containerUuid,
-						sceneItemId: match.item.sceneItemId,
-						sceneItemTransform: transform,
-					})
+					// A source added to a scene more than once has an item per copy; all of them move.
+					await self.obs.sendBatch(
+						matches.map((match) => ({
+							requestType: 'SetSceneItemTransform',
+							requestData: {
+								sceneUuid: match.containerUuid,
+								sceneItemId: match.item.sceneItemId,
+								sceneItemTransform: transform,
+							},
+						})),
+					)
 				} catch (e) {
 					logger.error(`Set Scene Item Properties Error: ${utils.describeError(e)}`)
 				}

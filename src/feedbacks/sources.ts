@@ -99,10 +99,9 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 						}
 					}
 				} else {
-					const match = self.obsState.findSceneItemByName(sceneName, sourceName)
-					if (match) {
-						return match.item.sceneItemEnabled
-					}
+					// A source can sit in the scene more than once; the button lights while any copy is on.
+					const matches = self.obsState.findSceneItemsByNameInScene(sceneName, sourceName)
+					return matches.some((match) => match.item.sceneItemEnabled)
 				}
 				return false
 			},
