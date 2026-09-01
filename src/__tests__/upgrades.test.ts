@@ -106,7 +106,7 @@ describe('v4_0_0 password migration', () => {
 })
 
 describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
-	test('migrates an "All Sources" toggle_scene_item to toggle_all_scene_items', () => {
+	test('migrates an "All Sources" toggle_scene_item to the allSources mode', () => {
 		const action = {
 			id: 'a1',
 			actionId: 'toggle_scene_item',
@@ -116,13 +116,15 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 
 		expect(result.updatedActions).toHaveLength(1)
 		const updated = result.updatedActions[0]
-		expect(updated.actionId).toBe('toggle_all_scene_items')
+		expect(updated.actionId).toBe('toggle_scene_item')
+		expect(updated.options.allSources).toBe(true)
 		expect(updated.options.all).toBeUndefined()
-		expect(updated.options.source).toBeUndefined()
+		expect(updated.options.source).toEqual([])
 		expect(updated.options.anyScene).toBeUndefined()
 		expect(updated.options.useCurrentScene).toBe(false)
 		expect(updated.options.scene).toBe('Scene A')
 		expect(updated.options.except).toEqual([])
+		expect(updated.options.includeGroupChildren).toBe(true)
 	})
 
 	test('maps "Current Scene" to useCurrentScene', () => {
@@ -148,7 +150,7 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		expect(result.updatedActions[0].options.scene).toBe('$(obs:scene_preview)')
 	})
 
-	test('leaves a single-source toggle_scene_item untouched', () => {
+	test('wraps a single-source toggle_scene_item selection into a list', () => {
 		const action = {
 			id: 'a1',
 			actionId: 'toggle_scene_item',
@@ -156,7 +158,26 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		} as unknown as CompanionMigrationAction
 		const result = v4_0_0(context, makeProps(null, [action]))
 
-		expect(result.updatedActions).toHaveLength(0)
+		const updated = result.updatedActions[0]
+		expect(updated.options.allSources).toBe(false)
+		expect(updated.options.source).toEqual(['Camera'])
+		expect(updated.options.all).toBeUndefined()
+	})
+
+	test('leaves an expression-bound source alone', () => {
+		const action = {
+			id: 'a1',
+			actionId: 'toggle_scene_item',
+			options: {
+				all: false,
+				source: { value: '$(internal:custom_cam)', isExpression: true },
+				scene: 'Scene A',
+				visible: 'toggle',
+			},
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions[0].options.source).toEqual({ value: '$(internal:custom_cam)', isExpression: true })
 	})
 })
 

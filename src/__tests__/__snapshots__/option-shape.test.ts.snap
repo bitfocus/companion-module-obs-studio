@@ -1637,78 +1637,6 @@ exports[`option shape > action options are unchanged 1`] = `
       "useVariables": true,
     },
   ],
-  "toggle_all_scene_items": [
-    {
-      "default": true,
-      "disableAutoExpression": true,
-      "id": "useCurrentScene",
-      "label": "Current Scene",
-      "type": "checkbox",
-    },
-    {
-      "allowCustom": true,
-      "choices": [
-        {
-          "id": "Scene B",
-          "label": "Scene B",
-        },
-        {
-          "id": "Scene A",
-          "label": "Scene A",
-        },
-      ],
-      "default": "Scene B",
-      "id": "scene",
-      "isVisibleExpression": "!$(options:useCurrentScene)",
-      "label": "Scene",
-      "type": "dropdown",
-    },
-    {
-      "choices": [
-        {
-          "id": "Clip",
-          "label": "Clip",
-        },
-        {
-          "id": "Logo",
-          "label": "Logo",
-        },
-        {
-          "id": "Mic",
-          "label": "Mic",
-        },
-        {
-          "id": "Title",
-          "label": "Title",
-        },
-      ],
-      "default": [],
-      "id": "except",
-      "label": "Except",
-      "type": "multidropdown",
-    },
-    {
-      "choices": [
-        {
-          "id": "true",
-          "label": "Show",
-        },
-        {
-          "id": "false",
-          "label": "Hide",
-        },
-        {
-          "id": "toggle",
-          "label": "Toggle",
-        },
-      ],
-      "default": "toggle",
-      "disableAutoExpression": true,
-      "id": "visible",
-      "label": "Visibility",
-      "type": "dropdown",
-    },
-  ],
   "toggle_filter": [
     {
       "default": false,
@@ -1791,6 +1719,7 @@ exports[`option shape > action options are unchanged 1`] = `
       "default": true,
       "disableAutoExpression": true,
       "id": "anyScene",
+      "isVisibleExpression": "!$(options:allSources)",
       "label": "All Scenes",
       "type": "checkbox",
     },
@@ -1798,7 +1727,7 @@ exports[`option shape > action options are unchanged 1`] = `
       "default": false,
       "disableAutoExpression": true,
       "id": "useCurrentScene",
-      "isVisibleExpression": "!$(options:anyScene)",
+      "isVisibleExpression": "$(options:allSources) || !$(options:anyScene)",
       "label": "Current Scene",
       "type": "checkbox",
     },
@@ -1816,9 +1745,16 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Scene B",
       "id": "scene",
-      "isVisibleExpression": "!$(options:anyScene) &&!$(options:useCurrentScene)",
+      "isVisibleExpression": "!$(options:useCurrentScene) && ($(options:allSources) || !$(options:anyScene))",
       "label": "Scene",
       "type": "dropdown",
+    },
+    {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "allSources",
+      "label": "All Sources",
+      "type": "checkbox",
     },
     {
       "allowCustom": true,
@@ -1840,10 +1776,45 @@ exports[`option shape > action options are unchanged 1`] = `
           "label": "Title",
         },
       ],
-      "default": "Clip",
+      "default": [],
       "id": "source",
-      "label": "Source",
-      "type": "dropdown",
+      "isVisibleExpression": "!$(options:allSources)",
+      "label": "Sources",
+      "type": "multidropdown",
+    },
+    {
+      "allowCustom": true,
+      "choices": [
+        {
+          "id": "Clip",
+          "label": "Clip",
+        },
+        {
+          "id": "Logo",
+          "label": "Logo",
+        },
+        {
+          "id": "Mic",
+          "label": "Mic",
+        },
+        {
+          "id": "Title",
+          "label": "Title",
+        },
+      ],
+      "default": [],
+      "id": "except",
+      "isVisibleExpression": "$(options:allSources)",
+      "label": "Except",
+      "type": "multidropdown",
+    },
+    {
+      "default": true,
+      "disableAutoExpression": true,
+      "id": "includeGroupChildren",
+      "isVisibleExpression": "$(options:allSources)",
+      "label": "Include Sources Inside Groups",
+      "type": "checkbox",
     },
     {
       "choices": [

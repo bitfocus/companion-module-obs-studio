@@ -50,10 +50,13 @@ export function getSourcePresets(self: OBSInstance): {
 					{
 						actionId: 'toggle_scene_item',
 						options: {
+							allSources: false,
 							anyScene: false,
 							useCurrentScene: true,
 							scene: '',
-							source: { value: '$(local:source)', isExpression: true },
+							source: { value: '[$(local:source)]', isExpression: true },
+							except: [],
+							includeGroupChildren: true,
 							visible: 'toggle',
 						},
 					},

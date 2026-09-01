@@ -403,4 +403,26 @@ export class OBSState {
 		if (!containerUuid) return undefined
 		return this.state.sceneItems.get(containerUuid)
 	}
+
+	/**
+	 * Every item of a container, each paired with the container that actually holds it, optionally
+	 * descending into groups. Group items themselves are always included: hiding a group hides its
+	 * contents, so both the group and its members have to be addressable.
+	 */
+	public getContainerItemsDeep(containerUuid: string, includeGroupChildren: boolean): SceneItemMatch[] {
+		const matches: SceneItemMatch[] = []
+		const seen = new Set<string>()
+
+		const walk = (uuid: string) => {
+			if (seen.has(uuid)) return
+			seen.add(uuid)
+			for (const item of this.state.sceneItems.get(uuid) ?? []) {
+				matches.push({ containerUuid: uuid, item })
+				if (item.isGroup && includeGroupChildren) walk(item.sourceUuid)
+			}
+		}
+		walk(containerUuid)
+
+		return matches
+	}
 }

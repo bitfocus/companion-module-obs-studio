@@ -5,7 +5,7 @@ import { actionEvent } from '../mock/events.js'
 import { MockContext } from '../mock-context.js'
 import { looseActions } from '../loose-definitions.js'
 
-describe('toggle_all_scene_items', () => {
+describe('toggle_scene_item — all sources', () => {
 	let self: MockInstance
 
 	beforeEach(() => {
@@ -28,8 +28,16 @@ describe('toggle_all_scene_items', () => {
 
 	test('hides every item when no except list is given', async () => {
 		const actions = looseActions(getSourceActions(self))
-		await actions['toggle_all_scene_items'].callback(
-			actionEvent('toggle_all_scene_items', { useCurrentScene: true, scene: '', except: [], visible: 'false' }),
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: false,
+				useCurrentScene: true,
+				scene: '',
+				except: [],
+				visible: 'false',
+			}),
 			new MockContext(),
 		)
 
@@ -44,8 +52,11 @@ describe('toggle_all_scene_items', () => {
 
 	test('excepted source is set to the opposite visibility', async () => {
 		const actions = looseActions(getSourceActions(self))
-		await actions['toggle_all_scene_items'].callback(
-			actionEvent('toggle_all_scene_items', {
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: false,
 				useCurrentScene: true,
 				scene: '',
 				except: ['Overlay'],
@@ -64,8 +75,11 @@ describe('toggle_all_scene_items', () => {
 
 	test('toggle leaves excepted sources untouched and inverts everything else', async () => {
 		const actions = looseActions(getSourceActions(self))
-		await actions['toggle_all_scene_items'].callback(
-			actionEvent('toggle_all_scene_items', {
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: false,
 				useCurrentScene: true,
 				scene: '',
 				except: ['Overlay'],
@@ -91,8 +105,16 @@ describe('toggle_all_scene_items', () => {
 		])
 
 		const actions = looseActions(getSourceActions(self))
-		await actions['toggle_all_scene_items'].callback(
-			actionEvent('toggle_all_scene_items', { useCurrentScene: true, scene: '', except: [], visible: 'false' }),
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: false,
+				useCurrentScene: true,
+				scene: '',
+				except: [],
+				visible: 'false',
+			}),
 			new MockContext(),
 		)
 
@@ -100,10 +122,77 @@ describe('toggle_all_scene_items', () => {
 		expect(batch.every((b) => b.requestData.sceneUuid === 'scene-a')).toBe(true)
 	})
 
+	test('includeGroupChildren descends into group containers', async () => {
+		self.states.sources.set('src-3', {
+			sourceName: 'Webcam Group',
+			sourceUuid: 'src-3',
+			isGroup: true,
+		} as any)
+		self.states.sceneItems.set('src-3', [
+			sceneItem({ sceneItemId: 10, sourceUuid: 'src-10', sourceName: 'Child Cam', sceneItemEnabled: true }),
+		])
+
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: true,
+				useCurrentScene: true,
+				scene: '',
+				except: [],
+				visible: 'false',
+			}),
+			new MockContext(),
+		)
+
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		expect(batch).toHaveLength(4)
+		const child = batch.find((b) => b.requestData.sceneItemId === 10)
+		// The group's own UUID is the container obs-websocket needs for an item inside it.
+		expect(child?.requestData.sceneUuid).toBe('src-3')
+		expect(child?.requestData.sceneItemEnabled).toBe(false)
+	})
+
+	test('a group child can be excepted', async () => {
+		self.states.sources.set('src-3', {
+			sourceName: 'Webcam Group',
+			sourceUuid: 'src-3',
+			isGroup: true,
+		} as any)
+		self.states.sceneItems.set('src-3', [
+			sceneItem({ sceneItemId: 10, sourceUuid: 'src-10', sourceName: 'Child Cam', sceneItemEnabled: false }),
+		])
+
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: true,
+				useCurrentScene: true,
+				scene: '',
+				except: ['Child Cam'],
+				visible: 'false',
+			}),
+			new MockContext(),
+		)
+
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		const child = batch.find((b) => b.requestData.sceneItemId === 10)
+		expect(child?.requestData.sceneItemEnabled).toBe(true)
+		expect(batch.filter((b) => b.requestData.sceneItemId !== 10).every((b) => !b.requestData.sceneItemEnabled)).toBe(
+			true,
+		)
+	})
+
 	test('unknown scene sends no batch', async () => {
 		const actions = looseActions(getSourceActions(self))
-		await actions['toggle_all_scene_items'].callback(
-			actionEvent('toggle_all_scene_items', {
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: false,
 				useCurrentScene: false,
 				scene: 'Does Not Exist',
 				except: [],
@@ -118,11 +207,111 @@ describe('toggle_all_scene_items', () => {
 	test('empty scene sends no batch', async () => {
 		seedScene(self, 'Scene C', 'scene-c')
 		const actions = looseActions(getSourceActions(self))
-		await actions['toggle_all_scene_items'].callback(
-			actionEvent('toggle_all_scene_items', { useCurrentScene: false, scene: 'Scene C', except: [], visible: 'false' }),
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: false,
+				useCurrentScene: false,
+				scene: 'Scene C',
+				except: [],
+				visible: 'false',
+			}),
 			new MockContext(),
 		)
 
 		expect(self.socket.callBatch).not.toHaveBeenCalled()
+	})
+})
+
+describe('toggle_scene_item — selected sources', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.programScene = 'Scene A'
+		self.states.programSceneUuid = 'scene-a'
+		self.states.sources.set('src-1', { sourceName: 'Camera', sourceUuid: 'src-1', isGroup: false } as any)
+		self.states.sources.set('src-2', { sourceName: 'Overlay', sourceUuid: 'src-2', isGroup: false } as any)
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+			sceneItem({ sceneItemId: 2, sourceUuid: 'src-2', sourceName: 'Overlay', sceneItemEnabled: true }),
+		])
+	})
+
+	test('several sources are set in a single batch', async () => {
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: false,
+				anyScene: false,
+				useCurrentScene: true,
+				scene: '',
+				source: ['Camera', 'Overlay'],
+				except: [],
+				includeGroupChildren: true,
+				visible: 'false',
+			}),
+			new MockContext(),
+		)
+
+		expect(self.socket.callBatch).toHaveBeenCalledTimes(1)
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		expect(batch.map((b) => b.requestData.sceneItemId).sort()).toEqual([1, 2])
+	})
+
+	test('an empty selection sends no batch', async () => {
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: false,
+				anyScene: false,
+				useCurrentScene: true,
+				scene: '',
+				source: [],
+				except: [],
+				includeGroupChildren: true,
+				visible: 'false',
+			}),
+			new MockContext(),
+		)
+
+		expect(self.socket.callBatch).not.toHaveBeenCalled()
+	})
+
+	test('a source inside a group targets the group container', async () => {
+		self.states.sources.set('src-10', {
+			sourceName: 'Child Cam',
+			sourceUuid: 'src-10',
+			isGroup: false,
+			parentGroupUuid: 'src-3',
+		} as any)
+		self.states.sceneItems.set('src-3', [
+			sceneItem({ sceneItemId: 10, sourceUuid: 'src-10', sourceName: 'Child Cam', sceneItemEnabled: false }),
+		])
+
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: false,
+				anyScene: true,
+				useCurrentScene: false,
+				scene: '',
+				source: ['Child Cam'],
+				except: [],
+				includeGroupChildren: true,
+				visible: 'true',
+			}),
+			new MockContext(),
+		)
+
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		expect(batch).toEqual([
+			{
+				requestType: 'SetSceneItemEnabled',
+				requestData: { sceneUuid: 'src-3', sceneItemId: 10, sceneItemEnabled: true },
+			},
+		])
 	})
 })

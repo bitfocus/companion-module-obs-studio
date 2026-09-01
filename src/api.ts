@@ -1383,22 +1383,38 @@ export class OBSApi {
 		}
 	}
 
+	public async setSourcesVisibility(
+		sourceNames: string[],
+		visible: string,
+		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
+	): Promise<void> {
+		// An expression bound to the multidropdown can yield a lone name rather than a list.
+		const names = Array.isArray(sourceNames) ? sourceNames : [sourceNames as unknown as string]
+		const instances = names.flatMap((sourceName) => {
+			const source = this.self.obsState.findSourceByName(sourceName)
+			return source ? this.findSourceInstances(source.sourceUuid, options) : []
+		})
+		if (instances.length === 0) return
+
+		await this.sendBatch(this.buildSourceVisibilityRequests(instances, visible))
+	}
+
 	public async setAllSourcesVisibility(
 		visible: string,
-		options: { useCurrentScene: boolean; scene: string; except: string[] },
+		options: { useCurrentScene: boolean; scene: string; except: string[]; includeGroupChildren: boolean },
 	): Promise<void> {
 		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
 		if (!scene) return
 
-		const items = this.self.obsState.getContainerItems(scene.sceneUuid)
-		if (!items || items.length === 0) return
+		const matches = this.self.obsState.getContainerItemsDeep(scene.sceneUuid, options.includeGroupChildren)
+		if (matches.length === 0) return
 
 		const except = new Set(Array.isArray(options.except) ? options.except : [])
-		const nonExcepted = items.filter((item) => !except.has(item.sourceName))
-		const excepted = items.filter((item) => except.has(item.sourceName))
+		const nonExcepted = matches.filter((match) => !except.has(match.item.sourceName))
+		const excepted = matches.filter((match) => except.has(match.item.sourceName))
 
-		const toInstances = (list: typeof items) =>
-			list.map((item) => ({ containerUuid: scene.sceneUuid, sceneItemId: item.sceneItemId }))
+		const toInstances = (list: SceneItemMatch[]) =>
+			list.map((match) => ({ containerUuid: match.containerUuid, sceneItemId: match.item.sceneItemId }))
 
 		const requests = this.buildSourceVisibilityRequests(toInstances(nonExcepted), visible)
 		if (visible !== 'toggle') {

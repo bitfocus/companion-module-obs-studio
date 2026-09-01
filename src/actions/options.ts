@@ -1,4 +1,9 @@
-import type { CompanionInputFieldDropdown, CompanionInputFieldNumber, DropdownChoice } from '@companion-module/base'
+import type {
+	CompanionInputFieldDropdown,
+	CompanionInputFieldMultiDropdown,
+	CompanionInputFieldNumber,
+	DropdownChoice,
+} from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { clamp } from '../utils.js'
 import { VIRTUALCAM_OUTPUT_NAME } from '../constants.js'
@@ -187,6 +192,25 @@ export function choiceDropdown<TKey extends string>(
 		label: field.label,
 		id: field.id,
 		default: field.default ?? spec.default(self),
+		choices: spec.choices(self),
+		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
+		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),
+		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
+	}
+}
+
+/** The multi-select form of `choiceDropdown`, for options that target several entities at once. */
+export function choiceMultiDropdown<TKey extends string>(
+	self: OBSInstance,
+	list: ChoiceListName,
+	field: Omit<ChoiceDropdownField<TKey>, 'default'> & { default?: string[] },
+): CompanionInputFieldMultiDropdown<TKey> {
+	const spec: ChoiceListSpec = CHOICE_LISTS[list]
+	return {
+		type: 'multidropdown',
+		label: field.label,
+		id: field.id,
+		default: field.default ?? [],
 		choices: spec.choices(self),
 		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
 		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),

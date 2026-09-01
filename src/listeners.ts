@@ -415,10 +415,13 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.sendToActionRecorder({
 				actionId: 'toggle_scene_item',
 				options: {
+					allSources: false,
 					anyScene: false,
 					useCurrentScene: false,
 					scene: sceneName,
-					source: sourceName,
+					source: [sourceName],
+					except: [],
+					includeGroupChildren: true,
 					visible: data.sceneItemEnabled ? 'true' : 'false',
 				},
 			})

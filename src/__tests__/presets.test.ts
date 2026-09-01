@@ -237,7 +237,6 @@ describe('presets', () => {
 		'setTextProperties',
 		'set_stream_settings',
 		'source_properties',
-		'toggle_all_scene_items',
 		'updateMediaLocalFile',
 		'vendorRequest',
 	]

@@ -3,7 +3,7 @@ import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
 import type { OBSTextSourceFont } from '../types.js'
 import { INPUT_KIND_PREFIX_TEXT_GDIPLUS } from '../constants.js'
-import { choiceDropdown } from './options.js'
+import { choiceDropdown, choiceMultiDropdown } from './options.js'
 
 const logger = createModuleLogger('Actions/Sources')
 
@@ -71,18 +71,13 @@ export type SourceActionSchemas = {
 	}
 	toggle_scene_item: {
 		options: {
+			allSources: boolean
 			anyScene: boolean
 			useCurrentScene: boolean
 			scene: string
-			source: string
-			visible: 'true' | 'false' | 'toggle'
-		}
-	}
-	toggle_all_scene_items: {
-		options: {
-			useCurrentScene: boolean
-			scene: string
+			source: string[]
 			except: string[]
+			includeGroupChildren: boolean
 			visible: 'true' | 'false' | 'toggle'
 		}
 	}
@@ -901,7 +896,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 
 		toggle_scene_item: {
 			name: 'Source - Set Visibility',
-			description: 'Shows, hides, or toggles the visibility of an item in the specified scene(s)',
+			description:
+				'Shows, hides, or toggles the visibility of sources in the specified scene(s). With All Sources checked, every source in the scene is set, and the excepted sources are set to the opposite visibility (ignored when Visibility is Toggle).',
 			options: [
 				{
 					type: 'checkbox',
@@ -909,6 +905,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					label: 'All Scenes',
 					id: 'anyScene',
 					default: true,
+					isVisibleExpression: '!$(options:allSources)',
 				},
 				{
 					type: 'checkbox',
@@ -916,14 +913,38 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					label: 'Current Scene',
 					id: 'useCurrentScene',
 					default: false,
-					isVisibleExpression: '!$(options:anyScene)',
+					isVisibleExpression: '$(options:allSources) || !$(options:anyScene)',
 				},
 				choiceDropdown(self, 'scene', {
 					id: 'scene',
 					label: 'Scene',
-					isVisibleExpression: '!$(options:anyScene) &&!$(options:useCurrentScene)',
+					isVisibleExpression: '!$(options:useCurrentScene) && ($(options:allSources) || !$(options:anyScene))',
 				}),
-				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
+				{
+					type: 'checkbox',
+					disableAutoExpression: true,
+					label: 'All Sources',
+					id: 'allSources',
+					default: false,
+				},
+				choiceMultiDropdown(self, 'source', {
+					id: 'source',
+					label: 'Sources',
+					isVisibleExpression: '!$(options:allSources)',
+				}),
+				choiceMultiDropdown(self, 'source', {
+					id: 'except',
+					label: 'Except',
+					isVisibleExpression: '$(options:allSources)',
+				}),
+				{
+					type: 'checkbox',
+					disableAutoExpression: true,
+					label: 'Include Sources Inside Groups',
+					id: 'includeGroupChildren',
+					default: true,
+					isVisibleExpression: '$(options:allSources)',
+				},
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -938,67 +959,33 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				},
 			],
 			callback: async (action) => {
-				const sourceUuid = action.options.source
-				await self.obs.setSourceVisibility(sourceUuid, action.options.visible, {
+				if (action.options.allSources) {
+					await self.obs.setAllSourcesVisibility(action.options.visible, {
+						useCurrentScene: action.options.useCurrentScene,
+						scene: action.options.scene,
+						except: action.options.except,
+						includeGroupChildren: action.options.includeGroupChildren,
+					})
+					return
+				}
+
+				await self.obs.setSourcesVisibility(action.options.source, action.options.visible, {
 					anyScene: action.options.anyScene,
 					useCurrentScene: action.options.useCurrentScene,
 					scene: action.options.scene,
 				})
 			},
 			learn: (action) => {
-				if (action.options.anyScene) return undefined
+				if (action.options.allSources || action.options.anyScene) return undefined
 				const sceneName = action.options.useCurrentScene ? self.states.programScene : action.options.scene
-				const match = self.obsState.findSceneItemByName(sceneName, action.options.source)
+				// A multi-source selection has no single visibility to learn, so only a lone source is learnable.
+				const sources = action.options.source
+				if (!Array.isArray(sources) || sources.length !== 1) return undefined
+				const match = self.obsState.findSceneItemByName(sceneName, sources[0])
 				if (!match) return undefined
 				return {
 					visible: match.item.sceneItemEnabled ? 'true' : 'false',
 				}
-			},
-		},
-
-		toggle_all_scene_items: {
-			name: 'Source - Set Visibility of All Sources in Scene',
-			description:
-				'Shows, hides, or toggles the visibility of every source in a scene, optionally excepting some sources. Excepted sources are set to the opposite visibility (ignored when Visibility is Toggle).',
-			options: [
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'Current Scene',
-					id: 'useCurrentScene',
-					default: true,
-				},
-				choiceDropdown(self, 'scene', {
-					id: 'scene',
-					label: 'Scene',
-					isVisibleExpression: '!$(options:useCurrentScene)',
-				}),
-				{
-					type: 'multidropdown',
-					label: 'Except',
-					id: 'except',
-					default: [],
-					choices: self.obsState.sourceChoices,
-				},
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Visibility',
-					id: 'visible',
-					default: 'toggle',
-					choices: [
-						{ id: 'true', label: 'Show' },
-						{ id: 'false', label: 'Hide' },
-						{ id: 'toggle', label: 'Toggle' },
-					],
-				},
-			],
-			callback: async (action) => {
-				await self.obs.setAllSourcesVisibility(action.options.visible, {
-					useCurrentScene: action.options.useCurrentScene,
-					scene: action.options.scene,
-					except: action.options.except,
-				})
 			},
 		},
 	}

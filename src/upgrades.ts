@@ -15,6 +15,17 @@ function getOpt(options: Record<string, unknown>, key: string): unknown {
 	return opt !== null && typeof opt === 'object' && 'value' in opt ? opt.value : opt
 }
 
+/** True when the stored option is the expression form, whose value must not be rewritten as a literal. */
+function isExpressionOpt(options: Record<string, unknown>, key: string): boolean {
+	const opt = options[key]
+	return (
+		opt !== null &&
+		typeof opt === 'object' &&
+		'isExpression' in opt &&
+		(opt as { isExpression?: unknown }).isExpression === true
+	)
+}
+
 function setOpt(options: Record<string, unknown>, key: string, value: unknown): void {
 	const opt = options[key]
 	if (opt !== null && typeof opt === 'object' && 'value' in opt) {
@@ -506,23 +517,33 @@ export default [
 					setOpt(action.options, 'useProgramScene', true)
 					actionChanged = true
 				}
-			} else if (action.actionId === 'toggle_scene_item' && getOpt(action.options, 'all') === true) {
-				// The "All Sources" flag was dropped when the action was rewritten for
-				// anyScene/useCurrentScene; move those configs onto the new dedicated action.
-				action.actionId = 'toggle_all_scene_items'
-				const scene = getOpt(action.options, 'scene')
-				if (scene === 'Current Scene') {
-					setOpt(action.options, 'useCurrentScene', true)
-				} else if (scene === 'Preview Scene') {
-					setOpt(action.options, 'useCurrentScene', false)
-					setOpt(action.options, 'scene', '$(obs:scene_preview)')
+			} else if (action.actionId === 'toggle_scene_item') {
+				// The old boolean "all" flag became the allSources mode of the rewritten action, and the
+				// single Source dropdown became a multi-select.
+				if (getOpt(action.options, 'all') === true) {
+					const scene = getOpt(action.options, 'scene')
+					if (scene === 'Current Scene') {
+						setOpt(action.options, 'useCurrentScene', true)
+					} else if (scene === 'Preview Scene') {
+						setOpt(action.options, 'useCurrentScene', false)
+						setOpt(action.options, 'scene', '$(obs:scene_preview)')
+					} else {
+						setOpt(action.options, 'useCurrentScene', false)
+					}
+					setOpt(action.options, 'allSources', true)
+					setOpt(action.options, 'source', [])
+					delete action.options.anyScene
 				} else {
-					setOpt(action.options, 'useCurrentScene', false)
+					setOpt(action.options, 'allSources', false)
+					const source = getOpt(action.options, 'source')
+					// An expression still evaluates fine against the multidropdown, so only literals are wrapped.
+					if (!Array.isArray(source) && !isExpressionOpt(action.options, 'source')) {
+						setOpt(action.options, 'source', source === undefined || source === '' ? [] : [source])
+					}
 				}
 				setOpt(action.options, 'except', [])
+				setOpt(action.options, 'includeGroupChildren', true)
 				delete action.options.all
-				delete action.options.source
-				delete action.options.anyScene
 				actionChanged = true
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)
