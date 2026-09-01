@@ -472,3 +472,118 @@ describe('toggle_scene_item — all sources within a group', () => {
 		expect(await run({ group: 'Camera' })).toBeUndefined()
 	})
 })
+
+describe('target dropdowns', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		seedScene(self, 'Scene B', 'scene-b')
+		self.states.programScene = 'Scene A'
+		self.states.programSceneUuid = 'scene-a'
+		self.states.previewScene = 'Scene B'
+		self.states.sources.set('src-1', { sourceName: 'Camera', sourceUuid: 'src-1', isGroup: false } as any)
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+		])
+		self.states.sceneItems.set('scene-b', [
+			sceneItem({ sceneItemId: 2, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+		])
+	})
+
+	describe('take_screenshot', () => {
+		const shoot = async (target: string, source: string) => {
+			const actions = looseActions(getSourceActions(self))
+			await actions['take_screenshot'].callback(
+				actionEvent('take_screenshot', {
+					target,
+					source,
+					format: 'png',
+					compression: 0,
+					customName: true,
+					path: '/tmp/shot.png',
+					prefix: '',
+				}),
+				new MockContext(),
+			)
+			return self.socket.call.mock.calls[0]
+		}
+
+		test('programScene shoots the program scene', async () => {
+			expect((await shoot('programScene', 'Camera'))[1]).toMatchObject({ sourceName: 'Scene A' })
+		})
+
+		test('previewScene shoots the preview scene', async () => {
+			expect((await shoot('previewScene', 'Camera'))[1]).toMatchObject({ sourceName: 'Scene B' })
+		})
+
+		test('source shoots the named source', async () => {
+			expect((await shoot('source', 'Camera'))[1]).toMatchObject({ sourceName: 'Camera' })
+		})
+	})
+
+	describe('source_properties', () => {
+		const transform = async (target: string, scene: string) => {
+			const actions = looseActions(getSourceActions(self))
+			await actions['source_properties'].callback(
+				actionEvent('source_properties', {
+					target,
+					scene,
+					source: 'Camera',
+					props: ['positionX'],
+					positionX: '100',
+					positionY: '',
+					scaleX: '',
+					scaleY: '',
+					rotation: '',
+				}),
+				new MockContext(),
+			)
+			return self.socket.callBatch.mock.calls[0]?.[0] as Array<{ requestData: any }> | undefined
+		}
+
+		test('programScene resolves the scene from program', async () => {
+			expect((await transform('programScene', 'Scene B'))?.[0].requestData.sceneUuid).toBe('scene-a')
+		})
+
+		test('scene uses the named scene', async () => {
+			expect((await transform('scene', 'Scene B'))?.[0].requestData.sceneUuid).toBe('scene-b')
+		})
+	})
+
+	describe('toggle_filter', () => {
+		beforeEach(() => {
+			self.states.sourceFilters.set('src-1', [
+				{ filterName: 'Color', filterEnabled: true, filterIndex: 0, filterKind: 'color_filter', filterSettings: {} },
+			])
+			self.states.sourceFilters.set('scene-a', [
+				{ filterName: 'Color', filterEnabled: true, filterIndex: 0, filterKind: 'color_filter', filterSettings: {} },
+			])
+		})
+
+		const toggle = async (target: string) => {
+			const actions = looseActions(getSourceActions(self))
+			await actions['toggle_filter'].callback(
+				actionEvent('toggle_filter', { target, source: 'Camera', filter: 'Color', visible: 'false' }),
+				new MockContext(),
+			)
+		}
+
+		test('source disables the filter on just that source', async () => {
+			await toggle('source')
+			expect(self.socket.call).toHaveBeenCalledWith('SetSourceFilterEnabled', {
+				sourceUuid: 'src-1',
+				filterName: 'Color',
+				filterEnabled: false,
+			})
+			expect(self.socket.callBatch).not.toHaveBeenCalled()
+		})
+
+		test('allSources batches every source carrying the filter', async () => {
+			await toggle('allSources')
+			const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+			expect(batch.map((b) => b.requestData.sourceUuid).sort()).toEqual(['scene-a', 'src-1'])
+		})
+	})
+})

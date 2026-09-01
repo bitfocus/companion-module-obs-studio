@@ -356,7 +356,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.sendToActionRecorder({
 				actionId: 'toggle_filter',
 				options: {
-					allSources: false,
+					target: 'source',
 					source: data.sourceName,
 					filter: data.filterName,
 					visible: data.filterEnabled ? 'true' : 'false',

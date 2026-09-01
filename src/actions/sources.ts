@@ -3,7 +3,7 @@ import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
 import type { OBSTextSourceFont } from '../types.js'
 import { INPUT_KIND_PREFIX_TEXT_GDIPLUS } from '../constants.js'
-import { choiceDropdown, choiceMultiDropdown } from './options.js'
+import { choiceDropdown, choiceMultiDropdown, targetDropdown } from './options.js'
 
 const logger = createModuleLogger('Actions/Sources')
 
@@ -39,14 +39,18 @@ export type SourceActionSchemas = {
 	}
 	resetCaptureDevice: { options: { source: string } }
 	toggle_filter: {
-		options: { allSources: boolean; source: string; filter: string; visible: 'true' | 'false' | 'toggle' }
+		options: {
+			target: 'source' | 'allSources'
+			source: string
+			filter: string
+			visible: 'true' | 'false' | 'toggle'
+		}
 	}
 	setFilterSettings: { options: { source: string; filter: string; settings: string } }
 	refresh_browser_source: { options: { source: string } }
 	take_screenshot: {
 		options: {
-			useProgramScene: boolean
-			usePreviewScene: boolean
+			target: 'source' | 'programScene' | 'previewScene'
 			source: string
 			format: string
 			compression: number
@@ -58,7 +62,7 @@ export type SourceActionSchemas = {
 	}
 	source_properties: {
 		options: {
-			useProgramScene: boolean
+			target: 'programScene' | 'scene'
 			scene: string
 			source: string
 			props: string[]
@@ -556,17 +560,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Filters - Set Visibility',
 			description: 'Shows, hides, or toggles the enabled state of a filter on a source',
 			options: [
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'All Sources',
-					id: 'allSources',
-					default: false,
-				},
+				targetDropdown(['source', 'allSources']),
 				choiceDropdown(self, 'sourceWithScenes', {
 					id: 'source',
 					label: 'Source',
-					isVisibleExpression: `!$(options:allSources)`,
+					isVisibleExpression: `$(options:target) == 'source'`,
 				}),
 				choiceDropdown(self, 'filter', { id: 'filter', label: 'Filter' }),
 				{
@@ -586,12 +584,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const filterName = action.options.filter
 
 				await self.obs.setFilterVisibility(filterName, action.options.visible, {
-					allSources: action.options.allSources,
+					target: action.options.target,
 					source: action.options.source,
 				})
 			},
 			learn: (action) => {
-				if (action.options.allSources) return undefined
+				if (action.options.target === 'allSources') return undefined
 				const sourceName = action.options.source
 				const filterName = action.options.filter
 				const filters = self.obsState.findSourceFiltersByName(sourceName)
@@ -661,25 +659,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Source - Take Screenshot',
 			description: 'Saves a screenshot of a specific source or scene to disk',
 			options: [
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'Current Program Scene',
-					id: 'useProgramScene',
-					default: false,
-				},
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'Current Preview Scene',
-					id: 'usePreviewScene',
-					default: false,
-					isVisibleExpression: `!$(options:useProgramScene)`,
-				},
+				targetDropdown(['source', 'programScene', 'previewScene']),
 				choiceDropdown(self, 'source', {
 					id: 'source',
 					label: 'Source',
-					isVisibleExpression: `!$(options:useProgramScene) && !$(options:usePreviewScene)`,
+					isVisibleExpression: `$(options:target) == 'source'`,
 				}),
 				choiceDropdown(self, 'imageFormat', {
 					id: 'format',
@@ -724,9 +708,9 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			hasResult: true,
 			callback: async (action) => {
 				let sourceName: string
-				if (action.options.useProgramScene) {
+				if (action.options.target === 'programScene') {
 					sourceName = self.states.programScene
-				} else if (action.options.usePreviewScene) {
+				} else if (action.options.target === 'previewScene') {
 					sourceName = self.states.previewScene
 				} else {
 					sourceName = action.options.source
@@ -757,17 +741,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Source - Set Transform Properties',
 			description: 'Sets the transform properties (position, scale, rotation) of a source',
 			options: [
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'Current Program Scene',
-					id: 'useProgramScene',
-					default: true,
-				},
+				targetDropdown(['programScene', 'scene']),
 				choiceDropdown(self, 'scene', {
 					id: 'scene',
 					label: 'Scene',
-					isVisibleExpression: `!$(options:useProgramScene)`,
+					isVisibleExpression: `$(options:target) == 'scene'`,
 				}),
 				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
 				{
@@ -826,7 +804,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				},
 			],
 			callback: async (action) => {
-				const sourceSceneName = action.options.useProgramScene ? self.states.programScene : action.options.scene
+				const sourceSceneName =
+					action.options.target === 'programScene' ? self.states.programScene : action.options.scene
 				const sourceName = action.options.source
 				const props = action.options.props || []
 
@@ -862,7 +841,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				}
 			},
 			learn: async (action) => {
-				const sourceSceneName = action.options.useProgramScene ? self.states.programScene : action.options.scene
+				const sourceSceneName =
+					action.options.target === 'programScene' ? self.states.programScene : action.options.scene
 				const sourceName = action.options.source
 
 				const match = self.obsState.findSceneItemByName(sourceSceneName, sourceName)
@@ -905,19 +885,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 			description:
 				'Shows, hides, or toggles the visibility of sources in the specified scene(s). With All Sources checked, every source in the chosen scene or group is set, and the excepted sources are set to the opposite visibility (ignored when Visibility is Toggle).',
 			options: [
-				{
-					type: 'dropdown',
-					disableAutoExpression: true,
-					label: 'Target',
-					id: 'target',
-					default: 'allScenes',
-					choices: [
-						{ id: 'allScenes', label: 'All Scenes' },
-						{ id: 'currentScene', label: 'Current Scene' },
-						{ id: 'scene', label: 'Specific Scene' },
-						{ id: 'group', label: 'Group' },
-					],
-				},
+				targetDropdown(['allScenes', 'currentScene', 'scene', 'group']),
 				choiceDropdown(self, 'scene', {
 					id: 'scene',
 					label: 'Scene',

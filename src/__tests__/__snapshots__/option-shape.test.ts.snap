@@ -1388,11 +1388,21 @@ exports[`option shape > action options are unchanged 1`] = `
   ],
   "source_properties": [
     {
-      "default": true,
+      "choices": [
+        {
+          "id": "programScene",
+          "label": "Current Program Scene",
+        },
+        {
+          "id": "scene",
+          "label": "Specific Scene",
+        },
+      ],
+      "default": "programScene",
       "disableAutoExpression": true,
-      "id": "useProgramScene",
-      "label": "Current Program Scene",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -1408,7 +1418,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Scene B",
       "id": "scene",
-      "isVisibleExpression": "!$(options:useProgramScene)",
+      "isVisibleExpression": "$(options:target) == 'scene'",
       "label": "Scene",
       "type": "dropdown",
     },
@@ -1555,19 +1565,25 @@ exports[`option shape > action options are unchanged 1`] = `
   ],
   "take_screenshot": [
     {
-      "default": false,
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "programScene",
+          "label": "Current Program Scene",
+        },
+        {
+          "id": "previewScene",
+          "label": "Current Preview Scene",
+        },
+      ],
+      "default": "source",
       "disableAutoExpression": true,
-      "id": "useProgramScene",
-      "label": "Current Program Scene",
-      "type": "checkbox",
-    },
-    {
-      "default": false,
-      "disableAutoExpression": true,
-      "id": "usePreviewScene",
-      "isVisibleExpression": "!$(options:useProgramScene)",
-      "label": "Current Preview Scene",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -1591,7 +1607,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Clip",
       "id": "source",
-      "isVisibleExpression": "!$(options:useProgramScene) && !$(options:usePreviewScene)",
+      "isVisibleExpression": "$(options:target) == 'source'",
       "label": "Source",
       "type": "dropdown",
     },
@@ -1639,11 +1655,21 @@ exports[`option shape > action options are unchanged 1`] = `
   ],
   "toggle_filter": [
     {
-      "default": false,
+      "choices": [
+        {
+          "id": "source",
+          "label": "Specific Source",
+        },
+        {
+          "id": "allSources",
+          "label": "All Sources",
+        },
+      ],
+      "default": "source",
       "disableAutoExpression": true,
-      "id": "allSources",
-      "label": "All Sources",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -1675,7 +1701,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Clip",
       "id": "source",
-      "isVisibleExpression": "!$(options:allSources)",
+      "isVisibleExpression": "$(options:target) == 'source'",
       "label": "Source",
       "type": "dropdown",
     },
@@ -2507,19 +2533,21 @@ exports[`option shape > feedback options are unchanged 1`] = `
   ],
   "scene_item_active": [
     {
-      "default": true,
+      "choices": [
+        {
+          "id": "allScenes",
+          "label": "All Scenes",
+        },
+        {
+          "id": "scene",
+          "label": "Specific Scene",
+        },
+      ],
+      "default": "allScenes",
       "disableAutoExpression": true,
-      "id": "anyScene",
-      "label": "All Scenes",
-      "type": "checkbox",
-    },
-    {
-      "default": false,
-      "disableAutoExpression": true,
-      "id": "useCurrentScene",
-      "isVisibleExpression": "!$(options:anyScene)",
-      "label": "Current Scene",
-      "type": "checkbox",
+      "id": "target",
+      "label": "Target",
+      "type": "dropdown",
     },
     {
       "allowCustom": true,
@@ -2535,7 +2563,7 @@ exports[`option shape > feedback options are unchanged 1`] = `
       ],
       "default": "Scene B",
       "id": "scene",
-      "isVisibleExpression": "!$(options:anyScene) && !$(options:useCurrentScene)",
+      "isVisibleExpression": "$(options:target) == 'scene'",
       "label": "Scene",
       "type": "dropdown",
     },

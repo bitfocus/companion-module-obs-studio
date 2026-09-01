@@ -222,3 +222,35 @@ export function choiceMultiDropdown<TKey extends string>(
 		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
 	}
 }
+
+/** The choice ids a Target dropdown may offer, shared so the same concept keeps the same id everywhere. */
+export const TARGET_CHOICES = {
+	allScenes: { id: 'allScenes', label: 'All Scenes' },
+	currentScene: { id: 'currentScene', label: 'Current Scene' },
+	programScene: { id: 'programScene', label: 'Current Program Scene' },
+	previewScene: { id: 'previewScene', label: 'Current Preview Scene' },
+	scene: { id: 'scene', label: 'Specific Scene' },
+	group: { id: 'group', label: 'Group' },
+	source: { id: 'source', label: 'Specific Source' },
+	allSources: { id: 'allSources', label: 'All Sources' },
+} as const satisfies Record<string, DropdownChoice>
+
+export type TargetChoiceName = keyof typeof TARGET_CHOICES
+
+/**
+ * The "what does this act on" selector. A one-of-N choice belongs in a dropdown rather than a chain of
+ * checkboxes, where each box has to be read together with the ones above it to know what is selected.
+ */
+export function targetDropdown<TKey extends string = 'target'>(
+	choices: readonly TargetChoiceName[],
+	field?: { id?: TKey; label?: string; default?: TargetChoiceName },
+): CompanionInputFieldDropdown<TKey> {
+	return {
+		type: 'dropdown',
+		disableAutoExpression: true,
+		label: field?.label ?? 'Target',
+		id: (field?.id ?? 'target') as TKey,
+		default: field?.default ?? choices[0],
+		choices: choices.map((name) => TARGET_CHOICES[name]),
+	}
+}

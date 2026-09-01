@@ -1492,9 +1492,9 @@ export class OBSApi {
 	public async setFilterVisibility(
 		filterName: string,
 		visible: string,
-		options: { allSources: boolean; source: string },
+		options: { target: 'source' | 'allSources'; source: string },
 	): Promise<void> {
-		if (options.allSources) {
+		if (options.target === 'allSources') {
 			const requests: OBSBatchRequest[] = []
 			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
 				const filter = filters.find((f) => f.filterName === filterName)

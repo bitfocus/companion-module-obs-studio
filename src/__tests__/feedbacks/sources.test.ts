@@ -51,3 +51,35 @@ describe('scene_item_active_in_scene', () => {
 		expect(check({ scene: 'Scene A', any: false, source: 'Missing' })).toBe(false)
 	})
 })
+
+describe('scene_item_active', () => {
+	let self: MockInstance
+
+	const check = (options: { target: string; scene: string; source: string }): unknown => {
+		const feedbacks = looseFeedbacks(getSourceFeedbacks(self))
+		return feedbacks['scene_item_active'].callback(feedbackEvent('scene_item_active', options), new MockContext())
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		seedScene(self, 'Scene B', 'scene-b')
+		self.states.programScene = 'Scene A'
+		self.states.sources.set('src-1', { sourceName: 'Camera', sourceUuid: 'src-1', active: true } as any)
+	})
+
+	test('allScenes is true whenever the source is active', () => {
+		expect(check({ target: 'allScenes', scene: '', source: 'Camera' })).toBe(true)
+	})
+
+	test('a named scene is true only when that scene is on program', () => {
+		expect(check({ target: 'scene', scene: 'Scene A', source: 'Camera' })).toBe(true)
+		expect(check({ target: 'scene', scene: 'Scene B', source: 'Camera' })).toBe(false)
+	})
+
+	test('false when the source is not active, whatever the target', () => {
+		self.states.sources.get('src-1')!.active = false
+		expect(check({ target: 'allScenes', scene: '', source: 'Camera' })).toBe(false)
+		expect(check({ target: 'scene', scene: 'Scene A', source: 'Camera' })).toBe(false)
+	})
+})

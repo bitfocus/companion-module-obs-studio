@@ -550,3 +550,64 @@ describe('v4_0_0 advanced feedback conversion', () => {
 		expect(feedback.feedbackId).toBe('streaming')
 	})
 })
+
+describe('v4_0_0 target dropdown migrations', () => {
+	function upgradeAction(actionId: string, options: Record<string, unknown>) {
+		const action = { id: 'a1', actionId, options } as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+		expect(result.updatedActions).toHaveLength(1)
+		return result.updatedActions[0]
+	}
+
+	test.each([
+		['programScene', 'programScene'],
+		['previewScene', 'previewScene'],
+		['Camera', 'source'],
+	])('take_screenshot source %s becomes target %s', (source, target) => {
+		const updated = upgradeAction('take_screenshot', { source })
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.useProgramScene).toBeUndefined()
+		expect(updated.options.usePreviewScene).toBeUndefined()
+	})
+
+	test('take_screenshot clears the magic source name it replaced', () => {
+		expect(upgradeAction('take_screenshot', { source: 'programScene' }).options.source).toBe('')
+	})
+
+	test.each([
+		['set_filter_visible', 'allSources', 'allSources'],
+		['set_filter_visible', 'Camera', 'source'],
+		['toggle_filter', 'allSources', 'allSources'],
+		['toggle_filter', 'Camera', 'source'],
+	])('%s source %s becomes target %s', (actionId, source, target) => {
+		const updated = upgradeAction(actionId, { source })
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.allSources).toBeUndefined()
+		expect(updated.options.all).toBeUndefined()
+	})
+
+	test.each([
+		['set_scene_item_properties', 'current', 'programScene'],
+		['set_scene_item_properties', 'Scene A', 'scene'],
+		['source_properties', 'current', 'programScene'],
+		['source_properties', 'Scene A', 'scene'],
+	])('%s scene %s becomes target %s', (actionId, scene, target) => {
+		const updated = upgradeAction(actionId, { scene })
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.useProgramScene).toBeUndefined()
+	})
+
+	test.each([
+		[{ scene: 'anyScene' }, 'allScenes'],
+		[{ anyScene: true, scene: '' }, 'allScenes'],
+		[{ useCurrentScene: true, scene: '' }, 'allScenes'],
+		[{ scene: 'Scene A' }, 'scene'],
+	])('scene_item_active %o becomes target %s', (options, target) => {
+		const feedback = { id: 'f1', feedbackId: 'scene_item_active', options } as unknown as CompanionMigrationFeedback
+		const result = v4_0_0(context, makeProps(null, [], [feedback]))
+		const updated = result.updatedFeedbacks[0]
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.anyScene).toBeUndefined()
+		expect(updated.options.useCurrentScene).toBeUndefined()
+	})
+})

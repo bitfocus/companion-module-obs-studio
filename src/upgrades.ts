@@ -499,24 +499,30 @@ export default [
 					setOpt(action.options, 'useCurrentScene', true)
 					actionChanged = true
 				}
-			} else if (action.actionId === 'set_filter_visible') {
-				if (getOpt(action.options, 'source') === 'allSources') {
-					setOpt(action.options, 'allSources', true)
-					actionChanged = true
-				}
+			} else if (action.actionId === 'set_filter_visible' || action.actionId === 'toggle_filter') {
+				// The magic 'allSources' source name became an explicit target.
+				const allSources = getOpt(action.options, 'source') === 'allSources' || getOpt(action.options, 'all') === true
+				setOpt(action.options, 'target', allSources ? 'allSources' : 'source')
+				if (allSources) setOpt(action.options, 'source', '')
+				delete action.options.all
+				delete action.options.allSources
+				actionChanged = true
 			} else if (action.actionId === 'take_screenshot') {
-				if (getOpt(action.options, 'source') === 'programScene') {
-					setOpt(action.options, 'useProgramScene', true)
-					actionChanged = true
-				} else if (getOpt(action.options, 'source') === 'previewScene') {
-					setOpt(action.options, 'usePreviewScene', true)
-					actionChanged = true
+				const source = getOpt(action.options, 'source')
+				if (source === 'programScene' || source === 'previewScene') {
+					setOpt(action.options, 'target', source)
+					setOpt(action.options, 'source', '')
+				} else {
+					setOpt(action.options, 'target', 'source')
 				}
+				delete action.options.useProgramScene
+				delete action.options.usePreviewScene
+				actionChanged = true
 			} else if (action.actionId === 'set_scene_item_properties') {
-				if (getOpt(action.options, 'scene') === 'current') {
-					setOpt(action.options, 'useProgramScene', true)
-					actionChanged = true
-				}
+				// Renamed to source_properties by consolidateAction below, so the target is set once here.
+				setOpt(action.options, 'target', getOpt(action.options, 'scene') === 'current' ? 'programScene' : 'scene')
+				delete action.options.useProgramScene
+				actionChanged = true
 			} else if (action.actionId === 'toggle_scene_item') {
 				// The old boolean "all" flag became the allSources mode of the rewritten action, the single
 				// Source dropdown became a multi-select, and the scene magic strings became a Target dropdown.
@@ -548,6 +554,8 @@ export default [
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)
 			} else if (action.actionId === 'source_properties') {
+				setOpt(action.options, 'target', getOpt(action.options, 'scene') === 'current' ? 'programScene' : 'scene')
+				delete action.options.useProgramScene
 				const includedProps: string[] = []
 				for (const key of ['positionX', 'positionY', 'scaleX', 'scaleY', 'rotation']) {
 					const value = getOpt(action.options, key)
@@ -579,10 +587,16 @@ export default [
 		for (const feedback of props.feedbacks) {
 			let feedbackChanged = false
 			if (feedback.feedbackId === 'scene_item_active') {
-				if (getOpt(feedback.options, 'scene') === 'anyScene') {
-					setOpt(feedback.options, 'anyScene', true)
-					feedbackChanged = true
-				}
+				// "Current Scene" always matched program, which "All Scenes" already covers, so both fold into it.
+				const allScenes =
+					getOpt(feedback.options, 'scene') === 'anyScene' ||
+					getOpt(feedback.options, 'anyScene') === true ||
+					getOpt(feedback.options, 'useCurrentScene') === true
+				setOpt(feedback.options, 'target', allScenes ? 'allScenes' : 'scene')
+				if (allScenes) setOpt(feedback.options, 'scene', '')
+				delete feedback.options.anyScene
+				delete feedback.options.useCurrentScene
+				feedbackChanged = true
 			} else if (
 				feedback.feedbackId === 'scenePreview' ||
 				feedback.feedbackId === 'sceneProgram' ||
