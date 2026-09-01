@@ -27,8 +27,7 @@ export function getSourcePresets(self: OBSInstance): {
 			{
 				feedbackId: 'scene_item_active',
 				options: {
-					anyScene: true,
-					useCurrentScene: false,
+					target: 'allScenes',
 					scene: '',
 					source: { value: '$(local:source)', isExpression: true },
 				},
@@ -50,10 +49,13 @@ export function getSourcePresets(self: OBSInstance): {
 					{
 						actionId: 'toggle_scene_item',
 						options: {
-							anyScene: false,
-							useCurrentScene: true,
+							allSources: false,
+							target: 'currentScene',
 							scene: '',
-							source: { value: '$(local:source)', isExpression: true },
+							group: '',
+							source: { value: '[$(local:source)]', isExpression: true },
+							except: [],
+							includeGroupChildren: true,
 							visible: 'toggle',
 						},
 					},
@@ -85,7 +87,7 @@ export function getSourcePresets(self: OBSInstance): {
 					{
 						actionId: 'toggle_filter',
 						options: {
-							allSources: true,
+							target: 'allSources',
 							source: '',
 							filter: { value: '$(local:filter)', isExpression: true },
 							visible: 'toggle',
@@ -105,9 +107,7 @@ export function getSourcePresets(self: OBSInstance): {
 		style: baseStyle({ text: 'Toggle\nFilter' }),
 		steps: [
 			{
-				down: [
-					{ actionId: 'toggle_filter', options: { allSources: false, source: '', filter: '', visible: 'toggle' } },
-				],
+				down: [{ actionId: 'toggle_filter', options: { target: 'source', source: '', filter: '', visible: 'toggle' } }],
 				up: [],
 			},
 		],
@@ -164,8 +164,7 @@ export function getSourcePresets(self: OBSInstance): {
 					{
 						actionId: 'take_screenshot',
 						options: {
-							useProgramScene: true,
-							usePreviewScene: false,
+							target: 'programScene',
 							source: '',
 							format: 'png',
 							compression: 0,

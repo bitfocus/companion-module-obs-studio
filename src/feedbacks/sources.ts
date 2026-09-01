@@ -1,12 +1,12 @@
 import { CompanionFeedbackDefinitions } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { styleActive, stylePreview, styleProgram } from '../presets/style.js'
-import { choiceDropdown } from '../actions/options.js'
+import { choiceDropdown, targetDropdown } from '../actions/options.js'
 
 export type SourceFeedbackSchemas = {
 	scene_item_active: {
 		type: 'boolean'
-		options: { anyScene: boolean; useCurrentScene: boolean; scene: string; source: string }
+		options: { target: 'allScenes' | 'scene'; scene: string; source: string }
 	}
 	scene_item_previewed: { type: 'boolean'; options: { source: string } }
 	scene_item_active_in_scene: { type: 'boolean'; options: { scene: string; any: boolean; source: string } }
@@ -22,25 +22,11 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				'If a source is currently visible in the program output (either directly or via a scene), change the style of the button',
 			defaultStyle: styleProgram(),
 			options: [
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'All Scenes',
-					id: 'anyScene',
-					default: true,
-				},
-				{
-					type: 'checkbox',
-					disableAutoExpression: true,
-					label: 'Current Scene',
-					id: 'useCurrentScene',
-					default: false,
-					isVisibleExpression: `!$(options:anyScene)`,
-				},
+				targetDropdown(['allScenes', 'scene']),
 				choiceDropdown(self, 'scene', {
 					id: 'scene',
 					label: 'Scene',
-					isVisibleExpression: `!$(options:anyScene) && !$(options:useCurrentScene)`,
+					isVisibleExpression: `$(options:target) == 'scene'`,
 				}),
 				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
 			],
@@ -49,12 +35,8 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 				const source = self.obsState.findSourceByName(sourceName)
 				if (!source?.active) return false
 
-				if (feedback.options.anyScene) {
-					return true
-				} else {
-					const sceneName = feedback.options.useCurrentScene ? self.states.programScene : feedback.options.scene
-					return sceneName === self.states.programScene
-				}
+				// An active source is on program by definition, so a named scene only narrows it to that scene.
+				return feedback.options.target === 'allScenes' || feedback.options.scene === self.states.programScene
 			},
 		},
 
@@ -99,10 +81,9 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 						}
 					}
 				} else {
-					const match = self.obsState.findSceneItemByName(sceneName, sourceName)
-					if (match) {
-						return match.item.sceneItemEnabled
-					}
+					// A source can sit in the scene more than once; the button lights while any copy is on.
+					const matches = self.obsState.findSceneItemsByNameInScene(sceneName, sourceName)
+					return matches.some((match) => match.item.sceneItemEnabled)
 				}
 				return false
 			},

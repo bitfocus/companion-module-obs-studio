@@ -15,6 +15,17 @@ function getOpt(options: Record<string, unknown>, key: string): unknown {
 	return opt !== null && typeof opt === 'object' && 'value' in opt ? opt.value : opt
 }
 
+/** True when the stored option is the expression form, whose value must not be rewritten as a literal. */
+function isExpressionOpt(options: Record<string, unknown>, key: string): boolean {
+	const opt = options[key]
+	return (
+		opt !== null &&
+		typeof opt === 'object' &&
+		'isExpression' in opt &&
+		(opt as { isExpression?: unknown }).isExpression === true
+	)
+}
+
 function setOpt(options: Record<string, unknown>, key: string, value: unknown): void {
 	const opt = options[key]
 	if (opt !== null && typeof opt === 'object' && 'value' in opt) {
@@ -488,45 +499,63 @@ export default [
 					setOpt(action.options, 'useCurrentScene', true)
 					actionChanged = true
 				}
-			} else if (action.actionId === 'set_filter_visible') {
-				if (getOpt(action.options, 'source') === 'allSources') {
-					setOpt(action.options, 'allSources', true)
-					actionChanged = true
-				}
+			} else if (action.actionId === 'set_filter_visible' || action.actionId === 'toggle_filter') {
+				// The magic 'allSources' source name became an explicit target.
+				const allSources = getOpt(action.options, 'source') === 'allSources' || getOpt(action.options, 'all') === true
+				setOpt(action.options, 'target', allSources ? 'allSources' : 'source')
+				if (allSources) setOpt(action.options, 'source', '')
+				delete action.options.all
+				delete action.options.allSources
+				actionChanged = true
 			} else if (action.actionId === 'take_screenshot') {
-				if (getOpt(action.options, 'source') === 'programScene') {
-					setOpt(action.options, 'useProgramScene', true)
-					actionChanged = true
-				} else if (getOpt(action.options, 'source') === 'previewScene') {
-					setOpt(action.options, 'usePreviewScene', true)
-					actionChanged = true
+				const source = getOpt(action.options, 'source')
+				if (source === 'programScene' || source === 'previewScene') {
+					setOpt(action.options, 'target', source)
+					setOpt(action.options, 'source', '')
+				} else {
+					setOpt(action.options, 'target', 'source')
 				}
+				delete action.options.useProgramScene
+				delete action.options.usePreviewScene
+				actionChanged = true
 			} else if (action.actionId === 'set_scene_item_properties') {
-				if (getOpt(action.options, 'scene') === 'current') {
-					setOpt(action.options, 'useProgramScene', true)
-					actionChanged = true
-				}
-			} else if (action.actionId === 'toggle_scene_item' && getOpt(action.options, 'all') === true) {
-				// The "All Sources" flag was dropped when the action was rewritten for
-				// anyScene/useCurrentScene; move those configs onto the new dedicated action.
-				action.actionId = 'toggle_all_scene_items'
+				// Renamed to source_properties by consolidateAction below, so the target is set once here.
+				setOpt(action.options, 'target', getOpt(action.options, 'scene') === 'current' ? 'programScene' : 'scene')
+				delete action.options.useProgramScene
+				actionChanged = true
+			} else if (action.actionId === 'toggle_scene_item') {
+				// The old boolean "all" flag became the allSources mode of the rewritten action, the single
+				// Source dropdown became a multi-select, and the scene magic strings became a Target dropdown.
 				const scene = getOpt(action.options, 'scene')
 				if (scene === 'Current Scene') {
-					setOpt(action.options, 'useCurrentScene', true)
-				} else if (scene === 'Preview Scene') {
-					setOpt(action.options, 'useCurrentScene', false)
-					setOpt(action.options, 'scene', '$(obs:scene_preview)')
+					setOpt(action.options, 'target', 'currentScene')
 				} else {
-					setOpt(action.options, 'useCurrentScene', false)
+					setOpt(action.options, 'target', 'scene')
+					if (scene === 'Preview Scene') setOpt(action.options, 'scene', '$(obs:scene_preview)')
+				}
+
+				if (getOpt(action.options, 'all') === true) {
+					setOpt(action.options, 'allSources', true)
+					setOpt(action.options, 'source', [])
+				} else {
+					setOpt(action.options, 'allSources', false)
+					const source = getOpt(action.options, 'source')
+					// An expression still evaluates fine against the multidropdown, so only literals are wrapped.
+					if (!Array.isArray(source) && !isExpressionOpt(action.options, 'source')) {
+						setOpt(action.options, 'source', source === undefined || source === '' ? [] : [source])
+					}
 				}
 				setOpt(action.options, 'except', [])
+				setOpt(action.options, 'includeGroupChildren', true)
+				setOpt(action.options, 'group', '')
 				delete action.options.all
-				delete action.options.source
 				delete action.options.anyScene
 				actionChanged = true
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)
 			} else if (action.actionId === 'source_properties') {
+				setOpt(action.options, 'target', getOpt(action.options, 'scene') === 'current' ? 'programScene' : 'scene')
+				delete action.options.useProgramScene
 				const includedProps: string[] = []
 				for (const key of ['positionX', 'positionY', 'scaleX', 'scaleY', 'rotation']) {
 					const value = getOpt(action.options, key)
@@ -558,10 +587,16 @@ export default [
 		for (const feedback of props.feedbacks) {
 			let feedbackChanged = false
 			if (feedback.feedbackId === 'scene_item_active') {
-				if (getOpt(feedback.options, 'scene') === 'anyScene') {
-					setOpt(feedback.options, 'anyScene', true)
-					feedbackChanged = true
-				}
+				// "Current Scene" always matched program, which "All Scenes" already covers, so both fold into it.
+				const allScenes =
+					getOpt(feedback.options, 'scene') === 'anyScene' ||
+					getOpt(feedback.options, 'anyScene') === true ||
+					getOpt(feedback.options, 'useCurrentScene') === true
+				setOpt(feedback.options, 'target', allScenes ? 'allScenes' : 'scene')
+				if (allScenes) setOpt(feedback.options, 'scene', '')
+				delete feedback.options.anyScene
+				delete feedback.options.useCurrentScene
+				feedbackChanged = true
 			} else if (
 				feedback.feedbackId === 'scenePreview' ||
 				feedback.feedbackId === 'sceneProgram' ||

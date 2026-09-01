@@ -356,7 +356,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.sendToActionRecorder({
 				actionId: 'toggle_filter',
 				options: {
-					allSources: false,
+					target: 'source',
 					source: data.sourceName,
 					filter: data.filterName,
 					visible: data.filterEnabled ? 'true' : 'false',
@@ -415,10 +415,13 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.sendToActionRecorder({
 				actionId: 'toggle_scene_item',
 				options: {
-					anyScene: false,
-					useCurrentScene: false,
+					allSources: false,
+					target: 'scene',
 					scene: sceneName,
-					source: sourceName,
+					group: '',
+					source: [sourceName],
+					except: [],
+					includeGroupChildren: true,
 					visible: data.sceneItemEnabled ? 'true' : 'false',
 				},
 			})

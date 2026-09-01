@@ -125,7 +125,7 @@ describe('filter listeners', () => {
 		expect(self.states.sourceFilters.get('mic-uuid')![0].filterEnabled).toBe(false)
 		expect(self.sendToActionRecorder).toHaveBeenCalledWith({
 			actionId: 'toggle_filter',
-			options: { allSources: false, source: 'Mic', filter: 'Gain', visible: 'false' },
+			options: { target: 'source', source: 'Mic', filter: 'Gain', visible: 'false' },
 		})
 	})
 

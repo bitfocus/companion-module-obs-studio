@@ -122,9 +122,9 @@ describe('container model — visibility resolution', () => {
 
 	test('toggling a grouped source (any scene) targets the group container', async () => {
 		await self.obs.setSourceVisibility('member-1', 'toggle', {
-			anyScene: true,
-			useCurrentScene: false,
+			target: 'allScenes',
 			scene: '',
+			group: '',
 		})
 
 		expect(self.socket.callBatch).toHaveBeenCalledTimes(1)
@@ -138,9 +138,9 @@ describe('container model — visibility resolution', () => {
 
 	test('toggling a grouped source in a specific scene resolves via parentGroupUuid', async () => {
 		await self.obs.setSourceVisibility('member-1', 'true', {
-			anyScene: false,
-			useCurrentScene: false,
+			target: 'scene',
 			scene: 'Scene A',
+			group: '',
 		})
 
 		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
@@ -245,9 +245,9 @@ describe('scene item lookup precedence', () => {
 
 	test('setSourceVisibility targets the scene copy, not the group copy', async () => {
 		await self.obs.setSourceVisibility('member-1', 'false', {
-			anyScene: false,
-			useCurrentScene: false,
+			target: 'scene',
 			scene: 'Scene B',
+			group: '',
 		})
 
 		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
@@ -267,5 +267,61 @@ describe('scene item lookup precedence', () => {
 		)
 
 		expect(result).toBe(false)
+	})
+})
+
+describe('duplicate scene item lookups', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedScene(self, 'Scene A', 'scene-a')
+		seedSource(self, 'Camera', 'src-1')
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+			sceneItem({ sceneItemId: 2, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: false }),
+		])
+	})
+
+	test('findSceneItems returns every copy, findSceneItem still returns one', () => {
+		expect(self.obsState.findSceneItems('scene-a', 'src-1').map((m) => m.item.sceneItemId)).toEqual([1, 2])
+		expect(self.obsState.findSceneItem('scene-a', 'src-1')?.item.sceneItemId).toBe(1)
+	})
+
+	test('the scene beats the parent group when it holds the source itself', () => {
+		self.states.sources.get('src-1')!.parentGroupUuid = 'group-1'
+		self.states.sceneItems.set('group-1', [
+			sceneItem({ sceneItemId: 99, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+		])
+
+		const matches = self.obsState.findSceneItems('scene-a', 'src-1')
+		expect(matches.every((m) => m.containerUuid === 'scene-a')).toBe(true)
+		expect(matches).toHaveLength(2)
+	})
+
+	test('the parent group is used when the scene does not hold the source', () => {
+		self.states.sources.get('src-1')!.parentGroupUuid = 'group-1'
+		self.states.sceneItems.set('scene-a', [])
+		self.states.sceneItems.set('group-1', [
+			sceneItem({ sceneItemId: 99, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+		])
+
+		expect(self.obsState.findSceneItems('scene-a', 'src-1')).toEqual([
+			{ containerUuid: 'group-1', item: expect.objectContaining({ sceneItemId: 99 }) },
+		])
+	})
+
+	test('findSceneItemsAnywhere collects every copy in every container', () => {
+		seedScene(self, 'Scene B', 'scene-b')
+		self.states.sceneItems.set('scene-b', [
+			sceneItem({ sceneItemId: 7, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
+		])
+
+		expect(
+			self.obsState
+				.findSceneItemsAnywhere('src-1')
+				.map((m) => m.item.sceneItemId)
+				.sort(),
+		).toEqual([1, 2, 7])
 	})
 })

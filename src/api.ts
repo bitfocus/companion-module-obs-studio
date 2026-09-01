@@ -26,6 +26,7 @@ import {
 	type OBSTransition,
 	type SourceDataBatchSpec,
 	type OBSFilter,
+	type VisibilityTarget,
 } from './types.js'
 import { DEFAULT_TIMECODE } from './constants.js'
 import { BatchBuilder, successfulEntry, type BatchEntry, type BatchSpec, type SuccessfulBatchEntry } from './batch.js'
@@ -55,6 +56,7 @@ export class OBSApi {
 
 	// Guard against overlapping connection attempts.
 	private connecting = false
+	private lastLoggedError: string | null = null
 
 	// Subscription tracking for volume meters (keyed by feedback ID).
 	private meterSubscribers = new Set<string>()
@@ -122,6 +124,7 @@ export class OBSApi {
 			if (obsWebSocketVersion) {
 				this.self.updateStatus(InstanceStatus.Ok)
 				this.stopReconnectionPoll()
+				this.lastLoggedError = null
 				logger.info('Connected to OBS')
 
 				// Setup initial state.
@@ -160,30 +163,37 @@ export class OBSApi {
 		}
 	}
 
+	// Repeated identical failures are logged only once, so a reconnection loop doesn't spam the log.
+	private logError(message: string): void {
+		if (this.lastLoggedError === message) return
+		this.lastLoggedError = message
+		logger.error(message)
+	}
+
 	public processWebSocketError(error: unknown): void {
 		let tryReconnect: boolean
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		if (errorMessage.match(/(Server sent no subprotocol)/i)) {
 			tryReconnect = false
-			logger.error('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
+			this.logError('Failed to connect to OBS. Please upgrade OBS to version 28 or above')
 			this.self.updateStatus(InstanceStatus.ConnectionFailure, 'Outdated OBS version')
 		} else if (errorMessage.match(/(missing an `authentication` string)/i)) {
 			tryReconnect = false
-			logger.error(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
+			this.logError(`Failed to connect to OBS. Please enter your WebSocket Server password in the module settings`)
 			this.self.updateStatus(InstanceStatus.BadConfig, 'Missing password')
 		} else if (errorMessage.match(/(Authentication failed)/i)) {
 			tryReconnect = false
-			logger.error(
+			this.logError(
 				`Failed to connect to OBS. Please ensure your WebSocket Server password is correct in the module settings`,
 			)
 			this.self.updateStatus(InstanceStatus.AuthenticationFailure)
 		} else if (errorMessage.match(/(ECONNREFUSED)/i)) {
 			tryReconnect = true
-			logger.error(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
+			this.logError(`Failed to connect to OBS. Please ensure OBS is open and reachable via your network`)
 			this.self.updateStatus(InstanceStatus.ConnectionFailure)
 		} else {
 			tryReconnect = true
-			logger.error(`Failed to connect to OBS (${errorMessage})`)
+			this.logError(`Failed to connect to OBS (${errorMessage})`)
 			this.self.updateStatus(InstanceStatus.UnknownError)
 		}
 		// A terminal failure stops the retry loop even if it started before the cause was known.
@@ -1359,11 +1369,7 @@ export class OBSApi {
 		}
 	}
 
-	public async setSourceVisibility(
-		sourceName: string,
-		visible: string,
-		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
-	): Promise<void> {
+	public async setSourceVisibility(sourceName: string, visible: string, options: VisibilityTarget): Promise<void> {
 		const source = this.self.obsState.findSourceByName(sourceName)
 		if (!source) return
 
@@ -1374,22 +1380,33 @@ export class OBSApi {
 		}
 	}
 
+	public async setSourcesVisibility(sourceNames: string[], visible: string, options: VisibilityTarget): Promise<void> {
+		// An expression bound to the multidropdown can yield a lone name rather than a list.
+		const names = Array.isArray(sourceNames) ? sourceNames : [sourceNames as unknown as string]
+		const instances = names.flatMap((sourceName) => {
+			const source = this.self.obsState.findSourceByName(sourceName)
+			return source ? this.findSourceInstances(source.sourceUuid, options) : []
+		})
+		if (instances.length === 0) return
+
+		await this.sendBatch(this.buildSourceVisibilityRequests(instances, visible))
+	}
+
 	public async setAllSourcesVisibility(
 		visible: string,
-		options: { useCurrentScene: boolean; scene: string; except: string[] },
+		options: VisibilityTarget & { except: string[]; includeGroupChildren: boolean },
 	): Promise<void> {
-		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
-		if (!scene) return
-
-		const items = this.self.obsState.getContainerItems(scene.sceneUuid)
-		if (!items || items.length === 0) return
+		const matches = this.resolveTargetContainers(options).flatMap((containerUuid) =>
+			this.self.obsState.getContainerItemsDeep(containerUuid, options.includeGroupChildren),
+		)
+		if (matches.length === 0) return
 
 		const except = new Set(Array.isArray(options.except) ? options.except : [])
-		const nonExcepted = items.filter((item) => !except.has(item.sourceName))
-		const excepted = items.filter((item) => except.has(item.sourceName))
+		const nonExcepted = matches.filter((match) => !except.has(match.item.sourceName))
+		const excepted = matches.filter((match) => except.has(match.item.sourceName))
 
-		const toInstances = (list: typeof items) =>
-			list.map((item) => ({ containerUuid: scene.sceneUuid, sceneItemId: item.sceneItemId }))
+		const toInstances = (list: SceneItemMatch[]) =>
+			list.map((match) => ({ containerUuid: match.containerUuid, sceneItemId: match.item.sceneItemId }))
 
 		const requests = this.buildSourceVisibilityRequests(toInstances(nonExcepted), visible)
 		if (visible !== 'toggle') {
@@ -1402,31 +1419,52 @@ export class OBSApi {
 		}
 	}
 
-	/** Resolves the scene an action targets: either the live program scene, or one named explicitly. */
-	private resolveTargetScene(useCurrentScene: boolean, sceneName: string) {
-		return useCurrentScene
-			? this.self.states.scenes.get(this.self.states.programSceneUuid)
-			: this.self.obsState.findSceneByName(sceneName)
+	/**
+	 * The container whose items an "all sources" action covers: a named group, or a scene. Group names
+	 * are globally unique in OBS and a group's items live under its own UUID, so a group needs no scene.
+	 */
+	/**
+	 * The containers an action covers. Everything but `allScenes` resolves to a single container; a
+	 * group needs no scene, since group names are globally unique and a group's items live under its
+	 * own UUID. An unresolvable target yields nothing rather than silently falling back to a scene.
+	 */
+	private resolveTargetContainers(options: VisibilityTarget): string[] {
+		switch (options.target) {
+			case 'allScenes':
+				return Array.from(this.self.states.scenes.keys())
+			case 'currentScene': {
+				const scene = this.self.states.scenes.get(this.self.states.programSceneUuid)
+				return scene ? [scene.sceneUuid] : []
+			}
+			case 'group': {
+				const group = this.self.obsState.findSourceByName(options.group)
+				return group?.isGroup ? [group.sourceUuid] : []
+			}
+			default: {
+				const scene = this.self.obsState.findSceneByName(options.scene)
+				return scene ? [scene.sceneUuid] : []
+			}
+		}
 	}
 
 	private findSourceInstances(
 		sourceUuid: string,
-		options: { anyScene: boolean; useCurrentScene: boolean; scene: string },
+		options: VisibilityTarget,
 	): { containerUuid: string; sceneItemId: number }[] {
 		const toInstance = ({ containerUuid, item }: SceneItemMatch) => ({
 			containerUuid,
 			sceneItemId: item.sceneItemId,
 		})
 
-		if (options.anyScene) {
+		// Across every scene the source's own containers are what matter, groups included, so this
+		// walks the item map directly rather than resolving each scene in turn.
+		if (options.target === 'allScenes') {
 			return this.self.obsState.findSceneItemsAnywhere(sourceUuid).map(toInstance)
 		}
 
-		const scene = this.resolveTargetScene(options.useCurrentScene, options.scene)
-		if (!scene) return []
-
-		const match = this.self.obsState.findSceneItem(scene.sceneUuid, sourceUuid)
-		return match ? [toInstance(match)] : []
+		return this.resolveTargetContainers(options)
+			.flatMap((containerUuid) => this.self.obsState.findSceneItems(containerUuid, sourceUuid))
+			.map(toInstance)
 	}
 
 	private buildSourceVisibilityRequests(
@@ -1454,9 +1492,9 @@ export class OBSApi {
 	public async setFilterVisibility(
 		filterName: string,
 		visible: string,
-		options: { allSources: boolean; source: string },
+		options: { target: 'source' | 'allSources'; source: string },
 	): Promise<void> {
-		if (options.allSources) {
+		if (options.target === 'allSources') {
 			const requests: OBSBatchRequest[] = []
 			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
 				const filter = filters.find((f) => f.filterName === filterName)

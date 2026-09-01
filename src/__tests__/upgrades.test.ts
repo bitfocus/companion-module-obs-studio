@@ -106,7 +106,7 @@ describe('v4_0_0 password migration', () => {
 })
 
 describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
-	test('migrates an "All Sources" toggle_scene_item to toggle_all_scene_items', () => {
+	test('migrates an "All Sources" toggle_scene_item to the allSources mode', () => {
 		const action = {
 			id: 'a1',
 			actionId: 'toggle_scene_item',
@@ -116,16 +116,19 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 
 		expect(result.updatedActions).toHaveLength(1)
 		const updated = result.updatedActions[0]
-		expect(updated.actionId).toBe('toggle_all_scene_items')
+		expect(updated.actionId).toBe('toggle_scene_item')
+		expect(updated.options.allSources).toBe(true)
 		expect(updated.options.all).toBeUndefined()
-		expect(updated.options.source).toBeUndefined()
+		expect(updated.options.source).toEqual([])
 		expect(updated.options.anyScene).toBeUndefined()
-		expect(updated.options.useCurrentScene).toBe(false)
+		expect(updated.options.target).toBe('scene')
 		expect(updated.options.scene).toBe('Scene A')
 		expect(updated.options.except).toEqual([])
+		expect(updated.options.includeGroupChildren).toBe(true)
+		expect(updated.options.group).toBe('')
 	})
 
-	test('maps "Current Scene" to useCurrentScene', () => {
+	test('maps "Current Scene" to the current-scene target', () => {
 		const action = {
 			id: 'a1',
 			actionId: 'toggle_scene_item',
@@ -133,7 +136,7 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		} as unknown as CompanionMigrationAction
 		const result = v4_0_0(context, makeProps(null, [action]))
 
-		expect(result.updatedActions[0].options.useCurrentScene).toBe(true)
+		expect(result.updatedActions[0].options.target).toBe('currentScene')
 	})
 
 	test('maps "Preview Scene" to the preview scene variable', () => {
@@ -144,11 +147,11 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		} as unknown as CompanionMigrationAction
 		const result = v4_0_0(context, makeProps(null, [action]))
 
-		expect(result.updatedActions[0].options.useCurrentScene).toBe(false)
+		expect(result.updatedActions[0].options.target).toBe('scene')
 		expect(result.updatedActions[0].options.scene).toBe('$(obs:scene_preview)')
 	})
 
-	test('leaves a single-source toggle_scene_item untouched', () => {
+	test('wraps a single-source toggle_scene_item selection into a list', () => {
 		const action = {
 			id: 'a1',
 			actionId: 'toggle_scene_item',
@@ -156,7 +159,26 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		} as unknown as CompanionMigrationAction
 		const result = v4_0_0(context, makeProps(null, [action]))
 
-		expect(result.updatedActions).toHaveLength(0)
+		const updated = result.updatedActions[0]
+		expect(updated.options.allSources).toBe(false)
+		expect(updated.options.source).toEqual(['Camera'])
+		expect(updated.options.all).toBeUndefined()
+	})
+
+	test('leaves an expression-bound source alone', () => {
+		const action = {
+			id: 'a1',
+			actionId: 'toggle_scene_item',
+			options: {
+				all: false,
+				source: { value: '$(internal:custom_cam)', isExpression: true },
+				scene: 'Scene A',
+				visible: 'toggle',
+			},
+		} as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+
+		expect(result.updatedActions[0].options.source).toEqual({ value: '$(internal:custom_cam)', isExpression: true })
 	})
 })
 
@@ -526,5 +548,66 @@ describe('v4_0_0 advanced feedback conversion', () => {
 
 		expect(result.updatedFeedbacks).toEqual([])
 		expect(feedback.feedbackId).toBe('streaming')
+	})
+})
+
+describe('v4_0_0 target dropdown migrations', () => {
+	function upgradeAction(actionId: string, options: Record<string, unknown>) {
+		const action = { id: 'a1', actionId, options } as unknown as CompanionMigrationAction
+		const result = v4_0_0(context, makeProps(null, [action]))
+		expect(result.updatedActions).toHaveLength(1)
+		return result.updatedActions[0]
+	}
+
+	test.each([
+		['programScene', 'programScene'],
+		['previewScene', 'previewScene'],
+		['Camera', 'source'],
+	])('take_screenshot source %s becomes target %s', (source, target) => {
+		const updated = upgradeAction('take_screenshot', { source })
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.useProgramScene).toBeUndefined()
+		expect(updated.options.usePreviewScene).toBeUndefined()
+	})
+
+	test('take_screenshot clears the magic source name it replaced', () => {
+		expect(upgradeAction('take_screenshot', { source: 'programScene' }).options.source).toBe('')
+	})
+
+	test.each([
+		['set_filter_visible', 'allSources', 'allSources'],
+		['set_filter_visible', 'Camera', 'source'],
+		['toggle_filter', 'allSources', 'allSources'],
+		['toggle_filter', 'Camera', 'source'],
+	])('%s source %s becomes target %s', (actionId, source, target) => {
+		const updated = upgradeAction(actionId, { source })
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.allSources).toBeUndefined()
+		expect(updated.options.all).toBeUndefined()
+	})
+
+	test.each([
+		['set_scene_item_properties', 'current', 'programScene'],
+		['set_scene_item_properties', 'Scene A', 'scene'],
+		['source_properties', 'current', 'programScene'],
+		['source_properties', 'Scene A', 'scene'],
+	])('%s scene %s becomes target %s', (actionId, scene, target) => {
+		const updated = upgradeAction(actionId, { scene })
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.useProgramScene).toBeUndefined()
+	})
+
+	test.each([
+		[{ scene: 'anyScene' }, 'allScenes'],
+		[{ anyScene: true, scene: '' }, 'allScenes'],
+		[{ useCurrentScene: true, scene: '' }, 'allScenes'],
+		[{ scene: 'Scene A' }, 'scene'],
+	])('scene_item_active %o becomes target %s', (options, target) => {
+		const feedback = { id: 'f1', feedbackId: 'scene_item_active', options } as unknown as CompanionMigrationFeedback
+		const result = v4_0_0(context, makeProps(null, [], [feedback]))
+		const updated = result.updatedFeedbacks[0]
+		expect(updated.options.target).toBe(target)
+		expect(updated.options.anyScene).toBeUndefined()
+		expect(updated.options.useCurrentScene).toBeUndefined()
 	})
 })

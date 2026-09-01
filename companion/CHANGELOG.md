@@ -7,89 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> **Note:** 4.0.0 is a major rewrite focused on performance and stability. It
-> updates the underlying module API to v2.1.0 to take advantage of new features
-> and improvements, which requires Companion v5.0.0 or newer.
+> **Note:** 4.0.0 is a major rewrite focused on performance and stability. It updates the underlying
+> module API to v2.1, which requires Companion v5.0.0 or newer.
 
 ### Added
 
-- WebSocket Server password is now securely stored and hidden by default
-- "Streaming - Reconnecting" feedback that activates while a stream is reconnecting
-- Streaming status variable now reports "Reconnecting" during stream reconnection
-- `screenshot_saved_path` variable containing the path of the most recently saved screenshot
-- "Source - Set Visibility of All Sources in Scene" action, with an "Except" option to exclude
-  specific sources (which are set to the opposite visibility)
-- `monitor_active` variable for each audio source, reporting whether monitoring is enabled
-- `audio_source_list` variable (list of available audio sources)
-- `source_active` variable for each source, reporting whether it is active
-- `replay_buffer_active`, `virtualcam_active`, `studio_mode`, and per-source `tracks_<source>` variables
-- Action Recorder ("Learn") support for actions, to capture current values from OBS
-- Value feedbacks, for use with gauges and other button graphics elements, or bound to a local variable:
-  "Audio - Peak Level (dB)", "Audio - Volume (dB)", "Audio - Balance (%)", "Audio - Sync Offset (ms)",
-  "Media - Playback Progress (%)", "Media - Remaining Time (seconds)", and "Streaming - Stream Congestion
-  Level"
-- "Streaming - Stream Congestion Above" feedback, active while congestion is above a chosen threshold
-- "Restart", "Stop", "Previous" and "Next" presets for each media source, alongside the existing play/pause
-  and scrub buttons
-- `latest_media_name`, `latest_media_time_elapsed` and `latest_media_time_remaining` variables, describing
-  the most recently started media source
-- "Playing Clips", "Play / Pause All Clips", "Stop All Playing Clips" and "Newest Clip Time Remaining"
-  presets
-- Layered presets, which draw a button from graphics elements rather than a single style, for the audio
-  meter, volume level, media time remaining, and stream congestion buttons. Each ships with a simple
-  fallback, so hosts that cannot draw layers (such as Bitfocus Buttons) still get a usable button:
-  - Audio meter and volume level draw a gauge for the source's peak level and fader position, and the
-    meter shows mute and monitoring status as icons beneath the source name
-  - "Volume Rotary" adjusts volume by 1 dB per detent on a rotary encoder, with a ring showing the
-    current fader position
-  - "Balance" draws a left/right slider, adjusted 5% per detent on a rotary encoder
-  - "Sync Offset Rotary" nudges the source's sync offset by 1 ms per detent
-  - "Track Status" shows all six mixer tracks on one button, as a square per track that fills while that
-    track is enabled
-  - Media time remaining draws a playback progress bar with elapsed and remaining times, turning yellow
-    under 20 seconds remaining and red under 10
-  - "Play / Pause Media" shows the source's transport state as a play, pause or stop icon
-  - "Scrub Rotary" jogs a media source 5 seconds per detent, with a ring showing playback progress
-  - Stream congestion draws OBS's four-bar signal indicator, using the same congestion thresholds OBS uses
-    for its own status bar icon
+- Action Recorder ("Learn") support, to capture current values from OBS into an action
+- Value feedbacks, for gauges and other button graphics elements, or bound to a local variable:
+  audio peak level, volume, balance and sync offset; media playback progress and remaining time;
+  and stream congestion level
+- "Streaming - Reconnecting" feedback, and a "Reconnecting" state in the streaming status variable
+- "Streaming - Stream Congestion Above" feedback, active while congestion passes a chosen threshold
+- Set Visibility can now act on several sources at once, on every source in a scene, or on every
+  source inside a group. When acting on all sources, an "Except" list can hold some back — those are
+  set to the opposite visibility
+- Set Visibility, Set Transform Properties and Filters - Set Visibility can target a group, and
+  sources inside groups can be addressed directly
+- New variables: `screenshot_saved_path`, `audio_source_list`, `replay_buffer_active`,
+  `virtualcam_active`, `studio_mode`, per-source `source_active`, `monitor_active` and
+  `tracks_<source>`, and `latest_media_name` / `latest_media_time_elapsed` /
+  `latest_media_time_remaining` for the most recently started media source
+- Restart, Stop, Previous and Next presets for each media source, alongside play/pause and scrub
+- "Playing Clips", "Play / Pause All Clips", "Stop All Playing Clips" and "Newest Clip Time
+  Remaining" presets
+- Layered presets, which draw a button from graphics elements instead of a single style — audio meter
+  and volume gauges, a volume/balance/sync-offset rotary set, a six-track mixer status button, a media
+  progress bar that turns yellow under 20 seconds and red under 10, a scrub rotary, and OBS's four-bar
+  congestion indicator. Each ships with a plain fallback, so hosts that cannot draw layers (such as
+  Bitfocus Buttons) still get a usable button
 
 ### Changed
 
-- Rewritten in TypeScript to improve code quality and stability
-- Batch more communication with obs-websocket wherever possible to improve performance
-- "Trigger Hotkey by ID" action's choices are now fetched dynamically from OBS instead of a static list
-- "Audio - Set Audio Monitoring" (previously "Set Audio Monitor Type") now enables, disables, or toggles
-  monitoring instead of selecting a monitor type, and the "Audio - Monitoring" feedback (previously
-  "Audio - Monitor Type") is simply active while monitoring is enabled, matching the audio mixer in OBS
-  32.1 and newer. Existing actions and feedbacks are converted automatically, with feedbacks that matched
-  "Off" becoming inverted
-
-### Deprecated
-
-- The "advanced" feedbacks have been replaced by boolean and value feedbacks. A best effort is made to convert any existing affected feedbacks:
-  - "Scene - Preview / Program" becomes "Scene - Program" (or "Scene - Preview" if it was set to preview
-    only). A feedback set to "Program and Preview" can only carry over the program
-    half, so add a "Scene - Preview" feedback alongside it if you want both
-  - "Audio - Meter" becomes "Audio - Peaking", using the same source and threshold. For metering,
-    use the new "Audio - Peak Level (dB)" value feedback
-  - "Streaming - Stream Congestion" becomes "Streaming - Stream Congestion Above", keeping the color that
-    was chosen for high congestion. For the full range, use the new "Streaming - Stream Congestion Level"
-    value feedback
-
-- Media actions now take a **Target** — a specific source, the newest playing clip, or all playing clips —
+- Rewritten in TypeScript, and communication with obs-websocket is batched wherever possible
+- The WebSocket Server password is now stored securely and hidden by default
+- Actions and feedbacks that can act on more than one thing now pick what they act on from a single
+  "Target" dropdown, in place of the stacked checkboxes that came before
+- "Trigger Hotkey by ID" fetches its choices from OBS instead of using a static list
+- "Audio - Set Audio Monitoring" (was "Set Audio Monitor Type") enables, disables or toggles
+  monitoring rather than selecting a monitor type, and "Audio - Monitoring" (was "Audio - Monitor
+  Type") is simply active while monitoring is on — matching the mixer in OBS 32.1 and newer
+- Media actions take a **Target** — a specific source, the newest playing clip, or all playing clips —
   in place of the "Currently Playing" checkbox. That checkbox acted on the last clip that had started
-  playing at any point, even after it stopped, which rarely matched the `current_media_*` variables shown
-  on the same button. "Newest" and "All" cover the clips that are playing or paused and active in program. Existing actions are converted automatically, with the checkbox becoming the "newest playing clip" target
+  at any point, even after it stopped, which rarely matched the `current_media_*` variables shown on
+  the same button
+
+  Existing configurations are converted automatically wherever these changed, including the advanced
+  feedbacks that boolean and value feedbacks replace:
+
+  - "Scene - Preview / Program" becomes "Scene - Program", or "Scene - Preview" if it was set to
+    preview only. One set to "Program and Preview" can only carry over the program half, so add a
+    "Scene - Preview" feedback alongside it if you want both
+  - "Audio - Meter" becomes "Audio - Peaking" with the same source and threshold; for metering, use
+    the new "Audio - Peak Level (dB)" value feedback
+  - "Streaming - Stream Congestion" becomes "Streaming - Stream Congestion Above", keeping the colour
+    chosen for high congestion; for the full range, use "Streaming - Stream Congestion Level"
+  - Monitoring feedbacks that matched "Off" are inverted, and the "Currently Playing" checkbox becomes
+    the "newest playing clip" target
 
 ### Fixed
 
-- Outputs registered by a plugin after Companion connected (such as DistroAV's NDI output) not appearing in
-  the Output action and feedback until the connection was restarted. OBS has no event for an output being
-  created, so the list is now re-enumerated periodically
-- The simple streaming output appearing as an Output target, duplicating the dedicated streaming actions
-
-- Recording status briefly showing "Unknown" when resuming a paused recording
-- Cached source filter settings not refreshing when changed in OBS or by another client
+- Sources inside a group could not be shown or hidden, and setting the visibility of every source in a
+  scene skipped anything inside a group entirely
+- A source added to the same scene more than once only ever responded on one of its copies, so Toggle
+  appeared to stop working after the first press
+- Outputs registered by a plugin after Companion connected (such as DistroAV's NDI output) did not
+  appear in the Output action and feedback until the connection was restarted. OBS has no event for an
+  output being created, so the list is now re-enumerated periodically
+- The simple streaming output appeared as an Output target, duplicating the dedicated streaming actions
+- Recording status briefly showed "Unknown" when resuming a paused recording
+- Cached source filter settings did not refresh when changed in OBS or by another client
 
 ## [3.15.3] - 2026-01-11
 

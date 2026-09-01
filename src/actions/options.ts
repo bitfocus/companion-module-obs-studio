@@ -1,4 +1,9 @@
-import type { CompanionInputFieldDropdown, CompanionInputFieldNumber, DropdownChoice } from '@companion-module/base'
+import type {
+	CompanionInputFieldDropdown,
+	CompanionInputFieldMultiDropdown,
+	CompanionInputFieldNumber,
+	DropdownChoice,
+} from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { clamp } from '../utils.js'
 import { VIRTUALCAM_OUTPUT_NAME } from '../constants.js'
@@ -116,6 +121,11 @@ const CHOICE_LISTS = {
 		choices: (self) => self.obsState.sceneChoices,
 		default: (self) => self.obsState.sceneListDefault,
 	},
+	/** Only the sources that are groups, for options that target a group as a container. */
+	group: {
+		choices: (self) => self.obsState.groupChoices,
+		default: (self) => self.obsState.groupChoicesDefault,
+	},
 	audioSource: {
 		choices: (self) => self.obsState.audioSourceList,
 		default: (self) => self.obsState.audioSourceListDefault,
@@ -191,5 +201,56 @@ export function choiceDropdown<TKey extends string>(
 		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
 		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),
 		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
+	}
+}
+
+/** The multi-select form of `choiceDropdown`, for options that target several entities at once. */
+export function choiceMultiDropdown<TKey extends string>(
+	self: OBSInstance,
+	list: ChoiceListName,
+	field: Omit<ChoiceDropdownField<TKey>, 'default'> & { default?: string[] },
+): CompanionInputFieldMultiDropdown<TKey> {
+	const spec: ChoiceListSpec = CHOICE_LISTS[list]
+	return {
+		type: 'multidropdown',
+		label: field.label,
+		id: field.id,
+		default: field.default ?? [],
+		choices: spec.choices(self),
+		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
+		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),
+		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
+	}
+}
+
+/** The choice ids a Target dropdown may offer, shared so the same concept keeps the same id everywhere. */
+export const TARGET_CHOICES = {
+	allScenes: { id: 'allScenes', label: 'All Scenes' },
+	currentScene: { id: 'currentScene', label: 'Current Scene' },
+	programScene: { id: 'programScene', label: 'Current Program Scene' },
+	previewScene: { id: 'previewScene', label: 'Current Preview Scene' },
+	scene: { id: 'scene', label: 'Specific Scene' },
+	group: { id: 'group', label: 'Group' },
+	source: { id: 'source', label: 'Specific Source' },
+	allSources: { id: 'allSources', label: 'All Sources' },
+} as const satisfies Record<string, DropdownChoice>
+
+export type TargetChoiceName = keyof typeof TARGET_CHOICES
+
+/**
+ * The "what does this act on" selector. A one-of-N choice belongs in a dropdown rather than a chain of
+ * checkboxes, where each box has to be read together with the ones above it to know what is selected.
+ */
+export function targetDropdown<TKey extends string = 'target'>(
+	choices: readonly TargetChoiceName[],
+	field?: { id?: TKey; label?: string; default?: TargetChoiceName },
+): CompanionInputFieldDropdown<TKey> {
+	return {
+		type: 'dropdown',
+		disableAutoExpression: true,
+		label: field?.label ?? 'Target',
+		id: (field?.id ?? 'target') as TKey,
+		default: field?.default ?? choices[0],
+		choices: choices.map((name) => TARGET_CHOICES[name]),
 	}
 }
