@@ -55,7 +55,7 @@ export function getSourcePresets(self: OBSInstance): {
 							group: '',
 							source: { value: '[$(local:source)]', isExpression: true },
 							except: [],
-							includeGroupChildren: true,
+							includeGroupChildren: 'groupsAndSources',
 							visible: 'toggle',
 						},
 					},

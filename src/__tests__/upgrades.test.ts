@@ -124,7 +124,7 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		expect(updated.options.target).toBe('scene')
 		expect(updated.options.scene).toBe('Scene A')
 		expect(updated.options.except).toEqual([])
-		expect(updated.options.includeGroupChildren).toBe(true)
+		expect(updated.options.includeGroupChildren).toBe('groupsAndSources')
 		expect(updated.options.group).toBe('')
 	})
 

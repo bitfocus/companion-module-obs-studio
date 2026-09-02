@@ -302,4 +302,55 @@ describe('SceneItemRemoved', () => {
 			}),
 		).not.toThrow()
 	})
+
+	test('clears the old parent when a source is removed from a group', () => {
+		self.states.sources.set('a', {
+			sourceName: 'A',
+			sourceUuid: 'a',
+			validName: 'A',
+			parentGroupUuid: 'group-a',
+		})
+		self.states.sceneItems.set('group-a', [
+			{
+				sceneItemId: 1,
+				sourceName: 'A',
+				sourceUuid: 'a',
+				sceneItemIndex: 0,
+				sceneItemLocked: false,
+				sceneItemEnabled: true,
+				isGroup: false,
+				inputKind: null,
+				sourceType: 'OBS_SOURCE_TYPE_INPUT',
+			},
+		])
+
+		self.socket.emit('SceneItemRemoved', {
+			sceneUuid: 'group-a',
+			sceneName: 'Group A',
+			sceneItemId: 1,
+			sourceName: 'A',
+			sourceUuid: 'a',
+		})
+
+		expect(self.states.sources.get('a')?.parentGroupUuid).toBeUndefined()
+	})
+
+	test('does not clear a newer parent when move events finish out of order', () => {
+		self.states.sources.set('a', {
+			sourceName: 'A',
+			sourceUuid: 'a',
+			validName: 'A',
+			parentGroupUuid: 'group-b',
+		})
+
+		self.socket.emit('SceneItemRemoved', {
+			sceneUuid: 'group-a',
+			sceneName: 'Group A',
+			sceneItemId: 1,
+			sourceName: 'A',
+			sourceUuid: 'a',
+		})
+
+		expect(self.states.sources.get('a')?.parentGroupUuid).toBe('group-b')
+	})
 })

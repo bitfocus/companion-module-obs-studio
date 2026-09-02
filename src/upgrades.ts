@@ -546,7 +546,7 @@ export default [
 					}
 				}
 				setOpt(action.options, 'except', [])
-				setOpt(action.options, 'includeGroupChildren', true)
+				setOpt(action.options, 'includeGroupChildren', 'groupsAndSources')
 				setOpt(action.options, 'group', '')
 				delete action.options.all
 				delete action.options.anyScene

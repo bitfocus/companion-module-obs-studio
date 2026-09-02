@@ -385,6 +385,10 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 					items.splice(itemIndex, 1)
 				}
 			}
+			const source = self.states.sources.get(data.sourceUuid)
+			// Only clear the relationship if this removal is still from the recorded parent. A
+			// move's create refresh may finish first and have already installed the new parent.
+			if (source?.parentGroupUuid === data.sceneUuid) delete source.parentGroupUuid
 			void self.updateActionsFeedbacksVariables()
 		}
 	})
@@ -421,7 +425,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 					group: '',
 					source: [sourceName],
 					except: [],
-					includeGroupChildren: true,
+					includeGroupChildren: 'groupsAndSources',
 					visible: data.sceneItemEnabled ? 'true' : 'false',
 				},
 			})

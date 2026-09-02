@@ -26,6 +26,7 @@ import {
 	type OBSTransition,
 	type SourceDataBatchSpec,
 	type OBSFilter,
+	type GroupMode,
 	type VisibilityTarget,
 } from './types.js'
 import { DEFAULT_TIMECODE } from './constants.js'
@@ -923,8 +924,10 @@ export class OBSApi {
 		while (pending.length > 0) {
 			const builder = new BatchBuilder<ContainerItemsBatchSpec>()
 			for (const containerUuid of pending) {
-				// Scenes are absent from the source map, so anything unknown here is a scene.
-				const isGroup = this.self.states.sources.get(containerUuid)?.isGroup ?? false
+				// SceneItemCreated for a new group can arrive before the event that adds the group to
+				// the source map. Scenes, unlike groups, already have their own authoritative map, so
+				// an unknown container must be treated as a group.
+				const isGroup = !this.self.states.scenes.has(containerUuid)
 				const requestType = isGroup ? 'GetGroupSceneItemList' : 'GetSceneItemList'
 				builder.add('items', requestType, { sceneUuid: containerUuid }, { containerUuid, isGroup }, false)
 			}
@@ -1394,7 +1397,7 @@ export class OBSApi {
 
 	public async setAllSourcesVisibility(
 		visible: string,
-		options: VisibilityTarget & { except: string[]; includeGroupChildren: boolean },
+		options: VisibilityTarget & { except: string[]; includeGroupChildren: GroupMode },
 	): Promise<void> {
 		const matches = this.resolveTargetContainers(options).flatMap((containerUuid) =>
 			this.self.obsState.getContainerItemsDeep(containerUuid, options.includeGroupChildren),

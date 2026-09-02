@@ -1,4 +1,12 @@
-import { ModuleChoice, OBSNormalizedState, OBSRecordingState, OBSSceneItem, OBSSource, OBSScene } from './types.js'
+import {
+	GroupMode,
+	ModuleChoice,
+	OBSNormalizedState,
+	OBSRecordingState,
+	OBSSceneItem,
+	OBSSource,
+	OBSScene,
+} from './types.js'
 import {
 	INPUT_KIND_IMAGE_SOURCE,
 	VIRTUALCAM_OUTPUT_NAME,
@@ -185,14 +193,15 @@ export class OBSState {
 	}
 
 	public get groupChoices(): ModuleChoice[] {
-		return this.cached('groupChoices', () =>
-			this.buildChoices(
+		return this.cached('groupChoices', () => [
+			{ id: '', label: 'None' },
+			...this.buildChoices(
 				Array.from(this.state.sources.values()),
 				(s) => s.isGroup === true,
 				(s) => ({ id: s.sourceName, label: s.sourceName }),
 				(a, b) => a.label.localeCompare(b.label),
 			),
-		)
+		])
 	}
 
 	public get audioSourceList(): ModuleChoice[] {
@@ -310,7 +319,7 @@ export class OBSState {
 	}
 
 	public get groupChoicesDefault(): string {
-		return (this.groupChoices[0]?.id as string) ?? ''
+		return ''
 	}
 
 	public get audioSourceListDefault(): string {
@@ -435,19 +444,21 @@ export class OBSState {
 
 	/**
 	 * Every item of a container, each paired with the container that actually holds it, optionally
-	 * descending into groups. Group items themselves are always included: hiding a group hides its
-	 * contents, so both the group and its members have to be addressable.
+	 * descending into groups. The group mode independently controls whether group items and their
+	 * children are returned.
 	 */
-	public getContainerItemsDeep(containerUuid: string, includeGroupChildren: boolean): SceneItemMatch[] {
+	public getContainerItemsDeep(containerUuid: string, groupMode: GroupMode): SceneItemMatch[] {
 		const matches: SceneItemMatch[] = []
 		const seen = new Set<string>()
+		const includeChildren = groupMode !== 'groups'
+		const includeGroups = groupMode !== 'sources'
 
 		const walk = (uuid: string) => {
 			if (seen.has(uuid)) return
 			seen.add(uuid)
 			for (const item of this.state.sceneItems.get(uuid) ?? []) {
-				matches.push({ containerUuid: uuid, item })
-				if (item.isGroup && includeGroupChildren) walk(item.sourceUuid)
+				if (!item.isGroup || includeGroups) matches.push({ containerUuid: uuid, item })
+				if (item.isGroup && includeChildren) walk(item.sourceUuid)
 			}
 		}
 		walk(containerUuid)

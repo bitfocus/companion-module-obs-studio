@@ -77,6 +77,21 @@ describe('container model — scene item creation routing', () => {
 			expect.objectContaining({ requestType: 'GetSceneItemList', requestData: { sceneUuid: 'scene-a' } }),
 		)
 	})
+
+	test('SceneItemCreated inside a not-yet-known group uses GetGroupSceneItemList', async () => {
+		mockBatchResponses(self.socket, (request) =>
+			request.requestType === 'GetGroupSceneItemList'
+				? { sceneItems: [sceneItem({ sceneItemId: 201, sourceUuid: 'member-2' })] }
+				: {},
+		)
+
+		await self.obs.addSceneItem('new-group', 'member-2')
+
+		expect(batchedRequests(self)).toContainEqual(
+			expect.objectContaining({ requestType: 'GetGroupSceneItemList', requestData: { sceneUuid: 'new-group' } }),
+		)
+		expect(self.states.sources.get('member-2')?.parentGroupUuid).toBe('new-group')
+	})
 })
 
 describe('container model — grouped source feedback', () => {

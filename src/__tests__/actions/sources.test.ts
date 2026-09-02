@@ -32,7 +32,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: false,
+				includeGroupChildren: 'groups',
 				target: 'currentScene',
 				scene: '',
 				group: '',
@@ -57,7 +57,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: false,
+				includeGroupChildren: 'groups',
 				target: 'currentScene',
 				scene: '',
 				group: '',
@@ -81,7 +81,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: false,
+				includeGroupChildren: 'groups',
 				target: 'currentScene',
 				scene: '',
 				group: '',
@@ -112,7 +112,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: false,
+				includeGroupChildren: 'groups',
 				target: 'currentScene',
 				scene: '',
 				group: '',
@@ -141,7 +141,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				target: 'currentScene',
 				scene: '',
 				group: '',
@@ -159,6 +159,35 @@ describe('toggle_scene_item — all sources', () => {
 		expect(child?.requestData.sceneItemEnabled).toBe(false)
 	})
 
+	test('sources mode includes group children but not the group item', async () => {
+		self.states.sources.set('src-3', {
+			sourceName: 'Webcam Group',
+			sourceUuid: 'src-3',
+			isGroup: true,
+		} as any)
+		self.states.sceneItems.set('src-3', [
+			sceneItem({ sceneItemId: 10, sourceUuid: 'src-10', sourceName: 'Child Cam', sceneItemEnabled: true }),
+		])
+
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: 'sources',
+				target: 'currentScene',
+				scene: '',
+				group: '',
+				except: [],
+				visible: 'false',
+			}),
+			new MockContext(),
+		)
+
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		expect(batch.map((entry) => entry.requestData.sceneItemId).sort((a, b) => a - b)).toEqual([1, 2, 10])
+	})
+
 	test('a group child can be excepted', async () => {
 		self.states.sources.set('src-3', {
 			sourceName: 'Webcam Group',
@@ -174,7 +203,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				target: 'currentScene',
 				scene: '',
 				group: '',
@@ -198,7 +227,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: false,
+				includeGroupChildren: 'groups',
 				target: 'scene',
 				scene: 'Does Not Exist',
 				group: '',
@@ -218,7 +247,7 @@ describe('toggle_scene_item — all sources', () => {
 			actionEvent('toggle_scene_item', {
 				allSources: true,
 				source: [],
-				includeGroupChildren: false,
+				includeGroupChildren: 'groups',
 				target: 'scene',
 				scene: 'Scene C',
 				group: '',
@@ -258,7 +287,7 @@ describe('toggle_scene_item — selected sources', () => {
 				group: '',
 				source: ['Camera', 'Overlay'],
 				except: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				visible: 'false',
 			}),
 			new MockContext(),
@@ -279,7 +308,7 @@ describe('toggle_scene_item — selected sources', () => {
 				group: '',
 				source: [],
 				except: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				visible: 'false',
 			}),
 			new MockContext(),
@@ -308,7 +337,7 @@ describe('toggle_scene_item — selected sources', () => {
 				group: '',
 				source: ['Child Cam'],
 				except: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				visible: 'true',
 			}),
 			new MockContext(),
@@ -350,7 +379,7 @@ describe('toggle_scene_item — a source added to a scene more than once', () =>
 				group: '',
 				source: ['Camera'],
 				except: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				visible,
 			}),
 			new MockContext(),
@@ -417,7 +446,7 @@ describe('toggle_scene_item — all sources within a group', () => {
 				scene: '',
 				source: [],
 				except: [],
-				includeGroupChildren: true,
+				includeGroupChildren: 'groupsAndSources',
 				visible: 'false',
 				...options,
 			}),
