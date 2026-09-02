@@ -390,22 +390,26 @@ export class OBSState {
 	/**
 	 * Every scene item representing `sourceUuid` within `sceneUuid`, and the container holding them.
 	 *
-	 * A source can sit directly in one scene and inside a group in another, so the targeted scene's own
-	 * items win; the parent group is consulted only when the scene does not hold the source itself.
-	 * Every caller that asks "which items is this source, here" goes through this, so the precedence is
-	 * decided once rather than re-derived per call site.
+	 * A source can sit directly in one scene and inside groups in others, so group membership is derived
+	 * from the groups that actually belong to the targeted scene. `parentGroupUuid` is only synchronization
+	 * metadata and cannot safely answer this question because one OBS source can have several scene items.
+	 * Direct items win; groups are consulted only when the scene does not hold the source itself.
 	 *
 	 * OBS allows the same source to be added to one scene repeatedly, so a name resolves to a list:
 	 * acting on only the first copy leaves the others stranded and out of sync.
 	 */
 	public findSceneItems(sceneUuid: string, sourceUuid: string): SceneItemMatch[] {
-		const parentGroupUuid = this.state.sources.get(sourceUuid)?.parentGroupUuid
-		for (const containerUuid of [sceneUuid, parentGroupUuid]) {
-			if (!containerUuid) continue
-			const items = this.state.sceneItems.get(containerUuid)?.filter((i) => i.sourceUuid === sourceUuid) ?? []
-			if (items.length > 0) return items.map((item) => ({ containerUuid, item }))
-		}
-		return []
+		const sceneItems = this.state.sceneItems.get(sceneUuid) ?? []
+		const directItems = sceneItems.filter((item) => item.sourceUuid === sourceUuid)
+		if (directItems.length > 0) return directItems.map((item) => ({ containerUuid: sceneUuid, item }))
+
+		return sceneItems
+			.filter((item) => item.isGroup)
+			.flatMap((group) =>
+				(this.state.sceneItems.get(group.sourceUuid) ?? [])
+					.filter((item) => item.sourceUuid === sourceUuid)
+					.map((item) => ({ containerUuid: group.sourceUuid, item })),
+			)
 	}
 
 	/** The single-item form, for callers such as `learn` that can only work from one item. */

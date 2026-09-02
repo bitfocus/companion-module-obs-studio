@@ -159,6 +159,35 @@ describe('toggle_scene_item — all sources', () => {
 		expect(child?.requestData.sceneItemEnabled).toBe(false)
 	})
 
+	test('groups mode includes the group item but not its children', async () => {
+		self.states.sources.set('src-3', {
+			sourceName: 'Webcam Group',
+			sourceUuid: 'src-3',
+			isGroup: true,
+		} as any)
+		self.states.sceneItems.set('src-3', [
+			sceneItem({ sceneItemId: 10, sourceUuid: 'src-10', sourceName: 'Child Cam', sceneItemEnabled: true }),
+		])
+
+		const actions = looseActions(getSourceActions(self))
+		await actions['toggle_scene_item'].callback(
+			actionEvent('toggle_scene_item', {
+				allSources: true,
+				source: [],
+				includeGroupChildren: 'groups',
+				target: 'currentScene',
+				scene: '',
+				group: '',
+				except: [],
+				visible: 'false',
+			}),
+			new MockContext(),
+		)
+
+		const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
+		expect(batch.map((entry) => entry.requestData.sceneItemId)).toEqual([1, 2, 3])
+	})
+
 	test('sources mode includes group children but not the group item', async () => {
 		self.states.sources.set('src-3', {
 			sourceName: 'Webcam Group',

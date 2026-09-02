@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { initOBSListeners } from '../listeners.js'
 import { getSourceFeedbacks } from '../feedbacks/sources.js'
 import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from './mock/instance.js'
@@ -101,6 +101,7 @@ describe('container model — grouped source feedback', () => {
 		self = makeMockInstance()
 		seedScene(self, 'Scene A', 'scene-a')
 		seedGroup(self, 'group-1', ['member-1'])
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })])
 	})
 
 	test('scene_item_active_in_scene resolves a grouped source through its group container', () => {
@@ -133,6 +134,7 @@ describe('container model — visibility resolution', () => {
 		self = makeMockInstance()
 		seedScene(self, 'Scene A', 'scene-a')
 		seedGroup(self, 'group-1', ['member-1'])
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })])
 	})
 
 	test('toggling a grouped source (any scene) targets the group container', async () => {
@@ -151,7 +153,7 @@ describe('container model — visibility resolution', () => {
 		expect(batch[0].requestData.sceneItemEnabled).toBe(false)
 	})
 
-	test('toggling a grouped source in a specific scene resolves via parentGroupUuid', async () => {
+	test("toggling a grouped source in a specific scene resolves through that scene's group", async () => {
 		await self.obs.setSourceVisibility('member-1', 'true', {
 			target: 'scene',
 			scene: 'Scene A',
@@ -220,6 +222,103 @@ describe('groups added after connect', () => {
 		expect(self.states.sceneItems.get('group-1')).toHaveLength(1)
 		expect(self.states.sources.get('member-1')!.parentGroupUuid).toBe('group-1')
 	})
+
+	test('a new-group event synchronizes its members before an all-sources visibility action', async () => {
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.programSceneUuid = 'scene-a'
+		initOBSListeners(self)
+		mockBatchResponses(self.socket, (request) => {
+			if (request.requestType === 'GetSceneItemList') {
+				return {
+					sceneItems: [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', sourceName: 'Group 1', isGroup: true })],
+				}
+			}
+			if (request.requestType === 'GetGroupSceneItemList') {
+				return {
+					sceneItems: [sceneItem({ sceneItemId: 10, sourceUuid: 'member-1', sourceName: 'Camera' })],
+				}
+			}
+			return {}
+		})
+
+		self.socket.emit('SceneItemCreated', {
+			sceneUuid: 'scene-a',
+			sceneName: 'Scene A',
+			sourceUuid: 'group-1',
+			sourceName: 'Group 1',
+			sceneItemId: 1,
+			sceneItemIndex: 0,
+		})
+
+		await vi.waitFor(() => expect(self.states.sceneItems.get('group-1')).toHaveLength(1))
+		self.socket.callBatch.mockClear()
+
+		await self.obs.setAllSourcesVisibility('false', {
+			target: 'currentScene',
+			scene: '',
+			group: '',
+			except: [],
+			includeGroupChildren: 'groupsAndSources',
+		})
+
+		const requests = batchedRequests(self).filter((request) => request.requestType === 'SetSceneItemEnabled')
+		expect(requests.map((request) => request.requestData)).toEqual([
+			{ sceneUuid: 'scene-a', sceneItemId: 1, sceneItemEnabled: false },
+			{ sceneUuid: 'group-1', sceneItemId: 10, sceneItemEnabled: false },
+		])
+	})
+
+	test('moving a source between existing groups synchronizes the destination used by visibility', async () => {
+		seedScene(self, 'Scene A', 'scene-a')
+		self.states.programSceneUuid = 'scene-a'
+		seedGroup(self, 'group-a', ['camera'])
+		seedGroup(self, 'group-b', [])
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'group-a', isGroup: true }),
+			sceneItem({ sceneItemId: 2, sourceUuid: 'group-b', isGroup: true }),
+		])
+		initOBSListeners(self)
+		mockBatchResponses(self.socket, (request) => {
+			if (request.requestType === 'GetGroupSceneItemList') {
+				return { sceneItems: [sceneItem({ sceneItemId: 300, sourceUuid: 'camera', sourceName: 'camera' })] }
+			}
+			return {}
+		})
+
+		self.socket.emit('SceneItemRemoved', {
+			sceneUuid: 'group-a',
+			sceneName: 'group-a',
+			sourceUuid: 'camera',
+			sourceName: 'camera',
+			sceneItemId: 200,
+		})
+		self.socket.emit('SceneItemCreated', {
+			sceneUuid: 'group-b',
+			sceneName: 'group-b',
+			sourceUuid: 'camera',
+			sourceName: 'camera',
+			sceneItemId: 300,
+			sceneItemIndex: 0,
+		})
+
+		await vi.waitFor(() => expect(self.states.sources.get('camera')?.parentGroupUuid).toBe('group-b'))
+		expect(self.states.sceneItems.get('group-a')).toEqual([])
+		self.socket.callBatch.mockClear()
+
+		await self.obs.setSourceVisibility('camera', 'false', {
+			target: 'scene',
+			scene: 'Scene A',
+			group: '',
+		})
+
+		const requests = batchedRequests(self).filter((request) => request.requestType === 'SetSceneItemEnabled')
+		expect(requests).toHaveLength(1)
+		expect(requests[0].requestData).toEqual({
+			sceneUuid: 'group-b',
+			sceneItemId: 300,
+			sceneItemEnabled: false,
+		})
+	})
 })
 
 describe('scene item lookup precedence', () => {
@@ -245,6 +344,32 @@ describe('scene item lookup precedence', () => {
 		const match = self.obsState.findSceneItemByName('Scene A', 'member-1')
 
 		expect(match).toEqual({ containerUuid: 'group-1', item: expect.objectContaining({ sceneItemId: 200 }) })
+	})
+
+	test('does not resolve through a group belonging to another scene', () => {
+		self.states.sceneItems.set('scene-a', [])
+		self.states.sceneItems.set('scene-b', [sceneItem({ sceneItemId: 2, sourceUuid: 'group-1', isGroup: true })])
+
+		expect(self.obsState.findSceneItemsByNameInScene('Scene A', 'member-1')).toEqual([])
+		expect(self.obsState.findSceneItemsByNameInScene('Scene B', 'member-1')).toEqual([
+			{ containerUuid: 'group-1', item: expect.objectContaining({ sceneItemId: 200 }) },
+		])
+	})
+
+	test('resolves the same source through the correct group in each scene', () => {
+		seedGroup(self, 'group-2', ['member-1'])
+		self.states.sceneItems.get('group-2')![0].sceneItemId = 300
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'group-1', isGroup: true })])
+		self.states.sceneItems.set('scene-b', [sceneItem({ sceneItemId: 2, sourceUuid: 'group-2', isGroup: true })])
+
+		expect(self.obsState.findSceneItemByName('Scene A', 'member-1')).toEqual({
+			containerUuid: 'group-1',
+			item: expect.objectContaining({ sceneItemId: 200 }),
+		})
+		expect(self.obsState.findSceneItemByName('Scene B', 'member-1')).toEqual({
+			containerUuid: 'group-2',
+			item: expect.objectContaining({ sceneItemId: 300 }),
+		})
 	})
 
 	test('returns undefined for an unknown scene or source', () => {
@@ -314,9 +439,9 @@ describe('duplicate scene item lookups', () => {
 		expect(matches).toHaveLength(2)
 	})
 
-	test('the parent group is used when the scene does not hold the source', () => {
+	test('a group belonging to the scene is used when the scene does not hold the source directly', () => {
 		self.states.sources.get('src-1')!.parentGroupUuid = 'group-1'
-		self.states.sceneItems.set('scene-a', [])
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 10, sourceUuid: 'group-1', isGroup: true })])
 		self.states.sceneItems.set('group-1', [
 			sceneItem({ sceneItemId: 99, sourceUuid: 'src-1', sourceName: 'Camera', sceneItemEnabled: true }),
 		])
