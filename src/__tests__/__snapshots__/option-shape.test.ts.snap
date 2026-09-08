@@ -2205,6 +2205,16 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "min": -100,
       "type": "number",
     },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "peakHold",
+      "label": "Peak hold (ms)",
+      "max": 10000,
+      "min": 0,
+      "tooltip": "How long the feedback stays active after a peak. 0 releases as soon as the level drops.",
+      "type": "number",
+    },
   ],
   "audio_monitor_type": [
     {

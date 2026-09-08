@@ -635,6 +635,12 @@ export default [
 			} else if (feedback.feedbackId === 'audio_monitor_type') {
 				feedbackChanged = convertMonitorFeedback(feedback)
 			}
+			// Peak hold is new in 4.0.0; existing indicators keep the old immediate release. Runs after
+			// the rename above so feedbacks converted from audioMeter get it too.
+			if (feedback.feedbackId === 'audioPeaking' && getOpt(feedback.options, 'peakHold') === undefined) {
+				setOpt(feedback.options, 'peakHold', 0)
+				feedbackChanged = true
+			}
 			if (feedbackChanged) {
 				changes.updatedFeedbacks.push(feedback)
 			}

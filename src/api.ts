@@ -61,6 +61,8 @@ export class OBSApi {
 
 	// Subscription tracking for volume meters (keyed by feedback ID).
 	private meterSubscribers = new Set<string>()
+	// Active peak-hold windows for audioPeaking feedbacks (keyed by feedback ID).
+	private peakHolds = new Map<string, { until: number; timer: NodeJS.Timeout }>()
 	private lastOutputListRefresh = 0
 	private metersActive = false
 	private lastMeterFeedbackCheck = 0
@@ -209,6 +211,7 @@ export class OBSApi {
 		// Stop reconnection poll to prevent hammering stale address on config change.
 		this.stopReconnectionPoll()
 		this.metersActive = false
+		this.clearAllPeakHolds()
 		if (this.self.socket) {
 			// Clear active polls.
 			this.stopStatsPoll()
@@ -229,7 +232,44 @@ export class OBSApi {
 
 	public removeMeterSubscriber(feedbackId: string): void {
 		this.meterSubscribers.delete(feedbackId)
+		this.clearPeakHold(feedbackId)
 		if (this.meterSubscribers.size === 0) this.applyMeterSubscription(false)
+	}
+
+	/**
+	 * Applies a peak hold to an audioPeaking feedback: once the source peaks, the feedback keeps
+	 * reading true for `holdMs`, and every further peak restarts that window. A hold of 0 means the
+	 * feedback follows the level directly.
+	 */
+	public evaluatePeakHold(feedbackId: string, peaking: boolean, holdMs: number): boolean {
+		if (holdMs <= 0) {
+			this.clearPeakHold(feedbackId)
+			return peaking
+		}
+		if (peaking) {
+			this.clearPeakHold(feedbackId)
+			// Meter events stop changing once the source goes quiet, so the release needs its own timer.
+			const timer = setTimeout(() => {
+				this.peakHolds.delete(feedbackId)
+				this.self.checkFeedbacksById(feedbackId)
+			}, holdMs)
+			this.peakHolds.set(feedbackId, { until: Date.now() + holdMs, timer })
+			return true
+		}
+		return (this.peakHolds.get(feedbackId)?.until ?? 0) > Date.now()
+	}
+
+	private clearPeakHold(feedbackId: string): void {
+		const hold = this.peakHolds.get(feedbackId)
+		if (hold) {
+			clearTimeout(hold.timer)
+			this.peakHolds.delete(feedbackId)
+		}
+	}
+
+	public clearAllPeakHolds(): void {
+		this.peakHolds.forEach((hold) => clearTimeout(hold.timer))
+		this.peakHolds.clear()
 	}
 
 	// Output-status polling only runs while an output_active feedback is on a button.

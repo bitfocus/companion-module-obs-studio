@@ -299,9 +299,17 @@ export function getAudioPresets(self: OBSInstance): {
 					steps: [{ down: [], up: [] }],
 					// Stacked thresholds, loudest last so it wins when several are true.
 					feedbacks: [
-						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -60 }, style: stylePreview() },
-						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -20 }, style: styleWarn() },
-						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -9 }, style: styleProgram() },
+						{
+							feedbackId: 'audioPeaking',
+							options: { source: value, threshold: -60, peakHold: 0 },
+							style: stylePreview(),
+						},
+						{ feedbackId: 'audioPeaking', options: { source: value, threshold: -20, peakHold: 0 }, style: styleWarn() },
+						{
+							feedbackId: 'audioPeaking',
+							options: { source: value, threshold: -9, peakHold: 0 },
+							style: styleProgram(),
+						},
 					],
 				},
 			],

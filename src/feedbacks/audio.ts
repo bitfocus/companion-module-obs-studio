@@ -9,7 +9,7 @@ export type AudioFeedbackSchemas = {
 	audio_monitor_type: { type: 'boolean'; options: { source: string } }
 	audio_track: { type: 'boolean'; options: { source: string; track: string } }
 	volume: { type: 'boolean'; options: { source: string; volume: number } }
-	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number } }
+	audioPeaking: { type: 'boolean'; options: { source: string; threshold: number; peakHold: number } }
 	audioPeakLevel: { type: 'value'; options: { source: string } }
 	sourceVolume: { type: 'value'; options: { source: string } }
 	sourceBalance: { type: 'value'; options: { source: string } }
@@ -103,16 +103,25 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 					max: 26,
 					clampValues: true,
 				},
+				{
+					type: 'number',
+					label: 'Peak hold (ms)',
+					tooltip: 'How long the feedback stays active after a peak. 0 releases as soon as the level drops.',
+					id: 'peakHold',
+					default: 0,
+					min: 0,
+					max: 10000,
+					clampValues: true,
+				},
 			],
 			callback: (feedback) => {
 				// Tell the API to subscribe to volume-meters while this feedback exists.
 				self.obs.addMeterSubscriber(feedback.id)
 				const sourceName = feedback.options.source
 				const source = self.obsState.findSourceByName(sourceName)
-				if (source?.peak && source.peak > feedback.options.threshold) {
-					return true
-				}
-				return false
+				const peaking = !!source?.peak && source.peak > feedback.options.threshold
+				// Feedbacks saved before the option existed hold for 0ms.
+				return self.obs.evaluatePeakHold(feedback.id, peaking, Number(feedback.options.peakHold) || 0)
 			},
 			unsubscribe: (feedback) => self.obs.removeMeterSubscriber(feedback.id),
 		},
