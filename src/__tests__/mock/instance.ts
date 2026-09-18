@@ -21,6 +21,7 @@ export type MockInstance = OBSInstance & {
 	setFeedbackDefinitions: Mock
 	setPresetDefinitions: Mock
 	checkFeedbacks: Mock
+	checkFeedbacksById: Mock
 	updateStatus: Mock
 	recordAction: Mock
 	updateActionsFeedbacksVariables: Mock
@@ -47,6 +48,7 @@ export function makeMockInstance(config?: Partial<ModuleConfig>, secrets?: Parti
 		setFeedbackDefinitions: vi.fn(),
 		setPresetDefinitions: vi.fn(),
 		checkFeedbacks: vi.fn(),
+		checkFeedbacksById: vi.fn(),
 		updateStatus: vi.fn(),
 		recordAction: vi.fn(),
 		updateActionsFeedbacksVariables: vi.fn(),

@@ -1,7 +1,7 @@
 import { CompanionActionDefinitions, createModuleLogger, type JsonObject } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import * as utils from '../utils.js'
-import type { OBSTextSourceFont } from '../types.js'
+import type { GroupMode, OBSTextSourceFont } from '../types.js'
 import { INPUT_KIND_PREFIX_TEXT_GDIPLUS } from '../constants.js'
 import { choiceDropdown, choiceMultiDropdown, targetDropdown } from './options.js'
 
@@ -81,7 +81,7 @@ export type SourceActionSchemas = {
 			group: string
 			source: string[]
 			except: string[]
-			includeGroupChildren: boolean
+			includeGroupChildren: GroupMode
 			visible: 'true' | 'false' | 'toggle'
 		}
 	}
@@ -914,11 +914,16 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					isVisibleExpression: '$(options:allSources)',
 				}),
 				{
-					type: 'checkbox',
+					type: 'dropdown',
 					disableAutoExpression: true,
-					label: 'Include Sources Inside Groups',
+					label: 'Groups',
 					id: 'includeGroupChildren',
-					default: true,
+					default: 'groupsAndSources',
+					choices: [
+						{ id: 'groups', label: 'Include groups' },
+						{ id: 'groupsAndSources', label: 'Include groups and sources within groups' },
+						{ id: 'sources', label: 'Include only sources within groups' },
+					],
 					// OBS has no nested groups, so a group target has nothing further to descend into.
 					isVisibleExpression: `$(options:allSources) && $(options:target) != 'group'`,
 				},

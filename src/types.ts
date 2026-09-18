@@ -298,6 +298,9 @@ export interface OBSOutput {
 	[key: string]: unknown
 }
 
+/** How an "all sources" action treats group items and their contents. */
+export type GroupMode = 'groups' | 'groupsAndSources' | 'sources'
+
 /** Which scene(s) or group a source-visibility action acts within. */
 export interface VisibilityTarget {
 	target: 'allScenes' | 'currentScene' | 'scene' | 'group'

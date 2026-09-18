@@ -124,7 +124,7 @@ describe('v4_0_0 toggle_scene_item "All Sources" migration', () => {
 		expect(updated.options.target).toBe('scene')
 		expect(updated.options.scene).toBe('Scene A')
 		expect(updated.options.except).toEqual([])
-		expect(updated.options.includeGroupChildren).toBe(true)
+		expect(updated.options.includeGroupChildren).toBe('groupsAndSources')
 		expect(updated.options.group).toBe('')
 	})
 
@@ -524,8 +524,24 @@ describe('v4_0_0 advanced feedback conversion', () => {
 		v4_0_0(context, makeProps(null, [], [feedback]))
 
 		expect(feedback.feedbackId).toBe('audioPeaking')
-		expect(feedback.options).toEqual({ source: 'Mic', threshold: -50 })
+		expect(feedback.options).toEqual({ source: 'Mic', threshold: -50, peakHold: 0 })
 		expect(feedback.style).toEqual({ color: Color.White, bgcolor: Color.Green })
+	})
+
+	test('defaults peakHold on an existing audioPeaking feedback', () => {
+		const feedback = makeFeedback('audioPeaking', { source: 'Mic', threshold: -20 })
+		const changes = v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(feedback.options.peakHold).toBe(0)
+		expect(changes.updatedFeedbacks).toEqual([feedback])
+	})
+
+	test('leaves a peakHold the user has already set alone', () => {
+		const feedback = makeFeedback('audioPeaking', { source: 'Mic', threshold: -20, peakHold: 500 })
+		const changes = v4_0_0(context, makeProps(null, [], [feedback]))
+
+		expect(feedback.options.peakHold).toBe(500)
+		expect(changes.updatedFeedbacks).toEqual([])
 	})
 
 	test('converts streamCongestion to the boolean, keeping the high-congestion color', () => {

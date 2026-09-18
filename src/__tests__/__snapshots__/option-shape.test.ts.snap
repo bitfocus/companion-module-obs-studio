@@ -1786,7 +1786,12 @@ exports[`option shape > action options are unchanged 1`] = `
     },
     {
       "allowCustom": true,
-      "choices": [],
+      "choices": [
+        {
+          "id": "",
+          "label": "None",
+        },
+      ],
       "default": "",
       "id": "group",
       "isVisibleExpression": "$(options:target) == 'group'",
@@ -1853,12 +1858,26 @@ exports[`option shape > action options are unchanged 1`] = `
       "type": "multidropdown",
     },
     {
-      "default": true,
+      "choices": [
+        {
+          "id": "groups",
+          "label": "Include groups",
+        },
+        {
+          "id": "groupsAndSources",
+          "label": "Include groups and sources within groups",
+        },
+        {
+          "id": "sources",
+          "label": "Include only sources within groups",
+        },
+      ],
+      "default": "groupsAndSources",
       "disableAutoExpression": true,
       "id": "includeGroupChildren",
       "isVisibleExpression": "$(options:allSources) && $(options:target) != 'group'",
-      "label": "Include Sources Inside Groups",
-      "type": "checkbox",
+      "label": "Groups",
+      "type": "dropdown",
     },
     {
       "choices": [
@@ -2184,6 +2203,16 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "label": "Threshold (dB)",
       "max": 26,
       "min": -100,
+      "type": "number",
+    },
+    {
+      "clampValues": true,
+      "default": 0,
+      "id": "peakHold",
+      "label": "Peak hold (ms)",
+      "max": 10000,
+      "min": 0,
+      "tooltip": "How long the feedback stays active after a peak. 0 releases as soon as the level drops.",
       "type": "number",
     },
   ],

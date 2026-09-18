@@ -1,219 +1,221 @@
-## OBS Studio
+# OBS Studio
 
-This module will allow you to control OBS Studio using the built-in WebSocket Server.
+Control OBS Studio from Bitfocus Buttons or Bitfocus Companion using OBS's built-in WebSocket
+server.
 
-### Configuration
+> **Requirements:** Version 4 of this module requires Buttons 1.8 or newer or Companion 5.0 or
+> newer. OBS Studio 32.1 or newer is recommended.
 
-- Download and install [**OBS 28 or above**](https://obsproject.com), which includes the obs-websocket plugin by default.
-- Enable and configure the obs-websocket plugin within OBS under Tools > WebSocket Server Settings
-- In the WebSocket Server Settings window, click Show Connect Info. This info can be referenced in the next step.
-- In the module configuration for this module, enter the Server IP address (or hostname), the Server Port (by default the port is 4455), and the Server Password (leave blank if authentication is disabled)
-- By default, a WebSocket (ws) connection is used. Set to Secure WebSocket (wss) if you have specifically configured a secure connection.
+## Connect to OBS
 
-### Available actions
+1. In OBS Studio, open **Tools → WebSocket Server Settings**.
+2. Enable the WebSocket server.
+3. Select **Show Connect Info** to see the address, port, and password.
+4. Enter those values in the OBS Studio connection settings in Buttons or Companion.
 
-**Recording & Streaming & Outputs**
+The default obs-websocket port is **4455**. Leave the password blank only when authentication is
+disabled in OBS.
 
-- Recording (Toggle Record / Start / Stop / Toggle Pause / Pause / Resume / Split / Create Chapter)
-- Streaming (Start / Stop / Toggle)
-- Set Stream Settings
-- Send Stream Caption
-- Output (Toggle / Start / Stop)
-- Replay Buffer (Toggle / Start / Stop / Save)
+The default connection type is WebSocket (**ws**). Choose Secure WebSocket (**wss**) only when the
+OBS server or a reverse proxy has been configured for TLS. Selecting wss does not enable TLS in OBS
+by itself.
 
-**Switching & Transitions**
+## Actions
 
-- Set Program Scene
-- Set Preview Scene
-- Smart Scene Switcher _(Previews selected scene or, if scene is already in preview, transitions the scene to program)_
-- Transition _(Requires Studio Mode to be active)_
-- Quick Transition _(Performs the selected transition and then returns to the previous transition)_
-- Set Transition Type
-- Set Transition Duration
-- Adjust Transition Duration
-- Adjust Transition Type
+### Recording, streaming, and outputs
 
-**Sources**
+| Action                          | Capabilities                                                   |
+| ------------------------------- | -------------------------------------------------------------- |
+| Recording – Controls            | Start, stop, toggle, pause, resume, split, or create a chapter |
+| Streaming – Controls            | Start, stop, or toggle streaming                               |
+| Streaming – Set Stream Settings | Change the configured streaming service                        |
+| Streaming – Send Caption        | Send caption text to the active stream                         |
+| Replay Buffer – Controls        | Start, stop, toggle, or save the replay buffer                 |
+| Output – Controls               | Start, stop, or toggle an OBS output                           |
 
-- Set Source Visibility _(one or more sources, or every source, targeting all scenes / the current scene / a specific scene / a group; with an optional except list, set to the opposite visibility)_
-- Set Filter Visibility
-- Set Filter Settings
-- Set Source Transform (Position / Scale / Rotation)
-- Source Mute (Set / Toggle)
-- Source Volume (Set / Adjust, in dB or percent, with an optional fade duration)
-- Set Audio Monitoring (Enable / Disable / Toggle)
-- Set Audio Sync Offset
-- Set Audio Balance
-- Set Audio Tracks (Set / Toggle mixer output tracks)
-- Set Source Text
-- Set Text Properties
-- Refresh Browser Source
-- Reset Video Capture Device
-- Take Screenshot
-- Play / Pause Media
-- Restart Media
-- Stop Media
-- Next Media
-- Previous Media
-- Set Media Time
-- Scrub Media
-- Update Media Source Local File Path
+### Scenes and transitions
 
-Every media action has a **Target**: a specific source, the newest playing clip, or (except when setting a
-file path) all playing clips at once. "Newest" and "all" cover the clips that are playing or paused and
-active in program.
+| Action                           | Capabilities                                               |
+| -------------------------------- | ---------------------------------------------------------- |
+| Scene – Set Program Scene        | Switch the current program scene                           |
+| Scene – Set Preview Scene        | Change the preview scene                                   |
+| Scene – Smart Scene Switcher     | Preview a scene, or transition it when already in preview  |
+| Transitions – Perform Transition | Perform a transition; Studio Mode must be active           |
+| Transitions – Quick Transition   | Perform a transition, then restore the previous transition |
+| Transitions – Set Type           | Select or cycle through transition types                   |
+| Transitions – Set Duration       | Set or adjust the transition duration                      |
 
-- Open Source Properties Window
-- Open Source Filters Window
-- Open Source Interact Window
+### Sources, groups, and filters
 
-**General**
+| Action                              | Capabilities                                                        |
+| ----------------------------------- | ------------------------------------------------------------------- |
+| Source – Set Visibility             | Show, hide, or toggle selected sources, all sources, or group items |
+| Source – Set Transform Properties   | Set position, scale, and rotation                                   |
+| Source – Set Source Text            | Replace the contents of a text source                               |
+| Source – Set Text Properties        | Change font, colour, alignment, outline, background, and layout     |
+| Filters – Set Visibility            | Enable, disable, or toggle a source or scene filter                 |
+| Filters – Set Settings              | Apply filter settings supplied as JSON                              |
+| Source – Refresh Browser Source     | Reload a browser source                                             |
+| Source – Reset Video Capture Device | Deactivate and reactivate a capture device                          |
+| Source – Take Screenshot            | Save an image of a source, program scene, or preview scene          |
 
-- Studio Mode (Enable / Disable / Toggle)
-- Open Projector
-- Set Profile
-- Set Scene Collection
-- Trigger Hotkey by Key
+### Audio
 
-**Advanced**
+| Action                       | Capabilities                                            |
+| ---------------------------- | ------------------------------------------------------- |
+| Audio – Mute                 | Mute, unmute, or toggle a source                        |
+| Audio – Source Volume        | Set or adjust dB/percent volume, optionally with a fade |
+| Audio – Set Audio Monitoring | Enable, disable, or toggle monitoring                   |
+| Audio – Source Audio Offset  | Set or adjust audio sync offset                         |
+| Audio – Source Audio Balance | Set or adjust stereo balance                            |
+| Audio – Set Audio Tracks     | Enable, disable, or toggle mixer tracks                 |
 
-- Trigger Hotkey by ID
-- Custom Command _(Request data must be valid JSON. See [obs-websocket protocol documentation](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests) for request types and required request data)_
-- Custom Vendor Request _(Request data must be valid JSON. Requests will vary based on plugin. See documentation for your specific plugin for more info. Support for this feature will be limited due to the large number of plugins available)_
+### Media
 
-### Available feedbacks
+Media actions can target a specific source, the newest playing clip, or all playing clips. “Newest”
+and “all” include playing or paused media sources that are active in program.
 
-**Recording & Streaming & Outputs**
+| Action                            | Capabilities                                              |
+| --------------------------------- | --------------------------------------------------------- |
+| Media – Playback Controls         | Play, pause, toggle, restart, stop, next, or previous     |
+| Media – Set / Scrub Playback Time | Set an absolute time or move relative to the current time |
+| Media – Set Source File           | Change the local file used by a media source              |
 
-- Streaming Active
-- Streaming Reconnecting
-- Recording Active
-- Recording Paused
-- Output Active
-- Replay Buffer Active
-- Stream Congestion Above (Active while congestion is above a chosen threshold, 0-100)
-- Stream Congestion Level (Value, the current congestion from 0 to 100, for use with a gauge)
+### OBS interface and general controls
 
-**Switching & Transitions**
+| Action                              | Capabilities                                       |
+| ----------------------------------- | -------------------------------------------------- |
+| Studio Mode                         | Enable, disable, or toggle Studio Mode             |
+| Set Profile                         | Select an OBS profile                              |
+| Set Scene Collection                | Select an OBS scene collection                     |
+| Hotkey – Trigger by Key Sequence    | Trigger a keyboard shortcut                        |
+| Hotkey – Trigger by ID              | Trigger an OBS hotkey by its registered identifier |
+| UI – Open Source Properties Window  | Open source properties in OBS                      |
+| UI – Open Source Filter Window      | Open source filters in OBS                         |
+| UI – Open Source Interaction Window | Open the interaction window for a browser source   |
+| UI – Open Projector                 | Open an OBS projector window                       |
 
-- Scene in Program
-- Scene in Preview
-- Previous Scene Active
-- Transition in Progress
-- Current Transition Type
-- Transition Duration
+## Feedbacks
 
-**Sources**
+Boolean feedbacks become active when their condition matches. They can change a button's style or
+be combined with other feedbacks.
 
-- Source Visible in Program (If a source is visible in the program, change the style of the button)
-- Source Active in Preview
-- Source Enabled in Scene (If a source is enabled in a specific scene, change the style of the button)
-- Filter Enabled
-- Audio Muted
-- Audio Monitoring
-- Audio Track Enabled
-- Audio Volume (If a source is at an exact volume in dB)
-- Audio Peaking (If a source's peak level is above a threshold)
-- Media Playing
-- Media Remaining Time (If remaining time of a media source is below a threshold, change the style of the button)
+### Status feedbacks
 
-Value feedbacks report a number rather than a style. Bind one to a button's local variable and use it in an
-expression, such as the value of a gauge:
+| Area                    | Feedbacks                                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Recording and streaming | Streaming Active, Streaming Reconnecting, Recording Active, Recording Paused                               |
+| Outputs                 | Output Active, Replay Buffer Active                                                                        |
+| Scenes and transitions  | Scene Program, Scene Preview, Scene Previous, Transition In Progress, Transition Type, Transition Duration |
+| Sources and filters     | Source Visible in Program, Source Active in Preview, Source Enabled in Scene, Filter Enabled               |
+| Audio                   | Muted, Monitoring, Track Enabled, Volume, Peaking                                                          |
+| Media                   | Playing, Remaining Time                                                                                    |
+| General                 | Profile Active, Scene Collection Active, Studio Mode Active, Disk Space Remaining                          |
+| Advanced                | Custom – Vendor Event                                                                                      |
 
-- Audio Peak Level (dB)
-- Audio Volume (dB)
-- Audio Balance (%)
-- Audio Sync Offset (ms)
-- Media Playback Progress (%)
-- Media Remaining Time (seconds)
+### Value feedbacks
 
-**General**
+Value feedbacks report a number instead of directly applying a style. Bind one to a button's local
+variable and use that value in an expression or graphical element such as a gauge.
 
-- Profile Active
-- Scene Collection Active
-- Studio Mode Active
-- Disk Space Remaining
+- Audio – Peak Level (dB)
+- Audio – Volume (dB)
+- Audio – Balance (%)
+- Audio – Sync Offset (ms)
+- Media – Playback Progress (%)
+- Media – Remaining Time (seconds)
+- Streaming – Stream Congestion Level
 
-**Advanced**
+## Variables
 
-- Vendor Event
+Use module variables in button text, expressions, action options, and feedback options. The variable
+browser shows the exact ID available to the current connection.
 
-### Available variables
+### Recording, streaming, and outputs
 
-**Recording & Streaming & Outputs**
+- **recording**, **streaming**, and **stream_service**
+- **recording_file_name** and **recording_path**
+- **recording_timecode** and its **\_hh**, **\_mm**, and **\_ss** variants
+- **stream_timecode** and its **\_hh**, **\_mm**, and **\_ss** variants
+- **kbits_per_sec**
+- **render_missed_frames**, **render_total_frames**
+- **output_skipped_frames**, **output_total_frames**
+- **stream_output_skipped_frames**, **stream_output_total_frames**
+- **average_frame_time**
+- **replay_buffer_path**, **replay_buffer_active**
+- **virtualcam_active**
 
-- recording
-- recording_file_name
-- recording_path
-- recording_timecode (also recording_timecode_hh, recording_timecode_mm and recording_timecode_ss)
-- streaming
-- stream_timecode (also stream_timecode_hh, stream_timecode_mm and stream_timecode_ss)
-- stream_service
-- kbits_per_sec (Amount of data per second transmitted by the stream encoder)
-- render_missed_frames
-- render_total_frames
-- output_skipped_frames
-- output_total_frames
-- stream_output_skipped_frames (Frames skipped by the current stream)
-- stream_output_total_frames (Total frames for the current stream)
-- average_frame_time
-- replay_buffer_path
-- replay_buffer_active
-- virtualcam_active
+### Scenes and transitions
 
-**Switching & Transitions**
+- **scene_active**, **scene_preview**, **scene_previous**
+- **scene_1**, **scene_2**, and so on, ordered from the top of the OBS scene list
+- **current_transition**, **transition_duration**, **transition_active**
+- **transition_list**
 
-- scene_active
-- scene_preview
-- scene_previous
-- current_transition
-- transition_duration
-- transition_list (List of every available transition)
-- transition_active (Boolean, true while a transition is in progress)
+### Media collections
 
-**Sources**
+- **current_media_name** — list of playing or paused media sources active in program
+- **current_media_time_elapsed** — matching list of elapsed times
+- **current_media_time_remaining** — matching list of remaining times
+- **latest_media_name** — most recently started source from that active collection
+- **latest_media_time_elapsed** and **latest_media_time_remaining**
 
-- current_media_name (List, containing an entry for every currently playing media source)
-- current_media_time_elapsed (List, containing an entry for every currently playing media source)
-- current_media_time_remaining (List, containing an entry for every currently playing media source)
-- latest_media_name (The most recently started media source, matching the "Newest Playing Clip" action target)
-- latest_media_time_elapsed (Elapsed time of the most recently started media source)
-- latest_media_time_remaining (Remaining time of the most recently started media source)
-- media_status_source_name(Current status of media sources, including: playing, paused, stopped, ended)
-- media_file_name (Current file name of media sources, not including the extension)
-- media_time_elapsed
-- media_time_remaining
-- image_file_name
-- current_text (Current text value of text sources)
-- volume (Current volume in dB of a source)
-- mute (Current audio mute state of a source)
-- monitor (Current audio monitoring type of a source)
-- monitor_active (Whether audio monitoring is enabled for a source)
-- sync_offset (Current audio sync offset of a source)
-- balance (Current audio balance of a source)
-- tracks (List of the audio mixer track numbers a source is routed to, e.g. [1, 3])
-- audio_source_list (List of every audio source)
+### Per-source variables
 
-**General**
+Per-source IDs end with a sanitized source name. Spaces and punctuation are converted so the name is
+safe to use as a variable ID. For example, a source named “Camera 1” uses a suffix such as
+**Camera_1**.
 
-- profile
-- scene_collection
-- studio_mode (Boolean, true while studio mode is enabled)
-- fps
-- cpu_usage
-- memory_usage
-- free_disk_space
-- free_disk_space_mb
-- screenshot_saved_path (File path of the last saved screenshot)
-- base_resolution
-- output_resolution
-- target_framerate
+| Pattern                     | Meaning                                      |
+| --------------------------- | -------------------------------------------- |
+| current_text_SOURCE         | Current text-source contents                 |
+| media_status_SOURCE         | Playing, paused, stopped, ended, or error    |
+| media_file_name_SOURCE      | Current media filename without its extension |
+| media_time_elapsed_SOURCE   | Current media elapsed time                   |
+| media_time_remaining_SOURCE | Current media remaining time                 |
+| image_file_name_SOURCE      | Current image filename                       |
+| volume_SOURCE               | Current source volume in dB                  |
+| mute_SOURCE                 | Muted or Unmuted                             |
+| monitor_SOURCE              | OBS audio monitoring mode                    |
+| monitor_active_SOURCE       | Whether audio monitoring is enabled          |
+| sync_offset_SOURCE          | Audio sync offset in milliseconds            |
+| balance_SOURCE              | Audio balance                                |
+| tracks_SOURCE               | List of enabled mixer track numbers          |
+| source_active_SOURCE        | Whether the source is active in program      |
 
-**Advanced**
+The available per-source variables depend on the source type and capabilities reported by OBS.
 
-- custom_command_response
-- custom_command_type
-- custom_command_request
-- vendor_event_name
-- vendor_event_type
-- vendor_event_data
+### General and system variables
+
+- **profile**, **scene_collection**, **studio_mode**
+- **fps**, **cpu_usage**, **memory_usage**
+- **free_disk_space**, **free_disk_space_mb**
+- **base_resolution**, **output_resolution**, **target_framerate**
+- **audio_source_list**
+- **screenshot_saved_path**
+
+### Advanced variables
+
+- **custom_command_type**, **custom_command_request**, **custom_command_response**
+- **vendor_event_name**, **vendor_event_type**, **vendor_event_data**
+
+## Advanced WebSocket features
+
+### Custom – Send Command
+
+Send any obs-websocket request that is not covered by a dedicated action. The request data must be a
+valid JSON object. Request names and fields are documented in the
+[obs-websocket protocol reference](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md#requests).
+
+The latest request type, request data, and response are published in the corresponding
+**custom_command_*** variables.
+
+### Custom – Send Vendor Request
+
+Send a request registered by an OBS plugin. Vendor name, request type, and request data are defined
+by that plugin. Consult the plugin's documentation; behavior cannot be generalized across vendors.
+
+### Custom – Vendor Event feedback
+
+Matches events emitted by OBS plugins. The latest received event is also exposed through the
+**vendor_event_*** variables.
