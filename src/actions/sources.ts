@@ -124,6 +124,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				{
 					type: 'multidropdown',
 					disableAutoExpression: true,
+					sortSelection: true,
 					label: 'Properties',
 					id: 'props',
 					default: [],
@@ -751,6 +752,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				{
 					type: 'multidropdown',
 					disableAutoExpression: true,
+					sortSelection: true,
 					label: 'Properties',
 					id: 'props',
 					default: [],
@@ -840,7 +842,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					logger.error(`Set Scene Item Properties Error: ${utils.describeError(e)}`)
 				}
 			},
-			learn: async (action) => {
+			learn: async (action, context) => {
 				const sourceSceneName =
 					action.options.target === 'programScene' ? self.states.programScene : action.options.scene
 				const sourceName = action.options.source
@@ -853,6 +855,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 						sceneUuid: match.containerUuid,
 						sceneItemId: match.item.sceneItemId,
 					})
+					if (context.signal.aborted) return undefined
 					const sceneItemTransform = res?.sceneItemTransform
 					if (!sceneItemTransform) return undefined
 
