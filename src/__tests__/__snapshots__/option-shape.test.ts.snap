@@ -1757,7 +1757,7 @@ exports[`option shape > action options are unchanged 1`] = `
         },
         {
           "id": "group",
-          "label": "Group",
+          "label": "Group Items",
         },
       ],
       "default": "allScenes",

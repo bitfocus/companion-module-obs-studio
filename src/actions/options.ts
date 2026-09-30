@@ -230,7 +230,7 @@ export const TARGET_CHOICES = {
 	programScene: { id: 'programScene', label: 'Current Program Scene' },
 	previewScene: { id: 'previewScene', label: 'Current Preview Scene' },
 	scene: { id: 'scene', label: 'Specific Scene' },
-	group: { id: 'group', label: 'Group' },
+	group: { id: 'group', label: 'Group Items' },
 	source: { id: 'source', label: 'Specific Source' },
 	allSources: { id: 'allSources', label: 'All Sources' },
 } as const satisfies Record<string, DropdownChoice>
