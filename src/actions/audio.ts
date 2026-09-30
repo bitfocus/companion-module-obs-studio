@@ -256,6 +256,7 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 				choiceDropdown(self, 'audioSource', { id: 'source', label: 'Source' }),
 				{
 					type: 'multidropdown',
+					sortSelection: true,
 					label: 'Tracks',
 					id: 'tracks',
 					tooltip: 'Leave empty to affect all tracks',

@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { initOBSListeners } from '../../listeners.js'
 import { ObsAudioMonitorType } from '../../types.js'
-import { makeMockInstance, seedScene, seedSource, type MockInstance } from '../mock/instance.js'
+import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from '../mock/instance.js'
 
 describe('rename listeners', () => {
 	let self: MockInstance
@@ -352,5 +352,52 @@ describe('SceneItemRemoved', () => {
 		})
 
 		expect(self.states.sources.get('a')?.parentGroupUuid).toBe('group-b')
+	})
+})
+
+describe('SceneItemEnableStateChanged', () => {
+	let self: MockInstance
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		initOBSListeners(self)
+	})
+
+	test('refreshes active state for a group source', async () => {
+		self.states.sources.set('group-a', {
+			sourceName: 'Group A',
+			sourceUuid: 'group-a',
+			validName: 'Group_A',
+			isGroup: true,
+			active: false,
+		})
+		self.states.sceneItems.set('scene-a', [
+			sceneItem({ sceneItemId: 1, sourceUuid: 'group-a', sourceName: 'Group A', isGroup: true }),
+		])
+		self.socket.call.mockResolvedValue({ videoActive: true, videoShowing: true })
+
+		self.socket.emit('SceneItemEnableStateChanged', {
+			sceneUuid: 'scene-a',
+			sceneName: 'Scene A',
+			sceneItemId: 1,
+			sceneItemEnabled: true,
+		})
+
+		expect(self.socket.call).toHaveBeenCalledWith('GetSourceActive', { sourceUuid: 'group-a' })
+		await vi.waitFor(() => expect(self.states.sources.get('group-a')?.active).toBe(true))
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('scene_item_active', 'scene_item_previewed')
+	})
+
+	test('does not request active state for an ordinary source', () => {
+		self.states.sceneItems.set('scene-a', [sceneItem({ sceneItemId: 1, sourceUuid: 'camera' })])
+
+		self.socket.emit('SceneItemEnableStateChanged', {
+			sceneUuid: 'scene-a',
+			sceneName: 'Scene A',
+			sceneItemId: 1,
+			sceneItemEnabled: false,
+		})
+
+		expect(self.socket.call).not.toHaveBeenCalled()
 	})
 })

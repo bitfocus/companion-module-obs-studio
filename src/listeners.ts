@@ -411,6 +411,16 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		if (sceneItem) {
 			sceneItem.sceneItemEnabled = data.sceneItemEnabled
 			sourceUuid = sceneItem.sourceUuid
+			if (sceneItem.isGroup) {
+				const groupUuid = sceneItem.sourceUuid
+				void self.obs.sendRequest('GetSourceActive', { sourceUuid: groupUuid }).then((active) => {
+					const group = self.states.sources.get(groupUuid)
+					if (!group || !active) return
+					group.active = active.videoActive
+					group.videoShowing = active.videoShowing
+					self.checkFeedbacks('scene_item_active', 'scene_item_previewed')
+				})
+			}
 		}
 		self.checkFeedbacks('scene_item_active_in_scene')
 		const sceneName = self.states.scenes.get(data.sceneUuid)?.sceneName

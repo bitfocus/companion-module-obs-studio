@@ -608,6 +608,37 @@ describe('target dropdowns', () => {
 		test('scene uses the named scene', async () => {
 			expect((await transform('scene', 'Scene B'))?.[0].requestData.sceneUuid).toBe('scene-b')
 		})
+
+		describe('learn', () => {
+			const learn = async (context: MockContext) => {
+				const actions = looseActions(getSourceActions(self))
+				return actions['source_properties'].learn!(
+					actionEvent('source_properties', {
+						target: 'scene',
+						scene: 'Scene B',
+						source: 'Camera',
+						props: ['positionX', 'rotation'],
+					}),
+					context,
+				)
+			}
+
+			test('returns the selected transform values', async () => {
+				self.socket.call.mockResolvedValue({ sceneItemTransform: { positionX: 12, positionY: 34, rotation: 90 } })
+
+				expect(await learn(new MockContext())).toEqual({ positionX: '12', rotation: '90' })
+			})
+
+			test('returns nothing when cancelled while the request is in flight', async () => {
+				const controller = new AbortController()
+				self.socket.call.mockImplementation(async () => {
+					controller.abort()
+					return { sceneItemTransform: { positionX: 12, rotation: 90 } }
+				})
+
+				expect(await learn(new MockContext('action', controller.signal))).toBeUndefined()
+			})
+		})
 	})
 
 	describe('toggle_filter', () => {
