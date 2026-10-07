@@ -16,6 +16,7 @@ import {
 	asString,
 	asNumber,
 	extractFileName,
+	sanitizePathFileName,
 	readTextSourceValue,
 	readMediaFileName,
 } from '../utils.js'
@@ -165,6 +166,19 @@ describe('extractFileName', () => {
 	test('returns empty string for non-string input', () => {
 		expect(extractFileName(undefined)).toBe('')
 		expect(extractFileName(123)).toBe('')
+	})
+})
+
+describe('sanitizePathFileName', () => {
+	test('replaces colons in the file name', () => {
+		expect(sanitizePathFileName('/shots/Shot_12:34:56.png')).toBe('/shots/Shot_12-34-56.png')
+	})
+	test('keeps a windows drive letter and folders', () => {
+		expect(sanitizePathFileName('C:\\shots\\Shot_12:34:56.png')).toBe('C:\\shots\\Shot_12-34-56.png')
+		expect(sanitizePathFileName('D:/shots/a:b.jpg')).toBe('D:/shots/a-b.jpg')
+	})
+	test('leaves a path without colons in the name alone', () => {
+		expect(sanitizePathFileName('/shots/shot.png')).toBe('/shots/shot.png')
 	})
 })
 

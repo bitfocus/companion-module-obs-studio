@@ -734,10 +734,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 
 				let filePath
 				if (action.options.customName) {
-					filePath = action.options.path
+					filePath = utils.sanitizePathFileName(action.options.path)
 				} else {
 					const prefix = action.options.prefix
-					filePath = `${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${action.options.format}`
+					filePath = utils.sanitizePathFileName(
+						`${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${action.options.format}`,
+					)
 				}
 
 				const quality = action.options.compression === 0 ? -1 : action.options.compression

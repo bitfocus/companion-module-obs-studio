@@ -89,6 +89,15 @@ export function extractFileName(path: unknown): string {
 }
 
 /**
+ * Replace colons in the file name part of a path with dashes, as Windows rejects them in file names (and
+ * variables like `$(internal:time_hms)` produce them). Colons in the folders, such as a drive letter, are kept.
+ */
+export function sanitizePathFileName(path: string): string {
+	const nameStart = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1
+	return path.slice(0, nameStart) + path.slice(nameStart).replace(/:/g, '-')
+}
+
+/**
  * Read the display text of a text source.
  *
  * Text sources either carry their text inline or point at a file, and the key naming differs

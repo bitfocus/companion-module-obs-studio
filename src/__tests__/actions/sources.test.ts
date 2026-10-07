@@ -551,33 +551,45 @@ describe('target dropdowns', () => {
 	})
 
 	describe('take_screenshot', () => {
-		const shoot = async (target: string, source: string) => {
+		const shoot = async (
+			target: string,
+			source: string,
+			naming: { customName: boolean; path: string; prefix: string },
+		) => {
 			const actions = looseActions(getSourceActions(self))
 			await actions['take_screenshot'].callback(
-				actionEvent('take_screenshot', {
-					target,
-					source,
-					format: 'png',
-					compression: 0,
-					customName: true,
-					path: '/tmp/shot.png',
-					prefix: '',
-				}),
+				actionEvent('take_screenshot', { target, source, format: 'png', compression: 0, ...naming }),
 				new MockContext(),
 			)
 			return self.socket.call.mock.calls[0]
 		}
+		const customPath = { customName: true, path: '/tmp/shot.png', prefix: '' }
 
 		test('programScene shoots the program scene', async () => {
-			expect((await shoot('programScene', 'Camera'))[1]).toMatchObject({ sourceName: 'Scene A' })
+			expect((await shoot('programScene', 'Camera', customPath))[1]).toMatchObject({ sourceName: 'Scene A' })
 		})
 
 		test('previewScene shoots the preview scene', async () => {
-			expect((await shoot('previewScene', 'Camera'))[1]).toMatchObject({ sourceName: 'Scene B' })
+			expect((await shoot('previewScene', 'Camera', customPath))[1]).toMatchObject({ sourceName: 'Scene B' })
 		})
 
 		test('source shoots the named source', async () => {
-			expect((await shoot('source', 'Camera'))[1]).toMatchObject({ sourceName: 'Camera' })
+			expect((await shoot('source', 'Camera', customPath))[1]).toMatchObject({ sourceName: 'Camera' })
+		})
+
+		test('a custom path has the colons in its file name replaced, keeping the drive letter', async () => {
+			const call = await shoot('source', 'Camera', {
+				customName: true,
+				path: 'C:/shots/Shot_12:34:56.png',
+				prefix: '',
+			})
+			expect(call[1]).toMatchObject({ imageFilePath: 'C:/shots/Shot_12-34-56.png' })
+		})
+
+		test('a prefix has its colons replaced in the default path', async () => {
+			self.states.recordDirectory = 'C:/Videos'
+			const call = await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot 12:34 ' })
+			expect(call[1].imageFilePath).toMatch(/^C:\/Videos\/Shot 12-34 \d+\.png$/)
 		})
 	})
 
