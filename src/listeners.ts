@@ -358,6 +358,7 @@ function setupFilterListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				options: {
 					target: 'source',
 					source: data.sourceName,
+					allFilters: false,
 					filter: data.filterName,
 					visible: data.filterEnabled ? 'true' : 'false',
 				},

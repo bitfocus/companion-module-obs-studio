@@ -651,13 +651,18 @@ describe('target dropdowns', () => {
 			])
 		})
 
-		const toggle = async (target: string) => {
+		const toggle = async (target: string, allFilters = false, visible = 'false') => {
 			const actions = looseActions(getSourceActions(self))
 			await actions['toggle_filter'].callback(
-				actionEvent('toggle_filter', { target, source: 'Camera', filter: 'Color', visible: 'false' }),
+				actionEvent('toggle_filter', { target, source: 'Camera', allFilters, filter: 'Color', visible }),
 				new MockContext(),
 			)
 		}
+
+		const batchedFilters = () =>
+			(self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>)
+				.map((b) => `${b.requestData.sourceUuid}/${b.requestData.filterName}=${b.requestData.filterEnabled}`)
+				.sort()
 
 		test('source disables the filter on just that source', async () => {
 			await toggle('source')
@@ -667,6 +672,58 @@ describe('target dropdowns', () => {
 				filterEnabled: false,
 			})
 			expect(self.socket.callBatch).not.toHaveBeenCalled()
+		})
+
+		test('allFilters on a source sets every filter on just that source', async () => {
+			self.states.sourceFilters.get('src-1')!.push({
+				filterName: 'Blur',
+				filterEnabled: true,
+				filterIndex: 1,
+				filterKind: 'blur_filter',
+				filterSettings: {},
+			})
+			await toggle('source', true)
+			expect(batchedFilters()).toEqual(['src-1/Blur=false', 'src-1/Color=false'])
+			expect(self.socket.call).not.toHaveBeenCalledWith('SetSourceFilterEnabled', expect.anything())
+		})
+
+		test('allFilters toggles each filter from its own state', async () => {
+			self.states.sourceFilters.get('src-1')!.push({
+				filterName: 'Blur',
+				filterEnabled: false,
+				filterIndex: 1,
+				filterKind: 'blur_filter',
+				filterSettings: {},
+			})
+			await toggle('source', true, 'toggle')
+			expect(batchedFilters()).toEqual(['src-1/Blur=true', 'src-1/Color=false'])
+		})
+
+		test('allFilters with allSources sets every filter everywhere', async () => {
+			self.states.sourceFilters.get('scene-a')!.push({
+				filterName: 'Blur',
+				filterEnabled: true,
+				filterIndex: 1,
+				filterKind: 'blur_filter',
+				filterSettings: {},
+			})
+			await toggle('allSources', true)
+			expect(batchedFilters()).toEqual(['scene-a/Blur=false', 'scene-a/Color=false', 'src-1/Color=false'])
+		})
+
+		test('learn has nothing to read back with allFilters', async () => {
+			const actions = looseActions(getSourceActions(self))
+			const learned = await actions['toggle_filter'].learn!(
+				actionEvent('toggle_filter', {
+					target: 'source',
+					source: 'Camera',
+					allFilters: true,
+					filter: 'Color',
+					visible: 'toggle',
+				}),
+				new MockContext(),
+			)
+			expect(learned).toBeUndefined()
 		})
 
 		test('allSources batches every source carrying the filter', async () => {

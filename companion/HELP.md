@@ -53,7 +53,7 @@ by itself.
 | Source – Set Transform Properties   | Set position, scale, and rotation                                   |
 | Source – Set Source Text            | Replace the contents of a text source                               |
 | Source – Set Text Properties        | Change font, colour, alignment, outline, background, and layout     |
-| Filters – Set Visibility            | Enable, disable, or toggle a source or scene filter                 |
+| Filters – Set Visibility            | Enable, disable, or toggle one or all filters on a source or scene  |
 | Filters – Set Settings              | Apply filter settings supplied as JSON                              |
 | Source – Refresh Browser Source     | Reload a browser source                                             |
 | Source – Reset Video Capture Device | Deactivate and reactivate a capture device                          |

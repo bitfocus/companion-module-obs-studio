@@ -1535,37 +1535,46 @@ export class OBSApi {
 	public async setFilterVisibility(
 		filterName: string,
 		visible: string,
-		options: { target: 'source' | 'allSources'; source: string },
+		options: { target: 'source' | 'allSources'; source: string; allFilters: boolean },
 	): Promise<void> {
-		if (options.target === 'allSources') {
-			const requests: OBSBatchRequest[] = []
-			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
-				const filter = filters.find((f) => f.filterName === filterName)
-				if (!filter) return
+		const requests: OBSBatchRequest[] = []
+		const addFilters = (sourceUuid: string, filters: OBSFilter[]): void => {
+			for (const filter of filters) {
+				if (!options.allFilters && filter.filterName !== filterName) continue
 				requests.push({
 					requestType: 'SetSourceFilterEnabled',
 					requestData: {
 						sourceUuid,
-						filterName,
+						filterName: filter.filterName,
 						filterEnabled: utils.resolveVisibility(visible, filter.filterEnabled),
 					},
 				})
-			})
-
-			await this.sendBatch(requests)
-		} else {
-			const sourceUuid = this.self.obsState.findFilterTargetUuid(options.source)
-			if (!sourceUuid) return
-
-			const filter = this.self.states.sourceFilters.get(sourceUuid)?.find((f) => f.filterName === filterName)
-			// Toggling a filter that isn't known would guess at its state, so do nothing instead.
-			if (visible === 'toggle' && !filter) return
-
-			await this.sendRequest('SetSourceFilterEnabled', {
-				sourceUuid,
-				filterName,
-				filterEnabled: utils.resolveVisibility(visible, filter?.filterEnabled),
-			})
+			}
 		}
+
+		if (options.target === 'allSources') {
+			this.self.states.sourceFilters.forEach((filters, sourceUuid) => addFilters(sourceUuid, filters))
+			await this.sendBatch(requests)
+			return
+		}
+
+		const sourceUuid = this.self.obsState.findFilterTargetUuid(options.source)
+		if (!sourceUuid) return
+
+		if (options.allFilters) {
+			addFilters(sourceUuid, this.self.states.sourceFilters.get(sourceUuid) ?? [])
+			await this.sendBatch(requests)
+			return
+		}
+
+		const filter = this.self.states.sourceFilters.get(sourceUuid)?.find((f) => f.filterName === filterName)
+		// Toggling a filter that isn't known would guess at its state, so do nothing instead.
+		if (visible === 'toggle' && !filter) return
+
+		await this.sendRequest('SetSourceFilterEnabled', {
+			sourceUuid,
+			filterName,
+			filterEnabled: utils.resolveVisibility(visible, filter?.filterEnabled),
+		})
 	}
 }

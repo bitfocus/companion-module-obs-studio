@@ -42,6 +42,7 @@ export type SourceActionSchemas = {
 		options: {
 			target: 'source' | 'allSources'
 			source: string
+			allFilters: boolean
 			filter: string
 			visible: 'true' | 'false' | 'toggle'
 		}
@@ -559,7 +560,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		// Filters
 		toggle_filter: {
 			name: 'Filters - Set Visibility',
-			description: 'Shows, hides, or toggles the enabled state of a filter on a source',
+			description:
+				'Shows, hides, or toggles the enabled state of a filter on a source. With All Filters checked, every filter on the chosen source(s) is set, each toggling from its own state.',
 			options: [
 				targetDropdown(['source', 'allSources']),
 				choiceDropdown(self, 'sourceWithScenes', {
@@ -567,7 +569,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					label: 'Source',
 					isVisibleExpression: `$(options:target) == 'source'`,
 				}),
-				choiceDropdown(self, 'filter', { id: 'filter', label: 'Filter' }),
+				{
+					type: 'checkbox',
+					disableAutoExpression: true,
+					label: 'All Filters',
+					id: 'allFilters',
+					default: false,
+				},
+				choiceDropdown(self, 'filter', {
+					id: 'filter',
+					label: 'Filter',
+					isVisibleExpression: '!$(options:allFilters)',
+				}),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -587,10 +600,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				await self.obs.setFilterVisibility(filterName, action.options.visible, {
 					target: action.options.target,
 					source: action.options.source,
+					allFilters: action.options.allFilters,
 				})
 			},
 			learn: (action) => {
-				if (action.options.target === 'allSources') return undefined
+				// Several filters have no single state to read back.
+				if (action.options.target === 'allSources' || action.options.allFilters) return undefined
 				const sourceName = action.options.source
 				const filterName = action.options.filter
 				const filters = self.obsState.findSourceFiltersByName(sourceName)

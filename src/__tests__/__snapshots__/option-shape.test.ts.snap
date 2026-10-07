@@ -1709,6 +1709,13 @@ exports[`option shape > action options are unchanged 1`] = `
       "type": "dropdown",
     },
     {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "allFilters",
+      "label": "All Filters",
+      "type": "checkbox",
+    },
+    {
       "allowCustom": true,
       "choices": [
         {
@@ -1718,6 +1725,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Gain",
       "id": "filter",
+      "isVisibleExpression": "!$(options:allFilters)",
       "label": "Filter",
       "type": "dropdown",
     },

@@ -89,6 +89,7 @@ export function getSourcePresets(self: OBSInstance): {
 						options: {
 							target: 'allSources',
 							source: '',
+							allFilters: false,
 							filter: { value: '$(local:filter)', isExpression: true },
 							visible: 'toggle',
 						},
@@ -107,7 +108,12 @@ export function getSourcePresets(self: OBSInstance): {
 		style: baseStyle({ text: 'Toggle\nFilter' }),
 		steps: [
 			{
-				down: [{ actionId: 'toggle_filter', options: { target: 'source', source: '', filter: '', visible: 'toggle' } }],
+				down: [
+					{
+						actionId: 'toggle_filter',
+						options: { target: 'source', source: '', allFilters: false, filter: '', visible: 'toggle' },
+					},
+				],
 				up: [],
 			},
 		],
