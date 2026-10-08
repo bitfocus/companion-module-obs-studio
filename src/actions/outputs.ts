@@ -3,10 +3,14 @@ import {
 	type CompanionActionDefinitions,
 	type DropdownChoice,
 	type SomeCompanionActionInputField,
+	createModuleLogger,
 } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { VIRTUALCAM_OUTPUT_NAME } from '../constants.js'
 import { choiceDropdown } from './options.js'
+import * as utils from '../utils.js'
+
+const logger = createModuleLogger('Actions/Outputs')
 
 function isVirtualCam(outputName: string): boolean {
 	return outputName === VIRTUALCAM_OUTPUT_NAME
@@ -94,6 +98,8 @@ export type OutputActionSchemas = {
 	set_stream_settings: {
 		options: {
 			streamType: 'rtmp_custom' | 'rtmp_common' | 'whip_custom'
+			service: string
+			server: string
 			streamURL: string
 			streamKey: string
 			useAuth: boolean
@@ -181,9 +187,28 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 					default: 'rtmp_custom',
 					choices: [
 						{ id: 'rtmp_custom', label: 'Custom RTMP' },
-						{ id: 'rtmp_common', label: 'Common RTMP' },
+						{ id: 'rtmp_common', label: 'Preset Service' },
 						{ id: 'whip_custom', label: 'Custom WHIP' },
 					],
+				},
+				{
+					type: 'textinput',
+					label: 'Service',
+					id: 'service',
+					default: '',
+					useVariables: true,
+					description: 'The name as listed in OBS Settings → Stream. Leave empty to keep the current service.',
+					isVisibleExpression: `$(options:streamType) === 'rtmp_common'`,
+				},
+				{
+					type: 'textinput',
+					label: 'Server',
+					id: 'server',
+					default: '',
+					useVariables: true,
+					description:
+						'The ingest URL, or "auto" where the service supports it. After selecting a service in OBS, and clicking "OK", you can use Learn to copy both from OBS.',
+					isVisibleExpression: `$(options:streamType) === 'rtmp_common'`,
 				},
 				{
 					type: 'textinput',
@@ -235,6 +260,12 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 				},
 			],
 			callback: async (action) => {
+				// OBS rejects stream setting changes while live, and the failure would otherwise only reach the debug log.
+				if (self.states.streaming) {
+					logger.warn('Stream settings cannot be changed while streaming')
+					return
+				}
+
 				const streamType = action.options.streamType
 				const streamServiceSettings: Record<string, unknown> = {}
 
@@ -247,6 +278,9 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 						streamServiceSettings.password = action.options.password
 					}
 				} else if (streamType === 'rtmp_common') {
+					// OBS merges into the current settings when the type is unchanged, so empty fields keep their values.
+					if (action.options.service) streamServiceSettings.service = action.options.service
+					if (action.options.server) streamServiceSettings.server = action.options.server
 					streamServiceSettings.key = action.options.streamKey
 				} else if (streamType === 'whip_custom') {
 					streamServiceSettings.server = action.options.streamURL
@@ -260,6 +294,35 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 				})
 				void self.obs.getStreamStatus()
 				void self.obs.getStreamServiceSettings()
+			},
+			learn: async (_action, context) => {
+				const res = await self.obs.sendRequest('GetStreamServiceSettings')
+				if (context.signal.aborted || !res) return undefined
+				const settings = res.streamServiceSettings
+				const read = (key: string): string => utils.asString(settings?.[key]) ?? ''
+
+				switch (res.streamServiceType) {
+					case 'rtmp_common':
+						return {
+							streamType: 'rtmp_common',
+							service: read('service'),
+							server: read('server'),
+							streamKey: read('key'),
+						}
+					case 'rtmp_custom':
+						return {
+							streamType: 'rtmp_custom',
+							streamURL: read('server'),
+							streamKey: read('key'),
+							useAuth: settings?.use_auth === true,
+							username: read('username'),
+							password: read('password'),
+						}
+					case 'whip_custom':
+						return { streamType: 'whip_custom', streamURL: read('server'), bearerToken: read('bearer_token') }
+					default:
+						return undefined
+				}
 			},
 		},
 		// Replay Buffer

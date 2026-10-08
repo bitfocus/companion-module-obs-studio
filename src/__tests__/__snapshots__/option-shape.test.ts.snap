@@ -1307,7 +1307,7 @@ exports[`option shape > action options are unchanged 1`] = `
         },
         {
           "id": "rtmp_common",
-          "label": "Common RTMP",
+          "label": "Preset Service",
         },
         {
           "id": "whip_custom",
@@ -1319,6 +1319,24 @@ exports[`option shape > action options are unchanged 1`] = `
       "id": "streamType",
       "label": "Stream Type",
       "type": "dropdown",
+    },
+    {
+      "default": "",
+      "description": "The name as listed in OBS Settings → Stream. Leave empty to keep the current service.",
+      "id": "service",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_common'",
+      "label": "Service",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "description": "The ingest URL, or auto where the service supports it. Set it whenever the service changes, as OBS otherwise keeps the previous service’s server. Use Learn to copy both from OBS.",
+      "id": "server",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_common'",
+      "label": "Server",
+      "type": "textinput",
+      "useVariables": true,
     },
     {
       "default": "",

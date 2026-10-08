@@ -666,6 +666,19 @@ export default [
 				delete action.options.useVariable
 				delete action.options.variableValue
 				actionChanged = true
+			} else if (action.actionId === 'set_stream_settings') {
+				// v3's fixed service list had a "Custom" entry backed by a separate name field; the service is now
+				// one free-text field, and only a preset service uses it. v3 never sent a server, so it stays empty
+				// and OBS keeps its current one, as before.
+				const service =
+					getOpt(action.options, 'service') === 'Custom' ? action.options.serviceName : action.options.service
+				action.options.service =
+					getOpt(action.options, 'streamType') === 'rtmp_common' && service
+						? service
+						: { isExpression: false, value: '' }
+				setOpt(action.options, 'server', '')
+				delete action.options.serviceName
+				actionChanged = true
 			} else if (action.actionId === 'open_projector') {
 				// v3 shared one source dropdown between source and scene projectors.
 				if (getOpt(action.options, 'type') === 'Scene' && action.options.scene === undefined) {

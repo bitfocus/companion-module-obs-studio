@@ -394,18 +394,48 @@ describe('v4_0_0 action consolidation', () => {
 			streamType: 'rtmp_custom',
 			streamURL: 'rtmp://example',
 			streamKey: 'key',
+			service: 'Twitch',
+			serviceName: 'Twitch',
 			streamAuth: true,
 			streamUserName: 'user',
 			streamPassword: 'pass',
 		})
 		expect(updated.options).toEqual({
 			streamType: 'rtmp_custom',
+			service: '',
+			server: '',
 			streamURL: 'rtmp://example',
 			streamKey: 'key',
 			useAuth: true,
 			username: 'user',
 			password: 'pass',
 		})
+	})
+
+	test('carries a preset stream service across, leaving the server to OBS', () => {
+		const updated = upgradeAction('set_stream_settings', {
+			streamType: 'rtmp_common',
+			service: 'YouTube - RTMPS',
+			serviceName: 'Twitch',
+			streamKey: 'key',
+		})
+		expect(updated.options).toEqual({
+			streamType: 'rtmp_common',
+			service: 'YouTube - RTMPS',
+			server: '',
+			streamKey: 'key',
+		})
+	})
+
+	test('uses the typed name for a "Custom" preset stream service', () => {
+		const updated = upgradeAction('set_stream_settings', {
+			streamType: 'rtmp_common',
+			service: 'Custom',
+			serviceName: 'Kick',
+			streamKey: 'key',
+		})
+		expect(updated.options).toMatchObject({ service: 'Kick', server: '' })
+		expect(updated.options.serviceName).toBeUndefined()
 	})
 
 	test('leaves an action outside the migrated families untouched', () => {
