@@ -1331,7 +1331,7 @@ exports[`option shape > action options are unchanged 1`] = `
     },
     {
       "default": "",
-      "description": "The ingest URL, or auto where the service supports it. Set it whenever the service changes, as OBS otherwise keeps the previous service’s server. Use Learn to copy both from OBS.",
+      "description": "The ingest URL, or "auto" where the service supports it. After selecting a service in OBS, and clicking "OK", you can use Learn to copy both from OBS.",
       "id": "server",
       "isVisibleExpression": "$(options:streamType) === 'rtmp_common'",
       "label": "Server",
