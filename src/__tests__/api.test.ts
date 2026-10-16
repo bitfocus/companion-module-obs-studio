@@ -115,3 +115,50 @@ describe('OBSApi.reconcileMediaPoll', () => {
 		expect(self.mediaPoll).toBeDefined()
 	})
 })
+
+describe('OBSApi.updateAudioPeak', () => {
+	let self: MockInstance
+
+	const meter = (inputLevelsMul: Array<[number, number, number]>): number | undefined => {
+		self.obs.updateAudioPeak({ inputs: [{ inputUuid: 'Mic', inputLevelsMul }] })
+		return self.states.sources.get('Mic')!.peak
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		self.obs.addSource('Mic', 'Mic', 'wasapi_input_capture')
+	})
+
+	test('reads a stereo source with signal only on the right channel', () => {
+		expect(
+			meter([
+				[0, 0, 0],
+				[0.5, 1, 1],
+			]),
+		).toBe(0)
+	})
+
+	test('reads the loudest channel of a multichannel source', () => {
+		expect(
+			meter([
+				[0, 0.1, 0.1],
+				[0, 0, 0],
+				[0, 0, 0],
+				[0.4, 0.5, 0.5],
+			]),
+		).toBe(-6)
+	})
+
+	test('floors a silent source to -100', () => {
+		expect(
+			meter([
+				[0, 0, 0],
+				[0, 0, 0],
+			]),
+		).toBe(-100)
+	})
+
+	test('floors a source reporting no channels to -100', () => {
+		expect(meter([])).toBe(-100)
+	})
+})

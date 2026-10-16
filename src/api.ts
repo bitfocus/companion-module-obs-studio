@@ -1426,11 +1426,11 @@ export class OBSApi {
 	}): void {
 		let changed = false
 		data.inputs.forEach((input) => {
-			const channel = input.inputLevelsMul[0]
+			// Loudest channel: a source is peaking if any of its channels is.
+			const channelPeak = Math.max(0, ...input.inputLevelsMul.map((channel) => channel?.[1] ?? 0))
 			// Floor silent inputs to -100 so quiet sources reset correctly.
 			let dbPeak = -100
-			const channelPeak = channel?.[1]
-			if (channelPeak && channelPeak > 0) {
+			if (channelPeak > 0) {
 				const computed = Math.round(20.0 * Math.log10(channelPeak))
 				if (isFinite(computed)) dbPeak = computed
 			}
