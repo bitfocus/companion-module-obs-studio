@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> **Note:** 4.0.0 is a major rewrite focused on performance and stability. It updates the underlying
-> module API to v2.1, which requires Companion v5.0.0 or newer.
+> **Note:** This release is a major overhaul focused on performance, stability, and modernized core APIs.
+>
+> Due to underlying API updates, this version requires the following minimum software releases:
+>
+> - OBS Studio: v32.1 or newer
+> - Bitfocus Buttons: v1.8.0 or newer
+> - Bitfocus Companion: v5.0.0 or newer
 
 ### Added
 

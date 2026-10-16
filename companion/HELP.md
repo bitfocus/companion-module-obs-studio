@@ -3,8 +3,11 @@
 Control OBS Studio from Bitfocus Buttons or Bitfocus Companion using OBS's built-in WebSocket
 server.
 
-> **Requirements:** Version 4 of this module requires Buttons 1.8 or newer or Companion 5.0 or
-> newer. OBS Studio 32.1 or newer is recommended.
+## Requirements
+
+- OBS Studio: v32.1 or newer
+- Bitfocus Buttons: v1.8.0 or newer
+- Bitfocus Companion: v5.0.0 or newer
 
 ## Connect to OBS
 
