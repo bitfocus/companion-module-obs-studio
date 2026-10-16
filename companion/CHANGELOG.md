@@ -76,6 +76,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The simple streaming output appeared as an Output target, duplicating the dedicated streaming actions
 - Recording status briefly showed "Unknown" when resuming a paused recording
 - Cached source filter settings did not refresh when changed in OBS or by another client
+- `recording_file_name` and `replay_buffer_path` reset to "None" whenever a scene or source was added,
+  removed or renamed
+- "Audio - Peaking" never triggered at full scale (0 dB), and only read a source's first channel, so a
+  source with signal only on the right channel, or on a later channel of a multichannel input, never
+  registered
+- "Media - Set Source File" did nothing on a Media Source that had never had a file chosen
+- Pressing a Quick Transition again just as the previous one finished could leave OBS on the quick
+  transition instead of restoring the original
+- "Set Text Properties" wrote every current setting back to OBS along with the chosen ones, which could
+  revert a text change made moments earlier and stored the source's defaults as explicit settings
+- `kbits_per_sec` showed a spike after reconnecting during a live stream, and dips when the stream
+  status was refreshed outside its regular poll
+- "Set Transform Properties" sent non-numeric values to OBS; they are now skipped with a warning
+- "Take Screenshot" saved to the root of the drive when the recording directory was not known; it now
+  asks OBS for the directory, and saves nothing if there is none
 
 ## [3.15.3] - 2026-01-11
 
