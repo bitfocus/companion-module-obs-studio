@@ -4,6 +4,7 @@ import type OBSInstance from '../main.js'
 import { OBSMediaStatus, OBSMediaInputAction, MEDIA_CONTROL_ACTIONS, type MediaControlAction } from '../types.js'
 import * as utils from '../utils.js'
 import { choiceDropdown, modeDropdown, modeNumber } from './options.js'
+import { INPUT_KIND_FFMPEG_SOURCE } from '../constants.js'
 
 const logger = createModuleLogger('Actions/Media')
 
@@ -205,22 +206,16 @@ export function getMediaActions(self: OBSInstance): CompanionActionDefinitions<M
 					logger.warn('No media source is currently playing, so the action was skipped')
 					return
 				}
-				const mediaFilePath = action.options.path
-				try {
-					const input = await self.obs.sendRequest('GetInputSettings', {
-						inputName: mediaName,
-					})
-					if (input?.inputSettings?.local_file !== undefined) {
-						await self.obs.sendRequest('SetInputSettings', {
-							inputName: mediaName,
-							inputSettings: {
-								local_file: mediaFilePath,
-							},
-						})
-					}
-				} catch (e) {
-					logger.error(`Set Media Source File Error: ${utils.describeError(e)}`)
+				// Checked against the cached kind: GetInputSettings omits defaults, so a source that never had a
+				// file chosen reports no local_file at all.
+				if (self.obsState.findSourceByName(mediaName)?.inputKind !== INPUT_KIND_FFMPEG_SOURCE) {
+					logger.warn(`${mediaName} is not a Media Source, so its file cannot be set`)
+					return
 				}
+				await self.obs.sendRequest('SetInputSettings', {
+					inputName: mediaName,
+					inputSettings: { local_file: action.options.path },
+				})
 			},
 			learn: (action) => {
 				const [mediaName] = resolveMediaTargets(self, action.options)

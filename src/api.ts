@@ -37,6 +37,7 @@ import {
 	INPUT_KIND_IMAGE_SOURCE,
 	POLL_INTERVALS,
 	FADE_STEP_MS,
+	SLEEP_MAX_MS,
 	isMediaInputKind,
 	isSelectableOutput,
 	isTextInputKind,
@@ -74,6 +75,8 @@ export class OBSApi {
 
 	// Source names with a volume fade batch currently executing in OBS.
 	private fadesInFlight = new Set<string>()
+	// Whether a quick transition batch (transition, wait, restore) is currently executing in OBS.
+	private quickTransitionInFlight = false
 
 	// Subscription tracking for output-status polling (keyed by feedback ID).
 	private outputStatusSubscribers = new Set<string>()
@@ -1133,6 +1136,45 @@ export class OBSApi {
 			await this.sendBatch(fadeBatch)
 		} finally {
 			this.fadesInFlight.delete(sourceName)
+		}
+	}
+
+	/**
+	 * Runs one studio-mode transition with the given type and duration, then restores the previous ones, as a
+	 * single serial batch whose Sleep holds the restore until the transition has finished.
+	 *
+	 * Guarded by the batch itself rather than `transitionActive`: SceneTransitionEnded clears that before the
+	 * restore runs, while the current transition still reads as the quick one, so a press in that window would
+	 * capture the quick transition as the one to restore.
+	 */
+	public async quickTransition(transitionName: string, duration: number): Promise<void> {
+		if (this.quickTransitionInFlight) {
+			logger.debug(`Ignoring quick transition to ${transitionName}, one is already in progress`)
+			return
+		}
+
+		this.quickTransitionInFlight = true
+		try {
+			await this.sendBatch([
+				{ requestType: 'SetCurrentSceneTransition', requestData: { transitionName } },
+				{ requestType: 'SetCurrentSceneTransitionDuration', requestData: { transitionDuration: duration } },
+				{ requestType: 'TriggerStudioModeTransition' },
+				{
+					requestType: 'Sleep',
+					// sleepMillis is capped by the protocol; exceeding it fails the Sleep and reverts early.
+					requestData: { sleepMillis: utils.clamp(duration + 100, 0, SLEEP_MAX_MS) },
+				},
+				{
+					requestType: 'SetCurrentSceneTransition',
+					requestData: { transitionName: this.self.states.currentTransition },
+				},
+				{
+					requestType: 'SetCurrentSceneTransitionDuration',
+					requestData: { transitionDuration: this.self.states.transitionDuration },
+				},
+			])
+		} finally {
+			this.quickTransitionInFlight = false
 		}
 	}
 

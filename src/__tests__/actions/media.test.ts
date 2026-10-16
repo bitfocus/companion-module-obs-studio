@@ -136,3 +136,42 @@ describe('resolveMediaTargets', () => {
 		])
 	})
 })
+
+describe('updateMediaLocalFile', () => {
+	let self: MockInstance
+
+	const setFile = async (source: string) => {
+		const actions = looseActions(getMediaActions(self))
+		await actions['updateMediaLocalFile'].callback(
+			actionEvent('updateMediaLocalFile', { target: 'source', source, path: '/clips/intro.mp4' }),
+			new MockContext(),
+		)
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+	})
+
+	test('sets the file of a media source that has never had one', async () => {
+		// GetInputSettings omits defaults, so such a source reports no local_file at all.
+		seedSource(self, 'Clip', 'Clip', 'ffmpeg_source')
+
+		await setFile('Clip')
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputSettings', {
+			inputName: 'Clip',
+			inputSettings: { local_file: '/clips/intro.mp4' },
+		})
+	})
+
+	test.each([
+		['a VLC source, which has a playlist instead', 'vlc_source'],
+		['a non-media input', 'image_source'],
+	])('leaves %s alone', async (_label, inputKind) => {
+		seedSource(self, 'Other', 'Other', inputKind)
+
+		await setFile('Other')
+
+		expect(self.socket.call).not.toHaveBeenCalled()
+	})
+})

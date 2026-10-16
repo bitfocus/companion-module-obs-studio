@@ -131,6 +131,50 @@ describe('quick_transition Sleep', () => {
 		const sleep = lastBatch(self.socket).find((r) => r.requestType === 'Sleep')
 		expect(sleep!.requestData).toEqual({ sleepMillis: SLEEP_MAX_MS })
 	})
+
+	test('ignores a second press while the first batch is still restoring', async () => {
+		self.states.currentTransition = 'Cut'
+		self.states.transitionDuration = 0
+		let finishFirst!: () => void
+		self.socket.callBatch.mockImplementationOnce(
+			async () =>
+				new Promise((resolve) => {
+					finishFirst = () => resolve([])
+				}),
+		)
+		const press = async () =>
+			actions['quick_transition'].callback(
+				actionEvent('quick_transition', { transition: 'Fade', customDuration: true, transition_time: 300 }),
+				new MockContext(),
+			)
+
+		const first = press()
+		// What OBS reports once the transition itself has ended, before the batch's restore has run.
+		self.states.currentTransition = 'Fade'
+		self.states.transitionActive = false
+		await press()
+		finishFirst()
+		await first
+
+		expect(self.socket.callBatch).toHaveBeenCalledTimes(1)
+		expect(lastBatch(self.socket).slice(-2)).toEqual([
+			{ requestType: 'SetCurrentSceneTransition', requestData: { transitionName: 'Cut' } },
+			{ requestType: 'SetCurrentSceneTransitionDuration', requestData: { transitionDuration: 0 } },
+		])
+	})
+
+	test('runs again once the previous batch has finished', async () => {
+		const press = async () =>
+			actions['quick_transition'].callback(
+				actionEvent('quick_transition', { transition: 'Fade', customDuration: true, transition_time: 300 }),
+				new MockContext(),
+			)
+
+		await press()
+		await press()
+
+		expect(self.socket.callBatch).toHaveBeenCalledTimes(2)
+	})
 })
 
 describe('input default settings', () => {

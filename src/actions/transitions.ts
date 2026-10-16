@@ -1,7 +1,5 @@
-import { clamp } from '../utils.js'
 import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
-import { SLEEP_MAX_MS } from '../constants.js'
 import { choiceDropdown, modeDropdown, modeNumber, resolveSetAdjust, visibleWhenMode } from './options.js'
 
 const logger = createModuleLogger('Actions/Transitions')
@@ -57,9 +55,6 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 				if (action.options.transition === 'Default' && !action.options.customDuration) {
 					await self.obs.sendRequest('TriggerStudioModeTransition')
 				} else {
-					const revertTransition = self.states.currentTransition ?? 'Cut'
-					const revertTransitionDuration =
-						self.states.transitionDuration !== undefined ? Number(self.states.transitionDuration) : 0
 					let duration
 					if (action.options.customDuration) {
 						duration = action.options.transition_time
@@ -70,38 +65,7 @@ export function getTransitionActions(self: OBSInstance): CompanionActionDefiniti
 								? Number(self.states.transitionDuration)
 								: 500)
 					}
-					if (!self.states.transitionActive) {
-						self.states.transitionActive = true
-						await self.obs.sendBatch([
-							{
-								requestType: 'SetCurrentSceneTransition',
-								requestData: { transitionName: action.options.transition },
-							},
-							{
-								requestType: 'SetCurrentSceneTransitionDuration',
-								requestData: { transitionDuration: duration },
-							},
-							{
-								requestType: 'TriggerStudioModeTransition',
-							},
-							{
-								requestType: 'Sleep',
-								// sleepMillis is capped by the protocol; exceeding it fails the Sleep and reverts early.
-								requestData: { sleepMillis: clamp(duration + 100, 0, SLEEP_MAX_MS) },
-							},
-							{
-								requestType: 'SetCurrentSceneTransition',
-								requestData: { transitionName: revertTransition },
-							},
-							{
-								requestType: 'SetCurrentSceneTransitionDuration',
-								requestData: { transitionDuration: revertTransitionDuration },
-							},
-						])
-						setTimeout(() => {
-							self.states.transitionActive = false
-						}, duration + 50)
-					}
+					await self.obs.quickTransition(action.options.transition, duration)
 				}
 			},
 		},
