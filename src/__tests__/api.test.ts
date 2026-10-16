@@ -55,6 +55,18 @@ describe('OBSApi.reconcileMediaPoll', () => {
 		expect(self.mediaPoll).toBeDefined()
 	})
 
+	test('starts the poll once a source first seen without a kind turns out to be media', () => {
+		self.obs.addSource('Clip', 'Clip')
+		self.obs.reconcileMediaPoll()
+		expect(self.mediaPoll).toBeUndefined()
+
+		self.obs.addSource('Clip', 'Clip', 'ffmpeg_source')
+		self.obs.reconcileMediaPoll()
+
+		expect(self.obsState.mediaSourceUuids).toEqual(['Clip'])
+		expect(self.mediaPoll).toBeDefined()
+	})
+
 	test('does not start the poll for a collection with no media sources', () => {
 		self.obs.addSource('Mic', 'Mic', 'wasapi_input_capture')
 

@@ -586,6 +586,26 @@ describe('target dropdowns', () => {
 			expect(call[1]).toMatchObject({ imageFilePath: 'C:/shots/Shot_12-34-56.png' })
 		})
 
+		test('fetches the record directory when it is not known yet', async () => {
+			self.socket.call.mockImplementation(async (requestType: string) =>
+				requestType === 'GetRecordDirectory' ? { recordDirectory: '/Users/test/Movies' } : {},
+			)
+
+			await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot ' })
+
+			const save = self.socket.call.mock.calls.find(([requestType]) => requestType === 'SaveSourceScreenshot')
+			expect(save![1].imageFilePath).toMatch(/^\/Users\/test\/Movies\/Shot \d+\.png$/)
+		})
+
+		test('saves nothing rather than writing to the drive root when the record directory is unknown', async () => {
+			self.socket.call.mockResolvedValue({})
+
+			await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot ' })
+
+			const requestTypes = self.socket.call.mock.calls.map(([requestType]) => requestType)
+			expect(requestTypes).not.toContain('SaveSourceScreenshot')
+		})
+
 		test('a prefix has its colons replaced in the default path', async () => {
 			self.states.recordDirectory = 'C:/Videos'
 			const call = await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot 12:34 ' })
@@ -594,7 +614,7 @@ describe('target dropdowns', () => {
 	})
 
 	describe('source_properties', () => {
-		const transform = async (target: string, scene: string) => {
+		const transform = async (target: string, scene: string, values: Record<string, unknown> = {}) => {
 			const actions = looseActions(getSourceActions(self))
 			await actions['source_properties'].callback(
 				actionEvent('source_properties', {
@@ -607,6 +627,7 @@ describe('target dropdowns', () => {
 					scaleX: '',
 					scaleY: '',
 					rotation: '',
+					...values,
 				}),
 				new MockContext(),
 			)
@@ -619,6 +640,26 @@ describe('target dropdowns', () => {
 
 		test('scene uses the named scene', async () => {
 			expect((await transform('scene', 'Scene B'))?.[0].requestData.sceneUuid).toBe('scene-b')
+		})
+
+		test('skips a non-numeric value but still sends the valid ones', async () => {
+			const batch = await transform('scene', 'Scene B', {
+				props: ['positionX', 'rotation'],
+				positionX: 'abc',
+				rotation: '45',
+			})
+
+			expect(batch?.[0].requestData.sceneItemTransform).toEqual({ rotation: 45 })
+		})
+
+		test('sends nothing when no selected value is a number', async () => {
+			expect(await transform('scene', 'Scene B', { positionX: 'abc' })).toBeUndefined()
+		})
+
+		test('keeps 0, which is a valid position', async () => {
+			const batch = await transform('scene', 'Scene B', { positionX: '0' })
+
+			expect(batch?.[0].requestData.sceneItemTransform).toEqual({ positionX: 0 })
 		})
 
 		describe('learn', () => {

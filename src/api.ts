@@ -399,7 +399,11 @@ export class OBSApi {
 				source.validName = utils.validName(sourceName)
 				this.self.obsState.invalidateSourceNameIndex()
 			}
-			if (inputKind && !source.inputKind) source.inputKind = inputKind
+			if (inputKind && !source.inputKind) {
+				source.inputKind = inputKind
+				// A source first seen without its kind can turn out to be a media source.
+				this.self.obsState.invalidateMediaSourceUuids()
+			}
 			if (isGroup) source.isGroup = true
 		}
 		return source
