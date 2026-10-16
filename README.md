@@ -3,12 +3,13 @@
 Control OBS Studio from [Bitfocus Buttons](https://bitfocus.io/buttons) or [Bitfocus Companion](https://bitfocus.io/companion). Switch scenes, control sources and audio, manage recording and streaming, and send custom WebSocket commands.
 
 > [!IMPORTANT]
-> Version 4 of this module requires:
+> This release is a major overhaul focused on performance, stability, and modernized core APIs.
 >
-> - Bitfocus Buttons 1.8 or newer
-> - Companion 5.0 or newer
+> Due to underlying API updates, this version requires the following minimum software releases:
 >
-> OBS Studio 32.1 or newer is recommended.
+> - OBS Studio: v32.1 or newer
+> - Bitfocus Buttons: v1.8.0 or newer
+> - Bitfocus Companion: v5.0.0 or newer
 
 ## Quick start
 
