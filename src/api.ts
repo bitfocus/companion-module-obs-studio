@@ -323,21 +323,13 @@ export class OBSApi {
 		requestData?: OBSRequestTypes[T],
 	): Promise<OBSResponseTypes[T] | undefined> {
 		const data = await this.sendRequest(requestType, requestData)
-		if (data) {
-			logger.debug(
-				`Custom Command Response: Request ${requestType} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
-			)
-			this.self.setVariableValues({
-				custom_command_type: requestType,
-				custom_command_request: requestData ? JSON.stringify(requestData) : '',
-				custom_command_response: JSON.stringify(data),
-			})
-		} else {
-			this.self.setVariableValues({
-				custom_command_request: '',
-				custom_command_response: '',
-			})
-		}
+		if (data) logger.debug(`Custom Command Response: Request ${requestType} replied with data ${JSON.stringify(data)}`)
+		// All three describe the latest command, so a failed one still replaces the previous command's type.
+		this.self.setVariableValues({
+			custom_command_type: requestType,
+			custom_command_request: requestData ? JSON.stringify(requestData) : '',
+			custom_command_response: data ? JSON.stringify(data) : '',
+		})
 		return data
 	}
 
@@ -1504,10 +1496,6 @@ export class OBSApi {
 		}
 	}
 
-	/**
-	 * The container whose items an "all sources" action covers: a named group, or a scene. Group names
-	 * are globally unique in OBS and a group's items live under its own UUID, so a group needs no scene.
-	 */
 	/**
 	 * The containers an action covers. Everything but `allScenes` resolves to a single container; a
 	 * group needs no scene, since group names are globally unique and a group's items live under its

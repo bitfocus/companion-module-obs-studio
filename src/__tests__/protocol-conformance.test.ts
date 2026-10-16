@@ -235,16 +235,23 @@ describe('custom_command variables', () => {
 		})
 	})
 
-	test('clears the request and response variables when the request fails', async () => {
-		self.socket.call.mockRejectedValue(new Error('nope'))
-
+	test('describes a failed request as the latest command, with an empty response', async () => {
+		self.socket.call.mockResolvedValueOnce({ sceneName: 'Scene A' })
 		await actions['custom_command'].callback(
 			actionEvent('custom_command', { command: 'GetCurrentProgramScene', arg: '' }),
 			new MockContext(),
 		)
+		self.socket.call.mockRejectedValue(new Error('nope'))
 
-		expect(self.setVariableValues).toHaveBeenCalledWith({
-			custom_command_request: '',
+		await actions['custom_command'].callback(
+			actionEvent('custom_command', { command: 'GetSceneItemList', arg: '{"sceneName":"Scene A"}' }),
+			new MockContext(),
+		)
+
+		// The type must not still name the previous, successful command.
+		expect(self.setVariableValues).toHaveBeenLastCalledWith({
+			custom_command_type: 'GetSceneItemList',
+			custom_command_request: '{"sceneName":"Scene A"}',
 			custom_command_response: '',
 		})
 	})
