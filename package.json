@@ -8,13 +8,11 @@
 		"format": "prettier -w .",
 		"format:check": "prettier --check .",
 		"package": "run build && companion-module-build",
-		"build": "rimraf dist && run build:main",
-		"check": "run format && run lint && run test",
-		"build:main": "tsc -p tsconfig.build.json",
+		"build": "rimraf dist && tsc -p tsconfig.build.json",
+		"check": "run format:check && run lint && run check-types && run test",
 		"check-types": "tsc -p tsconfig.json --noEmit",
 		"dev": "tsc -p tsconfig.build.json --watch",
-		"lint:raw": "eslint",
-		"lint": "run lint:raw .",
+		"lint": "eslint .",
 		"test": "vitest --run"
 	},
 	"license": "MIT",
@@ -49,7 +47,7 @@
 			"prettier --write"
 		],
 		"*.{ts,tsx,js,jsx}": [
-			"yarn lint:raw --fix"
+			"eslint --fix"
 		]
 	},
 	"packageManager": "yarn@4.18.1"
