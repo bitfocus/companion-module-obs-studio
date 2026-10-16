@@ -5,9 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
-## [Unreleased]
+## [4.0.0] - 2026-10-16
 
-> **Note:** This release is a major overhaul focused on performance, stability, and modernized core APIs.
+> [!IMPORTANT]
+> This release is a major overhaul focused on performance, stability, and modernized core APIs.
 >
 > Due to underlying API updates, this version requires the following minimum software releases:
 >
@@ -426,7 +427,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Releases prior to 2.0.0 are not documented here._
 
-[Unreleased]: https://github.com/bitfocus/companion-module-obs-studio/compare/v3.15.3...HEAD
+[4.0.0]: https://github.com/bitfocus/companion-module-obs-studio/compare/v3.15.3...v4.0.0
 [3.15.3]: https://github.com/bitfocus/companion-module-obs-studio/compare/v3.15.2...v3.15.3
 [3.15.2]: https://github.com/bitfocus/companion-module-obs-studio/compare/v3.15.1...v3.15.2
 [3.15.1]: https://github.com/bitfocus/companion-module-obs-studio/compare/v3.15.0...v3.15.1
