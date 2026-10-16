@@ -57,21 +57,11 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 
 	// Companion configuration and lifecycle
 	async init(config: ModuleConfig, _isFirstInit: boolean, secrets: ModuleSecrets): Promise<void> {
-		this.updateStatus(InstanceStatus.Connecting)
 		this.config = config
 		this.secrets = secrets
 		this.obs = new OBSApi(this)
 		this.obsState = new OBSState()
-
-		if (this.config?.host && this.config?.port) {
-			void this.obs.connectOBS()
-		} else if (this.config?.host && !this.config?.port) {
-			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server port')
-		} else if (!this.config?.host && this.config?.port) {
-			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server IP address or hostname')
-		} else {
-			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server connection info')
-		}
+		this.connect()
 	}
 
 	getConfigFields(): SomeCompanionConfigField[] {
@@ -84,7 +74,23 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 		await this.obs.disconnectOBS()
 		this.config = config
 		this.secrets = secrets
-		void this.init(config, false, secrets)
+		// The OBSApi is kept: it holds the feedback subscriptions (meters, output status), and Companion
+		// does not re-run feedback callbacks for a config change, so a fresh one would never relearn them.
+		this.obsState = new OBSState()
+		this.connect()
+	}
+
+	private connect(): void {
+		this.updateStatus(InstanceStatus.Connecting)
+		if (this.config?.host && this.config?.port) {
+			void this.obs.connectOBS()
+		} else if (this.config?.host && !this.config?.port) {
+			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server port')
+		} else if (!this.config?.host && this.config?.port) {
+			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server IP address or hostname')
+		} else {
+			this.updateStatus(InstanceStatus.BadConfig, 'Missing WebSocket Server connection info')
+		}
 	}
 
 	async destroy(): Promise<void> {
@@ -104,10 +110,10 @@ export default class OBSInstance extends InstanceBase<OBSInstanceTypes> {
 
 	initVariables(): void {
 		// Redefining variables drops the host's values for them, so the next write must republish in full.
-		this.variablePublisher.reset()
+		const previous = this.variablePublisher.reset()
 		const variables = getVariables.call(this)
 		this.setVariableDefinitions(variables)
-		updateVariableValues.call(this)
+		updateVariableValues.call(this, previous)
 	}
 
 	initFeedbacks(): void {

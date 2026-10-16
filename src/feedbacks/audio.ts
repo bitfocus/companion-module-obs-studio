@@ -119,7 +119,7 @@ export function getAudioFeedbacks(self: OBSInstance): CompanionFeedbackDefinitio
 				self.obs.addMeterSubscriber(feedback.id)
 				const sourceName = feedback.options.source
 				const source = self.obsState.findSourceByName(sourceName)
-				const peaking = !!source?.peak && source.peak > feedback.options.threshold
+				const peaking = source?.peak !== undefined && source.peak > feedback.options.threshold
 				// Feedbacks saved before the option existed hold for 0ms.
 				return self.obs.evaluatePeakHold(feedback.id, peaking, Number(feedback.options.peakHold) || 0)
 			},

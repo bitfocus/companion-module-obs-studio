@@ -62,4 +62,13 @@ describe('VariablePublisher', () => {
 
 		expect(publisher.publishVariables({ fps: 30, cpu_usage: 3.5 })).toEqual({ fps: 30, cpu_usage: 3.5 })
 	})
+
+	test('reset hands back what had been published', () => {
+		publisher.publishVariables({ fps: 30, recording_file_name: 'take-1' })
+
+		const previous = publisher.reset()
+
+		expect(Object.fromEntries(previous)).toEqual({ fps: 30, recording_file_name: 'take-1' })
+		expect(publisher.reset().size).toBe(0)
+	})
 })

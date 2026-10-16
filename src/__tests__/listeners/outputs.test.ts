@@ -43,6 +43,23 @@ describe('RecordStateChanged recorder mapping', () => {
 		expect(self.sendToActionRecorder).toHaveBeenCalledWith({ actionId: 'recording', options: { action: 'stop' } })
 	})
 
+	test.each(['OBS_WEBSOCKET_OUTPUT_STARTING', 'OBS_WEBSOCKET_OUTPUT_STOPPING'])(
+		'does not record the transitional %s state',
+		(outputState) => {
+			// Both report outputActive: false, so recording them read STARTING as a stop.
+			emit(false, outputState)
+
+			expect(self.sendToActionRecorder).not.toHaveBeenCalled()
+		},
+	)
+
+	test('records one start for a full start sequence', () => {
+		emit(false, 'OBS_WEBSOCKET_OUTPUT_STARTING')
+		emit(true, 'OBS_WEBSOCKET_OUTPUT_STARTED')
+
+		expect(self.sendToActionRecorder.mock.calls).toEqual([[{ actionId: 'recording', options: { action: 'start' } }]])
+	})
+
 	test('publishes the file name from the output path, extension stripped', () => {
 		emit(false, 'OBS_WEBSOCKET_OUTPUT_STOPPED', '/Users/test/Movies/2026-08-24 15-00-00.mkv')
 
@@ -88,15 +105,17 @@ describe('StreamStateChanged recorder mapping', () => {
 		expect(self.sendToActionRecorder).toHaveBeenCalledWith({ actionId: 'streaming', options: { action: 'stop' } })
 	})
 
-	test.each(['OBS_WEBSOCKET_OUTPUT_RECONNECTING', 'OBS_WEBSOCKET_OUTPUT_RECONNECTED'])(
-		'does not record %s as a user action',
-		(outputState) => {
-			// A dropped connection recovering on its own is not something the user did.
-			self.socket.emit('StreamStateChanged', { outputActive: true, outputState })
+	test.each([
+		'OBS_WEBSOCKET_OUTPUT_STARTING',
+		'OBS_WEBSOCKET_OUTPUT_STOPPING',
+		'OBS_WEBSOCKET_OUTPUT_RECONNECTING',
+		'OBS_WEBSOCKET_OUTPUT_RECONNECTED',
+	])('does not record %s as a user action', (outputState) => {
+		// Transitional states precede a settled one, and a reconnect is not something the user did.
+		self.socket.emit('StreamStateChanged', { outputActive: true, outputState })
 
-			expect(self.sendToActionRecorder).not.toHaveBeenCalled()
-		},
-	)
+		expect(self.sendToActionRecorder).not.toHaveBeenCalled()
+	})
 
 	test('clears the stream timecode variables when the stream stops', () => {
 		self.socket.emit('StreamStateChanged', { outputActive: false, outputState: 'OBS_WEBSOCKET_OUTPUT_STOPPED' })
@@ -126,6 +145,13 @@ describe('replay buffer and virtual camera listeners', () => {
 			actionId: 'replay_buffer',
 			options: { action: 'start' },
 		})
+	})
+
+	test('ReplayBufferStateChanged does not record the transitional states', () => {
+		self.socket.emit('ReplayBufferStateChanged', { outputActive: false, outputState: 'OBS_WEBSOCKET_OUTPUT_STARTING' })
+		self.socket.emit('ReplayBufferStateChanged', { outputActive: false, outputState: 'OBS_WEBSOCKET_OUTPUT_STOPPING' })
+
+		expect(self.sendToActionRecorder).not.toHaveBeenCalled()
 	})
 
 	test('ReplayBufferSaved publishes the saved path', () => {

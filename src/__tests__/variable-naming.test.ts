@@ -52,7 +52,7 @@ describe('variable names never contain a source UUID', () => {
 	})
 
 	test('the bulk variable publish uses names', () => {
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 
 		expect(publishedNames(self).filter((name) => name.includes(UUID))).toEqual([])
 	})

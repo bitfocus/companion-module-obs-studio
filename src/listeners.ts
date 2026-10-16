@@ -449,6 +449,17 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('SceneItemTransformChanged', () => {})
 }
 
+/**
+ * The recorded action for an output state change, if it is one. Only the settled states count: STARTING and
+ * STOPPING report `outputActive: false` and precede the state they lead to, and a stream reconnecting on its
+ * own is not something the user did.
+ */
+function settledOutputAction(outputState: string): 'start' | 'stop' | undefined {
+	if (outputState === (OBSOutputState.Started as string)) return 'start'
+	if (outputState === (OBSOutputState.Stopped as string)) return 'stop'
+	return undefined
+}
+
 // Output Listeners
 function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 	obs.on('StreamStateChanged', (data) => {
@@ -468,15 +479,10 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				stream_timecode_ss: blank.ss,
 			})
 		}
-		// Skip recording reconnect transitions as start/stop actions.
-		const isReconnectTransition =
-			outputState === OBSStreamingState.Reconnecting || outputState === OBSStreamingState.Reconnected
-		if (!isReconnectTransition) {
-			self.sendToActionRecorder({ actionId: 'streaming', options: { action: data.outputActive ? 'start' : 'stop' } })
-		}
+		const action = settledOutputAction(outputState)
+		if (action) self.sendToActionRecorder({ actionId: 'streaming', options: { action } })
 	})
 	obs.on('RecordStateChanged', (data) => {
-		const previousRecordingState = self.states.recording
 		// Narrowed once, as the streaming handler above does — obs-websocket types this as a string.
 		const outputState = data.outputState as OBSOutputState
 		// Normalize a resume back to plain Recording; the module has no separate resumed state.
@@ -492,24 +498,20 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		// RecordStateChanged carries no timecode; pass none so the handler takes its reset path.
 		self.obs.updateRecordingTimecode(undefined)
 
-		if (data.outputActive && previousRecordingState === OBSRecordingState.Paused) {
-			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'resume' } })
-		} else if (data.outputActive) {
-			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'start' } })
-		} else if (outputState === OBSOutputState.Paused) {
-			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'pause' } })
-		} else {
-			self.sendToActionRecorder({ actionId: 'recording', options: { action: 'stop' } })
-		}
+		const action =
+			outputState === OBSOutputState.Resumed
+				? 'resume'
+				: outputState === OBSOutputState.Paused
+					? 'pause'
+					: settledOutputAction(outputState)
+		if (action) self.sendToActionRecorder({ actionId: 'recording', options: { action } })
 	})
 	obs.on('ReplayBufferStateChanged', (data) => {
 		self.states.replayBuffer = data.outputActive
 		self.checkFeedbacks('replayBufferActive')
 		self.setVariableValues({ replay_buffer_active: self.states.replayBuffer })
-		self.sendToActionRecorder({
-			actionId: 'replay_buffer',
-			options: { action: data.outputActive ? 'start' : 'stop' },
-		})
+		const action = settledOutputAction(data.outputState)
+		if (action) self.sendToActionRecorder({ actionId: 'replay_buffer', options: { action } })
 	})
 	obs.on('RecordFileChanged', (data) => {
 		if (data.newOutputPath) {
@@ -523,10 +525,8 @@ function setupOutputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			self.checkFeedbacks('output_active')
 		}
 		self.setVariableValues({ virtualcam_active: data.outputActive })
-		self.sendToActionRecorder({
-			actionId: 'output',
-			options: { action: data.outputActive ? 'start' : 'stop', output: VIRTUALCAM_OUTPUT_NAME },
-		})
+		const action = settledOutputAction(data.outputState)
+		if (action) self.sendToActionRecorder({ actionId: 'output', options: { action, output: VIRTUALCAM_OUTPUT_NAME } })
 	})
 	obs.on('ReplayBufferSaved', (data) => {
 		self.setVariableValues({ replay_buffer_path: data.savedReplayPath })
