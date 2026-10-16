@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { getSourceActions } from '../../actions/sources.js'
-import { makeMockInstance, sceneItem, seedScene, type MockInstance } from '../mock/instance.js'
+import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from '../mock/instance.js'
 import { actionEvent } from '../mock/events.js'
 import { MockContext } from '../mock-context.js'
 import { looseActions } from '../loose-definitions.js'
@@ -551,38 +551,70 @@ describe('target dropdowns', () => {
 	})
 
 	describe('take_screenshot', () => {
-		const shoot = async (target: string, source: string) => {
+		const shoot = async (
+			target: string,
+			source: string,
+			naming: { customName: boolean; path: string; prefix: string },
+		) => {
 			const actions = looseActions(getSourceActions(self))
 			await actions['take_screenshot'].callback(
-				actionEvent('take_screenshot', {
-					target,
-					source,
-					format: 'png',
-					compression: 0,
-					customName: true,
-					path: '/tmp/shot.png',
-					prefix: '',
-				}),
+				actionEvent('take_screenshot', { target, source, format: 'png', compression: 0, ...naming }),
 				new MockContext(),
 			)
 			return self.socket.call.mock.calls[0]
 		}
+		const customPath = { customName: true, path: '/tmp/shot.png', prefix: '' }
 
 		test('programScene shoots the program scene', async () => {
-			expect((await shoot('programScene', 'Camera'))[1]).toMatchObject({ sourceName: 'Scene A' })
+			expect((await shoot('programScene', 'Camera', customPath))[1]).toMatchObject({ sourceName: 'Scene A' })
 		})
 
 		test('previewScene shoots the preview scene', async () => {
-			expect((await shoot('previewScene', 'Camera'))[1]).toMatchObject({ sourceName: 'Scene B' })
+			expect((await shoot('previewScene', 'Camera', customPath))[1]).toMatchObject({ sourceName: 'Scene B' })
 		})
 
 		test('source shoots the named source', async () => {
-			expect((await shoot('source', 'Camera'))[1]).toMatchObject({ sourceName: 'Camera' })
+			expect((await shoot('source', 'Camera', customPath))[1]).toMatchObject({ sourceName: 'Camera' })
+		})
+
+		test('a custom path has the colons in its file name replaced, keeping the drive letter', async () => {
+			const call = await shoot('source', 'Camera', {
+				customName: true,
+				path: 'C:/shots/Shot_12:34:56.png',
+				prefix: '',
+			})
+			expect(call[1]).toMatchObject({ imageFilePath: 'C:/shots/Shot_12-34-56.png' })
+		})
+
+		test('fetches the record directory when it is not known yet', async () => {
+			self.socket.call.mockImplementation(async (requestType: string) =>
+				requestType === 'GetRecordDirectory' ? { recordDirectory: '/Users/test/Movies' } : {},
+			)
+
+			await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot ' })
+
+			const save = self.socket.call.mock.calls.find(([requestType]) => requestType === 'SaveSourceScreenshot')
+			expect(save![1].imageFilePath).toMatch(/^\/Users\/test\/Movies\/Shot \d+\.png$/)
+		})
+
+		test('saves nothing rather than writing to the drive root when the record directory is unknown', async () => {
+			self.socket.call.mockResolvedValue({})
+
+			await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot ' })
+
+			const requestTypes = self.socket.call.mock.calls.map(([requestType]) => requestType)
+			expect(requestTypes).not.toContain('SaveSourceScreenshot')
+		})
+
+		test('a prefix has its colons replaced in the default path', async () => {
+			self.states.recordDirectory = 'C:/Videos'
+			const call = await shoot('source', 'Camera', { customName: false, path: '', prefix: 'Shot 12:34 ' })
+			expect(call[1].imageFilePath).toMatch(/^C:\/Videos\/Shot 12-34 \d+\.png$/)
 		})
 	})
 
 	describe('source_properties', () => {
-		const transform = async (target: string, scene: string) => {
+		const transform = async (target: string, scene: string, values: Record<string, unknown> = {}) => {
 			const actions = looseActions(getSourceActions(self))
 			await actions['source_properties'].callback(
 				actionEvent('source_properties', {
@@ -595,6 +627,7 @@ describe('target dropdowns', () => {
 					scaleX: '',
 					scaleY: '',
 					rotation: '',
+					...values,
 				}),
 				new MockContext(),
 			)
@@ -607,6 +640,26 @@ describe('target dropdowns', () => {
 
 		test('scene uses the named scene', async () => {
 			expect((await transform('scene', 'Scene B'))?.[0].requestData.sceneUuid).toBe('scene-b')
+		})
+
+		test('skips a non-numeric value but still sends the valid ones', async () => {
+			const batch = await transform('scene', 'Scene B', {
+				props: ['positionX', 'rotation'],
+				positionX: 'abc',
+				rotation: '45',
+			})
+
+			expect(batch?.[0].requestData.sceneItemTransform).toEqual({ rotation: 45 })
+		})
+
+		test('sends nothing when no selected value is a number', async () => {
+			expect(await transform('scene', 'Scene B', { positionX: 'abc' })).toBeUndefined()
+		})
+
+		test('keeps 0, which is a valid position', async () => {
+			const batch = await transform('scene', 'Scene B', { positionX: '0' })
+
+			expect(batch?.[0].requestData.sceneItemTransform).toEqual({ positionX: 0 })
 		})
 
 		describe('learn', () => {
@@ -651,13 +704,18 @@ describe('target dropdowns', () => {
 			])
 		})
 
-		const toggle = async (target: string) => {
+		const toggle = async (target: string, allFilters = false, visible = 'false') => {
 			const actions = looseActions(getSourceActions(self))
 			await actions['toggle_filter'].callback(
-				actionEvent('toggle_filter', { target, source: 'Camera', filter: 'Color', visible: 'false' }),
+				actionEvent('toggle_filter', { target, source: 'Camera', allFilters, filter: 'Color', visible }),
 				new MockContext(),
 			)
 		}
+
+		const batchedFilters = () =>
+			(self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>)
+				.map((b) => `${b.requestData.sourceUuid}/${b.requestData.filterName}=${b.requestData.filterEnabled}`)
+				.sort()
 
 		test('source disables the filter on just that source', async () => {
 			await toggle('source')
@@ -669,10 +727,104 @@ describe('target dropdowns', () => {
 			expect(self.socket.callBatch).not.toHaveBeenCalled()
 		})
 
+		test('allFilters on a source sets every filter on just that source', async () => {
+			self.states.sourceFilters.get('src-1')!.push({
+				filterName: 'Blur',
+				filterEnabled: true,
+				filterIndex: 1,
+				filterKind: 'blur_filter',
+				filterSettings: {},
+			})
+			await toggle('source', true)
+			expect(batchedFilters()).toEqual(['src-1/Blur=false', 'src-1/Color=false'])
+			expect(self.socket.call).not.toHaveBeenCalledWith('SetSourceFilterEnabled', expect.anything())
+		})
+
+		test('allFilters toggles each filter from its own state', async () => {
+			self.states.sourceFilters.get('src-1')!.push({
+				filterName: 'Blur',
+				filterEnabled: false,
+				filterIndex: 1,
+				filterKind: 'blur_filter',
+				filterSettings: {},
+			})
+			await toggle('source', true, 'toggle')
+			expect(batchedFilters()).toEqual(['src-1/Blur=true', 'src-1/Color=false'])
+		})
+
+		test('allFilters with allSources sets every filter everywhere', async () => {
+			self.states.sourceFilters.get('scene-a')!.push({
+				filterName: 'Blur',
+				filterEnabled: true,
+				filterIndex: 1,
+				filterKind: 'blur_filter',
+				filterSettings: {},
+			})
+			await toggle('allSources', true)
+			expect(batchedFilters()).toEqual(['scene-a/Blur=false', 'scene-a/Color=false', 'src-1/Color=false'])
+		})
+
+		test('learn has nothing to read back with allFilters', async () => {
+			const actions = looseActions(getSourceActions(self))
+			const learned = await actions['toggle_filter'].learn!(
+				actionEvent('toggle_filter', {
+					target: 'source',
+					source: 'Camera',
+					allFilters: true,
+					filter: 'Color',
+					visible: 'toggle',
+				}),
+				new MockContext(),
+			)
+			expect(learned).toBeUndefined()
+		})
+
 		test('allSources batches every source carrying the filter', async () => {
 			await toggle('allSources')
 			const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
 			expect(batch.map((b) => b.requestData.sourceUuid).sort()).toEqual(['scene-a', 'src-1'])
+		})
+	})
+})
+
+describe('setTextProperties', () => {
+	let self: MockInstance
+
+	const setProps = async (options: Record<string, unknown>) => {
+		const actions = looseActions(getSourceActions(self))
+		await actions['setTextProperties'].callback(
+			actionEvent('setTextProperties', { source: 'Title', ...options }),
+			new MockContext(),
+		)
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedSource(self, 'Title', 'Title', 'text_gdiplus_v3')
+		// As buildInputSettings caches it: the kind defaults merged under what OBS reported.
+		self.states.sources.get('Title')!.settings = {
+			text: 'Old text',
+			color: 0xffffffff,
+			align: 'left',
+			font: { face: 'Arial', size: 36, style: 'Regular' },
+		}
+	})
+
+	test('sends only the selected properties', async () => {
+		await setProps({ props: ['color1'], color1: 'rgba(255, 0, 0, 1)' })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputSettings', {
+			inputName: 'Title',
+			inputSettings: { color: 0xff0000ff },
+		})
+	})
+
+	test('sends the whole font when changing part of it, since OBS replaces nested objects', async () => {
+		await setProps({ props: ['fontSize'], fontSize: '48' })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputSettings', {
+			inputName: 'Title',
+			inputSettings: { font: { face: 'Arial', size: 48, style: 'Regular' } },
 		})
 	})
 })

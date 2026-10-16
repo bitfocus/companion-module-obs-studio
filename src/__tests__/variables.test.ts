@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from 'vitest'
+import type { CompanionVariableValue } from '@companion-module/base'
 import { getVariables, updateVariableValues } from '../variables.js'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
+import { OBSRecordingState } from '../types.js'
 
 describe('variables', () => {
 	let self: MockInstance
@@ -33,7 +35,7 @@ describe('variables', () => {
 	test('updateVariableValues only sets variables that are defined', () => {
 		const defined = new Set(Object.keys(getVariables.call(self)))
 
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 
 		expect(self.setVariableValues).toHaveBeenCalledTimes(1)
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
@@ -42,7 +44,7 @@ describe('variables', () => {
 	})
 
 	test('updateVariableValues reflects seeded scene state', () => {
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
 		expect(updates.scene_active).toBe('Scene A')
 		expect(updates.scene_preview).toBe('Scene B')
@@ -66,7 +68,7 @@ describe('variables', () => {
 			inputVolume: 0,
 		})
 
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
 
 		expect(updates.transition_list).toEqual(['Cut', 'Fade'])
@@ -82,7 +84,7 @@ describe('variables', () => {
 		self.states.sources.get('Mic')!.inputAudioSyncOffset = 250
 		self.states.sources.get('Clip')!.active = true
 
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
 
 		expect(updates.volume_Mic).toBe(0)
@@ -98,7 +100,7 @@ describe('variables', () => {
 		self.states.replayBuffer = true
 		self.states.outputs.set('virtualcam_output', { outputName: 'virtualcam_output', outputActive: true })
 
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
 
 		expect(updates.studio_mode).toBe(true)
@@ -107,7 +109,7 @@ describe('variables', () => {
 	})
 
 	test('virtualcam_active defaults to false before the virtualcam output is known', () => {
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
 
 		expect(updates.virtualcam_active).toBe(false)
@@ -116,9 +118,61 @@ describe('variables', () => {
 	test('tracks_<source> lists the active audio mixer tracks as numbers', () => {
 		self.states.sources.get('Mic')!.inputAudioTracks = { '1': false, '2': true, '3': true }
 
-		updateVariableValues.call(self)
+		updateVariableValues.call(self, new Map())
 		const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
 
 		expect(updates.tracks_Mic).toEqual([2, 3])
+	})
+
+	describe('rebuilding definitions', () => {
+		test('carries over values only an event or poll could have set', () => {
+			const previous = new Map<string, CompanionVariableValue>([
+				['recording_file_name', 'take-1'],
+				['stream_service', 'Twitch'],
+				['replay_buffer_path', '/tmp/replay.mkv'],
+				['custom_command_type', 'GetVersion'],
+			])
+
+			updateVariableValues.call(self, previous)
+			const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+			expect(updates.recording_file_name).toBe('take-1')
+			expect(updates.stream_service).toBe('Twitch')
+			expect(updates.replay_buffer_path).toBe('/tmp/replay.mkv')
+			expect(updates.custom_command_type).toBe('GetVersion')
+		})
+
+		test('falls back to placeholders for values never published', () => {
+			updateVariableValues.call(self, new Map())
+			const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+			expect(updates.recording_file_name).toBe('None')
+			expect(updates.stream_service).toBe('None')
+		})
+
+		test('derives recording, streaming and recording_path from state rather than the previous values', () => {
+			self.states.recording = OBSRecordingState.Recording
+			self.states.streaming = true
+			self.states.recordDirectory = '/Users/test/Movies'
+			const previous = new Map<string, CompanionVariableValue>([
+				['recording', 'Stopped'],
+				['streaming', 'Off-Air'],
+				['recording_path', 'None'],
+			])
+
+			updateVariableValues.call(self, previous)
+			const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+			expect(updates.recording).toBe('Recording')
+			expect(updates.streaming).toBe('Live')
+			expect(updates.recording_path).toBe('/Users/test/Movies')
+		})
+
+		test('drops previous values of per-source variables that no longer exist', () => {
+			updateVariableValues.call(self, new Map([['volume_Removed', -6]]))
+			const updates = self.setVariableValues.mock.calls[0][0] as Record<string, unknown>
+
+			expect(updates).not.toHaveProperty('volume_Removed')
+		})
 	})
 })

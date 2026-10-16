@@ -5,87 +5,119 @@ import {
 	CreateConvertToBooleanFeedbackUpgradeScript,
 	CompanionMigrationAction,
 	CompanionMigrationFeedback,
+	type CompanionMigrationOptionValues,
+	type ExpressionOrValue,
+	FixupNumericOrVariablesValueToExpressions,
+	type JsonValue,
 } from '@companion-module/base'
-import { LegacyModuleConfig, ModuleConfig, ModuleSecrets, ObsAudioMonitorType } from './types.js'
+import { LegacyModuleConfig, ModuleConfig, ModuleSecrets } from './types.js'
 import { Color } from './utils.js'
 import { CONGESTION_MEDIOCRE } from './constants.js'
 
-function getOpt(options: Record<string, unknown>, key: string): unknown {
-	const opt = options[key]
+/**
+ * Companion hands upgrade scripts every option wrapped as `{ isExpression, value }`, and stores whatever comes
+ * back as-is, so anything written here must use the same shape or Companion reads it as missing.
+ */
+type OptionValue = ExpressionOrValue<JsonValue | undefined>
+type OptionTransform = (opt: OptionValue | undefined) => OptionValue | undefined
+
+function getOpt(options: CompanionMigrationOptionValues, key: string): unknown {
+	const opt: unknown = options[key]
 	return opt !== null && typeof opt === 'object' && 'value' in opt ? opt.value : opt
 }
 
-/** True when the stored option is the expression form, whose value must not be rewritten as a literal. */
-function isExpressionOpt(options: Record<string, unknown>, key: string): boolean {
-	const opt = options[key]
-	return (
-		opt !== null &&
-		typeof opt === 'object' &&
-		'isExpression' in opt &&
-		(opt as { isExpression?: unknown }).isExpression === true
-	)
-}
-
-function setOpt(options: Record<string, unknown>, key: string, value: unknown): void {
-	const opt = options[key]
+function setOpt(options: CompanionMigrationOptionValues, key: string, value: unknown): void {
+	const opt: unknown = options[key]
 	if (opt !== null && typeof opt === 'object' && 'value' in opt) {
 		opt.value = value
 	} else {
-		options[key] = value
+		options[key] = { isExpression: false, value: value as JsonValue | undefined }
 	}
 }
 
-/**
- * The monitor option went from OBS's three-state monitor type to a plain enabled/disabled value, matching the
- * OBS 32.1+ mixer where monitoring is a single toggle. Both monitoring types become enabled; anything that
- * isn't one of the three known types (an expression, or an already-converted value) is left alone.
- */
-function convertMonitorOption(options: Record<string, unknown>): boolean {
-	const monitor = getOpt(options, 'monitor')
-	if (monitor === ObsAudioMonitorType.None) {
-		setOpt(options, 'monitor', 'false')
-		return true
-	}
-	if (monitor === ObsAudioMonitorType.MonitorOnly || monitor === ObsAudioMonitorType.MonitorAndOutput) {
-		setOpt(options, 'monitor', 'true')
-		return true
-	}
-	return false
-}
-
-/**
- * The feedback lost its monitor option entirely and is now simply true while monitoring is enabled, so a
- * feedback that matched "Off" has to be inverted to keep meaning the same thing.
- */
-function convertMonitorFeedback(feedback: CompanionMigrationFeedback): boolean {
-	const monitor = getOpt(feedback.options, 'monitor')
-	if (
-		monitor !== ObsAudioMonitorType.None &&
-		monitor !== ObsAudioMonitorType.MonitorOnly &&
-		monitor !== ObsAudioMonitorType.MonitorAndOutput
-	) {
-		return false
-	}
-
-	// An inversion driven by an expression can't be flipped statically, so it is left as the user set it.
-	if (monitor === ObsAudioMonitorType.None && feedback.isInverted?.isExpression !== true) {
-		feedback.isInverted = { isExpression: false, value: feedback.isInverted?.value !== true }
-	}
-	delete feedback.options.monitor
-	return true
-}
-
-function renameOpt(options: Record<string, unknown>, from: string, to: string): void {
+function renameOpt(options: CompanionMigrationOptionValues, from: string, to: string): void {
 	if (!(from in options)) return
 	options[to] = options[from]
 	delete options[from]
 }
 
 /**
+ * v3 parsed variables in these fields itself, but v4 dropdowns don't, so a value carrying variables has to
+ * become an expression to keep resolving.
+ */
+const variablesToExpression: OptionTransform = (opt) => {
+	if (!opt || opt.isExpression || typeof opt.value !== 'string' || !opt.value.includes('$(')) return opt
+	return FixupNumericOrVariablesValueToExpressions(opt)
+}
+
+/** The multi-select form of `variablesToExpression`, for a single v3 value moving into a multidropdown. */
+const variablesToListExpression: OptionTransform = (opt) => {
+	if (opt?.isExpression || Array.isArray(opt?.value)) return opt
+	const converted = variablesToExpression(opt)
+	if (converted?.isExpression) return { isExpression: true, value: `[${String(converted.value)}]` }
+	const value = opt?.value
+	return { isExpression: false, value: value === undefined || value === '' ? [] : [value] }
+}
+
+function lookupTransform(map: Record<string, JsonValue>): OptionTransform {
+	return (opt) => {
+		const key = opt?.value
+		if (!opt || opt.isExpression || (typeof key !== 'string' && typeof key !== 'boolean') || !(String(key) in map))
+			return opt
+		return { isExpression: false, value: map[String(key)] }
+	}
+}
+
+function scaleTransform(factor: number): OptionTransform {
+	return (opt) => {
+		if (!opt || opt.isExpression || typeof opt.value !== 'number') return opt
+		return { isExpression: false, value: opt.value * factor }
+	}
+}
+
+const PREVIEW_SCENE_EXPRESSION: OptionValue = { isExpression: true, value: '$(obs:scene_preview)' }
+
+/** v3's three monitor choices, mapped onto whether monitoring is enabled. */
+const V3_MONITOR_ENABLED: Record<string, boolean> = {
+	none: false,
+	monitorOnly: true,
+	monitorAndOutput: true,
+}
+
+/**
+ * The monitor option went from three monitor types to a plain enabled/disabled value, matching the OBS 32.1+
+ * mixer where monitoring is a single toggle. Both monitoring types become enabled; anything that isn't one of
+ * the three v3 choices (an expression, or an already-converted value) is left alone.
+ */
+function convertMonitorOption(options: CompanionMigrationOptionValues): boolean {
+	const monitor = getOpt(options, 'monitor')
+	if (typeof monitor !== 'string' || !(monitor in V3_MONITOR_ENABLED)) return false
+	setOpt(options, 'monitor', V3_MONITOR_ENABLED[monitor] ? 'true' : 'false')
+	return true
+}
+
+/**
+ * The feedback lost its monitor option entirely and is now simply true while monitoring is enabled, so a
+ * feedback that matched "None" has to be inverted to keep meaning the same thing.
+ */
+function convertMonitorFeedback(feedback: CompanionMigrationFeedback): boolean {
+	const monitor = getOpt(feedback.options, 'monitor')
+	if (typeof monitor !== 'string' || !(monitor in V3_MONITOR_ENABLED)) return false
+
+	// An inversion driven by an expression can't be flipped statically, so it is left as the user set it.
+	if (!V3_MONITOR_ENABLED[monitor] && feedback.isInverted?.isExpression !== true) {
+		feedback.isInverted = { isExpression: false, value: feedback.isInverted?.value !== true }
+	}
+	delete feedback.options.monitor
+	return true
+}
+
+/**
  * Action families that used to be one action per command (recording start/stop/pause/…), or a
  * set/adjust pair, are now a single action with a leading dropdown. Each entry names the combined
- * action, the fixed option values that identify the old command, any option renames it needs, and
- * defaults for options that the old action could leave unset.
+ * action, the fixed option values that identify the old command, any option renames it needs,
+ * defaults for options that the old action could leave unset, and transforms (keyed by the new option
+ * name, run after renames) for values whose meaning changed.
  */
 const ACTION_MIGRATIONS: Record<
 	string,
@@ -94,6 +126,7 @@ const ACTION_MIGRATIONS: Record<
 		options: Record<string, unknown>
 		renames?: Record<string, string>
 		defaults?: Record<string, unknown>
+		transforms?: Record<string, OptionTransform>
 	}
 > = {
 	start_recording: { actionId: 'recording', options: { action: 'start' } },
@@ -101,7 +134,7 @@ const ACTION_MIGRATIONS: Record<
 	pause_recording: { actionId: 'recording', options: { action: 'pause' } },
 	resume_recording: { actionId: 'recording', options: { action: 'resume' } },
 	ToggleRecordPause: { actionId: 'recording', options: { action: 'toggle_pause' } },
-	toggle_recording: { actionId: 'recording', options: { action: 'toggle' } },
+	StartStopRecording: { actionId: 'recording', options: { action: 'toggle' } },
 	SplitRecordFile: { actionId: 'recording', options: { action: 'split' } },
 	CreateRecordChapter: { actionId: 'recording', options: { action: 'chapter' } },
 
@@ -131,21 +164,40 @@ const ACTION_MIGRATIONS: Record<
 	adjust_volume_percent: {
 		actionId: 'volume',
 		options: { mode: 'adjust', unit: 'percent' },
-		renames: { volume: 'amount' },
+		renames: { percent: 'amount' },
 	},
 
-	set_audio_offset: { actionId: 'audio_offset', options: { mode: 'set' }, renames: { offset: 'value' } },
-	adjust_audio_offset: { actionId: 'audio_offset', options: { mode: 'adjust' } },
-	set_audio_balance: { actionId: 'audio_balance', options: { mode: 'set' }, renames: { balance: 'value' } },
-	adjust_audio_balance: { actionId: 'audio_balance', options: { mode: 'adjust' } },
+	setSyncOffset: { actionId: 'audio_offset', options: { mode: 'set' }, renames: { offset: 'value' } },
+	// The v3 adjust amounts were free text parsed as numbers.
+	adjustSyncOffset: {
+		actionId: 'audio_offset',
+		options: { mode: 'adjust' },
+		renames: { offset: 'amount' },
+		transforms: { amount: FixupNumericOrVariablesValueToExpressions },
+	},
+	setAudioBalance: { actionId: 'audio_balance', options: { mode: 'set' }, renames: { balance: 'value' } },
+	adjustAudioBalance: {
+		actionId: 'audio_balance',
+		options: { mode: 'adjust' },
+		renames: { offset: 'amount' },
+		transforms: { amount: FixupNumericOrVariablesValueToExpressions },
+	},
 
-	set_transition_type: { actionId: 'transition_type', options: { mode: 'set' } },
+	set_transition: {
+		actionId: 'transition_type',
+		options: { mode: 'set' },
+		transforms: { transitions: variablesToExpression },
+	},
 	set_transition_duration: {
 		actionId: 'transition_duration',
 		options: { mode: 'set' },
 		renames: { duration: 'value' },
 	},
-	adjust_transition_duration: { actionId: 'transition_duration', options: { mode: 'adjust' } },
+	adjustTransitionDuration: {
+		actionId: 'transition_duration',
+		options: { mode: 'adjust' },
+		renames: { duration: 'amount' },
+	},
 
 	preview_scene: { actionId: 'preview_scene', options: { mode: 'set' } },
 
@@ -164,24 +216,46 @@ const ACTION_MIGRATIONS: Record<
 		defaults: { mode: 'next' },
 	},
 
-	play_pause_media: { actionId: 'media_control', options: {}, renames: { playPause: 'action' } },
+	play_pause_media: {
+		actionId: 'media_control',
+		options: {},
+		renames: { playPause: 'action' },
+		// v3 named its choices after OBS's pause flag: 'false' played and 'true' paused.
+		transforms: { action: lookupTransform({ toggle: 'toggle', false: 'play', true: 'pause' }) },
+	},
 	restart_media: { actionId: 'media_control', options: { action: 'restart' } },
 	stop_media: { actionId: 'media_control', options: { action: 'stop' } },
 	next_media: { actionId: 'media_control', options: { action: 'next' } },
 	previous_media: { actionId: 'media_control', options: { action: 'previous' } },
-	set_media_time: { actionId: 'media_time', options: { mode: 'set' }, renames: { mediaTime: 'value' } },
+	// The v3 timecode was in seconds; the combined action takes milliseconds.
+	set_media_time: {
+		actionId: 'media_time',
+		options: { mode: 'set' },
+		renames: { mediaTime: 'value' },
+		transforms: { value: scaleTransform(1000) },
+	},
 	scrub_media: { actionId: 'media_time', options: { mode: 'adjust' }, renames: { scrubAmount: 'amount' } },
+	updateMediaLocalFile: { actionId: 'updateMediaLocalFile', options: {}, renames: { mediaFilePath: 'path' } },
+
+	set_stream_settings: {
+		actionId: 'set_stream_settings',
+		options: {},
+		renames: { streamAuth: 'useAuth', streamUserName: 'username', streamPassword: 'password' },
+	},
 }
 
 const MEDIA_TARGET_ACTIONS = ['media_control', 'media_time', 'updateMediaLocalFile']
 
-/** Converts the old "Currently Playing" checkbox on the media actions to the explicit target dropdown. */
+/**
+ * v3 media actions targeted the last clip that started via the magic source 'currentMedia' (their default);
+ * that becomes the explicit "newest playing clip" target, and every other source an explicit source target.
+ */
 function convertMediaTarget(action: CompanionMigrationAction): boolean {
-	if (!MEDIA_TARGET_ACTIONS.includes(action.actionId)) return false
-	if (getOpt(action.options, 'useCurrentMedia') === undefined) return false
+	if (!MEDIA_TARGET_ACTIONS.includes(action.actionId) || action.options.target !== undefined) return false
 
-	setOpt(action.options, 'target', getOpt(action.options, 'useCurrentMedia') === true ? 'newest' : 'source')
-	delete action.options.useCurrentMedia
+	const currentMedia = getOpt(action.options, 'source') === 'currentMedia'
+	setOpt(action.options, 'target', currentMedia ? 'newest' : 'source')
+	if (currentMedia) setOpt(action.options, 'source', '')
 	return true
 }
 
@@ -198,6 +272,9 @@ function consolidateAction(action: CompanionMigrationAction): boolean {
 	}
 	for (const [key, value] of Object.entries(migration.defaults ?? {})) {
 		if (!(key in action.options)) setOpt(action.options, key, value)
+	}
+	for (const [key, transform] of Object.entries(migration.transforms ?? {})) {
+		if (key in action.options) action.options[key] = transform(action.options[key])
 	}
 	return true
 }
@@ -476,8 +553,12 @@ export default [
 				action.actionId === 'preview_scene' ||
 				action.actionId === 'smart_switcher'
 			) {
-				if (getOpt(action.options, 'custom') === true) {
-					setOpt(action.options, 'scene', getOpt(action.options, 'customSceneName'))
+				// v3 chose the custom name through a magic '<CUSTOM SCENE NAME>' entry in the scene dropdown.
+				if (getOpt(action.options, 'scene') === 'customSceneName') {
+					action.options.scene = variablesToExpression(action.options.customSceneName) ?? {
+						isExpression: false,
+						value: '',
+					}
 				}
 				delete action.options.custom
 				delete action.options.customSceneName
@@ -500,10 +581,17 @@ export default [
 					actionChanged = true
 				}
 			} else if (action.actionId === 'set_filter_visible' || action.actionId === 'toggle_filter') {
-				// The magic 'allSources' source name became an explicit target.
-				const allSources = getOpt(action.options, 'source') === 'allSources' || getOpt(action.options, 'all') === true
+				// The magic 'allSources' source name became an explicit target, while v3's "All" checkbox meant
+				// every filter on the chosen source.
+				const allSources = getOpt(action.options, 'source') === 'allSources'
 				setOpt(action.options, 'target', allSources ? 'allSources' : 'source')
-				if (allSources) setOpt(action.options, 'source', '')
+				if (allSources) {
+					setOpt(action.options, 'source', '')
+				} else {
+					action.options.source = variablesToExpression(action.options.source)
+				}
+				setOpt(action.options, 'allFilters', getOpt(action.options, 'all') === true)
+				action.options.filter = variablesToExpression(action.options.filter)
 				delete action.options.all
 				delete action.options.allSources
 				actionChanged = true
@@ -514,7 +602,27 @@ export default [
 					setOpt(action.options, 'source', '')
 				} else {
 					setOpt(action.options, 'target', 'source')
+					// v3 picked "Custom" in the source dropdown and kept the real source in a second one.
+					if (source === 'custom') action.options.source = action.options.custom ?? { isExpression: false, value: '' }
 				}
+				delete action.options.custom
+
+				// v3 kept a folder and a file name; v4 takes the whole file path, or a prefix in the recording folder.
+				const fileName =
+					(getOpt(action.options, 'fileName') as string | undefined) ||
+					'Screenshot_$(internal:date_iso)_$(internal:time_hms)'
+				if (getOpt(action.options, 'customName') === true) {
+					const folder = getOpt(action.options, 'path')
+					if (typeof folder === 'string' && folder !== '') {
+						const format = (getOpt(action.options, 'format') as string | undefined) || 'png'
+						setOpt(action.options, 'path', `${folder}/${fileName}.${format}`)
+					} else {
+						setOpt(action.options, 'customName', false)
+						setOpt(action.options, 'prefix', fileName)
+					}
+				}
+				if (action.options.prefix === undefined) setOpt(action.options, 'prefix', 'Screenshot ')
+				delete action.options.fileName
 				delete action.options.useProgramScene
 				delete action.options.usePreviewScene
 				actionChanged = true
@@ -531,7 +639,8 @@ export default [
 					setOpt(action.options, 'target', 'currentScene')
 				} else {
 					setOpt(action.options, 'target', 'scene')
-					if (scene === 'Preview Scene') setOpt(action.options, 'scene', '$(obs:scene_preview)')
+					action.options.scene =
+						scene === 'Preview Scene' ? PREVIEW_SCENE_EXPRESSION : variablesToExpression(action.options.scene)
 				}
 
 				if (getOpt(action.options, 'all') === true) {
@@ -539,11 +648,7 @@ export default [
 					setOpt(action.options, 'source', [])
 				} else {
 					setOpt(action.options, 'allSources', false)
-					const source = getOpt(action.options, 'source')
-					// An expression still evaluates fine against the multidropdown, so only literals are wrapped.
-					if (!Array.isArray(source) && !isExpressionOpt(action.options, 'source')) {
-						setOpt(action.options, 'source', source === undefined || source === '' ? [] : [source])
-					}
+					action.options.source = variablesToListExpression(action.options.source)
 				}
 				setOpt(action.options, 'except', [])
 				setOpt(action.options, 'includeGroupChildren', 'groupsAndSources')
@@ -553,8 +658,41 @@ export default [
 				actionChanged = true
 			} else if (action.actionId === 'set_audio_monitor') {
 				actionChanged = convertMonitorOption(action.options)
+			} else if (action.actionId === 'set_transition_duration') {
+				// The "Use Variable" text field folds into the number field as an expression.
+				if (getOpt(action.options, 'useVariable') === true) {
+					action.options.duration = FixupNumericOrVariablesValueToExpressions(action.options.variableValue)
+				}
+				delete action.options.useVariable
+				delete action.options.variableValue
+				actionChanged = true
+			} else if (action.actionId === 'set_stream_settings') {
+				// v3's fixed service list had a "Custom" entry backed by a separate name field; the service is now
+				// one free-text field, and only a preset service uses it. v3 never sent a server, so it stays empty
+				// and OBS keeps its current one, as before.
+				const service =
+					getOpt(action.options, 'service') === 'Custom' ? action.options.serviceName : action.options.service
+				action.options.service =
+					getOpt(action.options, 'streamType') === 'rtmp_common' && service
+						? service
+						: { isExpression: false, value: '' }
+				setOpt(action.options, 'server', '')
+				delete action.options.serviceName
+				actionChanged = true
+			} else if (action.actionId === 'open_projector') {
+				// v3 shared one source dropdown between source and scene projectors.
+				if (getOpt(action.options, 'type') === 'Scene' && action.options.scene === undefined) {
+					action.options.scene = action.options.source
+					actionChanged = true
+				}
 			} else if (action.actionId === 'source_properties') {
-				setOpt(action.options, 'target', getOpt(action.options, 'scene') === 'current' ? 'programScene' : 'scene')
+				const scene = getOpt(action.options, 'scene')
+				if (scene === undefined || scene === 'Current Scene' || scene === 'current') {
+					setOpt(action.options, 'target', 'programScene')
+				} else {
+					setOpt(action.options, 'target', 'scene')
+					if (scene === 'Preview Scene') action.options.scene = PREVIEW_SCENE_EXPRESSION
+				}
 				delete action.options.useProgramScene
 				const includedProps: string[] = []
 				for (const key of ['positionX', 'positionY', 'scaleX', 'scaleY', 'rotation']) {
@@ -634,6 +772,17 @@ export default [
 				feedbackChanged = true
 			} else if (feedback.feedbackId === 'audio_monitor_type') {
 				feedbackChanged = convertMonitorFeedback(feedback)
+			} else if (feedback.feedbackId === 'recording' && ('fg' in feedback.options || 'bg' in feedback.options)) {
+				// The advanced feedback coloured both recording and paused; paused is now its own feedback.
+				feedback.style = {
+					color: (getOpt(feedback.options, 'fg') as number | undefined) ?? Color.White,
+					bgcolor: (getOpt(feedback.options, 'bg') as number | undefined) ?? Color.Red,
+				}
+				for (const key of ['fg', 'bg', 'fg_paused', 'bg_paused']) delete feedback.options[key]
+				feedbackChanged = true
+			} else if (feedback.feedbackId === 'audioPeaking' && 'peak' in feedback.options) {
+				renameOpt(feedback.options, 'peak', 'threshold')
+				feedbackChanged = true
 			}
 			// Peak hold is new in 4.0.0; existing indicators keep the old immediate release. Runs after
 			// the rename above so feedbacks converted from audioMeter get it too.

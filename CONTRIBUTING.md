@@ -24,7 +24,7 @@ yarn lint
 yarn format:check
 ```
 
-Run format, lint, and tests together with `yarn check`. A pre-commit hook runs lint on staged files. CI runs format, lint, types, and tests on every push and pull request.
+Run format check, lint, types, and tests together with `yarn check`. A pre-commit hook runs lint on staged files. CI runs format, lint, types, and tests on every push and pull request.
 
 ## Layout
 

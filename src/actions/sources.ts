@@ -42,6 +42,7 @@ export type SourceActionSchemas = {
 		options: {
 			target: 'source' | 'allSources'
 			source: string
+			allFilters: boolean
 			filter: string
 			visible: 'true' | 'false' | 'toggle'
 		}
@@ -347,12 +348,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const sourceName = action.options.source
 				const props = action.options.props || []
 				const source = self.obsState.findSourceByName(sourceName)
-				const existingSettings = { ...(source?.settings || {}) }
-
-				// Start with existing settings, then overlay changes.
-				const inputSettings: JsonObject = { ...existingSettings }
-				// Always copy font object if it exists.
-				const existingFont: OBSTextSourceFont = { ...(existingSettings.font as OBSTextSourceFont | undefined) }
+				// SetInputSettings overlays top-level keys, so only the chosen properties are sent: resending the
+				// cached settings would pin the kind defaults merged into them and could revert a newer change.
+				const inputSettings: JsonObject = {}
+				// Nested objects are replaced rather than merged, so the font goes out whole.
+				const existingFont: OBSTextSourceFont = { ...(source?.settings?.font as OBSTextSourceFont | undefined) }
 				const kind = source?.inputKind ?? ''
 
 				for (const prop of props) {
@@ -559,7 +559,8 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 		// Filters
 		toggle_filter: {
 			name: 'Filters - Set Visibility',
-			description: 'Shows, hides, or toggles the enabled state of a filter on a source',
+			description:
+				'Shows, hides, or toggles the enabled state of a filter on a source. With All Filters checked, every filter on the chosen source(s) is set, each toggling from its own state.',
 			options: [
 				targetDropdown(['source', 'allSources']),
 				choiceDropdown(self, 'sourceWithScenes', {
@@ -567,7 +568,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					label: 'Source',
 					isVisibleExpression: `$(options:target) == 'source'`,
 				}),
-				choiceDropdown(self, 'filter', { id: 'filter', label: 'Filter' }),
+				{
+					type: 'checkbox',
+					disableAutoExpression: true,
+					label: 'All Filters',
+					id: 'allFilters',
+					default: false,
+				},
+				choiceDropdown(self, 'filter', {
+					id: 'filter',
+					label: 'Filter',
+					isVisibleExpression: '!$(options:allFilters)',
+				}),
 				{
 					type: 'dropdown',
 					disableAutoExpression: true,
@@ -587,10 +599,12 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				await self.obs.setFilterVisibility(filterName, action.options.visible, {
 					target: action.options.target,
 					source: action.options.source,
+					allFilters: action.options.allFilters,
 				})
 			},
 			learn: (action) => {
-				if (action.options.target === 'allSources') return undefined
+				// Several filters have no single state to read back.
+				if (action.options.target === 'allSources' || action.options.allFilters) return undefined
 				const sourceName = action.options.source
 				const filterName = action.options.filter
 				const filters = self.obsState.findSourceFiltersByName(sourceName)
@@ -719,10 +733,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 
 				let filePath
 				if (action.options.customName) {
-					filePath = action.options.path
+					filePath = utils.sanitizePathFileName(action.options.path)
 				} else {
+					// Without a record directory the default path would land at the root of the drive.
+					if (!self.states.recordDirectory) await self.obs.getRecordDirectory()
+					if (!self.states.recordDirectory) {
+						logger.warn('The recording directory is unknown, so set a custom path to save screenshots')
+						return null
+					}
 					const prefix = action.options.prefix
-					filePath = `${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${action.options.format}`
+					filePath = utils.sanitizePathFileName(
+						`${self.states.recordDirectory}/${prefix}${new Date().getTime()}.${action.options.format}`,
+					)
 				}
 
 				const quality = action.options.compression === 0 ? -1 : action.options.compression
@@ -812,13 +834,18 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const props = action.options.props || []
 
 				const transform: { [key: string]: number } = {}
-				if (props.includes('positionX') && action.options.positionX)
-					transform.positionX = Number(action.options.positionX)
-				if (props.includes('positionY') && action.options.positionY)
-					transform.positionY = Number(action.options.positionY)
-				if (props.includes('scaleX') && action.options.scaleX) transform.scaleX = Number(action.options.scaleX)
-				if (props.includes('scaleY') && action.options.scaleY) transform.scaleY = Number(action.options.scaleY)
-				if (props.includes('rotation') && action.options.rotation) transform.rotation = Number(action.options.rotation)
+				for (const prop of ['positionX', 'positionY', 'scaleX', 'scaleY', 'rotation'] as const) {
+					const raw = action.options[prop]
+					if (!props.includes(prop) || !raw?.trim()) continue
+					const value = Number(raw)
+					// A non-numeric value would go out as NaN, which JSON sends as null; skip that field on its own.
+					if (Number.isFinite(value)) {
+						transform[prop] = value
+					} else {
+						logger.warn(`Ignoring ${prop} for ${sourceName}: "${raw}" is not a number`)
+					}
+				}
+				if (Object.keys(transform).length === 0) return
 
 				const matches = self.obsState.findSceneItemsByNameInScene(sourceSceneName, sourceName)
 				if (matches.length === 0) {

@@ -317,7 +317,7 @@ describe('scene filters', () => {
 			{ filterName: 'Color', filterEnabled: true, filterIndex: 0, filterKind: 'color_filter', filterSettings: {} },
 		])
 
-		await self.obs.setFilterVisibility('Color', 'toggle', { target: 'source', source: 'Scene A' })
+		await self.obs.setFilterVisibility('Color', 'toggle', { target: 'source', source: 'Scene A', allFilters: false })
 
 		expect(self.socket.call).toHaveBeenCalledWith('SetSourceFilterEnabled', {
 			sourceUuid: 'scene-a',

@@ -37,6 +37,7 @@ import {
 	INPUT_KIND_IMAGE_SOURCE,
 	POLL_INTERVALS,
 	FADE_STEP_MS,
+	SLEEP_MAX_MS,
 	isMediaInputKind,
 	isSelectableOutput,
 	isTextInputKind,
@@ -74,6 +75,8 @@ export class OBSApi {
 
 	// Source names with a volume fade batch currently executing in OBS.
 	private fadesInFlight = new Set<string>()
+	// Whether a quick transition batch (transition, wait, restore) is currently executing in OBS.
+	private quickTransitionInFlight = false
 
 	// Subscription tracking for output-status polling (keyed by feedback ID).
 	private outputStatusSubscribers = new Set<string>()
@@ -320,21 +323,13 @@ export class OBSApi {
 		requestData?: OBSRequestTypes[T],
 	): Promise<OBSResponseTypes[T] | undefined> {
 		const data = await this.sendRequest(requestType, requestData)
-		if (data) {
-			logger.debug(
-				`Custom Command Response: Request ${requestType} replied with ${requestData ? `data ${JSON.stringify(data)}` : 'no data'}`,
-			)
-			this.self.setVariableValues({
-				custom_command_type: requestType,
-				custom_command_request: requestData ? JSON.stringify(requestData) : '',
-				custom_command_response: JSON.stringify(data),
-			})
-		} else {
-			this.self.setVariableValues({
-				custom_command_request: '',
-				custom_command_response: '',
-			})
-		}
+		if (data) logger.debug(`Custom Command Response: Request ${requestType} replied with data ${JSON.stringify(data)}`)
+		// All three describe the latest command, so a failed one still replaces the previous command's type.
+		this.self.setVariableValues({
+			custom_command_type: requestType,
+			custom_command_request: requestData ? JSON.stringify(requestData) : '',
+			custom_command_response: data ? JSON.stringify(data) : '',
+		})
 		return data
 	}
 
@@ -404,7 +399,11 @@ export class OBSApi {
 				source.validName = utils.validName(sourceName)
 				this.self.obsState.invalidateSourceNameIndex()
 			}
-			if (inputKind && !source.inputKind) source.inputKind = inputKind
+			if (inputKind && !source.inputKind) {
+				source.inputKind = inputKind
+				// A source first seen without its kind can turn out to be a media source.
+				this.self.obsState.invalidateMediaSourceUuids()
+			}
 			if (isGroup) source.isGroup = true
 		}
 		return source
@@ -1136,6 +1135,45 @@ export class OBSApi {
 		}
 	}
 
+	/**
+	 * Runs one studio-mode transition with the given type and duration, then restores the previous ones, as a
+	 * single serial batch whose Sleep holds the restore until the transition has finished.
+	 *
+	 * Guarded by the batch itself rather than `transitionActive`: SceneTransitionEnded clears that before the
+	 * restore runs, while the current transition still reads as the quick one, so a press in that window would
+	 * capture the quick transition as the one to restore.
+	 */
+	public async quickTransition(transitionName: string, duration: number): Promise<void> {
+		if (this.quickTransitionInFlight) {
+			logger.debug(`Ignoring quick transition to ${transitionName}, one is already in progress`)
+			return
+		}
+
+		this.quickTransitionInFlight = true
+		try {
+			await this.sendBatch([
+				{ requestType: 'SetCurrentSceneTransition', requestData: { transitionName } },
+				{ requestType: 'SetCurrentSceneTransitionDuration', requestData: { transitionDuration: duration } },
+				{ requestType: 'TriggerStudioModeTransition' },
+				{
+					requestType: 'Sleep',
+					// sleepMillis is capped by the protocol; exceeding it fails the Sleep and reverts early.
+					requestData: { sleepMillis: utils.clamp(duration + 100, 0, SLEEP_MAX_MS) },
+				},
+				{
+					requestType: 'SetCurrentSceneTransition',
+					requestData: { transitionName: this.self.states.currentTransition },
+				},
+				{
+					requestType: 'SetCurrentSceneTransitionDuration',
+					requestData: { transitionDuration: this.self.states.transitionDuration },
+				},
+			])
+		} finally {
+			this.quickTransitionInFlight = false
+		}
+	}
+
 	public updateSourceMute(source: OBSSource, muted: boolean): void {
 		source.inputMuted = muted
 		this.self.setVariableValues({ [`mute_${source.validName}`]: muted ? 'Muted' : 'Unmuted' })
@@ -1388,11 +1426,11 @@ export class OBSApi {
 	}): void {
 		let changed = false
 		data.inputs.forEach((input) => {
-			const channel = input.inputLevelsMul[0]
+			// Loudest channel: a source is peaking if any of its channels is.
+			const channelPeak = Math.max(0, ...input.inputLevelsMul.map((channel) => channel?.[1] ?? 0))
 			// Floor silent inputs to -100 so quiet sources reset correctly.
 			let dbPeak = -100
-			const channelPeak = channel?.[1]
-			if (channelPeak && channelPeak > 0) {
+			if (channelPeak > 0) {
 				const computed = Math.round(20.0 * Math.log10(channelPeak))
 				if (isFinite(computed)) dbPeak = computed
 			}
@@ -1463,10 +1501,6 @@ export class OBSApi {
 	}
 
 	/**
-	 * The container whose items an "all sources" action covers: a named group, or a scene. Group names
-	 * are globally unique in OBS and a group's items live under its own UUID, so a group needs no scene.
-	 */
-	/**
 	 * The containers an action covers. Everything but `allScenes` resolves to a single container; a
 	 * group needs no scene, since group names are globally unique and a group's items live under its
 	 * own UUID. An unresolvable target yields nothing rather than silently falling back to a scene.
@@ -1535,37 +1569,46 @@ export class OBSApi {
 	public async setFilterVisibility(
 		filterName: string,
 		visible: string,
-		options: { target: 'source' | 'allSources'; source: string },
+		options: { target: 'source' | 'allSources'; source: string; allFilters: boolean },
 	): Promise<void> {
-		if (options.target === 'allSources') {
-			const requests: OBSBatchRequest[] = []
-			this.self.states.sourceFilters.forEach((filters, sourceUuid) => {
-				const filter = filters.find((f) => f.filterName === filterName)
-				if (!filter) return
+		const requests: OBSBatchRequest[] = []
+		const addFilters = (sourceUuid: string, filters: OBSFilter[]): void => {
+			for (const filter of filters) {
+				if (!options.allFilters && filter.filterName !== filterName) continue
 				requests.push({
 					requestType: 'SetSourceFilterEnabled',
 					requestData: {
 						sourceUuid,
-						filterName,
+						filterName: filter.filterName,
 						filterEnabled: utils.resolveVisibility(visible, filter.filterEnabled),
 					},
 				})
-			})
-
-			await this.sendBatch(requests)
-		} else {
-			const sourceUuid = this.self.obsState.findFilterTargetUuid(options.source)
-			if (!sourceUuid) return
-
-			const filter = this.self.states.sourceFilters.get(sourceUuid)?.find((f) => f.filterName === filterName)
-			// Toggling a filter that isn't known would guess at its state, so do nothing instead.
-			if (visible === 'toggle' && !filter) return
-
-			await this.sendRequest('SetSourceFilterEnabled', {
-				sourceUuid,
-				filterName,
-				filterEnabled: utils.resolveVisibility(visible, filter?.filterEnabled),
-			})
+			}
 		}
+
+		if (options.target === 'allSources') {
+			this.self.states.sourceFilters.forEach((filters, sourceUuid) => addFilters(sourceUuid, filters))
+			await this.sendBatch(requests)
+			return
+		}
+
+		const sourceUuid = this.self.obsState.findFilterTargetUuid(options.source)
+		if (!sourceUuid) return
+
+		if (options.allFilters) {
+			addFilters(sourceUuid, this.self.states.sourceFilters.get(sourceUuid) ?? [])
+			await this.sendBatch(requests)
+			return
+		}
+
+		const filter = this.self.states.sourceFilters.get(sourceUuid)?.find((f) => f.filterName === filterName)
+		// Toggling a filter that isn't known would guess at its state, so do nothing instead.
+		if (visible === 'toggle' && !filter) return
+
+		await this.sendRequest('SetSourceFilterEnabled', {
+			sourceUuid,
+			filterName,
+			filterEnabled: utils.resolveVisibility(visible, filter?.filterEnabled),
+		})
 	}
 }

@@ -161,3 +161,41 @@ describe('set_audio_monitor', () => {
 		expect(learned).toEqual({ monitor: expected })
 	})
 })
+
+describe('volume', () => {
+	let self: MockInstance
+
+	const run = async (options: Record<string, unknown>) => {
+		const actions = looseActions(getAudioActions(self))
+		await actions['volume'].callback(
+			actionEvent('volume', { source: 'Mic', unit: 'db', value: 0, amount: 1, duration: 0, ...options }),
+			new MockContext(),
+		)
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		// Seeded without inputVolume: its audio data has not been fetched yet.
+		seedSource(self, 'Mic')
+	})
+
+	test.each(['db', 'percent'])('does not adjust in %s while the current level is unknown', async (unit) => {
+		await run({ mode: 'adjust', unit })
+
+		expect(self.socket.call).not.toHaveBeenCalled()
+	})
+
+	test('still sets an absolute level while the current level is unknown', async () => {
+		await run({ mode: 'set', value: -6 })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputVolume', { inputName: 'Mic', inputVolumeDb: -6 })
+	})
+
+	test('adjusts from the known level', async () => {
+		self.states.sources.get('Mic')!.inputVolume = -30
+
+		await run({ mode: 'adjust', amount: 2 })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputVolume', { inputName: 'Mic', inputVolumeDb: -28 })
+	})
+})

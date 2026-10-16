@@ -3,8 +3,11 @@
 Control OBS Studio from Bitfocus Buttons or Bitfocus Companion using OBS's built-in WebSocket
 server.
 
-> **Requirements:** Version 4 of this module requires Buttons 1.8 or newer or Companion 5.0 or
-> newer. OBS Studio 32.1 or newer is recommended.
+## Requirements
+
+- OBS Studio: v32.1 or newer
+- Bitfocus Buttons: v1.8.0 or newer
+- Bitfocus Companion: v5.0.0 or newer
 
 ## Connect to OBS
 
@@ -53,7 +56,7 @@ by itself.
 | Source – Set Transform Properties   | Set position, scale, and rotation                                   |
 | Source – Set Source Text            | Replace the contents of a text source                               |
 | Source – Set Text Properties        | Change font, colour, alignment, outline, background, and layout     |
-| Filters – Set Visibility            | Enable, disable, or toggle a source or scene filter                 |
+| Filters – Set Visibility            | Enable, disable, or toggle one or all filters on a source or scene  |
 | Filters – Set Settings              | Apply filter settings supplied as JSON                              |
 | Source – Refresh Browser Source     | Reload a browser source                                             |
 | Source – Reset Video Capture Device | Deactivate and reactivate a capture device                          |

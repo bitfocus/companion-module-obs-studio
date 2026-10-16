@@ -16,7 +16,7 @@ yarn format:check
 yarn check
 ```
 
-Before finishing a change, `yarn check` (or format, lint, types, and tests separately) should pass. Do not bypass the pre-commit hook.
+Before finishing a change, `yarn check` (format check, lint, types, and tests) should pass. Do not bypass the pre-commit hook.
 
 ## Git
 

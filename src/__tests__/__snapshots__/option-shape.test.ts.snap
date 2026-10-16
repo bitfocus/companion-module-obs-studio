@@ -1307,7 +1307,7 @@ exports[`option shape > action options are unchanged 1`] = `
         },
         {
           "id": "rtmp_common",
-          "label": "Common RTMP",
+          "label": "Preset Service",
         },
         {
           "id": "whip_custom",
@@ -1319,6 +1319,24 @@ exports[`option shape > action options are unchanged 1`] = `
       "id": "streamType",
       "label": "Stream Type",
       "type": "dropdown",
+    },
+    {
+      "default": "",
+      "description": "The name as listed in OBS Settings → Stream. Leave empty to keep the current service.",
+      "id": "service",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_common'",
+      "label": "Service",
+      "type": "textinput",
+      "useVariables": true,
+    },
+    {
+      "default": "",
+      "description": "The ingest URL, or "auto" where the service supports it. After selecting a service in OBS, and clicking "OK", you can use Learn to copy both from OBS.",
+      "id": "server",
+      "isVisibleExpression": "$(options:streamType) === 'rtmp_common'",
+      "label": "Server",
+      "type": "textinput",
+      "useVariables": true,
     },
     {
       "default": "",
@@ -1709,6 +1727,13 @@ exports[`option shape > action options are unchanged 1`] = `
       "type": "dropdown",
     },
     {
+      "default": false,
+      "disableAutoExpression": true,
+      "id": "allFilters",
+      "label": "All Filters",
+      "type": "checkbox",
+    },
+    {
       "allowCustom": true,
       "choices": [
         {
@@ -1718,6 +1743,7 @@ exports[`option shape > action options are unchanged 1`] = `
       ],
       "default": "Gain",
       "id": "filter",
+      "isVisibleExpression": "!$(options:allFilters)",
       "label": "Filter",
       "type": "dropdown",
     },

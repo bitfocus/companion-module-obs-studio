@@ -135,65 +135,68 @@ function dynamicVariableEntries(self: OBSInstance): VariableEntry[] {
 	return entries
 }
 
+// Variables that exist regardless of what the connected OBS holds.
+const STATIC_VARIABLES: CompanionVariableDefinitions = {
+	base_resolution: { name: 'Current base (canvas) resolution' },
+	output_resolution: { name: 'Current output (scaled) resolution' },
+	target_framerate: { name: 'Current profile framerate' },
+	fps: { name: 'Current actual framerate' },
+	cpu_usage: { name: 'Current CPU usage (%)' },
+	memory_usage: { name: 'Current RAM usage (MB)' },
+	free_disk_space: { name: 'Free recording disk space' },
+	free_disk_space_mb: { name: 'Free recording disk space in MB, with no unit text' },
+	render_missed_frames: { name: 'Number of frames missed due to rendering lag' },
+	render_total_frames: { name: 'Number of frames rendered' },
+	output_skipped_frames: { name: 'Number of encoder frames skipped' },
+	output_total_frames: { name: 'Number of total encoder frames' },
+	stream_output_skipped_frames: { name: 'Number of frames skipped by the current stream' },
+	stream_output_total_frames: { name: 'Number of total frames for the current stream' },
+	average_frame_time: { name: 'Average frame time (in milliseconds)' },
+	recording: { name: 'Recording State' },
+	recording_file_name: { name: 'File name of the last completed recording' },
+	recording_path: { name: 'File path of current recording' },
+	recording_timecode: { name: 'Recording timecode (hh:mm:ss)' },
+	recording_timecode_hh: { name: 'Recording timecode (hours)' },
+	recording_timecode_mm: { name: 'Recording timecode (minutes)' },
+	recording_timecode_ss: { name: 'Recording timecode (seconds)' },
+	stream_timecode: { name: 'Stream Timecode (hh:mm:ss)' },
+	stream_timecode_hh: { name: 'Stream Timecode (hours)' },
+	stream_timecode_mm: { name: 'Stream Timecode (minutes)' },
+	stream_timecode_ss: { name: 'Stream Timecode (seconds)' },
+	stream_service: { name: 'Stream Service' },
+	streaming: { name: 'Streaming State' },
+	kbits_per_sec: { name: 'Stream output in kilobits per second' },
+	scene_active: { name: 'Current active scene' },
+	scene_preview: { name: 'Current preview scene' },
+	scene_previous: { name: 'Previously active scene, before the current scene' },
+	profile: { name: 'Current profile' },
+	scene_collection: { name: 'Current scene collection' },
+	current_transition: { name: 'Current transition' },
+	transition_duration: { name: 'Current transition duration (ms)' },
+	transition_active: { name: 'Transition in progress' },
+	transition_list: { name: 'List of available transition types' },
+	audio_source_list: { name: 'List of audio sources' },
+	current_media_name: { name: 'Source name(s) for currently playing media source(s)' },
+	latest_media_name: { name: 'Source name of the most recently started media source' },
+	latest_media_time_elapsed: { name: 'Elapsed time of the most recently started media source' },
+	latest_media_time_remaining: { name: 'Remaining time of the most recently started media source' },
+	current_media_time_elapsed: { name: 'Elapsed time(s) for currently playing media source(s)' },
+	current_media_time_remaining: { name: 'Remaining time(s) for currently playing media source(s)' },
+	replay_buffer_path: { name: 'File path of the last replay buffer saved' },
+	replay_buffer_active: { name: 'Replay buffer is active' },
+	virtualcam_active: { name: 'Virtual camera is active' },
+	studio_mode: { name: 'Studio mode is active' },
+	screenshot_saved_path: { name: 'File path of the last saved screenshot' },
+	custom_command_type: { name: 'Latest Custom Command type sent to obs-websocket' },
+	custom_command_request: { name: 'Latest Custom Command request data sent to obs-websocket' },
+	custom_command_response: { name: 'Latest response from obs-websocket after using the Custom Command action' },
+	vendor_event_name: { name: 'Vendor name of the latest Vendor Event received from obs-websocket' },
+	vendor_event_type: { name: 'Latest Vendor Event type received from obs-websocket' },
+	vendor_event_data: { name: 'Latest Vendor Event data received from obs-websocket' },
+}
+
 export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
-	const variables: CompanionVariableDefinitions = {
-		base_resolution: { name: 'Current base (canvas) resolution' },
-		output_resolution: { name: 'Current output (scaled) resolution' },
-		target_framerate: { name: 'Current profile framerate' },
-		fps: { name: 'Current actual framerate' },
-		cpu_usage: { name: 'Current CPU usage (%)' },
-		memory_usage: { name: 'Current RAM usage (MB)' },
-		free_disk_space: { name: 'Free recording disk space' },
-		free_disk_space_mb: { name: 'Free recording disk space in MB, with no unit text' },
-		render_missed_frames: { name: 'Number of frames missed due to rendering lag' },
-		render_total_frames: { name: 'Number of frames rendered' },
-		output_skipped_frames: { name: 'Number of encoder frames skipped' },
-		output_total_frames: { name: 'Number of total encoder frames' },
-		stream_output_skipped_frames: { name: 'Number of frames skipped by the current stream' },
-		stream_output_total_frames: { name: 'Number of total frames for the current stream' },
-		average_frame_time: { name: 'Average frame time (in milliseconds)' },
-		recording: { name: 'Recording State' },
-		recording_file_name: { name: 'File name of the last completed recording' },
-		recording_path: { name: 'File path of current recording' },
-		recording_timecode: { name: 'Recording timecode (hh:mm:ss)' },
-		recording_timecode_hh: { name: 'Recording timecode (hours)' },
-		recording_timecode_mm: { name: 'Recording timecode (minutes)' },
-		recording_timecode_ss: { name: 'Recording timecode (seconds)' },
-		stream_timecode: { name: 'Stream Timecode (hh:mm:ss)' },
-		stream_timecode_hh: { name: 'Stream Timecode (hours)' },
-		stream_timecode_mm: { name: 'Stream Timecode (minutes)' },
-		stream_timecode_ss: { name: 'Stream Timecode (seconds)' },
-		stream_service: { name: 'Stream Service' },
-		streaming: { name: 'Streaming State' },
-		kbits_per_sec: { name: 'Stream output in kilobits per second' },
-		scene_active: { name: 'Current active scene' },
-		scene_preview: { name: 'Current preview scene' },
-		scene_previous: { name: 'Previously active scene, before the current scene' },
-		profile: { name: 'Current profile' },
-		scene_collection: { name: 'Current scene collection' },
-		current_transition: { name: 'Current transition' },
-		transition_duration: { name: 'Current transition duration (ms)' },
-		transition_active: { name: 'Transition in progress' },
-		transition_list: { name: 'List of available transition types' },
-		audio_source_list: { name: 'List of audio sources' },
-		current_media_name: { name: 'Source name(s) for currently playing media source(s)' },
-		latest_media_name: { name: 'Source name of the most recently started media source' },
-		latest_media_time_elapsed: { name: 'Elapsed time of the most recently started media source' },
-		latest_media_time_remaining: { name: 'Remaining time of the most recently started media source' },
-		current_media_time_elapsed: { name: 'Elapsed time(s) for currently playing media source(s)' },
-		current_media_time_remaining: { name: 'Remaining time(s) for currently playing media source(s)' },
-		replay_buffer_path: { name: 'File path of the last replay buffer saved' },
-		replay_buffer_active: { name: 'Replay buffer is active' },
-		virtualcam_active: { name: 'Virtual camera is active' },
-		studio_mode: { name: 'Studio mode is active' },
-		screenshot_saved_path: { name: 'File path of the last saved screenshot' },
-		custom_command_type: { name: 'Latest Custom Command type sent to obs-websocket' },
-		custom_command_request: { name: 'Latest Custom Command request data sent to obs-websocket' },
-		custom_command_response: { name: 'Latest response from obs-websocket after using the Custom Command action' },
-		vendor_event_name: { name: 'Vendor name of the latest Vendor Event received from obs-websocket' },
-		vendor_event_type: { name: 'Latest Vendor Event type received from obs-websocket' },
-		vendor_event_data: { name: 'Latest Vendor Event data received from obs-websocket' },
-	}
+	const variables: CompanionVariableDefinitions = { ...STATIC_VARIABLES }
 
 	for (const entry of dynamicVariableEntries(this)) {
 		variables[entry.id] = { name: entry.name }
@@ -202,35 +205,48 @@ export function getVariables(this: OBSInstance): CompanionVariableDefinitions {
 	return variables
 }
 
-export function updateVariableValues(this: OBSInstance): void {
-	const updates: Record<string, VariableValue> = {
-		recording: 'Unknown',
-		recording_file_name: 'None',
-		recording_path: 'None',
-		recording_timecode: '00:00:00',
-		recording_timecode_hh: '00',
-		recording_timecode_mm: '00',
-		recording_timecode_ss: '00',
-		stream_timecode: '00:00:00',
-		stream_timecode_hh: '00',
-		stream_timecode_mm: '00',
-		stream_timecode_ss: '00',
-		stream_service: 'None',
-		streaming: 'Off-Air',
-		kbits_per_sec: 0,
-		stream_output_skipped_frames: 0,
-		stream_output_total_frames: 0,
-		current_media_name: [],
-		latest_media_name: '',
-		latest_media_time_elapsed: DEFAULT_TIMECODE,
-		latest_media_time_remaining: DEFAULT_TIMECODE,
-		replay_buffer_path: 'None',
+// Values the module only learns from an event or a poll, so a fresh connection starts from these.
+const PLACEHOLDER_VALUES: Record<string, VariableValue> = {
+	recording_file_name: 'None',
+	recording_timecode: DEFAULT_TIMECODE,
+	recording_timecode_hh: '00',
+	recording_timecode_mm: '00',
+	recording_timecode_ss: '00',
+	stream_timecode: DEFAULT_TIMECODE,
+	stream_timecode_hh: '00',
+	stream_timecode_mm: '00',
+	stream_timecode_ss: '00',
+	stream_service: 'None',
+	kbits_per_sec: 0,
+	stream_output_skipped_frames: 0,
+	stream_output_total_frames: 0,
+	current_media_name: [],
+	current_media_time_elapsed: [],
+	current_media_time_remaining: [],
+	latest_media_name: '',
+	latest_media_time_elapsed: DEFAULT_TIMECODE,
+	latest_media_time_remaining: DEFAULT_TIMECODE,
+	replay_buffer_path: 'None',
+	screenshot_saved_path: 'None',
+}
+
+/**
+ * Publishes every variable after a definition rebuild. `previous` is what was published before it: values
+ * the module cannot re-derive from state are carried over, so a rebuild mid-recording doesn't blank them.
+ */
+export function updateVariableValues(this: OBSInstance, previous: ReadonlyMap<string, CompanionVariableValue>): void {
+	const updates: CompanionVariableValues = { ...PLACEHOLDER_VALUES }
+	for (const id of Object.keys(STATIC_VARIABLES)) {
+		if (previous.has(id)) updates[id] = previous.get(id)
+	}
+
+	Object.assign(updates, {
+		recording: utils.getOBSRecordingStateLabel(this.states.recording),
+		recording_path: this.states.recordDirectory || 'None',
+		streaming: utils.getOBSStreamingStateLabel(utils.getStreamingState(this.states)),
 		replay_buffer_active: this.states.replayBuffer,
 		virtualcam_active: this.states.outputs.get(VIRTUALCAM_OUTPUT_NAME)?.outputActive ?? false,
 		studio_mode: this.states.studioMode,
-		screenshot_saved_path: 'None',
-		current_media_time_elapsed: [],
-		current_media_time_remaining: [],
 		scene_preview: this.states.previewScene,
 		scene_active: this.states.programScene,
 		scene_previous: this.states.previousScene,
@@ -244,7 +260,7 @@ export function updateVariableValues(this: OBSInstance): void {
 		base_resolution: this.states.resolution,
 		output_resolution: this.states.outputResolution,
 		target_framerate: this.states.framerate,
-	}
+	})
 
 	for (const entry of dynamicVariableEntries(this)) {
 		updates[entry.id] = entry.value
@@ -281,9 +297,13 @@ export class VariablePublisher {
 	/**
 	 * Republishes in full on the next write. Called wherever the host may no longer hold these values;
 	 * a redundant republish costs nothing, a missed one leaves a variable blank with no error.
+	 *
+	 * Returns what had been published, for a caller that needs to republish it.
 	 */
-	public reset(): void {
-		this.lastPublished.clear()
+	public reset(): ReadonlyMap<string, CompanionVariableValue> {
+		const published = this.lastPublished
+		this.lastPublished = new Map()
+		return published
 	}
 }
 

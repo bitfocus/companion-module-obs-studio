@@ -131,6 +131,11 @@ describe('audioPeaking', () => {
 		expect(check({ threshold: -20, peakHold: 0 })).toBe(false)
 	})
 
+	test('treats a full-scale (0 dB) peak as peaking', () => {
+		setPeak(0)
+		expect(check({ threshold: -20, peakHold: 0 })).toBe(true)
+	})
+
 	test('stays active for the hold duration after the level drops', () => {
 		setPeak(-10)
 		expect(check({ threshold: -20, peakHold: 1000 })).toBe(true)

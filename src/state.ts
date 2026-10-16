@@ -59,8 +59,11 @@ export class OBSState {
 
 	public invalidateSourceNameIndex(): void {
 		this.sourceNameIndex = undefined
-		// Kind (and so media-list membership) is only set on creation/removal, but this cache is
-		// cheap to rebuild, so piggyback on the same invalidation points rather than tracking separately.
+		// Sources coming and going changes media-list membership too.
+		this.invalidateMediaSourceUuids()
+	}
+
+	public invalidateMediaSourceUuids(): void {
 		this.mediaSourceUuidCache = undefined
 	}
 

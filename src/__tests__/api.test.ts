@@ -55,6 +55,18 @@ describe('OBSApi.reconcileMediaPoll', () => {
 		expect(self.mediaPoll).toBeDefined()
 	})
 
+	test('starts the poll once a source first seen without a kind turns out to be media', () => {
+		self.obs.addSource('Clip', 'Clip')
+		self.obs.reconcileMediaPoll()
+		expect(self.mediaPoll).toBeUndefined()
+
+		self.obs.addSource('Clip', 'Clip', 'ffmpeg_source')
+		self.obs.reconcileMediaPoll()
+
+		expect(self.obsState.mediaSourceUuids).toEqual(['Clip'])
+		expect(self.mediaPoll).toBeDefined()
+	})
+
 	test('does not start the poll for a collection with no media sources', () => {
 		self.obs.addSource('Mic', 'Mic', 'wasapi_input_capture')
 
@@ -101,5 +113,52 @@ describe('OBSApi.reconcileMediaPoll', () => {
 		self.obs.reconcileMediaPoll()
 
 		expect(self.mediaPoll).toBeDefined()
+	})
+})
+
+describe('OBSApi.updateAudioPeak', () => {
+	let self: MockInstance
+
+	const meter = (inputLevelsMul: Array<[number, number, number]>): number | undefined => {
+		self.obs.updateAudioPeak({ inputs: [{ inputUuid: 'Mic', inputLevelsMul }] })
+		return self.states.sources.get('Mic')!.peak
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		self.obs.addSource('Mic', 'Mic', 'wasapi_input_capture')
+	})
+
+	test('reads a stereo source with signal only on the right channel', () => {
+		expect(
+			meter([
+				[0, 0, 0],
+				[0.5, 1, 1],
+			]),
+		).toBe(0)
+	})
+
+	test('reads the loudest channel of a multichannel source', () => {
+		expect(
+			meter([
+				[0, 0.1, 0.1],
+				[0, 0, 0],
+				[0, 0, 0],
+				[0.4, 0.5, 0.5],
+			]),
+		).toBe(-6)
+	})
+
+	test('floors a silent source to -100', () => {
+		expect(
+			meter([
+				[0, 0, 0],
+				[0, 0, 0],
+			]),
+		).toBe(-100)
+	})
+
+	test('floors a source reporting no channels to -100', () => {
+		expect(meter([])).toBe(-100)
 	})
 })
