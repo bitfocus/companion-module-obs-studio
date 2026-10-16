@@ -348,12 +348,11 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				const sourceName = action.options.source
 				const props = action.options.props || []
 				const source = self.obsState.findSourceByName(sourceName)
-				const existingSettings = { ...(source?.settings || {}) }
-
-				// Start with existing settings, then overlay changes.
-				const inputSettings: JsonObject = { ...existingSettings }
-				// Always copy font object if it exists.
-				const existingFont: OBSTextSourceFont = { ...(existingSettings.font as OBSTextSourceFont | undefined) }
+				// SetInputSettings overlays top-level keys, so only the chosen properties are sent: resending the
+				// cached settings would pin the kind defaults merged into them and could revert a newer change.
+				const inputSettings: JsonObject = {}
+				// Nested objects are replaced rather than merged, so the font goes out whole.
+				const existingFont: OBSTextSourceFont = { ...(source?.settings?.font as OBSTextSourceFont | undefined) }
 				const kind = source?.inputKind ?? ''
 
 				for (const prop of props) {

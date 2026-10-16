@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { getSourceActions } from '../../actions/sources.js'
-import { makeMockInstance, sceneItem, seedScene, type MockInstance } from '../mock/instance.js'
+import { makeMockInstance, sceneItem, seedScene, seedSource, type MockInstance } from '../mock/instance.js'
 import { actionEvent } from '../mock/events.js'
 import { MockContext } from '../mock-context.js'
 import { looseActions } from '../loose-definitions.js'
@@ -742,6 +742,48 @@ describe('target dropdowns', () => {
 			await toggle('allSources')
 			const batch = self.socket.callBatch.mock.calls[0][0] as Array<{ requestData: any }>
 			expect(batch.map((b) => b.requestData.sourceUuid).sort()).toEqual(['scene-a', 'src-1'])
+		})
+	})
+})
+
+describe('setTextProperties', () => {
+	let self: MockInstance
+
+	const setProps = async (options: Record<string, unknown>) => {
+		const actions = looseActions(getSourceActions(self))
+		await actions['setTextProperties'].callback(
+			actionEvent('setTextProperties', { source: 'Title', ...options }),
+			new MockContext(),
+		)
+	}
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		seedSource(self, 'Title', 'Title', 'text_gdiplus_v3')
+		// As buildInputSettings caches it: the kind defaults merged under what OBS reported.
+		self.states.sources.get('Title')!.settings = {
+			text: 'Old text',
+			color: 0xffffffff,
+			align: 'left',
+			font: { face: 'Arial', size: 36, style: 'Regular' },
+		}
+	})
+
+	test('sends only the selected properties', async () => {
+		await setProps({ props: ['color1'], color1: 'rgba(255, 0, 0, 1)' })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputSettings', {
+			inputName: 'Title',
+			inputSettings: { color: 0xff0000ff },
+		})
+	})
+
+	test('sends the whole font when changing part of it, since OBS replaces nested objects', async () => {
+		await setProps({ props: ['fontSize'], fontSize: '48' })
+
+		expect(self.socket.call).toHaveBeenCalledWith('SetInputSettings', {
+			inputName: 'Title',
+			inputSettings: { font: { face: 'Arial', size: 48, style: 'Regular' } },
 		})
 	})
 })
