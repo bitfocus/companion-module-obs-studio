@@ -1,4 +1,4 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
+import { CompanionActionDefinitions, createModuleLogger } from '@companion-module/base'
 import type OBSInstance from '../main.js'
 import { clamp, dbToPercent, isMonitoringEnabled, percentToDb } from '../utils.js'
 import { ObsAudioMonitorType } from '../types.js'
@@ -11,6 +11,8 @@ import {
 	SYNC_OFFSET_MIN,
 	SYNC_OFFSET_MAX,
 } from '../constants.js'
+
+const logger = createModuleLogger('Actions/Audio')
 
 export type AudioActionSchemas = {
 	mute: { options: { source: string; mute: 'true' | 'false' | 'toggle' }; result: boolean | null }
@@ -105,11 +107,14 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 				let newDb: number
 				if (action.options.mode === 'set') {
 					newDb = usePercent ? percentToDb(action.options.value) : action.options.value
+				} else if (currentDb === undefined) {
+					// Guessing a starting level would jump the source, so wait until its volume has been read.
+					logger.warn(`Cannot adjust the volume of ${sourceName}, its current level is not known yet`)
+					return
 				} else if (usePercent) {
-					const currentPercent = dbToPercent(currentDb ?? VOLUME_MIN_DB)
-					newDb = percentToDb(clamp(currentPercent + action.options.amount, 0, 100))
+					newDb = percentToDb(clamp(dbToPercent(currentDb) + action.options.amount, 0, 100))
 				} else {
-					newDb = (currentDb ?? 0) + action.options.amount
+					newDb = currentDb + action.options.amount
 				}
 				newDb = clamp(newDb, VOLUME_MIN_DB, VOLUME_MAX_DB)
 
