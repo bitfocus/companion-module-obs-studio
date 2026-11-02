@@ -688,3 +688,35 @@ describe('v4_0_0 feedback conversion', () => {
 		expect(feedback.feedbackId).toBe('streaming')
 	})
 })
+
+describe('v4_0_0 scene feedbacks carrying variables', () => {
+	// A 3.15.3 install still has every script after v3_15_0 to run.
+	const fromV3_15_3 = upgrades.slice(upgrades.findIndex((script) => script.name === 'v3_15_0') + 1)
+
+	function upgradeFromV3(feedbackId: string, options: Record<string, unknown>) {
+		const feedback = { id: 'f1', controlId: 'ctl1', feedbackId, options: wrap(options) } as CompanionMigrationFeedback
+		for (const script of fromV3_15_3) script(context, makeProps(null, [], [feedback]))
+		return { feedback, options: plain(feedback.options) }
+	}
+
+	test('scene_item_active_in_scene turns a scene and source carrying variables into expressions', () => {
+		const { options } = upgradeFromV3('scene_item_active_in_scene', {
+			scene: '$(obs:scene_active)',
+			any: false,
+			source: 'Cam $(internal:n)',
+		})
+		expect(options.scene).toEqual({ isExpression: true, value: '$(obs:scene_active)' })
+		expect(options.source).toEqual({ isExpression: true, value: 'parseVariables("Cam $(internal:n)")' })
+	})
+
+	test.each([
+		['sceneProgram', {}, 'sceneProgram'],
+		['scenePreview', {}, 'scenePreview'],
+		['scene_active', { mode: 'program' }, 'sceneProgram'],
+		['scene_active', { mode: 'preview' }, 'scenePreview'],
+	])('%s %o turns a scene carrying variables into an expression', (feedbackId, extra, upgradedId) => {
+		const { feedback, options } = upgradeFromV3(feedbackId, { ...extra, scene: '$(obs:scene_active)' })
+		expect(feedback.feedbackId).toBe(upgradedId)
+		expect(options.scene).toEqual({ isExpression: true, value: '$(obs:scene_active)' })
+	})
+})

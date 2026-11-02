@@ -745,10 +745,15 @@ export default [
 				}
 				delete feedback.options.custom
 				delete feedback.options.customSceneName
+				// v3 parsed variables in the program and preview scene names, but never in the previous one.
+				if (feedback.feedbackId !== 'scenePrevious') {
+					feedback.options.scene = variablesToExpression(feedback.options.scene)
+				}
 				feedbackChanged = true
 			} else if (feedback.feedbackId === 'scene_active') {
 				const preview = getOpt(feedback.options, 'mode') === 'preview'
 				feedback.feedbackId = preview ? 'scenePreview' : 'sceneProgram'
+				feedback.options.scene = variablesToExpression(feedback.options.scene)
 				feedback.style = {
 					color: (getOpt(feedback.options, preview ? 'fg_preview' : 'fg') as number | undefined) ?? Color.White,
 					bgcolor:
@@ -756,6 +761,10 @@ export default [
 						(preview ? Color.Green : Color.Red),
 				}
 				for (const key of ['mode', 'fg', 'bg', 'fg_preview', 'bg_preview']) delete feedback.options[key]
+				feedbackChanged = true
+			} else if (feedback.feedbackId === 'scene_item_active_in_scene') {
+				feedback.options.scene = variablesToExpression(feedback.options.scene)
+				feedback.options.source = variablesToExpression(feedback.options.source)
 				feedbackChanged = true
 			} else if (feedback.feedbackId === 'audioMeter') {
 				feedback.feedbackId = 'audioPeaking'
