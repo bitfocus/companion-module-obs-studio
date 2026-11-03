@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Upgrading from 3.x keeps variables working in the scene and source of "Scene in Program",
-  "Scene in Preview" and "Source - Enabled in Scene" feedbacks, which were left as literal text
+- Variables from 3.x work again in the scene and source of "Scene in Program", "Scene in Preview"
+  and "Source - Enabled in Scene" feedbacks, including on connections already upgraded to 4.0.0,
+  where they were left as literal text
 
 ## [4.0.0] - 2026-10-16
 

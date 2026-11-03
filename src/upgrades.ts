@@ -745,15 +745,10 @@ export default [
 				}
 				delete feedback.options.custom
 				delete feedback.options.customSceneName
-				// v3 parsed variables in the program and preview scene names, but never in the previous one.
-				if (feedback.feedbackId !== 'scenePrevious') {
-					feedback.options.scene = variablesToExpression(feedback.options.scene)
-				}
 				feedbackChanged = true
 			} else if (feedback.feedbackId === 'scene_active') {
 				const preview = getOpt(feedback.options, 'mode') === 'preview'
 				feedback.feedbackId = preview ? 'scenePreview' : 'sceneProgram'
-				feedback.options.scene = variablesToExpression(feedback.options.scene)
 				feedback.style = {
 					color: (getOpt(feedback.options, preview ? 'fg_preview' : 'fg') as number | undefined) ?? Color.White,
 					bgcolor:
@@ -761,10 +756,6 @@ export default [
 						(preview ? Color.Green : Color.Red),
 				}
 				for (const key of ['mode', 'fg', 'bg', 'fg_preview', 'bg_preview']) delete feedback.options[key]
-				feedbackChanged = true
-			} else if (feedback.feedbackId === 'scene_item_active_in_scene') {
-				feedback.options.scene = variablesToExpression(feedback.options.scene)
-				feedback.options.source = variablesToExpression(feedback.options.source)
 				feedbackChanged = true
 			} else if (feedback.feedbackId === 'audioMeter') {
 				feedback.feedbackId = 'audioPeaking'
@@ -804,6 +795,34 @@ export default [
 			}
 		}
 
+		return changes
+	},
+	function v4_0_1(
+		_context: CompanionUpgradeContext<ModuleConfig>,
+		props: CompanionStaticUpgradeProps<ModuleConfig, ModuleSecrets>,
+	): CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> {
+		const changes: CompanionStaticUpgradeResult<ModuleConfig, ModuleSecrets> = {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+		// v3 parsed variables in these scene and source names, but v4_0_0 shipped without converting them.
+		// v3 never parsed variables in the previous scene, so scenePrevious stays as it is.
+		const keysByFeedback: Record<string, string[]> = {
+			sceneProgram: ['scene'],
+			scenePreview: ['scene'],
+			scene_item_active_in_scene: ['scene', 'source'],
+		}
+		for (const feedback of props.feedbacks) {
+			let feedbackChanged = false
+			for (const key of keysByFeedback[feedback.feedbackId] ?? []) {
+				const converted = variablesToExpression(feedback.options[key])
+				if (converted === feedback.options[key]) continue
+				feedback.options[key] = converted
+				feedbackChanged = true
+			}
+			if (feedbackChanged) changes.updatedFeedbacks.push(feedback)
+		}
 		return changes
 	},
 ]

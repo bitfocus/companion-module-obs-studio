@@ -27,8 +27,8 @@ function makeProps(
 
 // Index 1 is the v2_0_0 script (index 0 is the generated boolean-feedback conversion).
 const v2_0_0 = upgrades[1]
-// v4_0_0 is the last script in the list.
-const v4_0_0 = upgrades[upgrades.length - 1]
+const v4_0_0 = upgrades.find((script) => script.name === 'v4_0_0')!
+const v4_0_1 = upgrades.find((script) => script.name === 'v4_0_1')!
 
 function makeLegacyProps(
 	config: LegacyModuleConfig | null,
@@ -689,7 +689,7 @@ describe('v4_0_0 feedback conversion', () => {
 	})
 })
 
-describe('v4_0_0 scene feedbacks carrying variables', () => {
+describe('scene feedbacks carrying variables', () => {
 	// A 3.15.3 install still has every script after v3_15_0 to run.
 	const fromV3_15_3 = upgrades.slice(upgrades.findIndex((script) => script.name === 'v3_15_0') + 1)
 
@@ -718,5 +718,34 @@ describe('v4_0_0 scene feedbacks carrying variables', () => {
 		const { feedback, options } = upgradeFromV3(feedbackId, { ...extra, scene: '$(obs:scene_active)' })
 		expect(feedback.feedbackId).toBe(upgradedId)
 		expect(options.scene).toEqual({ isExpression: true, value: '$(obs:scene_active)' })
+	})
+
+	test.each([
+		['sceneProgram', 'scene'],
+		['scenePreview', 'scene'],
+		['scene_item_active_in_scene', 'scene'],
+		['scene_item_active_in_scene', 'source'],
+	])('a 4.0.0 install turns the %s %s carrying variables into an expression', (feedbackId, key) => {
+		const feedback = {
+			id: 'f1',
+			controlId: 'ctl1',
+			feedbackId,
+			options: wrap({ [key]: '$(obs:scene_active)' }),
+		} as CompanionMigrationFeedback
+		const result = v4_0_1(context, makeProps(null, [], [feedback]))
+		expect(result.updatedFeedbacks).toEqual([feedback])
+		expect(plain(feedback.options)[key]).toEqual({ isExpression: true, value: '$(obs:scene_active)' })
+	})
+
+	test('a 4.0.0 install leaves the previous scene as text', () => {
+		const feedback = {
+			id: 'f1',
+			controlId: 'ctl1',
+			feedbackId: 'scenePrevious',
+			options: wrap({ scene: '$(obs:scene_active)' }),
+		} as CompanionMigrationFeedback
+		const result = v4_0_1(context, makeProps(null, [], [feedback]))
+		expect(result.updatedFeedbacks).toEqual([])
+		expect(plain(feedback.options).scene).toBe('$(obs:scene_active)')
 	})
 })
