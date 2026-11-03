@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Variables from 3.x work again in the scene and source of "Scene in Program", "Scene in Preview"
+  and "Source - Enabled in Scene" feedbacks, including on connections already upgraded to 4.0.0,
+  where they were left as literal text
+
 ## [4.0.0] - 2026-10-16
 
 > [!IMPORTANT]
