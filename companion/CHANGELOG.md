@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- "Source - Active in Preview" now follows enabled nested scenes and groups and refreshes when
+  preview, visibility, scene contents, or Studio Mode changes. Sources shown only outside the preview
+  no longer activate it
 - Variables from 3.x work again in the scene and source of "Scene in Program", "Scene in Preview"
   and "Source - Enabled in Scene" feedbacks, including on connections already upgraded to 4.0.0,
   where they were left as literal text

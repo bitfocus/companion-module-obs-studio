@@ -991,6 +991,7 @@ export class OBSApi {
 			pending = nested
 		}
 
+		this.self.checkFeedbacks('scene_item_previewed')
 		return contained
 	}
 

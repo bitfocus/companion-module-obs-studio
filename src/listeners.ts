@@ -125,7 +125,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.previewScene = data.sceneName ?? 'None'
 		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
-		self.checkFeedbacks('scenePreview')
+		self.checkFeedbacks('scenePreview', 'scene_item_previewed')
 		self.sendToActionRecorder({ actionId: 'preview_scene', options: { mode: 'set', scene: data.sceneName } })
 	})
 	obs.on('SceneListChanged', (data) => {
@@ -390,6 +390,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			// Only clear the relationship if this removal is still from the recorded parent. A
 			// move's create refresh may finish first and have already installed the new parent.
 			if (source?.parentGroupUuid === data.sceneUuid) delete source.parentGroupUuid
+			self.checkFeedbacks('scene_item_previewed')
 			void self.updateActionsFeedbacksVariables()
 		}
 	})
@@ -423,7 +424,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				})
 			}
 		}
-		self.checkFeedbacks('scene_item_active_in_scene')
+		self.checkFeedbacks('scene_item_active_in_scene', 'scene_item_previewed')
 		const sceneName = self.states.scenes.get(data.sceneUuid)?.sceneName
 		const sourceName = sourceUuid ? self.states.sources.get(sourceUuid)?.sourceName : undefined
 		if (sourceName && sceneName) {
@@ -607,7 +608,7 @@ function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				self.states.previewScene = 'None'
 				self.states.previewSceneUuid = ''
 			}
-			self.checkFeedbacks('studioMode', 'scenePreview')
+			self.checkFeedbacks('studioMode', 'scenePreview', 'scene_item_previewed')
 			self.setVariableValues({ scene_preview: self.states.previewScene })
 		})()
 	})

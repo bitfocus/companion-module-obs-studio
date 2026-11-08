@@ -116,6 +116,12 @@ be combined with other feedbacks.
 | General                 | Profile Active, Scene Collection Active, Studio Mode Active, Disk Space Remaining                          |
 | Advanced                | Custom – Vendor Event                                                                                      |
 
+**Source – Active in Preview** follows the source's enabled path through the current Studio Mode
+preview scene, including nested scenes and groups. Hiding a containing scene or group also makes its
+contents inactive in this feedback. If a source appears more than once, any enabled path counts.
+Sources shown only in program, a projector, or a properties window do not count. The feedback is
+inactive when Studio Mode is off.
+
 ### Value feedbacks
 
 Value feedbacks report a number instead of directly applying a style. Bind one to a button's local
