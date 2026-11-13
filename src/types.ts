@@ -145,7 +145,6 @@ export interface OBSNormalizedState {
 
 export interface OBSSource {
 	active?: boolean
-	videoShowing?: boolean
 	inputMuted?: boolean
 	inputVolume?: number
 	inputAudioBalance?: number
@@ -221,7 +220,7 @@ export type OBSInputListEntry = {
  * payload as `any`.
  */
 export type SourceDataPayloads = {
-	active: { videoActive?: boolean; videoShowing?: boolean }
+	active: { videoActive?: boolean }
 	filters: { filters?: OBSFilter[] }
 	settings: { inputKind?: string; inputSettings: JsonObject }
 	mute: { inputMuted: boolean }

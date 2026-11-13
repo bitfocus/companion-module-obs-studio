@@ -85,7 +85,7 @@ export class OBSApi {
 
 	// Event subscriptions except high-frequency volume meters.
 	private get baseEventSubscriptions(): number {
-		return EventSubscription.All | EventSubscription.InputActiveStateChanged | EventSubscription.InputShowStateChanged
+		return EventSubscription.All | EventSubscription.InputActiveStateChanged
 	}
 
 	constructor(self: OBSInstance) {
@@ -991,8 +991,13 @@ export class OBSApi {
 			pending = nested
 		}
 
-		this.self.checkFeedbacks('scene_item_previewed')
+		this.containersChanged()
 		return contained
+	}
+
+	/** Refreshes feedbacks derived from the scene/group item graph after any change to it. */
+	public containersChanged(): void {
+		this.self.checkFeedbacks('scene_item_previewed')
 	}
 
 	public async fetchSourcesData(sourceUuids: string[]): Promise<void> {
@@ -1060,7 +1065,6 @@ export class OBSApi {
 		switch (entry.kind) {
 			case 'active':
 				source.active = entry.responseData.videoActive
-				source.videoShowing = entry.responseData.videoShowing
 				break
 			case 'filters':
 				this.setSourceFilters(uuid, entry.responseData.filters)
@@ -1284,6 +1288,7 @@ export class OBSApi {
 		this.self.obsState.invalidateSceneNameIndex()
 		this.self.obsState.invalidateSourceNameIndex()
 		this.reconcileMediaPoll()
+		this.containersChanged()
 		void this.self.updateActionsFeedbacksVariables()
 	}
 

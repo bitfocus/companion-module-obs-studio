@@ -454,7 +454,10 @@ export class OBSState {
 			for (const item of this.state.sceneItems.get(containerUuid) ?? []) {
 				if (!item.sceneItemEnabled) continue
 				if (item.sourceUuid === sourceUuid) return true
-				if (item.isGroup || this.state.scenes.has(item.sourceUuid)) pending.push(item.sourceUuid)
+				// sourceType covers a nested scene whose own registration hasn't arrived yet.
+				const isContainer =
+					item.isGroup || item.sourceType === 'OBS_SOURCE_TYPE_SCENE' || this.state.scenes.has(item.sourceUuid)
+				if (isContainer) pending.push(item.sourceUuid)
 			}
 		}
 		return false

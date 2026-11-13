@@ -47,7 +47,6 @@ describe('Source - Active in Preview', () => {
 	)
 
 	test.each(['preview', 'nested', 'group'])('a hidden item in %s blocks its descendants', (container) => {
-		self.states.sources.get('camera')!.videoShowing = true
 		self.states.sceneItems.get(container)![0].sceneItemEnabled = false
 		expect(check('Camera')).toBe(false)
 	})
@@ -80,27 +79,23 @@ describe('Source - Active in Preview', () => {
 	})
 
 	test('a source shown only in program or another OBS window does not count', () => {
-		self.states.sources.get('camera')!.videoShowing = true
 		self.states.sources.get('camera')!.active = true
 		self.states.sceneItems.set('preview', [])
 		expect(check('Camera')).toBe(false)
 	})
 
 	test('Studio Mode must be enabled, even if preview state remains cached', () => {
-		self.states.sources.get('camera')!.videoShowing = true
 		self.states.studioMode = false
 		expect(check('Camera')).toBe(false)
 	})
 
 	test('an unknown preview scene or source is inactive', () => {
 		expect(check('Missing')).toBe(false)
-		self.states.sources.get('camera')!.videoShowing = true
 		self.states.previewSceneUuid = ''
 		expect(check('Camera')).toBe(false)
 	})
 
 	test('missing container data is inactive', () => {
-		self.states.sources.get('camera')!.videoShowing = true
 		self.states.sceneItems.delete('nested')
 		expect(check('Camera')).toBe(false)
 	})
@@ -111,6 +106,11 @@ describe('Source - Active in Preview', () => {
 		])
 		expect(check('Camera')).toBe(false)
 		self.states.sceneItems.get('nested')!.push(sceneItem({ sceneItemId: 6, sourceUuid: 'camera' }))
+		expect(check('Camera')).toBe(true)
+	})
+
+	test('a nested scene counts before its own scene registration arrives', () => {
+		self.states.scenes.delete('nested')
 		expect(check('Camera')).toBe(true)
 	})
 
@@ -125,7 +125,7 @@ describe('Source - Active in Preview', () => {
 			})
 		})
 
-		test('changing preview updates the button without InputShowStateChanged', () => {
+		test('changing preview updates the button', () => {
 			self.socket.emit('CurrentPreviewSceneChanged', { sceneName: 'Nested', sceneUuid: 'nested' })
 			expect(displayed).toBe(true)
 			self.states.sceneItems.set('program', [])
@@ -165,6 +165,22 @@ describe('Source - Active in Preview', () => {
 			await vi.waitFor(() => expect(displayed).toBe(true))
 			self.socket.emit('SceneItemRemoved', { sceneUuid: 'preview', sourceUuid: 'nested', sceneItemId: 1 })
 			expect(displayed).toBe(false)
+		})
+
+		test('removing a nested scene refreshes the button', async () => {
+			displayed = true
+			await self.obs.removeScene('nested')
+			expect(displayed).toBe(false)
+		})
+
+		test('a scene list change refreshes the button', () => {
+			self.socket.emit('SceneListChanged', {
+				scenes: [
+					{ sceneName: 'Preview', sceneUuid: 'preview', sceneIndex: 0 },
+					{ sceneName: 'Nested', sceneUuid: 'nested', sceneIndex: 1 },
+				],
+			})
+			expect(displayed).toBe(true)
 		})
 
 		test('reloading an empty scene collection clears the feedback', async () => {
