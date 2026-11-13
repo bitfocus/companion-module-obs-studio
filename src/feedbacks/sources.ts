@@ -43,11 +43,14 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 		scene_item_previewed: {
 			type: 'boolean',
 			name: 'Source - Active in Preview',
-			description: 'If a source is currently enabled in the preview scene, change the style of the button',
+			description:
+				'If a source is enabled in the Studio Mode preview, including through enabled scenes and groups, change the style of the button',
 			defaultStyle: stylePreview(),
 			options: [choiceDropdown(self, 'source', { id: 'source', label: 'Source name' })],
 			callback: (feedback) => {
-				return !!self.obsState.findSourceByName(feedback.options.source)?.videoShowing
+				if (!self.states.studioMode || !self.states.previewSceneUuid) return false
+				const source = self.obsState.findSourceByName(feedback.options.source)
+				return !!source && self.obsState.isSourceEnabledInScene(self.states.previewSceneUuid, source.sourceUuid)
 			},
 		},
 

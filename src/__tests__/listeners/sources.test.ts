@@ -214,13 +214,6 @@ describe('input active/show listeners', () => {
 		expect(self.setVariableValues).toHaveBeenCalledWith({ source_active_My_Mic: true })
 		expect(self.checkFeedbacks).toHaveBeenCalledWith('scene_item_active')
 	})
-
-	test('InputShowStateChanged updates the preview-showing state', () => {
-		self.socket.emit('InputShowStateChanged', { inputName: 'My Mic', inputUuid: 'mic-uuid', videoShowing: true })
-
-		expect(self.states.sources.get('mic-uuid')!.videoShowing).toBe(true)
-		expect(self.checkFeedbacks).toHaveBeenCalledWith('scene_item_previewed')
-	})
 })
 
 describe('InputSettingsChanged', () => {
@@ -374,7 +367,7 @@ describe('SceneItemEnableStateChanged', () => {
 		self.states.sceneItems.set('scene-a', [
 			sceneItem({ sceneItemId: 1, sourceUuid: 'group-a', sourceName: 'Group A', isGroup: true }),
 		])
-		self.socket.call.mockResolvedValue({ videoActive: true, videoShowing: true })
+		self.socket.call.mockResolvedValue({ videoActive: true })
 
 		self.socket.emit('SceneItemEnableStateChanged', {
 			sceneUuid: 'scene-a',
@@ -385,7 +378,7 @@ describe('SceneItemEnableStateChanged', () => {
 
 		expect(self.socket.call).toHaveBeenCalledWith('GetSourceActive', { sourceUuid: 'group-a' })
 		await vi.waitFor(() => expect(self.states.sources.get('group-a')?.active).toBe(true))
-		expect(self.checkFeedbacks).toHaveBeenCalledWith('scene_item_active', 'scene_item_previewed')
+		expect(self.checkFeedbacks).toHaveBeenCalledWith('scene_item_active')
 	})
 
 	test('does not request active state for an ordinary source', () => {

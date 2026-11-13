@@ -443,6 +443,26 @@ export class OBSState {
 		return matches
 	}
 
+	/** Whether an enabled path through scenes and groups reaches this source. */
+	public isSourceEnabledInScene(sceneUuid: string, sourceUuid: string): boolean {
+		const pending = [sceneUuid]
+		const seen = new Set<string>()
+		while (pending.length > 0) {
+			const containerUuid = pending.pop()!
+			if (seen.has(containerUuid)) continue
+			seen.add(containerUuid)
+			for (const item of this.state.sceneItems.get(containerUuid) ?? []) {
+				if (!item.sceneItemEnabled) continue
+				if (item.sourceUuid === sourceUuid) return true
+				// sourceType covers a nested scene whose own registration hasn't arrived yet.
+				const isContainer =
+					item.isGroup || item.sourceType === 'OBS_SOURCE_TYPE_SCENE' || this.state.scenes.has(item.sourceUuid)
+				if (isContainer) pending.push(item.sourceUuid)
+			}
+		}
+		return false
+	}
+
 	// Items of a container (scene or group) by UUID (shared map).
 	public getContainerItems(containerUuid: string | undefined): import('./types.js').OBSSceneItem[] | undefined {
 		if (!containerUuid) return undefined

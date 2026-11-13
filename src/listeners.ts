@@ -125,7 +125,7 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		self.states.previewScene = data.sceneName ?? 'None'
 		self.states.previewSceneUuid = data.sceneUuid ?? ''
 		self.setVariableValues({ scene_preview: self.states.previewScene })
-		self.checkFeedbacks('scenePreview')
+		self.checkFeedbacks('scenePreview', 'scene_item_previewed')
 		self.sendToActionRecorder({ actionId: 'preview_scene', options: { mode: 'set', scene: data.sceneName } })
 	})
 	obs.on('SceneListChanged', (data) => {
@@ -133,6 +133,8 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		for (const scene of data.scenes as unknown as OBSScene[]) {
 			self.obs.registerScene(scene.sceneUuid, scene.sceneName, scene.sceneIndex)
 		}
+		// Nested scenes are recognized through this map.
+		self.obs.containersChanged()
 		// Refresh definitions so reordered scene positions don't go stale.
 		void self.updateActionsFeedbacksVariables()
 	})
@@ -169,12 +171,6 @@ function setupInputListeners(self: OBSInstance, obs: OBSWebSocket): void {
 		source.active = data.videoActive
 		self.checkFeedbacks('scene_item_active')
 		self.setVariableValues({ [`source_active_${source.validName}`]: data.videoActive })
-	})
-	obs.on('InputShowStateChanged', (data) => {
-		const source = self.states.sources.get(data.inputUuid)
-		if (!source) return
-		source.videoShowing = data.videoShowing
-		self.checkFeedbacks('scene_item_previewed')
 	})
 	obs.on('InputMuteStateChanged', (data) => {
 		const source = self.states.sources.get(data.inputUuid)
@@ -390,6 +386,7 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			// Only clear the relationship if this removal is still from the recorded parent. A
 			// move's create refresh may finish first and have already installed the new parent.
 			if (source?.parentGroupUuid === data.sceneUuid) delete source.parentGroupUuid
+			self.obs.containersChanged()
 			void self.updateActionsFeedbacksVariables()
 		}
 	})
@@ -418,12 +415,12 @@ function setupSceneItemListeners(self: OBSInstance, obs: OBSWebSocket): void {
 					const group = self.states.sources.get(groupUuid)
 					if (!group || !active) return
 					group.active = active.videoActive
-					group.videoShowing = active.videoShowing
-					self.checkFeedbacks('scene_item_active', 'scene_item_previewed')
+					self.checkFeedbacks('scene_item_active')
 				})
 			}
 		}
 		self.checkFeedbacks('scene_item_active_in_scene')
+		self.obs.containersChanged()
 		const sceneName = self.states.scenes.get(data.sceneUuid)?.sceneName
 		const sourceName = sourceUuid ? self.states.sources.get(sourceUuid)?.sourceName : undefined
 		if (sourceName && sceneName) {
@@ -607,7 +604,7 @@ function setupUIListeners(self: OBSInstance, obs: OBSWebSocket): void {
 				self.states.previewScene = 'None'
 				self.states.previewSceneUuid = ''
 			}
-			self.checkFeedbacks('studioMode', 'scenePreview')
+			self.checkFeedbacks('studioMode', 'scenePreview', 'scene_item_previewed')
 			self.setVariableValues({ scene_preview: self.states.previewScene })
 		})()
 	})

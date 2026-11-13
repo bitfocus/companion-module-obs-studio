@@ -10,8 +10,7 @@ import { MockContext } from './mock-context.js'
 import { looseFeedbacks } from './loose-definitions.js'
 
 /** The subscription mask `connectOBS` asks for when no meter feedback is on a button. */
-const BASE_SUBSCRIPTIONS =
-	EventSubscription.All | EventSubscription.InputActiveStateChanged | EventSubscription.InputShowStateChanged
+const BASE_SUBSCRIPTIONS = EventSubscription.All | EventSubscription.InputActiveStateChanged
 const METER_SUBSCRIPTIONS = BASE_SUBSCRIPTIONS | EventSubscription.InputVolumeMeters
 
 /**
