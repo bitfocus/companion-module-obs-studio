@@ -1,6 +1,110 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 
+describe('OBSApi.getStreamStatus bitrate', () => {
+	let self: MockInstance
+	let sampleTime: number
+
+	beforeEach(() => {
+		self = makeMockInstance()
+		sampleTime = 0
+		vi.spyOn(performance, 'now').mockImplementation(() => sampleTime)
+	})
+
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
+	async function sample(outputBytes: number, time: number, outputActive: boolean): Promise<void> {
+		sampleTime = time
+		self.socket.call.mockResolvedValue({
+			outputActive,
+			outputReconnecting: false,
+			outputBytes,
+			outputTimecode: '01:00:00.000',
+			outputDuration: 3600000,
+			outputCongestion: 0,
+			outputSkippedFrames: 0,
+			outputTotalFrames: 108000,
+		})
+		await self.obs.getStreamStatus()
+	}
+
+	function bitrate(): unknown {
+		return self.setVariableValues.mock.lastCall?.[0].kbits_per_sec
+	}
+
+	test('does not report lifetime output bytes as the first bitrate sample', async () => {
+		await sample(1000000000, 1000, true)
+
+		expect(bitrate()).toBe(0)
+	})
+
+	test.each([
+		[500, 375000],
+		[1000, 750000],
+		[2000, 1500000],
+	])('reports 6000 kbps over a %i ms sample interval', async (interval, bytes) => {
+		await sample(1000000000, 1000, true)
+		await sample(1000000000 + bytes, 1000 + interval, true)
+
+		expect(bitrate()).toBe(6000)
+	})
+
+	test('keeps the full sampling interval across a failed status request', async () => {
+		await sample(1000000000, 1000, true)
+		sampleTime = 2000
+		self.socket.call.mockRejectedValueOnce(new Error('status request failed'))
+		await self.obs.getStreamStatus()
+		expect(self.setVariableValues).toHaveBeenCalledTimes(1)
+
+		await sample(1002250000, 4000, true)
+
+		expect(bitrate()).toBe(6000)
+	})
+
+	test('starts a new baseline when the output byte counter resets', async () => {
+		await sample(1000000000, 1000, true)
+		await sample(500, 2000, true)
+		expect(bitrate()).toBe(0)
+
+		await sample(750500, 3000, true)
+
+		expect(bitrate()).toBe(6000)
+	})
+
+	test('starts a new baseline when connection state is initialized again', async () => {
+		await sample(1000000000, 1000, true)
+		await sample(1000750000, 2000, true)
+		expect(bitrate()).toBe(6000)
+
+		self.obs.initializeStates()
+		await sample(2000000000, 10000, true)
+		expect(bitrate()).toBe(0)
+
+		await sample(2000750000, 11000, true)
+		expect(bitrate()).toBe(6000)
+	})
+
+	test('reports zero while inactive and discards the sampling interval across a stop', async () => {
+		await sample(1000000000, 1000, true)
+		await sample(1000900000, 2500, false)
+		expect(bitrate()).toBe(0)
+
+		await sample(2000000, 10000, true)
+		expect(bitrate()).toBe(0)
+		await sample(2750000, 11000, true)
+		expect(bitrate()).toBe(6000)
+	})
+
+	test('reports zero when two samples have no elapsed time', async () => {
+		await sample(1000000000, 1000, true)
+		await sample(1000750000, 1000, true)
+
+		expect(bitrate()).toBe(0)
+	})
+})
+
 describe('OBSApi.buildProfileList', () => {
 	let self: MockInstance
 

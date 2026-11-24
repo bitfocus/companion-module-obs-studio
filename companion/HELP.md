@@ -154,6 +154,10 @@ browser shows the exact ID available to the current connection.
 - **replay_buffer_path**, **replay_buffer_active**
 - **virtualcam_active**
 
+**kbits_per_sec** measures the bytes sent between successful status samples using their actual
+elapsed time. The first sample after connecting establishes a baseline and reports 0; later samples
+account for delayed or failed status requests.
+
 ### Scenes and transitions
 
 - **scene_active**, **scene_preview**, **scene_previous**
