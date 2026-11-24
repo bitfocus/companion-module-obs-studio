@@ -745,7 +745,7 @@ export class OBSApi {
 		const streamStatus = await this.sendRequest('GetStreamStatus')
 
 		if (streamStatus) {
-			const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
+			const timecodeMatch = streamStatus.outputTimecode?.match(/\d{2,}:\d\d:\d\d/)
 			const timecode = timecodeMatch?.[0] ?? '00:00:00'
 			const previousStreaming = this.self.states.streaming
 			this.self.states.streaming = streamStatus.outputActive

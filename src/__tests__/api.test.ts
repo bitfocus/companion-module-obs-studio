@@ -1,6 +1,52 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { makeMockInstance, seedFullState, type MockInstance } from './mock/instance.js'
 
+describe('OBSApi.getStreamStatus timecodes', () => {
+	test.each([
+		['01:02:03.456', '01:02:03', '01', '02', '03'],
+		['99:59:59.999', '99:59:59', '99', '59', '59'],
+		['100:00:00.000', '100:00:00', '100', '00', '00'],
+		['123:45:06.789', '123:45:06', '123', '45', '06'],
+	])('publishes every hour digit from %s', async (outputTimecode, timecode, hh, mm, ss) => {
+		const self = makeMockInstance()
+		self.socket.call.mockResolvedValue({
+			outputActive: true,
+			outputCongestion: 0,
+			outputTimecode,
+			outputBytes: 1000,
+			outputSkippedFrames: 0,
+			outputTotalFrames: 100,
+		})
+
+		await self.obs.getStreamStatus()
+
+		expect(self.setVariableValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				stream_timecode: timecode,
+				stream_timecode_hh: hh,
+				stream_timecode_mm: mm,
+				stream_timecode_ss: ss,
+			}),
+		)
+	})
+
+	test.each([undefined, '', 'invalid'])('uses zero when the timecode is %s', async (outputTimecode) => {
+		const self = makeMockInstance()
+		self.socket.call.mockResolvedValue({ outputTimecode })
+
+		await self.obs.getStreamStatus()
+
+		expect(self.setVariableValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				stream_timecode: '00:00:00',
+				stream_timecode_hh: '00',
+				stream_timecode_mm: '00',
+				stream_timecode_ss: '00',
+			}),
+		)
+	})
+})
+
 describe('OBSApi.buildProfileList', () => {
 	let self: MockInstance
 
