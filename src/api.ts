@@ -318,6 +318,20 @@ export class OBSApi {
 		}
 	}
 
+	// A successful request may have no response data, so its result must track rejection separately.
+	public async sendRequestSucceeded<T extends keyof OBSRequestTypes>(
+		requestType: T,
+		requestData: OBSRequestTypes[T] | null,
+	): Promise<boolean> {
+		try {
+			await this.self.socket.call(requestType, requestData ?? undefined)
+			return true
+		} catch (error) {
+			logger.debug(`Request ${requestType} failed (${utils.describeError(error)})`)
+			return false
+		}
+	}
+
 	public async sendCustomRequest<T extends keyof OBSRequestTypes>(
 		requestType: T,
 		requestData?: OBSRequestTypes[T],

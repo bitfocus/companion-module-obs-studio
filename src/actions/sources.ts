@@ -749,14 +749,14 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 
 				const quality = action.options.compression === 0 ? -1 : action.options.compression
 
-				const res = await self.obs.sendRequest('SaveSourceScreenshot', {
+				const succeeded = await self.obs.sendRequestSucceeded('SaveSourceScreenshot', {
 					sourceName: sourceName,
 					imageFormat: action.options.format,
 					imageFilePath: filePath,
 					imageCompressionQuality: quality,
 				})
 				// SaveSourceScreenshot returns no data; surface the path for reference.
-				return res !== undefined ? (filePath ?? null) : null
+				return succeeded ? (filePath ?? null) : null
 			},
 		},
 

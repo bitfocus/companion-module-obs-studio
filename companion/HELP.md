@@ -98,6 +98,11 @@ and “all” include playing or paused media sources that are active in program
 | UI – Open Source Interaction Window | Open the interaction window for a browser source   |
 | UI – Open Projector                 | Open an OBS projector window                       |
 
+The start/stop choices for recording, streaming, replay buffer, and output controls return the
+requested state after OBS accepts the command. Audio mute and Studio Mode return their requested
+states as well. A failed request returns `null`. Output toggles return the state reported by OBS.
+**Source – Take Screenshot** returns the saved path on success, or `null` on failure.
+
 ## Feedbacks
 
 Boolean feedbacks become active when their condition matches. They can change a button's style or

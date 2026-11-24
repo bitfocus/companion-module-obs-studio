@@ -35,7 +35,7 @@ function parseJsonOption(rawValue: string, label: string): JsonObject | undefine
 }
 
 export type UiConfigCustomActionSchemas = {
-	studio_mode: { options: { enabled: 'true' | 'false' | 'toggle' }; result: boolean }
+	studio_mode: { options: { enabled: 'true' | 'false' | 'toggle' }; result: boolean | null }
 	set_profile: { options: { profile: string } }
 	set_scene_collection: { options: { scene_collection: string } }
 	'trigger-hotkey': { options: { id: string } }
@@ -82,8 +82,8 @@ export function getUiConfigCustomActions(self: OBSInstance): CompanionActionDefi
 			callback: async (action) => {
 				const enabled =
 					action.options.enabled === 'toggle' ? !self.states.studioMode : action.options.enabled === 'true'
-				await self.obs.sendRequest('SetStudioModeEnabled', { studioModeEnabled: enabled })
-				return enabled
+				const succeeded = await self.obs.sendRequestSucceeded('SetStudioModeEnabled', { studioModeEnabled: enabled })
+				return succeeded ? enabled : null
 			},
 		},
 

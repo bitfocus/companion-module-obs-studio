@@ -19,15 +19,15 @@ function isVirtualCam(outputName: string): boolean {
 /**
  * Every output family (recording, streaming, replay buffer, individual outputs) is one action with
  * a leading dropdown, and they all share the same toggle/start/stop shape and result convention:
- * toggle reports the state OBS came back with, start/stop report the state they asked for, and
- * anything else reports nothing.
+ * toggle reports the state OBS came back with, start/stop report the state they asked for after a
+ * successful request, and failures or anything else report nothing.
  */
 function outputControlAction<TOptions extends { action: string }>(config: {
 	name: string
 	description: string
 	toggle: (options: TOptions) => Promise<{ outputActive?: boolean } | undefined>
-	start: (options: TOptions) => Promise<unknown>
-	stop: (options: TOptions) => Promise<unknown>
+	start: (options: TOptions) => Promise<boolean>
+	stop: (options: TOptions) => Promise<boolean>
 	/** Choices beyond toggle/start/stop, along with any option fields they need. */
 	extraChoices?: DropdownChoice[]
 	extraOptions?: SomeCompanionActionInputField<Extract<keyof TOptions, string>>[]
@@ -61,11 +61,9 @@ function outputControlAction<TOptions extends { action: string }>(config: {
 					return res?.outputActive ?? null
 				}
 				case 'start':
-					await config.start(action.options)
-					return true
+					return (await config.start(action.options)) ? true : null
 				case 'stop':
-					await config.stop(action.options)
-					return false
+					return (await config.stop(action.options)) ? false : null
 				default:
 					await config.handleExtra?.(action.options)
 					return null
@@ -117,8 +115,8 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Recording - Controls',
 			description: 'Controls the recording output',
 			toggle: async () => self.obs.sendRequest('ToggleRecord'),
-			start: async () => self.obs.sendRequest('StartRecord'),
-			stop: async () => self.obs.sendRequest('StopRecord'),
+			start: async () => self.obs.sendRequestSucceeded('StartRecord', null),
+			stop: async () => self.obs.sendRequestSucceeded('StopRecord', null),
 			extraChoices: [
 				{ id: 'pause', label: 'Pause' },
 				{ id: 'resume', label: 'Resume' },
@@ -156,8 +154,8 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Streaming - Controls',
 			description: 'Controls the streaming output',
 			toggle: async () => self.obs.sendRequest('ToggleStream'),
-			start: async () => self.obs.sendRequest('StartStream'),
-			stop: async () => self.obs.sendRequest('StopStream'),
+			start: async () => self.obs.sendRequestSucceeded('StartStream', null),
+			stop: async () => self.obs.sendRequestSucceeded('StopStream', null),
 		}),
 		SendStreamCaption: {
 			name: 'Streaming - Send Caption',
@@ -330,8 +328,8 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 			name: 'Replay Buffer - Controls',
 			description: 'Controls the replay buffer output',
 			toggle: async () => self.obs.sendRequest('ToggleReplayBuffer'),
-			start: async () => self.obs.sendRequest('StartReplayBuffer'),
-			stop: async () => self.obs.sendRequest('StopReplayBuffer'),
+			start: async () => self.obs.sendRequestSucceeded('StartReplayBuffer', null),
+			stop: async () => self.obs.sendRequestSucceeded('StopReplayBuffer', null),
 			extraChoices: [{ id: 'save', label: 'Save' }],
 			handleExtra: async () => self.obs.sendRequest('SaveReplayBuffer'),
 		}),
@@ -346,12 +344,12 @@ export function getOutputActions(self: OBSInstance): CompanionActionDefinitions<
 					: self.obs.sendRequest('ToggleOutput', { outputName: output }),
 			start: async ({ output }) =>
 				isVirtualCam(output)
-					? self.obs.sendRequest('StartVirtualCam')
-					: self.obs.sendRequest('StartOutput', { outputName: output }),
+					? self.obs.sendRequestSucceeded('StartVirtualCam', null)
+					: self.obs.sendRequestSucceeded('StartOutput', { outputName: output }),
 			stop: async ({ output }) =>
 				isVirtualCam(output)
-					? self.obs.sendRequest('StopVirtualCam')
-					: self.obs.sendRequest('StopOutput', { outputName: output }),
+					? self.obs.sendRequestSucceeded('StopVirtualCam', null)
+					: self.obs.sendRequestSucceeded('StopOutput', { outputName: output }),
 			extraOptions: [choiceDropdown(self, 'output', { id: 'output', label: 'Output' })],
 		}),
 	}
