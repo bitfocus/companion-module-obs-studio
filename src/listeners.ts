@@ -110,6 +110,17 @@ function setupSceneListeners(self: OBSInstance, obs: OBSWebSocket): void {
 			scene.sceneName = data.sceneName
 			self.obsState.invalidateSceneNameIndex()
 		}
+		if (self.states.programSceneUuid === data.sceneUuid) self.states.programScene = data.sceneName
+		if (self.states.previewSceneUuid === data.sceneUuid) self.states.previewScene = data.sceneName
+		if (self.states.previousSceneUuid === data.sceneUuid) self.states.previousScene = data.sceneName
+		if (self.states.sources.has(data.sceneUuid)) {
+			self.obs.addSource(data.sceneUuid, data.sceneName)
+		}
+		for (const items of self.states.sceneItems.values()) {
+			for (const item of items) {
+				if (item.sourceUuid === data.sceneUuid) item.sourceName = data.sceneName
+			}
+		}
 		void self.updateActionsFeedbacksVariables()
 	})
 	obs.on('CurrentProgramSceneChanged', (data) => {
