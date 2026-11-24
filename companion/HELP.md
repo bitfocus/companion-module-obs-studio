@@ -116,6 +116,10 @@ be combined with other feedbacks.
 | General                 | Profile Active, Scene Collection Active, Studio Mode Active, Disk Space Remaining                          |
 | Advanced                | Custom – Vendor Event                                                                                      |
 
+**Streaming – Reconnecting** and the **streaming** variable reflect an ongoing stream reconnection
+even when the module connects to OBS after the reconnection began. They clear when OBS reports that
+the stream has recovered or stopped.
+
 **Source – Active in Preview** follows the source's enabled path through the current Studio Mode
 preview scene, including nested scenes and groups. Hiding a containing scene or group also makes its
 contents inactive in this feedback. If a source appears more than once, any enabled path counts.

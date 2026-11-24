@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Streaming reconnection feedback and the streaming status variable now follow the status reported
+  by OBS when connecting and polling, including reconnections that began before the module connected
 - "Source - Active in Preview" now follows enabled nested scenes and groups and refreshes when
   preview, visibility, scene contents, or Studio Mode changes. Sources shown only outside the preview
   no longer activate it
