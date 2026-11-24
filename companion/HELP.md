@@ -154,6 +154,9 @@ browser shows the exact ID available to the current connection.
 - **replay_buffer_path**, **replay_buffer_active**
 - **virtualcam_active**
 
+Streaming timecodes omit milliseconds and retain the full hour count, including streams lasting
+100 hours or more. **stream_timecode_hh** reports that same hour count.
+
 ### Scenes and transitions
 
 - **scene_active**, **scene_preview**, **scene_previous**
