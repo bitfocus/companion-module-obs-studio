@@ -748,7 +748,9 @@ export class OBSApi {
 			const timecodeMatch = streamStatus.outputTimecode?.match(/\d\d:\d\d:\d\d/i)
 			const timecode = timecodeMatch?.[0] ?? '00:00:00'
 			const previousStreaming = this.self.states.streaming
+			const previousReconnecting = this.self.states.streamReconnecting
 			this.self.states.streaming = streamStatus.outputActive
+			this.self.states.streamReconnecting = streamStatus.outputReconnecting
 			const streamingTimecodeSplit = utils.splitTimecode(timecode)
 
 			const streamingChanged = this.self.states.streaming !== previousStreaming
@@ -762,6 +764,7 @@ export class OBSApi {
 			const streamingState = utils.getStreamingState(this.self.states)
 
 			if (streamingChanged) this.self.checkFeedbacks('streaming')
+			if (this.self.states.streamReconnecting !== previousReconnecting) this.self.checkFeedbacks('streamReconnecting')
 			if (congestionChanged) this.self.checkFeedbacks('streamCongestionAbove', 'streamCongestionLevel')
 			this.self.setVariableValues({
 				streaming: utils.getOBSStreamingStateLabel(streamingState),
