@@ -65,6 +65,7 @@ export class OBSApi {
 	// Active peak-hold windows for audioPeaking feedbacks (keyed by feedback ID).
 	private peakHolds = new Map<string, { until: number; timer: NodeJS.Timeout }>()
 	private lastOutputListRefresh = 0
+	private lastStreamStatusTime: number | null = null
 	private metersActive = false
 	private lastMeterFeedbackCheck = 0
 	private meterFeedbackPending = false
@@ -97,6 +98,7 @@ export class OBSApi {
 		this.self.obsState.resetSceneSourceStates()
 		// Reset state
 		this.self.states.sceneCollectionChanging = false
+		this.lastStreamStatusTime = null
 	}
 
 	public async connectOBS(): Promise<void> {
@@ -755,9 +757,12 @@ export class OBSApi {
 			const congestionChanged = streamStatus.outputCongestion !== this.self.states.streamCongestion
 			this.self.states.streamCongestion = streamStatus.outputCongestion
 
+			const sampleTime = performance.now()
+			const elapsed = this.lastStreamStatusTime === null ? 0 : sampleTime - this.lastStreamStatusTime
 			const newBytes = streamStatus.outputBytes - this.self.states.outputBytes
-			const kbits = newBytes > 0 ? Math.round((newBytes * 8) / 1000) : 0
+			const kbits = streamStatus.outputActive && newBytes > 0 && elapsed > 0 ? Math.round((newBytes * 8) / elapsed) : 0
 			this.self.states.outputBytes = streamStatus.outputBytes
+			this.lastStreamStatusTime = streamStatus.outputActive ? sampleTime : null
 
 			const streamingState = utils.getStreamingState(this.self.states)
 
