@@ -161,6 +161,10 @@ browser shows the exact ID available to the current connection.
 - **current_transition**, **transition_duration**, **transition_active**
 - **transition_list**
 
+Renaming a scene in OBS updates its program, preview, and previous-scene names in variables and
+feedbacks. If the scene is also used as a source, its new name is available in source choices and
+visibility exceptions.
+
 ### Media collections
 
 - **current_media_name** — list of playing or paused media sources active in program
