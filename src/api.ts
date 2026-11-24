@@ -485,8 +485,16 @@ export class OBSApi {
 		const needed = this.self.obsState.mediaSourceUuids.length > 0
 		if (needed && !this.self.mediaPoll) {
 			this.startMediaPoll()
-		} else if (!needed && this.self.mediaPoll) {
+		} else if (!needed) {
 			this.stopMediaPoll()
+			this.self.setVariableValues({
+				current_media_name: [],
+				current_media_time_elapsed: [],
+				current_media_time_remaining: [],
+				latest_media_name: '',
+				latest_media_time_elapsed: DEFAULT_TIMECODE,
+				latest_media_time_remaining: DEFAULT_TIMECODE,
+			})
 		}
 	}
 
