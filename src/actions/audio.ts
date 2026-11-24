@@ -60,8 +60,11 @@ export function getAudioActions(self: OBSInstance): CompanionActionDefinitions<A
 				}
 
 				const muted = action.options.mute === 'true'
-				await self.obs.sendRequest('SetInputMute', { inputName: action.options.source, inputMuted: muted })
-				return muted
+				const succeeded = await self.obs.sendRequestSucceeded('SetInputMute', {
+					inputName: action.options.source,
+					inputMuted: muted,
+				})
+				return succeeded ? muted : null
 			},
 			learn: (action) => {
 				const sourceName = action.options.source

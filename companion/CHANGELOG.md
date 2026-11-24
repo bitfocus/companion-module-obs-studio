@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Action results now distinguish failed requests from successful replies with no data: failed
+  output, mute, and Studio Mode commands return no result, while successful screenshots return
+  their saved path
 - "Source - Active in Preview" now follows enabled nested scenes and groups and refreshes when
   preview, visibility, scene contents, or Studio Mode changes. Sources shown only outside the preview
   no longer activate it
