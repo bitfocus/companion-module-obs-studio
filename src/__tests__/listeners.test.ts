@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import type { CompanionVariableValues } from '@companion-module/base'
 import { initOBSListeners } from '../listeners.js'
 import { OBSRecordingState } from '../types.js'
+import { updateVariableValues } from '../variables.js'
+import { mockBatchResponses } from './mock/socket.js'
 import {
 	makeMockInstance,
 	sceneItem,
@@ -204,12 +207,33 @@ describe('SceneItemListReindexed', () => {
 
 describe('media poll lifetime', () => {
 	let self: MockInstance
+	let published: CompanionVariableValues
+	const emptyMedia = {
+		current_media_name: [],
+		current_media_time_elapsed: [],
+		current_media_time_remaining: [],
+		latest_media_name: '',
+		latest_media_time_elapsed: '00:00:00',
+		latest_media_time_remaining: '00:00:00',
+	}
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.useFakeTimers()
 		self = makeMockInstance()
 		seedFullState(self)
 		initOBSListeners(self)
+		published = {}
+		self.setVariableValues.mockImplementation((values: CompanionVariableValues) => Object.assign(published, values))
+		self.updateActionsFeedbacksVariables.mockImplementation(() => {
+			updateVariableValues.call(self, new Map(Object.entries(published)))
+		})
+		self.states.sources.get('Clip')!.active = true
+		mockBatchResponses(self.socket, () => ({
+			mediaState: 'OBS_MEDIA_STATE_PLAYING',
+			mediaCursor: 5000,
+			mediaDuration: 60000,
+		}))
+		await self.obs.getOBSMediaStatus()
 	})
 
 	afterEach(() => {
@@ -217,13 +241,17 @@ describe('media poll lifetime', () => {
 		vi.useRealTimers()
 	})
 
-	test('removing the last media input stops the poll', () => {
+	test('removing the last media input clears its variables and stops the poll', async () => {
 		self.obs.reconcileMediaPoll()
 		expect(self.mediaPoll).toBeDefined()
+		expect(published).toMatchObject({ current_media_name: ['Clip'], latest_media_name: 'Clip' })
 
 		self.socket.emit('InputRemoved', { inputName: 'Clip', inputUuid: 'Clip' })
 
 		expect(self.mediaPoll).toBeUndefined()
+		expect(published).toMatchObject(emptyMedia)
+		await vi.advanceTimersByTimeAsync(3000)
+		expect(self.socket.callBatch).toHaveBeenCalledTimes(1)
 	})
 
 	test('removing a non-media input leaves the poll running', () => {
@@ -233,6 +261,14 @@ describe('media poll lifetime', () => {
 		self.socket.emit('InputRemoved', { inputName: 'Mic', inputUuid: 'Mic' })
 
 		expect(self.mediaPoll).toBeDefined()
+		expect(published).toMatchObject({
+			current_media_name: ['Clip'],
+			current_media_time_elapsed: ['00:00:05'],
+			current_media_time_remaining: ['00:00:55'],
+			latest_media_name: 'Clip',
+			latest_media_time_elapsed: '00:00:05',
+			latest_media_time_remaining: '00:00:55',
+		})
 	})
 
 	test('a scene collection change stops the poll while state is inconsistent', () => {
@@ -242,5 +278,25 @@ describe('media poll lifetime', () => {
 		self.socket.emit('CurrentSceneCollectionChanging', { sceneCollectionName: 'Other' })
 
 		expect(self.mediaPoll).toBeUndefined()
+	})
+
+	test('loading a collection with no media clears variables even after the poll was stopped', async () => {
+		self.obs.reconcileMediaPoll()
+		expect(published).toMatchObject({ current_media_name: ['Clip'], latest_media_name: 'Clip' })
+		self.socket.emit('CurrentSceneCollectionChanging', { sceneCollectionName: 'Empty' })
+		expect(self.mediaPoll).toBeUndefined()
+
+		self.socket.call.mockImplementation(async (request: string) => {
+			if (request === 'GetSceneList') return { scenes: [] }
+			if (request === 'GetInputList') return { inputs: [] }
+			return {}
+		})
+		const reload = vi.spyOn(self.obs, 'buildSceneList')
+		self.socket.emit('CurrentSceneCollectionChanged', { sceneCollectionName: 'Empty' })
+		await reload.mock.results[0].value
+
+		expect(self.obsState.mediaSourceUuids).toEqual([])
+		expect(self.mediaPoll).toBeUndefined()
+		expect(published).toMatchObject(emptyMedia)
 	})
 })

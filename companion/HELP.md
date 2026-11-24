@@ -169,6 +169,10 @@ browser shows the exact ID available to the current connection.
 - **latest_media_name** — most recently started source from that active collection
 - **latest_media_time_elapsed** and **latest_media_time_remaining**
 
+When the last media source is removed, or a scene collection with no media sources is loaded, the
+**current_media_*** lists become empty. **latest_media_name** becomes blank and its times return to
+**00:00:00**.
+
 ### Per-source variables
 
 Per-source IDs end with a sanitized source name. Spaces and punctuation are converted so the name is
