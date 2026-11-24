@@ -135,6 +135,10 @@ variable and use that value in an expression or graphical element such as a gaug
 - Media – Remaining Time (seconds)
 - Streaming – Stream Congestion Level
 
+Stream congestion feedbacks follow streaming activity as well as the congestion value. When
+streaming stops, the congestion threshold feedback becomes inactive and the level returns to 0,
+even if OBS still reports the previous congestion value.
+
 ## Variables
 
 Use module variables in button text, expressions, action options, and feedback options. The variable

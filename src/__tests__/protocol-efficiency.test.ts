@@ -396,6 +396,37 @@ describe('poll feedback gating', () => {
 		expect(self.checkFeedbacks).toHaveBeenCalledWith('streaming')
 	})
 
+	test.each([false, true])(
+		'updates cached congestion feedbacks when streaming changes from %s at the same congestion',
+		async (streaming) => {
+			self.states.streaming = streaming
+			self.states.streamCongestion = 0.9
+			const feedbacks = looseFeedbacks(getOutputFeedbacks(self))
+			const cached: Record<string, unknown> = {}
+			const ids = ['streamCongestionAbove', 'streamCongestionLevel']
+			const evaluate = (id: string): void => {
+				if (!ids.includes(id)) return
+				cached[id] = feedbacks[id].callback(feedbackEvent(id, { threshold: 67 }), new MockContext('feedback'))
+			}
+			ids.forEach(evaluate)
+			self.checkFeedbacks.mockImplementation((...ids: string[]) => ids.forEach(evaluate))
+			expect(cached).toEqual({ streamCongestionAbove: streaming, streamCongestionLevel: streaming ? 90 : 0 })
+			self.socket.call.mockResolvedValue({
+				outputActive: !streaming,
+				outputCongestion: 0.9,
+				outputTimecode: '00:01:00.000',
+				outputBytes: 1000,
+				outputSkippedFrames: 0,
+				outputTotalFrames: 100,
+			})
+
+			await self.obs.getStreamStatus()
+
+			expect(self.states.streaming).toBe(!streaming)
+			expect(cached).toEqual({ streamCongestionAbove: !streaming, streamCongestionLevel: streaming ? 0 : 90 })
+		},
+	)
+
 	test('getRecordStatus only re-checks recording feedbacks on a state change', async () => {
 		self.socket.call.mockResolvedValue({ outputActive: true, outputPaused: false, outputTimecode: '00:00:10.000' })
 		await self.obs.getRecordStatus()
