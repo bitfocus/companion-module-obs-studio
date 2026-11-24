@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Refresh stream congestion feedbacks when polled streaming activity changes, even if the congestion
+  value stays the same
 - "Source - Active in Preview" now follows enabled nested scenes and groups and refreshes when
   preview, visibility, scene contents, or Studio Mode changes. Sources shown only outside the preview
   no longer activate it

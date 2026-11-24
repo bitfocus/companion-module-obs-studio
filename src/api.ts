@@ -762,7 +762,9 @@ export class OBSApi {
 			const streamingState = utils.getStreamingState(this.self.states)
 
 			if (streamingChanged) this.self.checkFeedbacks('streaming')
-			if (congestionChanged) this.self.checkFeedbacks('streamCongestionAbove', 'streamCongestionLevel')
+			if (streamingChanged || congestionChanged) {
+				this.self.checkFeedbacks('streamCongestionAbove', 'streamCongestionLevel')
+			}
 			this.self.setVariableValues({
 				streaming: utils.getOBSStreamingStateLabel(streamingState),
 				stream_timecode: timecode,
