@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Filter source suggestions by the selected scene in visibility, properties, and scene-based
+  feedback options on hosts supporting dropdown choice visibility
+
 ### Fixed
 
 - "Source - Active in Preview" now follows enabled nested scenes and groups and refreshes when

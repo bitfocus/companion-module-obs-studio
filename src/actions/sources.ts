@@ -770,7 +770,7 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 					label: 'Scene',
 					isVisibleExpression: `$(options:target) == 'scene'`,
 				}),
-				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
+				choiceDropdown(self, 'source', { id: 'source', label: 'Source', sourceScene: 'target' }),
 				{
 					type: 'multidropdown',
 					disableAutoExpression: true,
@@ -936,11 +936,13 @@ export function getSourceActions(self: OBSInstance): CompanionActionDefinitions<
 				choiceMultiDropdown(self, 'source', {
 					id: 'source',
 					label: 'Sources',
+					sourceScene: 'target',
 					isVisibleExpression: '!$(options:allSources)',
 				}),
 				choiceMultiDropdown(self, 'source', {
 					id: 'except',
 					label: 'Except',
+					sourceScene: 'target',
 					isVisibleExpression: '$(options:allSources)',
 				}),
 				{
