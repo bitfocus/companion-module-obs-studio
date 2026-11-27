@@ -1447,18 +1447,22 @@ exports[`option shape > action options are unchanged 1`] = `
       "choices": [
         {
           "id": "Clip",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Clip",
         },
         {
           "id": "Logo",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes(["Scene A"], $(options:scene))",
           "label": "Logo",
         },
         {
           "id": "Mic",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Mic",
         },
         {
           "id": "Title",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Title",
         },
       ],
@@ -1839,18 +1843,22 @@ exports[`option shape > action options are unchanged 1`] = `
       "choices": [
         {
           "id": "Clip",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Clip",
         },
         {
           "id": "Logo",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes(["Scene A"], $(options:scene))",
           "label": "Logo",
         },
         {
           "id": "Mic",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Mic",
         },
         {
           "id": "Title",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Title",
         },
       ],
@@ -1865,18 +1873,22 @@ exports[`option shape > action options are unchanged 1`] = `
       "choices": [
         {
           "id": "Clip",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Clip",
         },
         {
           "id": "Logo",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes(["Scene A"], $(options:scene))",
           "label": "Logo",
         },
         {
           "id": "Mic",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Mic",
         },
         {
           "id": "Title",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Title",
         },
       ],
@@ -2630,18 +2642,22 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "choices": [
         {
           "id": "Clip",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Clip",
         },
         {
           "id": "Logo",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes(["Scene A"], $(options:scene))",
           "label": "Logo",
         },
         {
           "id": "Mic",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Mic",
         },
         {
           "id": "Title",
+          "isVisibleExpression": "$(options:target) != 'scene' || !arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Title",
         },
       ],
@@ -2681,18 +2697,22 @@ exports[`option shape > feedback options are unchanged 1`] = `
       "choices": [
         {
           "id": "Clip",
+          "isVisibleExpression": "!arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Clip",
         },
         {
           "id": "Logo",
+          "isVisibleExpression": "!arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes(["Scene A"], $(options:scene))",
           "label": "Logo",
         },
         {
           "id": "Mic",
+          "isVisibleExpression": "!arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Mic",
         },
         {
           "id": "Title",
+          "isVisibleExpression": "!arrayIncludes(["Scene A"], $(options:scene)) || arrayIncludes([], $(options:scene))",
           "label": "Title",
         },
       ],

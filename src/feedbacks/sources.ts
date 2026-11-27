@@ -28,7 +28,7 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 					label: 'Scene',
 					isVisibleExpression: `$(options:target) == 'scene'`,
 				}),
-				choiceDropdown(self, 'source', { id: 'source', label: 'Source' }),
+				choiceDropdown(self, 'source', { id: 'source', label: 'Source', sourceScene: 'target' }),
 			],
 			callback: (feedback) => {
 				const sourceName = feedback.options.source
@@ -68,7 +68,12 @@ export function getSourceFeedbacks(self: OBSInstance): CompanionFeedbackDefiniti
 					id: 'any',
 					default: false,
 				},
-				choiceDropdown(self, 'source', { id: 'source', label: 'Source', isVisibleExpression: `!$(options:any)` }),
+				choiceDropdown(self, 'source', {
+					id: 'source',
+					label: 'Source',
+					isVisibleExpression: `!$(options:any)`,
+					sourceScene: 'scene',
+				}),
 			],
 			callback: (feedback) => {
 				const sceneName = feedback.options.scene

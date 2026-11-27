@@ -25,6 +25,12 @@ by itself.
 
 ## Actions
 
+On hosts supporting dropdown choice visibility, selecting **Specific Scene** filters source
+suggestions to that scene, including sources inside its groups. This applies to source visibility,
+source properties, and scene-based source feedbacks. Saved selections and custom values are preserved.
+Other targets, unknown scenes, and scene expressions retain the full source list. Older hosts
+continue to show all sources.
+
 ### Recording, streaming, and outputs
 
 | Action                          | Capabilities                                                   |

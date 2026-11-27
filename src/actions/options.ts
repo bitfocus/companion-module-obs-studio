@@ -183,6 +183,26 @@ interface ChoiceDropdownField<TKey extends string> {
 	isVisibleExpression?: string
 	/** Overrides the list's own default; only for options that intentionally start elsewhere. */
 	default?: string | number
+	/** Restrict source suggestions to a literal scene, optionally gated by the Target field. */
+	sourceScene?: 'scene' | 'target'
+}
+
+export function sceneSourceChoices(
+	self: OBSInstance,
+	scope: 'scene' | 'target',
+): Array<DropdownChoice & { isVisibleExpression: string }> {
+	const scenes = self.obsState.sceneChoices.filter((scene) => self.obsState.findSceneItemsByName(String(scene.id)))
+	const knownScenes = JSON.stringify(scenes.map((scene) => scene.id))
+	const guard = scope === 'target' ? "$(options:target) != 'scene' || " : ''
+	return self.obsState.sourceChoices.map((source) => {
+		const matchingScenes = scenes
+			.filter((scene) => self.obsState.findSceneItemsByNameInScene(String(scene.id), String(source.id)).length > 0)
+			.map((scene) => scene.id)
+		return {
+			...source,
+			isVisibleExpression: `${guard}!arrayIncludes(${knownScenes}, $(options:scene)) || arrayIncludes(${JSON.stringify(matchingScenes)}, $(options:scene))`,
+		}
+	})
 }
 
 /** A dropdown bound to one of the module's state-derived choice lists. */
@@ -197,7 +217,7 @@ export function choiceDropdown<TKey extends string>(
 		label: field.label,
 		id: field.id,
 		default: field.default ?? spec.default(self),
-		choices: spec.choices(self),
+		choices: field.sourceScene ? sceneSourceChoices(self, field.sourceScene) : spec.choices(self),
 		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
 		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),
 		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
@@ -216,7 +236,7 @@ export function choiceMultiDropdown<TKey extends string>(
 		label: field.label,
 		id: field.id,
 		default: field.default ?? [],
-		choices: spec.choices(self),
+		choices: field.sourceScene ? sceneSourceChoices(self, field.sourceScene) : spec.choices(self),
 		...((field.allowCustom ?? true) ? { allowCustom: true as const } : {}),
 		...(field.disableAutoExpression ? { disableAutoExpression: true as const } : {}),
 		...(field.isVisibleExpression !== undefined ? { isVisibleExpression: field.isVisibleExpression } : {}),
